@@ -10,6 +10,7 @@ import logging
 import warnings
 from typing import TypeVar
 
+import numpy as np
 import pandas as pd
 
 from lenskit.data import ItemListCollection
@@ -52,7 +53,7 @@ class RunAnalysisResult:
     def list_metrics(self, fill_missing=True) -> pd.DataFrame:
         """
         Get the per-list scores of the results.  This is a data frame with one
-        row per list (with the list key on the inded), and one metric per
+        row per list (with the list key on the index), and one metric per
         column.
 
         Args:
@@ -62,11 +63,13 @@ class RunAnalysisResult:
                 want to do analyses that need to treat missing values
                 differently.
         """
-        return self._list_metrics.fillna(self._defaults)
+        if fill_missing:
+            return self._list_metrics.fillna(self._defaults)
+        return self._list_metrics
 
     def list_summary(self, *keys: str) -> pd.DataFrame:
         """
-        Sumamry statistics for the per-list metrics.  Each metric is on its own
+        Summary statistics for the per-list metrics.  Each metric is on its own
         row, with columns reporting the following:
 
         ``mean``:
@@ -204,11 +207,43 @@ class RunAnalysis:
             _log.warning("could not find test data for %d lists", no_test_count)
 
         list_results = self._accumulator.list_metrics(fill_missing=False)
-        global_results = self._accumulator.summary_metrics()["mean"]
+
+        global_metrics = [m for m in self._accumulator.metrics if m.is_global or m.is_decomposed]
+
+        _log.debug("computing %d global metrics", len(global_metrics))
+
+        global_results = {}
+        for metric_wrapper in global_metrics:
+            try:
+                if metric_wrapper.is_global:
+                    result = metric_wrapper.measure_run(outputs, test)
+                elif metric_wrapper.is_decomposed:
+                    intermediate_data = self._accumulator._list_data[metric_wrapper.label]
+                    clean_data = [x for x in intermediate_data if x is not None]
+                    if clean_data:
+                        summary = metric_wrapper.summarize(clean_data)
+                        if isinstance(summary, dict):
+                            result = summary.get("mean", 0.0)
+                        else:
+                            result = float(summary)
+                    else:
+                        result = metric_wrapper.default or 0.0
+                else:
+                    _log.warning("unexpected metric type for %s", metric_wrapper.label)
+                    result = 0.0
+
+                global_results[metric_wrapper.label] = result
+
+            except Exception as e:
+                _log.warning("error computing global metric %s: %s", metric_wrapper.label, e)
+                global_results[metric_wrapper.label] = metric_wrapper.default or 0.0
+
+        global_results = pd.Series(global_results, dtype=np.float64)
+
         defaults = {
-            wrapper.label: wrapper.default
-            for wrapper in self._accumulator.metrics
-            if wrapper.default is not None
+            metric_wrapper.label: metric_wrapper.default
+            for metric_wrapper in self._accumulator.metrics
+            if metric_wrapper.default is not None
         }
 
-        return RunAnalysisResult(list_results, global_results, defaults)  # type: ignore
+        return RunAnalysisResult(list_results, global_results, defaults)

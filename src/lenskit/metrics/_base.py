@@ -34,6 +34,14 @@ class Metric(ABC):
 
     Stability:
         Full
+
+    .. note::
+
+        For simplicity in the analysis code, you cannot simply implement the
+        properties of this class on an arbitrary class in order to implement a
+        metric with all available behavior such as labeling and defaults;
+        you must actually extend this class. This requirement may be relaxed
+        in the future.
     """
 
     default: ClassVar[float | None] = 0.0
@@ -54,6 +62,7 @@ class Metric(ABC):
     def __str__(self):
         return f"Metric {self.label}"
 
+    @abstractmethod
     def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
         """
         Compute measurements for a single list.
@@ -81,22 +90,15 @@ class Metric(ABC):
         else:
             return None
 
+    @abstractmethod
     def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> dict[str, float]:
-        if isinstance(values, (pa.Array, pa.ChunkedArray)):
-            values = values.to_pylist()
+        """
+        Aggregate intermediate values into summary statistics.
 
-        numeric_values = []
-        for v in values:
-            if v is not None:
-                if isinstance(v, (float, int, np.floating, np.integer)):
-                    numeric_values.append(float(v))
-                elif isinstance(v, dict) and "mean" in v:
-                    numeric_values.append(float(v["mean"]))
-
-        if not numeric_values:
-            return {"mean": 0.0}
-
-        return {"mean": float(np.mean(numeric_values))}
+        Returns:
+            A dictionary of summary statistics.
+        """
+        raise NotImplementedError()
 
 
 class ListMetric(Metric):
@@ -133,22 +135,31 @@ class ListMetric(Metric):
             return float(data)
         return None
 
-    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> dict[str, float]:
+    def summarize(
+        self, values: list[Any] | pa.Array | pa.ChunkedArray, /
+    ) -> dict[str, float | None]:
+        """
+        Summarize per-list metric values
+
+        Returns:
+            A dictionary containing mean, median, and std.
+        """
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
             values = values.to_pylist()
 
-        numeric_values = []
-        for v in values:
-            if v is not None:
-                if isinstance(v, (float, int, np.floating, np.integer)):
-                    numeric_values.append(float(v))
-                elif isinstance(v, dict) and "mean" in v:
-                    numeric_values.append(float(v["mean"]))
+        numeric_values = [
+            float(v) for v in values if isinstance(v, (int, float, np.integer, np.floating))
+        ]
 
         if not numeric_values:
-            return {"mean": 0.0}
+            return {"mean": None, "median": None, "std": None}
 
-        return {"mean": float(np.mean(numeric_values))}
+        arr = np.array(numeric_values, dtype=np.float64)
+        return {
+            "mean": float(np.mean(arr)),
+            "median": float(np.median(arr)),
+            "std": float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0,
+        }
 
 
 class GlobalMetric(Metric):
@@ -199,10 +210,13 @@ class DecomposedMetric(Metric):
     def extract_list_metrics(self, data: Any, /) -> float | None:
         return self.extract_list_metric(data)
 
-    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> float:
+    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> dict[str, float]:
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
             values = values.to_pylist()
-        return self.global_aggregate(values)
+        result = self.global_aggregate(values)
+        if isinstance(result, (float, int, np.floating, np.integer)):
+            return {"value": float(result)}
+        return result
 
     @abstractmethod
     def compute_list_data(self, output: ItemList, test: ItemList, /) -> Any:
@@ -227,7 +241,7 @@ class DecomposedMetric(Metric):
         return None
 
     @abstractmethod
-    def global_aggregate(self, values: list[Any], /) -> float:
+    def global_aggregate(self, values: list[Any], /) -> float | dict[str, float]:
         """
         Aggregate list metrics to compute a global value.
 

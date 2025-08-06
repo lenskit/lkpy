@@ -14,8 +14,9 @@ from pytest import approx, mark, raises
 from lenskit.basic import PopScorer
 from lenskit.data import ItemList
 from lenskit.metrics import NDCG, Recall
-from lenskit.metrics._accum import MetricAccumulator, to_result
+from lenskit.metrics._accum import MetricAccumulator
 from lenskit.metrics.basic import ListLength
+from lenskit.metrics.predict import RMSE
 from lenskit.splitting import split_temporal_fraction
 
 _log = logging.getLogger(__name__)
@@ -78,7 +79,6 @@ def test_metric_accum(ml_ds):
         top_10 = scores.top_n(10)
 
         recs_il = ItemList(top_10, user=[user.user_id] * len(top_10), ordered=True)
-
         acc.measure_list(recs_il, truth_il, user=user.user_id)
 
     list_metrics = acc.list_metrics()
@@ -113,7 +113,7 @@ def test_to_result_conversion():
     acc.measure_list(recs1, truth1, user="u1")
     acc.measure_list(recs2, truth2, user="u2")
 
-    result = to_result(acc)
+    result = acc.to_result()
 
     list_results = result.list_metrics()
     assert isinstance(list_results, pd.DataFrame)
@@ -131,3 +131,91 @@ def test_to_result_conversion():
 
         assert 0.0 <= g[metric_name] <= 1.0
         assert 0.0 <= summary_df.loc[metric_name, "mean"] <= 1.0
+
+
+def test_measure_list_multiple_key_fields():
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength())
+
+    acc.measure_list(ItemList([1, 2, 3], user=["u1"] * 3), ItemList([2]), user="u1", fold=1)
+    acc.measure_list(ItemList([4, 5], user=["u2"] * 2), ItemList([5]), user="u2", fold=1)
+
+    assert acc._list_keys == [("u1", 1), ("u2", 1)]
+    assert acc._key_fields == ["user", "fold"]
+
+    metrics = acc.list_metrics()
+    assert len(metrics) == 2
+    assert set(metrics.index.names) == {"user", "fold"}
+
+    summary = acc.summary_metrics()
+    assert "mean" in summary.columns
+
+
+def test_measure_list_keys_work_as_expected():
+    acc = MetricAccumulator()
+    acc.add_metric(Recall(2))
+
+    acc.measure_list(ItemList([1, 2], user=["u1"] * 2), ItemList([2]), user="u1", session="a")
+    acc.measure_list(ItemList([3, 4], user=["u1"] * 2), ItemList([3]), user="u1", session="b")
+
+    metrics = acc.list_metrics()
+    assert len(metrics) == 2
+    assert ("u1", "a") in metrics.index
+    assert ("u1", "b") in metrics.index
+
+
+def test_summary_defaults_to_mean():
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength())
+
+    acc.measure_list(ItemList([1, 2], user=["u1"] * 2), ItemList([2]), user="u1")
+    acc.measure_list(ItemList([3, 4, 5], user=["u2"] * 3), ItemList([4]), user="u2")
+
+    summary = acc.summary_metrics()
+    assert approx(summary.loc["N", "mean"]) == 2.5
+
+
+def test_duplicate_metric_labels_raise():
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength, label="dup")
+    acc.add_metric(ListLength, label="dup")
+    with raises(RuntimeError):
+        acc._validate_setup()
+
+
+def test_metric_measure_list_exception_logs_warning(caplog):
+    acc = MetricAccumulator()
+
+    class BadMetric:
+        pass
+
+    acc.add_metric(BadMetric())
+
+    with caplog.at_level(logging.WARNING):
+        acc.measure_list(ItemList([1], user=[1]), ItemList([1]), user=1)
+
+    assert any("Error computing metric" in r.message for r in caplog.records)
+
+
+def test_measure_list_mixed_result_types():
+    acc = MetricAccumulator()
+
+    class DummyMetric(ListLength):
+        label = "D"
+
+        def measure_list(self, recs, test):
+            if len(acc._list_data.get(self.label, [])) % 2 == 0:  # returns scaler
+                return 1.0
+            else:
+                return {"b": 2.0}  # returns dict
+
+        def summarize(self, values):
+            return {"mean": np.mean([v if isinstance(v, float) else v["a"] for v in values])}
+
+    acc.add_metric(DummyMetric())
+
+    acc.measure_list(ItemList([1], user=["u1"]), ItemList([1]), user="u1")
+    acc.measure_list(ItemList([2], user=["u2"]), ItemList([2]), user="u2")
+
+    df = acc.list_metrics()
+    assert "D.b" in df.columns

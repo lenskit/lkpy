@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from lenskit.data import ItemList
+from lenskit.data import ItemList, ItemListCollection
 
 from ._base import DecomposedMetric, GlobalMetric, ListMetric, Metric, MetricFunction
 
@@ -60,45 +60,35 @@ class MetricWrapper:
         else:
             raise TypeError(f"metric {self.metric} does not support list measurement")
 
-    def compute_list_data(self, list: ItemList, test: ItemList) -> Any:
-        """Compute intermediate data for a single list."""
-        if isinstance(self.metric, (DecomposedMetric, Metric)):
-            if hasattr(self.metric, "measure_list") and callable(
-                getattr(self.metric, "measure_list")
-            ):
-                return self.metric.measure_list(list, test)
-            else:
-                raise TypeError(f"metric {self.metric} does not support list data computation")
-        else:
-            raise TypeError(f"metric {self.metric} does not support list data computation")
-
-    def extract_list_metrics(self, data: Any) -> float | dict[str, float] | None:
-        """Extract per-list metrics from intermediate data."""
-        if isinstance(self.metric, (DecomposedMetric, Metric)):
-            # Use new unified interface if available, fall back to old
-            if hasattr(self.metric, "extract_list_metrics"):
-                return self.metric.extract_list_metrics(data)
-            else:
-                return data if isinstance(data, (float, dict)) else None
-        return None
-
-    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray) -> float | dict[str, float]:
+    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray) -> dict[str, float | None]:
         """Aggregate intermediate values into summary statistics."""
-        if isinstance(self.metric, (DecomposedMetric, Metric)):
-            if hasattr(self.metric, "summarize"):
-                return self.metric.summarize(values)
-            else:
-                return self._default_summarize(values)
-        else:
-            return self._default_summarize(values)
+        if hasattr(self.metric, "summarize"):
+            result = self.metric.summarize(values)
+            if isinstance(result, dict):
+                return result
+            return {"mean": float(result), "median": None, "std": None}
+        return self._default_summarize(values)
 
-    def _default_summarize(self, values) -> dict[str, float]:
+    def _default_summarize(self, values) -> dict[str, float | None]:
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
             values = values.to_pylist()
         numeric_values = [v for v in values if v is not None]
+
         if not numeric_values:
-            return {"mean": 0.0}
-        return {"mean": float(np.mean(numeric_values))}
+            return {"mean": None, "median": None, "std": None}
+
+        arr = np.array(numeric_values, dtype=np.float64)
+        return {
+            "mean": float(np.mean(arr)),
+            "median": float(np.median(arr)),
+            "std": float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0,
+        }
+
+    def measure_run(self, run: ItemListCollection, test: ItemListCollection) -> float:
+        if isinstance(self.metric, GlobalMetric):
+            return self.metric.measure_run(run, test)
+        else:
+            raise TypeError(f"metric {self.metric} does not support global measurement")
 
 
 class MetricAccumulator:
@@ -160,15 +150,14 @@ class MetricAccumulator:
 
         for wrapper in self.metrics:
             try:
-                if wrapper.is_decomposed:
-                    data = wrapper.compute_list_data(output, test)
-                    self._list_data[wrapper.label].append(data)
-                    list_metric = wrapper.extract_list_metrics(data)
-                    self._list_metrics[wrapper.label].append(list_metric)
-                else:
-                    metric_value = wrapper.measure_list(output, test)
-                    self._list_data[wrapper.label].append(metric_value)
-                    self._list_metrics[wrapper.label].append(metric_value)
+                if wrapper.is_global:
+                    self._list_data[wrapper.label].append(None)
+                    self._list_metrics[wrapper.label].append(None)
+                    continue
+
+                metric_result = wrapper.measure_list(output, test)
+                self._list_data[wrapper.label].append(metric_result)
+                self._list_metrics[wrapper.label].append(metric_result)
             except Exception as e:
                 _log.warning(f"Error computing metric {wrapper.label}: {e}")
                 self._list_data[wrapper.label].append(None)
@@ -194,18 +183,45 @@ class MetricAccumulator:
 
         data = {}
         for wrapper in self.metrics:
+            if wrapper.is_global:
+                continue
+
             metric_results = self._list_metrics[wrapper.label]
 
-            if metric_results and isinstance(metric_results[0], dict):
+            result_types = set(type(r).__name__ for r in metric_results if r is not None)
+            if len(result_types) > 1:
+                _log.warning(f"mixed result types for metric {wrapper.label}: {result_types}")
+            has_dict_results = any(isinstance(r, dict) for r in metric_results if r is not None)
+
+            if has_dict_results:
+                all_keys = set()
                 for result in metric_results:
                     if isinstance(result, dict):
-                        for sub_key, sub_value in result.items():
-                            col_name = f"{wrapper.label}.{sub_key}"
-                            if col_name not in data:
-                                data[col_name] = []
-                            data[col_name].append(sub_value)
+                        all_keys.update(result.keys())
+
+                for key in sorted(all_keys):
+                    col_name = f"{wrapper.label}.{key}"
+                    col_values = []
+                    for result in metric_results:
+                        if isinstance(result, dict):
+                            col_values.append(result.get(key))
+                        else:
+                            col_values.append(None)
+                    data[col_name] = col_values
+
             else:
-                data[wrapper.label] = metric_results
+                scalar_values = []
+                for result in metric_results:
+                    if isinstance(result, dict):
+                        scalar_values.append(None)
+                    else:
+                        scalar_values.append(result)
+
+                if not all(v is None for v in scalar_values):
+                    data[wrapper.label] = scalar_values
+
+        if not data:
+            return pd.DataFrame(index=index)
 
         df = pd.DataFrame(data, index=index)
 
@@ -213,7 +229,7 @@ class MetricAccumulator:
             defaults = {
                 wrapper.label: wrapper.default
                 for wrapper in self.metrics
-                if wrapper.default is not None
+                if wrapper.default is not None and not wrapper.is_global
             }
             df = df.fillna(defaults)
 
@@ -223,6 +239,9 @@ class MetricAccumulator:
         summaries = {}
 
         for wrapper in self.metrics:
+            if wrapper.is_global:
+                continue
+
             data = self._list_data[wrapper.label]
             clean_data = [x for x in data if x is not None]
 
@@ -235,9 +254,9 @@ class MetricAccumulator:
                         summaries[wrapper.label] = {"mean": summary}
                 except Exception as e:
                     _log.warning(f"Error summarizing metric {wrapper.label}: {e}")
-                    summaries[wrapper.label] = {"mean": 0.0}
+                    summaries[wrapper.label] = {"mean": wrapper.default or 0.0}
             else:
-                summaries[wrapper.label] = {"mean": 0.0}
+                summaries[wrapper.label] = {"mean": wrapper.default or 0.0}
 
         if summaries:
             df = pd.DataFrame(summaries).T
@@ -259,8 +278,10 @@ class MetricAccumulator:
         if label is None:
             if isinstance(m, Metric):
                 wl = m.label
-            else:
+            elif isinstance(m, type):
                 wl = m.__name__  # type: ignore
+            else:
+                wl = type(m).__name__
         else:
             wl = label
 
@@ -286,16 +307,15 @@ class MetricAccumulator:
                 raise RuntimeError(f"duplicate metric: {lbl}")
             seen.add(lbl)
 
+    def to_result(self):
+        """
+        Convert this MetricAccumulator into a RunAnalysisResult.
+        """
+        from .bulk import RunAnalysisResult
 
-def to_result(acc: MetricAccumulator):
-    """
-    Convert a MetricAccumulator into a RunAnalysisResult.
-    """
-    from .bulk import RunAnalysisResult
+        list_results = self.list_metrics(fill_missing=False)
+        global_results = self.summary_metrics()["mean"]
 
-    list_results = acc.list_metrics(fill_missing=False)
-    global_results = acc.summary_metrics()["mean"]
+        defaults = {wrapper.label: wrapper.default for wrapper in self.metrics}
 
-    defaults = {wrapper.label: wrapper.default for wrapper in acc.metrics}
-
-    return RunAnalysisResult(list_results, global_results, defaults)  # type: ignore
+        return RunAnalysisResult(list_results, global_results, defaults)  # type: ignore
