@@ -217,23 +217,7 @@ class RunAnalysis:
             try:
                 if metric_wrapper.is_global:
                     result = metric_wrapper.measure_run(outputs, test)
-                elif metric_wrapper.is_decomposed:
-                    intermediate_data = self._accumulator._list_data[metric_wrapper.label]
-                    clean_data = [x for x in intermediate_data if x is not None]
-                    if clean_data:
-                        summary = metric_wrapper.summarize(clean_data)
-                        if isinstance(summary, dict):
-                            result = summary.get("mean", 0.0)
-                        else:
-                            result = float(summary)
-                    else:
-                        result = metric_wrapper.default or 0.0
-                else:
-                    _log.warning("unexpected metric type for %s", metric_wrapper.label)
-                    result = 0.0
-
-                global_results[metric_wrapper.label] = result
-
+                    global_results[metric_wrapper.label] = result
             except Exception as e:
                 _log.warning("error computing global metric %s: %s", metric_wrapper.label, e)
                 global_results[metric_wrapper.label] = metric_wrapper.default or 0.0

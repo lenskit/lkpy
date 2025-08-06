@@ -236,7 +236,7 @@ class DecomposedMetric(Metric):
             The per-list metric, or ``None`` if this metric does not compute
             per-list metrics.
 
-        Use `extract_list_metrics` in `Metric` for new implementations.
+        Implement :meth:`Metric.extract_list_metrics` in new implementations.
         """
         return None
 
@@ -245,6 +245,6 @@ class DecomposedMetric(Metric):
         """
         Aggregate list metrics to compute a global value.
 
-        Use `summarize` in `Metric` for new implementations.
+        Implement :meth:`Metric.summarize` in new implementations.
         """
         raise NotImplementedError()
