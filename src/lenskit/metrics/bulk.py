@@ -208,19 +208,24 @@ class RunAnalysis:
 
         list_results = self._accumulator.list_metrics(fill_missing=False)
 
-        global_metrics = [m for m in self._accumulator.metrics if m.is_global or m.is_decomposed]
+        global_metrics = [m for m in self._accumulator.metrics if m.is_global]
 
         _log.debug("computing %d global metrics", len(global_metrics))
 
         global_results = {}
         for metric_wrapper in global_metrics:
             try:
-                if metric_wrapper.is_global:
-                    result = metric_wrapper.measure_run(outputs, test)
-                    global_results[metric_wrapper.label] = result
+                result = metric_wrapper.measure_run(outputs, test)
+                global_results[metric_wrapper.label] = result
             except Exception as e:
                 _log.warning("error computing global metric %s: %s", metric_wrapper.label, e)
                 global_results[metric_wrapper.label] = metric_wrapper.default or 0.0
+
+        summary_df = self._accumulator.summary_metrics()
+        if not summary_df.empty:
+            for col in summary_df.columns:
+                if "." not in col:
+                    global_results.update(summary_df[col].to_dict())
 
         global_results = pd.Series(global_results, dtype=np.float64)
 

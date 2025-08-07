@@ -43,16 +43,6 @@ class GiniBase(DecomposedMetric, RankingMetricBase):
         else:
             self.item_count = len(items)
 
-    @override
-    def measure_list(self, output: ItemList, test, **kwargs):
-        # collect per-list intermediate data for summarization
-        return self.compute_list_data(output, test)
-
-    @override
-    def summarize(self, intermediate_data):
-        # aggregate collected data into a final metric value
-        return self.global_aggregate(intermediate_data)
-
 
 class ListGini(GiniBase):
     """

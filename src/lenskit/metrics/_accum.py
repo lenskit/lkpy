@@ -38,8 +38,10 @@ class MetricWrapper:
 
     @property
     def is_listwise(self) -> bool:
-        "Check if this metric is listwise."
-        return isinstance(self.metric, (ListMetric, Callable))
+        "Check if this metric is listwise (includes ListMetric and callable functions)."
+        return isinstance(self.metric, (ListMetric, Callable)) or (
+            isinstance(self.metric, Metric) and hasattr(self.metric, "measure_list")
+        )
 
     @property
     def is_global(self) -> bool:
@@ -53,7 +55,7 @@ class MetricWrapper:
 
     def measure_list(self, list: ItemList, test: ItemList) -> float | dict[str, float]:
         """Measure a single list and return metric result(s)."""
-        if isinstance(self.metric, ListMetric):
+        if isinstance(self.metric, Metric):
             return self.metric.measure_list(list, test)
         elif isinstance(self.metric, Callable):
             return self.metric(list, test)
@@ -85,6 +87,7 @@ class MetricWrapper:
         }
 
     def measure_run(self, run: ItemListCollection, test: ItemListCollection) -> float:
+        """Only global metrics support run-level measurement."""
         if isinstance(self.metric, GlobalMetric):
             return self.metric.measure_run(run, test)
         else:
@@ -314,8 +317,16 @@ class MetricAccumulator:
         from .bulk import RunAnalysisResult
 
         list_results = self.list_metrics(fill_missing=False)
-        global_results = self.summary_metrics()["mean"]
 
+        summary_df = self.summary_metrics()
+        global_results = {}
+
+        if not summary_df.empty:
+            for col in summary_df.columns:
+                if "." not in col:
+                    global_results.update(summary_df[col].to_dict())
+
+        global_results = pd.Series(global_results, dtype=np.float64)
         defaults = {wrapper.label: wrapper.default for wrapper in self.metrics}
 
         return RunAnalysisResult(list_results, global_results, defaults)  # type: ignore
