@@ -51,10 +51,14 @@ class MetricWrapper:
         "Check if this metric is decomposed."
         return isinstance(self.metric, DecomposedMetric)
 
-    def measure_list(self, list: ItemList, test: ItemList) -> float | dict[str, float]:
+    def measure_list(
+        self, list: ItemList | None, test: ItemList | None
+    ) -> float | dict[str, float]:
         """Measure a single list and return metric result(s)."""
-        if list is None or test is None or len(list) == 0 or len(test) == 0:
-            return np.nan
+        if list is None:
+            list = ItemList([])
+        if test is None:
+            test = ItemList([])
         if isinstance(self.metric, Metric):
             return self.metric.measure_list(list, test)
         elif isinstance(self.metric, Callable):
