@@ -12,6 +12,7 @@ from typing import Callable, ParamSpec
 
 from lenskit.data import ItemList
 
+from ._accum import MetricAccumulator
 from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
 from ._quick import quick_measure_model
 from .basic import ListLength, TestItemCount
@@ -37,6 +38,7 @@ from .ranking import (
 __all__ = [
     "Metric",
     "MetricFunction",
+    "MetricAccumulator",
     "ListMetric",
     "GlobalMetric",
     "RankingMetricBase",
