@@ -6,102 +6,141 @@
 
 //! Support for reading invalid JSON that is actually valid Python expression syntax.
 
-use std::any::Any;
+use std::borrow::Cow;
 
+use log::*;
 use pyo3::{
-    exceptions::{PyTypeError, PyValueError},
+    exceptions::PyValueError,
     prelude::*,
-    types::{PyBool, PyComplex, PyDict, PyFloat, PyInt, PyList, PyNone, PyString},
+    types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyNone, PyString},
 };
 
-use rustpython_ast::{Constant, Expr, ExprDict, ExprList};
-use rustpython_parser::Parse;
+use serde_json::{Number, Value};
 
 /// Parse a “pyson” object.
 #[pyfunction]
 pub fn pyon_loads<'py>(py: Python<'py>, text: &str) -> PyResult<Bound<'py, PyAny>> {
-    let ast = ExprDict::parse(text, "internal")
-        .map_err(|_e| PyErr::new::<PyValueError, _>("Python parse error"))?;
-    let obj = realize_dict(py, ast)?;
-    Ok(obj)
+    match pyon_parser::expr(text) {
+        Ok(ast) => {
+            let obj = realize_value(py, ast)?;
+            Ok(obj)
+        }
+        Err(e) => {
+            error!(
+                "parse error at {}:{}: found {}, expected {:}",
+                e.location.line,
+                e.location.column,
+                text.chars()
+                    .nth(e.location.offset)
+                    .map(|c| format!("“{}”", c))
+                    .unwrap_or("<EOF>".into()),
+                e.expected
+            );
+            Err(PyValueError::new_err(format!("parse error: {:}", e)))
+        }
+    }
 }
 
-fn realize_value<'py>(py: Python<'py>, ast: Expr) -> PyResult<Bound<'py, PyAny>> {
+peg::parser! {
+    grammar pyon_parser() for str {
+        rule _ = quiet!{[' ' | '\n' | '\t' | '\r' | '\n']*}
+
+        rule digit() = ['0'..='9']
+        rule digits() -> &'input str
+        = $(digit()+)
+
+        rule number() -> Value
+        = e:$("-"? digits() "." digits()) {Value::Number(Number::from_f64(e.parse::<f64>().unwrap()).unwrap())}
+        / e:$("-" digits()) {Value::Number(e.parse::<i64>().unwrap().into())}
+        / e:digits() {Value::Number(e.parse::<u64>().unwrap().into())}
+
+        rule boolean() -> Value
+        = ("true" / "True") { Value::Bool(true)}
+        / ("false" / "False") { Value::Bool(false)}
+
+        rule null() -> Value
+        = ("null" / "None") { Value::Null}
+
+        rule _string() -> String
+        = "b"? "'" parts:((_str_part_sq() / echar())*) "'" {parts.into_iter().collect()}
+        / "b"? "\"" parts:((_str_part_dq() / echar())*) "\"" {parts.into_iter().collect()}
+
+        rule _str_part_sq() -> Cow<'input, str>
+        = s:$([^'\'' | '\\']+) {Cow::Borrowed(s)}
+
+        rule _str_part_dq() -> Cow<'input, str>
+        = s:$([^'"' | '\\']+) {Cow::Borrowed(s)}
+
+        rule string() -> Value
+        = s:_string() {Value::String(s)}
+
+        rule echar() -> Cow<'input, str>
+        = "\\t" {"\t".into()}
+        / "\\r" {"\r".into()}
+        / "\\n" {"\n".into()}
+        / "\\u" x:$(['a'..='f'| 'A'..='F'| '0'..='9']*<4,4>) {
+            let s = format!("0x{}", x);
+            let c = u32::from_str_radix(x, 16).expect("invalid hex");
+            String::from_iter([char::from_u32(c).expect("invalid cahracter")]).into()
+        }
+        / "\\U" x:$(['a'..='f'| 'A'..='F'| '0'..='9']*<8,8>) {
+            let s = format!("0x{}", x);
+            let c = u32::from_str_radix(x, 16).expect("invalid hex");
+            String::from_iter([char::from_u32(c).expect("invalid cahracter")]).into()
+        }
+        / "\\" c:$([_]) {c.into()}
+
+        rule list() -> Value
+        = "[" e:(expr() ** ",") _ ","? "]" {Value::Array(e)}
+
+        rule object() -> Value
+        = "{" entries:(object_entry() ** ",") _ ","? "}" {Value::Object(entries.into_iter().collect())}
+
+        rule object_entry() -> (String, Value)
+        = _ k:_string() _ ":" v:expr() {(k, v)}
+
+        rule _expr() -> Value
+        = null()
+        / boolean()
+        / number()
+        / string()
+        / list()
+        / object()
+
+        pub rule expr() -> Value = _ e:_expr() _ {e}
+}
+}
+
+fn realize_value<'py>(py: Python<'py>, ast: Value) -> PyResult<Bound<'py, PyAny>> {
     match ast {
-        Expr::Constant(c) => realize_constant(py, c.value),
-        Expr::List(list) => realize_list(py, list),
-        Expr::Dict(dict) => realize_dict(py, dict),
-        _ => Err(PyErr::new::<PyValueError, _>(format!(
-            "unsupported expression type {:?}",
-            ast.type_id()
-        ))),
-    }
-}
-
-fn realize_constant<'py>(py: Python<'py>, c: Constant) -> PyResult<Bound<'py, PyAny>> {
-    match c {
-        Constant::Bool(val) => Ok(PyBool::new(py, val).to_owned().into_any()),
-        Constant::Bytes(val) => Ok(PyString::new(py, str::from_utf8(&val)?).into_any()),
-        Constant::None => Ok(PyNone::get(py).to_owned().into_any()),
-        Constant::Str(s) => Ok(PyString::new(py, &s).into_any()),
-        Constant::Int(big_int) => {
-            let n: i64 = big_int
-                .try_into()
-                .map_err(|_e| PyErr::new::<PyValueError, _>("integer out of bounds"))?;
-            Ok(PyInt::new(py, n).into_any())
-        }
-        Constant::Tuple(constants) => {
-            let list = PyList::empty(py);
-            for elt in constants {
-                list.append(realize_constant(py, elt)?)?;
+        Value::Null => Ok(PyNone::get(py).to_owned().into_any()),
+        Value::Bool(val) => Ok(PyBool::new(py, val).to_owned().into_any()),
+        Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Ok(PyInt::new(py, i).into_any())
+            } else if let Some(x) = n.as_f64() {
+                Ok(PyFloat::new(py, x).into_any())
+            } else {
+                Err(PyValueError::new_err(format!("invalid number {:?}", n)))
             }
-            Ok(list.into_any())
         }
-        Constant::Float(x) => Ok(PyFloat::new(py, x).into_any()),
-        Constant::Complex { real, imag } => Ok(PyComplex::from_doubles(py, real, imag).into_any()),
-        Constant::Ellipsis => Err(PyErr::new::<PyValueError, _>("ellipsis not supported")),
-    }
-}
+        Value::String(s) => Ok(PyString::new(py, &s).into_any()),
+        Value::Array(list) => {
+            let out = PyList::empty(py);
+            for elt in list {
+                out.append(realize_value(py, elt)?)?;
+            }
 
-fn realize_list<'py>(py: Python<'py>, list: ExprList) -> PyResult<Bound<'py, PyAny>> {
-    let out = PyList::empty(py);
-
-    for elt in list.elts {
-        out.append(realize_value(py, elt)?)?;
-    }
-
-    Ok(out.into_any())
-}
-
-fn realize_dict<'py>(py: Python<'py>, dict: ExprDict) -> PyResult<Bound<'py, PyAny>> {
-    let out = PyDict::new(py);
-
-    for (key, val) in dict.keys.into_iter().zip(dict.values.into_iter()) {
-        if let Some(key) = key {
-            let key = expect_string(key)?;
-            let val = realize_value(py, val)?;
-            out.set_item(key, val)?;
-        } else {
-            return Err(PyErr::new::<PyValueError, _>(
-                "dictionary splat not supported",
-            ));
+            Ok(out.into_any())
         }
-    }
+        Value::Object(dict) => {
+            let out = PyDict::new(py);
 
-    Ok(out.into_any())
-}
+            for (k, v) in dict {
+                out.set_item(k, realize_value(py, v)?)?;
+            }
 
-fn expect_string(val: Expr) -> PyResult<String> {
-    if let Some(c) = val.constant_expr() {
-        match c.value {
-            Constant::Str(s) => Ok(s),
-            Constant::Bytes(s) => Ok(String::from_utf8(s)?),
-            _ => Err(PyErr::new::<PyTypeError, _>(format!(
-                "expected string, got {:?}",
-                c.kind
-            ))),
+            Ok(out.into_any())
         }
-    } else {
-        Err(PyErr::new::<PyValueError, _>("expression is not constant"))
     }
 }
