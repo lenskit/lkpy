@@ -38,10 +38,8 @@ class MetricWrapper:
 
     @property
     def is_listwise(self) -> bool:
-        "Check if this metric is listwise (includes ListMetric and callable functions)."
-        return isinstance(self.metric, (ListMetric, Callable)) or (
-            isinstance(self.metric, Metric) and hasattr(self.metric, "measure_list")
-        )
+        "Check if this metric is listwise."
+        return isinstance(self.metric, (ListMetric, Callable))
 
     @property
     def is_global(self) -> bool:
@@ -72,6 +70,7 @@ class MetricWrapper:
         return self._default_summarize(values)
 
     def _default_summarize(self, values) -> dict[str, float | None]:
+        """Calculate summary statistics."""
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
             values = values.to_pylist()
         numeric_values = [v for v in values if v is not None]
