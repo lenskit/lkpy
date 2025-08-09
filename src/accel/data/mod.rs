@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: MIT
 
 //! Data management accelerators.
-use arrow::{
-    array::{make_array, ArrayData},
-    pyarrow::PyArrowType,
-};
-use ndarray::ArrayD;
 use pyo3::prelude::*;
 
 mod index;
