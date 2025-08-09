@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.compute as pc
 from more_itertools import chunked
 from xopen import xopen
 
@@ -104,9 +105,39 @@ def load_steam(*files: Path, reviews: bool = False) -> Dataset:
 
 
 def _load_au_steam(interactions: Path, reviews: Path | None) -> Dataset:
-    _dsb = DatasetBuilder()
+    dsb = DatasetBuilder()
 
-    _ui_data = _read_table(interactions, AU_USERS_ITEMS_SCHEMA)
+    ui_data = _read_table(interactions, AU_USERS_ITEMS_SCHEMA)
+    _log.info("loaded Steam data", users=ui_data.num_rows)
+
+    items = ui_data.column("items")
+
+    _log.debug("loading items")
+    ii_flat_chunks = [c.flatten() for c in items.chunks]
+    ii_tbl: pa.Table = pa.table(
+        {
+            "item_id": pa.chunked_array(c.field("item_id") for c in ii_flat_chunks),
+            "item_name": pa.chunked_array(c.field("item_name") for c in ii_flat_chunks),
+        }
+    )
+    item_info: pa.Table = ii_tbl.group_by("item_id").aggregate([("item_name", "distinct")])
+    item_info = item_info.append_column(
+        "name", pc.list_element(item_info.column("item_name_distinct"), 0)
+    ).drop_columns("item_name_distinct")
+    item_info = item_info.filter(item_info.column("item_id").is_valid())
+    _log.debug("item schema: %s", item_info.schema)
+    _log.info("adding items", count=item_info.num_rows)
+    dsb.add_entities("item", item_info.column("item_id"))
+    dsb.add_scalar_attribute("item", "name", item_info)
+
+    _log.info("adding users", count=ui_data.num_rows)
+    dsb.add_entities("user", pc.unique(ui_data.column("user_id")))
+    dsb.add_scalar_attribute("user", "steam_id", ui_data.select(["user_id", "steam_id"]))
+
+    _log.info("adding user-item interactions")
+    # TODO: make DSB work better with CSR-shaped data
+
+    return dsb.build()
 
 
 def _load_all_steam(games: Path | None, reviews: Path, *, include_reviews: bool) -> Dataset:
