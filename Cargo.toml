@@ -16,6 +16,7 @@ pyo3-log = "^0.12"
 
 rayon = "^1.10"
 
+hashbrown = "^0.15"
 ordered-float = "^5"
 rustc-hash = "^2.1.1"
 

@@ -10,7 +10,7 @@ import numpy as np
 import pyarrow as pa
 
 from lenskit.data.matrix import SparseRowArray
-from lenskit.data.types import NPMatrix, NPVector
+from lenskit.data.types import ID, NPMatrix, NPVector
 from lenskit.funksvd import FunkSVDTrainingData, FunkSVDTrainingParams
 from lenskit.logging import Progress
 
@@ -38,6 +38,16 @@ class _DataAccelerator(Protocol):
         Efficiently create a boolean array that is true everywhere except ``indices``.
         """
         ...
+
+    class IDIndex:
+        """
+        Backend implementation for ID indexes / vocabularies.
+        """
+        def __init__(self, ids: pa.Array | None = None): ...
+        def get_index(self, id: ID): ...
+        def get_indexes(self, ids: pa.Array | None = None): ...
+        def id_array(self) -> pa.Array: ...
+        def __len__(self) -> int: ...
 
 data: _DataAccelerator
 
