@@ -8,7 +8,7 @@
 
 use arrow_schema::DataType;
 use pyo3::{
-    exceptions::{PyTypeError, PyValueError},
+    exceptions::{PyOverflowError, PyTypeError, PyValueError},
     prelude::*,
 };
 
@@ -18,6 +18,7 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use hashbrown::{hash_table::Entry, HashTable};
+use log::*;
 
 mod storage;
 mod storage_int;
@@ -50,6 +51,7 @@ impl IDIndex {
     fn from_data(data: PyArrowType<ArrayData>) -> PyResult<Self> {
         let arr = make_array(data.0);
         let ids: Box<dyn IDArray> = match arr.data_type() {
+            DataType::Null if arr.len() == 0 => return Ok(Self::empty()),
             DataType::Int16 => Box::new(IDPrimArray::new(arr.as_primitive::<Int16Type>().clone())),
             DataType::UInt16 => {
                 Box::new(IDPrimArray::new(arr.as_primitive::<UInt16Type>().clone()))
@@ -107,7 +109,16 @@ impl IDIndex {
 
     /// Look up a single index by ID.
     fn get_index<'py>(&self, py: Python<'py>, id: Bound<'py, PyAny>) -> PyResult<Option<u32>> {
-        let wrap = self.ids.wrap_value(id)?;
+        let wrap = match self.ids.wrap_value(id) {
+            Ok(w) => w,
+            Err(e)
+                if e.is_instance_of::<PyTypeError>(py)
+                    || e.is_instance_of::<PyOverflowError>(py) =>
+            {
+                return Ok(None)
+            }
+            Err(e) => return Err(e),
+        };
         let hash = wrap.hash(0);
         let res = self.index.find(hash, |jr| wrap.compare_with_entry(0, *jr));
         Ok(res.map(|ir| *ir))
