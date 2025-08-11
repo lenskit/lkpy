@@ -1,6 +1,14 @@
 [tools]
+rust = "stable"
 shfmt = "latest"
 uv = "latest"
+# "cargo:usage-cli" = "latest"
+
+[settings]
+experimental = true
+use_file_shell_for_executable_tasks = true
+windows_default_file_shell_args = "mise/runtask.cmd"
+windows_executable_extensions = [ "exe", "bat", "cmd", "com", "ps1", "vbs", "py" ]
 
 [settings.python]
 uv_venv_auto = true
