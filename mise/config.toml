@@ -1,3 +1,6 @@
 [tools]
 shfmt = "latest"
 uv = "latest"
+
+[settings.python]
+uv_venv_auto = true
