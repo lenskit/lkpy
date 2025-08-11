@@ -47,7 +47,7 @@ def test_add_repeated_interactions():
 
 def test_bad_interaction_matrix_call():
     dsb = DatasetBuilder()
-    with raises(DataError):
+    with raises(ValueError):
         dsb.add_interactions(
             "click",
             pd.DataFrame(

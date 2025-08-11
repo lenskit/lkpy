@@ -23,7 +23,7 @@ from typing_extensions import Literal, overload, override
 
 from lenskit._accel import NegativeSampler, RowColumnSet
 from lenskit._accel import data as _data_accel
-from lenskit.diagnostics import DataError, FieldError
+from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 
@@ -124,7 +124,7 @@ class RelationshipSet:
             count_column = self._table.column("count").combine_chunks().slice(0)
             count_column.fill_null(pa.scalar(1, type=pa.int8()))
             count = pc.sum(count_column)
-            return count
+            return count.as_py()
 
         return self._table.num_rows
 
@@ -213,7 +213,7 @@ class RelationshipSet:
             raise FieldError(self.name, col_entity)
 
         if col_entity == row_entity:
-            raise DataError("row and column entity should not be the same")
+            raise ValueError("row and column entity should not be the same")
 
         e_dict: dict[str, str | None]
         e_dict = {row_entity: None, col_entity: None}
@@ -224,17 +224,17 @@ class RelationshipSet:
             attributes=self.schema.attributes,
             remove_duplicates=self.schema.remove_duplicates,
         )
-        new_table = self._table.combine_chunks()
+        new_table = self._table
 
         if "timestamp" in new_table.column_names:
             new_table = new_table.sort_by([("timestamp", "ascending")])
 
         if "count" not in new_table.column_names:
             new_table = new_table.add_column(
-                new_table.num_columns, "added_count", pa.array(np.ones(new_table.num_rows))
+                new_table.num_columns, "count", pa.array(np.ones(new_table.num_rows))
             )
         else:
-            null_filled = new_table["count"].fill_null(pa.scalar(1, type=pa.int8()))
+            null_filled = new_table["count"].fill_null(1)
             new_table = new_table.set_column(
                 new_table.schema.get_field_index("count"),
                 "count",
@@ -244,42 +244,26 @@ class RelationshipSet:
         group_keys = [entity + "_num" for entity in e_dict]
         table_group = new_table.group_by(group_keys)
 
-        repeat_filter = new_table.add_column(
-            0, "_row_number", pa.array(np.arange(new_table.num_rows))
-        )
-        repeat_filter = repeat_filter.group_by(group_keys).aggregate([("_row_number", "max")])
-        repeat_filter = repeat_filter.sort_by([("_row_number_max", "ascending")])
+        aggregates: list[tuple[str, str]]
+        column_renames: dict[str, str]
+        aggregates = []
+        column_renames = {}
 
         if "timestamp" in new_table.column_names:
-            table_timestamp = table_group.aggregate([("timestamp", "max"), ("timestamp", "min")])
-
-            timestamp_rename = {"timestamp_max": "timestamp", "timestamp_min": "first_timestamp"}
-            table_timestamp = table_timestamp.rename_columns(timestamp_rename)
-            new_table = new_table.drop("timestamp")
-
-            new_table = new_table.join(table_timestamp, keys=group_keys)
-
-        if "count" in new_table.column_names:
-            table_count = table_group.aggregate([("count", "sum")])
-
-            table_count = table_count.rename_columns({"count_sum": "count"})
-            new_table = new_table.drop("count")
-
-            new_table = new_table.join(table_count, keys=group_keys)
-
-        else:
-            table_count = table_group.aggregate(
-                [("added_count", "count", pc.CountOptions(mode="all"))]
+            aggregates.extend([("timestamp", "max"), ("timestamp", "min")])
+            column_renames.update(
+                {"timestamp_max": "timestamp", "timestamp_min": "first_timestamp"}
             )
 
-            table_count = table_count.rename_columns({"added_count_count": "count"})
-            new_table = new_table.drop("added_count")
+        if "count" in new_table.column_names:
+            aggregates.append(("count", "sum"))
+            column_renames.update({"count_sum": "count"})
 
-            new_table = new_table.join(table_count, keys=group_keys)
+        if aggregates:
+            aggregated_table = table_group.aggregate(aggregates)
+            aggregated_table = aggregated_table.rename_columns(column_renames)
 
-        new_table = new_table.take(repeat_filter.column("_row_number_max"))
-
-        return MatrixRelationshipSet(self.name, self._vocabularies, matrix_schema, new_table)
+        return MatrixRelationshipSet(self.name, self._vocabularies, matrix_schema, aggregated_table)
 
 
 class MatrixRelationshipSet(RelationshipSet):
