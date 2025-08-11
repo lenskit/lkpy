@@ -16,9 +16,10 @@ done
 
 if ((${options[h]})); then
     cat <<EOD
-mise run build:sdist [-cdh]
+mise run build:sdist [-scdh]
 
 Options:
+    -s      build source dist only
     -c      clean staged sources before building
     -d      create dynamically-versioned sdist
     -h      print this help message
@@ -53,5 +54,10 @@ if ((${options[d]})); then
     cd "$STAGE_SOURCE"
 fi
 
-msg "building sdist"
-exec uv build --sdist "${build_args[@]}"
+if ((${options[s]})); then
+    msg "setting to only build source dist"
+    build_args+="--sdist"
+fi
+
+msg "building distribution"
+echo-run uv build "${build_args[@]}"
