@@ -137,7 +137,6 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
                 if issubclass(cls, tcls):  # type: ignore
                     return True
             elif isinstance(typ, type):
-                print(typ, type(typ))
                 if issubclass(typ, tcls):  # type: ignore
                     return True
         elif typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721

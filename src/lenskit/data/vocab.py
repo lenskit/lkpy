@@ -157,7 +157,6 @@ class Vocabulary:
     ) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         "Look up the numbers for an array of terms or IDs."
         term_arr = pa.array(terms)  # type: ignore
-        print(term_arr)
         nums = self._index.get_indexes(term_arr)  # type: ignore
         if missing == "error" and nums.null_count:
             raise KeyError(f"{nums.null_count} invalid keys")
