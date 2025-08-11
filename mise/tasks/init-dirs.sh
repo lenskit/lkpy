@@ -1,5 +1,5 @@
-#!/bin/bash
-#MISE description="Initialize output directories."
+#!/usr/bin/env bash
+#MISE description="Initialize output directories"
 
 OUT_DIRS=(build output dist)
 
