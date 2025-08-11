@@ -1,0 +1,3 @@
+[tools]
+shfmt = "latest"
+uv = "latest"
