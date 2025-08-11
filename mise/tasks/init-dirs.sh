@@ -5,7 +5,7 @@ OUT_DIRS=(build output dist)
 
 set -euo pipefail
 
-for dir in "$OUT_DIRS[@]"; do
+for dir in "${OUT_DIRS[@]}"; do
     mkdir -p "$dir"
     if [[ ! -f "$dir/CACHEDIR.TAG" ]]; then
         cat >"$dir/CACHEDIR.TAG" <<TAG
