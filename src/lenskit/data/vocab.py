@@ -269,7 +269,7 @@ class Vocabulary:
         return self._index.get_index(key) is not None  # type: ignore
 
     def __iter__(self) -> Iterator[object]:
-        return iter(self._array)
+        return (t.as_py() for t in self._array)
 
     def __len__(self) -> int:
         return self.size
