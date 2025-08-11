@@ -4,6 +4,8 @@
 
 set -eo pipefail
 
+. "$MISE_PROJECT_ROOT/mise/task-functions.sh"
+
 declare -A options
 declare -a build_args=()
 STAGE_SOURCE=build/staged-source
@@ -14,7 +16,7 @@ done
 
 if ((${options[h]})); then
     cat <<EOD
-mise run build:sdist [-vch]
+mise run build:sdist [-cdh]
 
 Options:
     -c      clean staged sources before building
@@ -25,30 +27,31 @@ EOD
 fi
 
 if ((${options[d]})); then
-    if [[ -n "$(git status -u --porcelain)" ]]; then
-        echo "dynamically-versioned build requires fully-committed source" >&2
+    if ! git-is-clean; then
+        msg "dynamically-versioned build requires fully-committed source"
         exit 3
     fi
 
     if ((${options[c]})); then
-        echo "cleaning $STAGE_SOURCE"
+        msg "cleaning $STAGE_SOURCE"
         rm -rf "$STAGE_SOURCE"
     fi
 
-    echo "staging sources"
+    msg "staging sources"
     git archive --format=tar --prefix=staged-source/ HEAD |
         tar -C build -xf -
     if (($?)); then
-        echo "source archive failed" >&2
+        msg "source archive failed"
         exit 10
     fi
 
-    echo "updating version"
-    mise run version -- --update "$STAGED_SOURCE" || exit 11
+    msg "updating version"
+    mise run version -- --update "$STAGE_SOURCE" || exit 11
 
-    echo "entering staged source directory"
+    msg "entering staged source directory"
     build_args+=(-o "$PWD/dist")
+    cd "$STAGE_SOURCE"
 fi
 
-echo "building sdist"
+msg "building sdist"
 exec uv build --sdist "${build_args[@]}"
