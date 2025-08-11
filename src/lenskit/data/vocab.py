@@ -110,6 +110,7 @@ class Vocabulary:
         """
         if self._pd_index is None:
             self._pd_index = pd.Index(self._array.to_numpy(zero_copy_only=False))
+            self._pd_index.name = f"{self.name}_id"
         return self._pd_index
 
     @property
