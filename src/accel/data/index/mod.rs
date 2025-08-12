@@ -129,17 +129,20 @@ impl IDIndex {
         let arr = make_array(ids.0);
         let n = arr.len();
         let wrap = self.ids.wrap_array(arr)?;
-        let mut rb = UInt32Builder::with_capacity(n);
+        let mut rb = Int32Builder::with_capacity(n);
         // TODO: parallelize index lookup
         for i in 0..n {
             let hash = wrap.hash(i);
             if let Some(ir) = self.index.find(hash, |jr| wrap.compare_with_entry(i, *jr)) {
-                rb.append_value(*ir);
+                rb.append_value(*ir as i32);
             } else {
                 rb.append_null();
             }
         }
-        Ok(rb.finish().into_data().into())
+        let numbers = rb.finish();
+        trace!("resolved with {} nulls", numbers.null_count());
+        trace!("validity mask: {:?}", numbers.nulls());
+        Ok(numbers.into_data().into())
     }
 
     /// Get the ID array.

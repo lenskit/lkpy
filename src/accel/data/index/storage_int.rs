@@ -14,6 +14,8 @@ use arrow::compute::cast;
 use pyo3::{exceptions::PyTypeError, prelude::*, types::PyInt};
 use rustc_hash::FxHasher;
 
+use log::*;
+
 use super::storage::{IDArray, WrappedData};
 
 /// ID array implementation for primitive (integer) IDs.
@@ -73,6 +75,12 @@ where
         arr: arrow::array::ArrayRef,
     ) -> PyResult<Box<dyn WrappedData + 'a>> {
         // convert the array to our type
+        trace!(
+            "casting {} IDs from {} to {}",
+            arr.len(),
+            arr.data_type(),
+            self.array.data_type()
+        );
         let arr = cast(&arr, self.array.data_type())
             .map_err(|e| PyTypeError::new_err(format!("error castting arrays: {}", e)))?;
         let arr: &PrimitiveArray<T> = arr.as_primitive();
