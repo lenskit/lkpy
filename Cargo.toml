@@ -10,7 +10,7 @@ path = "src/accel/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-log = "^0.4"
+log = { version="^0.4", features=["release_max_level_debug"] }
 pyo3 = { version = "^0.25", features = ["extension-module", "abi3-py311"] }
 pyo3-log = "^0.12"
 
