@@ -492,7 +492,8 @@ class Dataset:
             A data frame indexed by item ID with the interaction statistics. See
             :ref:`interaction-stats` for a description of the columns returned.
 
-            The index is the vocabulary, so ``iloc`` works with item numbers.
+            The index is aligned with the vocabulary, so ``iloc`` works with item
+            numbers.
         """
         iset = self.interactions().matrix()
         if iset.col_type != "item":
