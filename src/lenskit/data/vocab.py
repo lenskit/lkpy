@@ -16,10 +16,16 @@ from typing import Hashable, Iterable, Iterator, Literal, Sequence, overload
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.compute as pc
 from numpy.typing import ArrayLike, NDArray
+from structlog.stdlib import BoundLogger
 
-from .. import _accel
+from lenskit import _accel
+from lenskit.logging import get_logger, trace
+
 from .types import ID, IDArray, IDSequence
+
+_log = get_logger(__name__)
 
 
 class Vocabulary:
@@ -62,6 +68,7 @@ class Vocabulary:
     "Internal index."
     _hash: str | None
     "Checksum of index data for fast equivalence testing."
+    _log: BoundLogger
 
     def __init__(
         self,
@@ -71,6 +78,7 @@ class Vocabulary:
         reorder: bool = True,
     ):
         self.name = name
+        self._log = _log.bind(entity=name)
         key_arr: pa.Array
         if keys is None:
             key_arr = pa.array([], type=pa.int32())
@@ -158,10 +166,11 @@ class Vocabulary:
         "Look up the numbers for an array of terms or IDs."
         term_arr = pa.array(terms)  # type: ignore
         nums = self._index.get_indexes(term_arr)  # type: ignore
+        trace(self._log, "resolved %d IDs, %d invalid", len(term_arr), nums.null_count)
         if missing == "error" and nums.null_count:
             raise KeyError(f"{nums.null_count} invalid keys")
         elif missing == "negative":
-            nums = nums.cast(pa.int32()).fill_null(-1)  # type: ignore
+            nums = pc.fill_null(nums, -1)
 
         match format:
             case "numpy":
@@ -283,6 +292,7 @@ class Vocabulary:
         self.name = state["name"]
         self._array = state["array"]
         self._index = _accel.data.IDIndex(self._array)
+        self._log = _log.bind(entity=self.name)
 
     def __str__(self) -> str:
         if self.name:
