@@ -56,8 +56,8 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     # TRUE_SVAR = TRUE_SD * TRUE_SD / size
     results = []
 
-    # Test: for 1000 runs, do approx. 95% of confidence intervals contain the
-    # true mean?
+    # Test: for NBATCHES * PERBATCH runs, do approx. 95% of confidence intervals
+    # contain the true mean?
 
     worker = ray.remote(num_cpus=2)(_blb_worker)
 
@@ -102,7 +102,12 @@ def _blb_worker(
         mean = np.mean(xs).item()
 
         results.append(
-            (mean, blb_summary(xs, "mean", rng=rng, b_factor=0.7, s_window=10, r_window=20))
+            (
+                mean,
+                blb_summary(
+                    xs, "mean", rng=rng, b_factor=0.7, s_window=10, r_window=20, rel_tol=0.01
+                ),
+            )
         )
 
     return results
