@@ -45,6 +45,82 @@ def test_add_repeated_interactions():
     assert len(log) == 7
 
 
+def test_remove_repeat_in_repeated_interactions():
+    dsb = DatasetBuilder()
+    dsb.add_relationship_class(
+        "click", ["user", "item"], repeats=True, interaction=True, remove_duplicates=True
+    )
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                "timestamp": np.arange(1, 8) * 10,
+            }
+        ),
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().pandas()
+    assert isinstance(log, pd.DataFrame)
+    assert all(log.columns == ["user_num", "item_num", "timestamp"])
+    assert len(log) == 6
+    assert len(log[log.user_num == 1]) == 1
+
+
+def test_remove_repeat_with_forbidden_repeat():
+    dsb = DatasetBuilder()
+    dsb.add_relationship_class(
+        "click", ["user", "item"], repeats=False, interaction=True, remove_duplicates=True
+    )
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                "timestamp": np.arange(1, 8) * 10,
+            }
+        ),
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().pandas()
+    assert isinstance(log, pd.DataFrame)
+    assert all(log.columns == ["user_num", "item_num", "timestamp"])
+    assert len(log) == 6
+    assert len(log[log.user_num == 1]) == 1
+
+
+def test_remove_duplicate_in_repeated_interactions():
+    dsb = DatasetBuilder()
+    dsb.add_relationship_class(
+        "click", ["user", "item"], repeats=True, interaction=True, remove_duplicates="exact"
+    )
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                "item_id": ["x", "y", "z", "x", "y", "y", "z"],
+                "tag_id": ["j", "i", "k", "j", "k", "i", "k"],
+            }
+        ),
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().pandas()
+    assert isinstance(log, pd.DataFrame)
+    assert all(log.columns == ["user_num", "item_num", "tag_id"])
+    assert len(log) == 6
+    assert len(log[log.user_num == 1]) == 1
+    assert len(log[log.user_num == 2]) == 3
+
+
 def test_bad_interaction_matrix_call():
     dsb = DatasetBuilder()
     with raises(ValueError):
