@@ -62,6 +62,10 @@ MissingEntityAction: TypeAlias = Literal["insert", "filter", "error"]
 """
 Action to take when a relationship references a missing entity.
 """
+RepeatOption: TypeAlias = Literal["allow", "forbid", "remove", "remove-duplicate"]
+"""
+Defines how should repeated interactions be handled.
+"""
 
 
 class DatasetBuilder:
@@ -166,8 +170,9 @@ class DatasetBuilder:
         self,
         name: str,
         entities: RelationshipEntities,
-        allow_repeats: bool = True,
+        repeats: bool = True,
         interaction: bool = False,
+        remove_duplicates: bool | Literal["exact"] = False,
     ) -> None:
         """
         Add a relationship class to the dataset.  This usually doesn't need to
@@ -197,13 +202,13 @@ class DatasetBuilder:
                 are allowed.
             interaction:
                 Whether this is an interaction relationship.
+            remove_duplicates:
+                If ``True``, exact duplicate interactions will be removed.
         """
         if name in self._tables:
             raise ValueError(f"relationship class name “{name}” already defined")
 
         check_name(name)
-        if len(entities) != 2:
-            raise NotImplementedError("datasets currently only support 2-entity relationships")
 
         self._log.debug("adding relationship class", class_name=name)
         e_dict: dict[str, str | None]
@@ -224,7 +229,8 @@ class DatasetBuilder:
         self.schema.relationships[name] = RelationshipSchema(
             entities=e_dict,
             interaction=interaction,
-            repeats=AllowableTroolean.ALLOWED if allow_repeats else AllowableTroolean.FORBIDDEN,
+            repeats=AllowableTroolean.ALLOWED if repeats else AllowableTroolean.FORBIDDEN,
+            remove_duplicates=remove_duplicates,
         )
         self._tables[name] = _empty_rel_table(enames)
 
@@ -333,9 +339,10 @@ class DatasetBuilder:
         *,
         entities: RelationshipEntities | None = None,
         missing: MissingEntityAction = "error",
-        allow_repeats: bool = True,
+        repeats: bool = True,
         interaction: bool | Literal["default"] = False,
         _warning_parent: int = 0,
+        remove_duplicates: bool | Literal["exact"] = False,
     ) -> None:
         """
         Add relationship records to the data set.
@@ -365,6 +372,8 @@ class DatasetBuilder:
                 Whether this is an interaction relationship or not; can be
                 ``"default"`` to indicate this is the default interaction
                 relationship.
+            remove_duplicates:
+                If ``True``, exact duplicate interactions will be removed.
         """
         if isinstance(data, pd.DataFrame):
             table = pa.Table.from_pandas(data, preserve_index=False)
@@ -386,7 +395,11 @@ class DatasetBuilder:
                 )
                 entities = [c[:-3] for c in table.column_names if c.endswith("_id")]
             self.add_relationship_class(
-                cls, entities, allow_repeats=allow_repeats, interaction=bool(interaction)
+                cls,
+                entities,
+                repeats=repeats,
+                interaction=bool(interaction),
+                remove_duplicates=remove_duplicates,
             )
             if interaction == "default":
                 self.schema.default_interaction = cls
@@ -432,9 +445,6 @@ class DatasetBuilder:
             new_table = new_table.filter(link_mask)
         log.debug("adding %d new rows", new_table.num_rows)
 
-        if "count" in new_table.column_names:  # pragma: nocover
-            raise NotImplementedError("count attributes are not yet implemented")
-
         cur_table = self._tables[cls]
         if cur_table is not None:
             new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
@@ -445,13 +455,7 @@ class DatasetBuilder:
             ndf = new_table.select(list(link_nums.keys())).to_pandas()
             dupes = ndf.duplicated()
             if np.any(dupes):
-                if rc_def.repeats.is_allowed:
-                    rc_def.repeats = AllowableTroolean.PRESENT
-                else:
-                    raise DataError(
-                        f"repeated interactions not allowed for relationship class {cls}"
-                    )
-
+                self._resolve_repeated_interactions(t=new_table, rel=rc_def)
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
         )
@@ -464,8 +468,9 @@ class DatasetBuilder:
         *,
         entities: RelationshipEntities | None = None,
         missing: MissingEntityAction = "error",
-        allow_repeats: bool = True,
+        repeats: bool = True,
         default: bool = False,
+        remove_duplicates: bool | Literal["exact"] = False,
     ) -> None:
         """
         Add a interaction records to the data set.
@@ -495,20 +500,23 @@ class DatasetBuilder:
             missing:
                 What to do when interactions reference nonexisting entities; can
                 be ``"error"`` or ``"insert"``.
-            allow_repeats:
-                Whether repeated interactions are allowed.
+            repeats:
+                Whether repeated interactions are allowed, forbidden, or removed.
             default:
                 If ``True``, set this as the default interaction class (if the
                 dataset has more than one interaction class).
+            remove_duplicates:
+                If ``True``, exact duplicate interactions will be removed.
         """
         self.add_relationships(
             cls,
             data,
             entities=entities,
             missing=missing,
-            allow_repeats=allow_repeats,
+            repeats=repeats,
             interaction="default" if default else True,
             _warning_parent=1,
+            remove_duplicates=remove_duplicates,
         )
 
     def filter_interactions(
@@ -991,11 +999,18 @@ class DatasetBuilder:
                 tables[n] = pa.table({id_col_name(n): pa.array([], type=pa.int64())})
             else:
                 rel = self.schema.relationships.get(n, None)
-                if rel is not None and rel.repeats.is_forbidden and len(rel.entities) == 2:
-                    e_cols = [e + "_num" for e in rel.entities.keys()]
-                    if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
-                        log.debug("sorting non-repeating relationship %s", n)
-                        t = t.sort_by([(c, "ascending") for c in e_cols])
+                if rel is not None:
+                    if not rel.repeats.is_forbidden and len(rel.entities) == 2:
+                        e_cols = [e + "_num" for e in rel.entities.keys()]
+                        if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
+                            log.debug("sorting non-repeating relationship %s", n)
+                            t = t.sort_by([(c, "ascending") for c in e_cols])
+                    if rel.remove_duplicates and rel.remove_duplicates != "exact":
+                        t = self._remove_repeated_relationships(t, rel)
+                    if rel.remove_duplicates == "exact":
+                        temp_df = t.to_pandas()
+                        temp_df.drop_duplicates(inplace=True)
+                        t = pa.Table.from_pandas(temp_df, preserve_index=False)
 
                 tables[n] = t
 
@@ -1013,6 +1028,17 @@ class DatasetBuilder:
         container = self.build_container()
         container.save(path)
 
+    def _remove_repeated_relationships(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
+        if "timestamp" in t.column_names:
+            t = t.sort_by([("timestamp", "ascending")])
+        t_modified = t.add_column(0, "_row_number", pa.array(np.arange(t.num_rows)))
+        t_modified = t_modified.group_by(
+            [entity + "_num" for entity in rel.entity_class_names]
+        ).aggregate([("_row_number", "max")])
+        t_modified = t_modified.sort_by([("_row_number_max", "ascending")])
+        t = t.take(t_modified.column("_row_number_max"))
+        return t
+
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
     ) -> pa.Int32Array:
@@ -1022,6 +1048,21 @@ class DatasetBuilder:
             return pa.nulls(len(tgt_ids), type=pa.int32())
         nums = np.require(index.get_indexer_for(tgt_ids), np.int32)
         return pc.if_else(nums >= 0, nums, None)
+
+    def _resolve_repeated_interactions(self, t: pa.Table, rel: RelationshipSchema):
+        remove_repeat = rel.remove_duplicates and rel.remove_duplicates != "exact"
+        if rel.remove_duplicates:
+            if rel.remove_duplicates == "exact":
+                temp_df = t.to_pandas()
+                temp_df.drop_duplicates(inplace=True)
+                t = pa.Table.from_pandas(temp_df, preserve_index=False)
+            else:
+                t = self._remove_repeated_relationships(t, rel)
+
+        if rel.repeats.is_allowed and not remove_repeat:
+            rel.repeats = AllowableTroolean.PRESENT
+        elif rel.repeats.is_forbidden and not remove_repeat:
+            raise DataError("repeated interactions not allowed for relationship class")
 
 
 def _expand_and_align_list_array(

@@ -169,7 +169,7 @@ def from_interactions_df(
         df,
         entities=["user", "item"],
         missing=missing,
-        allow_repeats=False,
+        repeats=False,
         default=True,
     )
 

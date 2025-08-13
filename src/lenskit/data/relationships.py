@@ -10,7 +10,6 @@ Relationship accessors for Dataset.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -66,6 +65,8 @@ class RelationshipSet:
     The name of the relationship class for these relationships.
     """
     schema: RelationshipSchema
+    dataset: Dataset
+    mat_rset: dict[tuple[str, str], MatrixRelationshipSet]
 
     _table: pa.Table
     """
@@ -77,17 +78,34 @@ class RelationshipSet:
 
     def __init__(
         self,
-        ds: Dataset,
         name: str,
+        vocab: dict[str, Vocabulary],
         schema: RelationshipSchema,
         table: pa.Table,
     ):
         self.name = name
         self.schema = schema
+        self.mat_rset = {}
         self._table = table
 
-        self._vocabularies = {e: ds.entities(e).vocabulary for e in schema.entities}
+        self._vocabularies = vocab
         self._link_cols = [num_col_name(e) for e in schema.entities]
+
+    def __getstate__(self):
+        return {
+            "name": self.name,
+            "schema": self.schema,
+            "columns": self._link_cols,
+            "table": self._table,
+            "vocabularies": self._vocabularies,
+        }
+
+    def __setstate__(self, state):
+        self.name = state["name"]
+        self.schema = state["schema"]
+        self._link_cols = state["columns"]
+        self._table = state["table"]
+        self._vocabularies = state["vocabularies"]
 
     @property
     def is_interaction(self) -> bool:
@@ -102,7 +120,10 @@ class RelationshipSet:
 
     def count(self):
         if "count" in self._table.column_names:  # pragma: nocover
-            raise NotImplementedError()
+            count_column = self._table.column("count").combine_chunks().slice(0)
+            count_column.fill_null(pa.scalar(1, type=pa.int8()))
+            count = pc.sum(count_column)
+            return count.as_py()
 
         return self._table.num_rows
 
@@ -162,19 +183,86 @@ class RelationshipSet:
         return tbl.to_pandas()
 
     def matrix(
-        self, *, combine: MAT_AGG | Mapping[str, MAT_AGG] | None = None
+        self, *, row_entity: str = "user", col_entity: str = "item"
+    ) -> MatrixRelationshipSet:  # pragma: nocover
+        if (row_entity, col_entity) in self.mat_rset:
+            return self.mat_rset[(row_entity, col_entity)]
+        else:
+            new_mat_rset = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
+            self.mat_rset[(row_entity, col_entity)] = new_mat_rset
+            return new_mat_rset
+
+    def _make_matrix(
+        self, *, row_entity: str = "user", col_entity: str = "item"
     ) -> MatrixRelationshipSet:  # pragma: nocover
         """
         Convert this relationship set into a matrix, coalescing duplicate
         observations.
 
         Args:
-            combine:
-                The method for combining attribute values for repeated
-                relationships or interactions.  Can either be a single strategy
-                or a mapping from attribute names to combination strategies.
+            row_entity:
+                The specified row entity of the matrix
+            col_entity:
+                The specified column entity of the matrix
         """
-        raise NotImplementedError()
+        if row_entity not in self.schema.entities.keys():
+            raise FieldError(self.name, row_entity)
+
+        if col_entity not in self.schema.entities.keys():
+            raise FieldError(self.name, col_entity)
+
+        if col_entity == row_entity:
+            raise ValueError("row and column entity should not be the same")
+
+        e_dict: dict[str, str | None]
+        e_dict = {row_entity: None, col_entity: None}
+        matrix_schema = RelationshipSchema(
+            entities=e_dict,
+            interaction=self.schema.interaction,
+            repeats=self.schema.repeats,
+            attributes=self.schema.attributes,
+            remove_duplicates=self.schema.remove_duplicates,
+        )
+        new_table = self._table
+
+        if "timestamp" in new_table.column_names:
+            new_table = new_table.sort_by([("timestamp", "ascending")])
+
+        if "count" not in new_table.column_names:
+            new_table = new_table.add_column(
+                new_table.num_columns, "count", pa.array(np.ones(new_table.num_rows))
+            )
+        else:
+            null_filled = new_table["count"].fill_null(1)
+            new_table = new_table.set_column(
+                new_table.schema.get_field_index("count"),
+                "count",
+                null_filled,  # type: ignore
+            )
+
+        group_keys = [entity + "_num" for entity in e_dict]
+        table_group = new_table.group_by(group_keys)
+
+        aggregates: list[tuple[str, str]]
+        column_renames: dict[str, str]
+        aggregates = []
+        column_renames = {}
+
+        if "timestamp" in new_table.column_names:
+            aggregates.extend([("timestamp", "max"), ("timestamp", "min")])
+            column_renames.update(
+                {"timestamp_max": "timestamp", "timestamp_min": "first_timestamp"}
+            )
+
+        if "count" in new_table.column_names:
+            aggregates.append(("count", "sum"))
+            column_renames.update({"count_sum": "count"})
+
+        if aggregates:
+            aggregated_table = table_group.aggregate(aggregates)
+            aggregated_table = aggregated_table.rename_columns(column_renames)
+
+        return MatrixRelationshipSet(self.name, self._vocabularies, matrix_schema, aggregated_table)
 
 
 class MatrixRelationshipSet(RelationshipSet):
@@ -201,13 +289,13 @@ class MatrixRelationshipSet(RelationshipSet):
 
     def __init__(
         self,
-        ds: Dataset,
         name: str,
+        vocab: dict[str, Vocabulary],
         schema: RelationshipSchema,
         table: pa.Table,
     ):
-        super().__init__(ds, name, schema, table)
-        self._init_structures(ds_name=ds.name)
+        super().__init__(name, vocab, schema, table)
+        self._init_structures()
 
     def _init_structures(self, *, ds_name: str | None = None):
         log = _log.bind(dataset=ds_name, relationship=self.name)
