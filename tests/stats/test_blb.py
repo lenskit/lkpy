@@ -8,6 +8,7 @@ from math import sqrt
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.stats import binomtest
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
@@ -16,9 +17,12 @@ from pytest import approx, mark, warns
 
 from lenskit.data.types import NPVector
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import get_logger
 from lenskit.parallel.ray import ensure_cluster, ray_available
 from lenskit.random import random_generator
 from lenskit.stats import blb_summary
+
+_log = get_logger(__name__)
 
 
 def test_blb_single_array(rng: np.random.Generator):
@@ -55,7 +59,7 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     # Test: for 1000 runs, do approx. 95% of confidence intervals contain the
     # true mean?
 
-    worker = ray.remote(num_cpus=1)(_blb_worker)
+    worker = ray.remote(num_cpus=2)(_blb_worker)
 
     NBATCHES = 20
     PERBATCH = 50
@@ -71,18 +75,20 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
             results.append(summary)
 
     n_lb_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN])
-    pct_lb_good = (n_lb_good / NTRIALS) * 100
+    f_lb_good = n_lb_good / NTRIALS
     n_ub_good = len([r for r in results if TRUE_MEAN <= r["ci_upper"]])
-    pct_ub_good = (n_ub_good / NTRIALS) * 100
+    f_ub_good = n_ub_good / NTRIALS
     n_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN <= r["ci_upper"]])
-    pct_good = (n_good / NTRIALS) * 100
-    print(
-        "{:.1f}% CIs good ({:1f}% LB fail, {:.1f}% UB fail)".format(
-            pct_good, 100 - pct_lb_good, 100 - pct_ub_good
-        )
+    f_good = n_good / NTRIALS
+    bt = binomtest(n_good, NTRIALS, 0.95)
+    _log.info(
+        "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.4f}".format(
+            f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
+        ),
+        test=bt,
     )
-    # leave a little wiggle room
-    assert 90 <= pct_good <= 98
+    # leave some wiggle room
+    assert bt.pvalue >= 0.05
 
 
 def _blb_worker(
@@ -95,7 +101,9 @@ def _blb_worker(
         xs = rng.normal(true_mean, true_sd, size)
         mean = np.mean(xs).item()
 
-        results.append((mean, blb_summary(xs, "mean", rng=rng)))
+        results.append(
+            (mean, blb_summary(xs, "mean", rng=rng, b_factor=0.7, s_window=10, r_window=20))
+        )
 
     return results
 
