@@ -82,7 +82,7 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     f_good = n_good / NTRIALS
     bt = binomtest(n_good, NTRIALS, 0.95)
     _log.info(
-        "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.4f}".format(
+        "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
             f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
         ),
         test=bt,
