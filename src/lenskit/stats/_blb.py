@@ -77,7 +77,7 @@ def blb_summary(
             statistics to support weighted computation (this is what allows it
             to speed up the bootstrap procedure).
         ci_width:
-            The width of the confidence interval to estimat.e
+            The width of the confidence interval to estimate.
         b_factor:
             The shrinking factor :math:`\gamma` to use to derive subsample
             sizes. Each subsample has size :math:`N^{\gamma}`.
@@ -259,8 +259,9 @@ class _BLBootstrapper:
             lb, ub = np.quantile(stats, [ql, qh])
             self._tracer.trace("initial bounds: %f < s < %f", lb, ub)
             # recenter bounds around estimate
-            lb = estimate - (stat - lb)
-            ub = estimate + (ub - stat)
+            ec = means.statistic
+            lb = estimate - (ec - lb)
+            ub = estimate + (ub - ec)
             self._tracer.trace("adjusted bounds: %f < s < %f", lb, ub)
             lbs.record(stat, lb)
             ubs.record(stat, ub)
