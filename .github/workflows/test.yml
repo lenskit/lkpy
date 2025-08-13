@@ -72,7 +72,7 @@ jobs:
 
       - name: 🔍 Inspect environment
         run: |
-          coverage run -m lenskit doctor
+          coverage run -m lenskit doctor --full
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
@@ -121,7 +121,7 @@ jobs:
 
       - name: 🔍 Inspect environment
         run: |
-          lenskit doctor
+          lenskit doctor --full
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
@@ -169,7 +169,7 @@ jobs:
 
       - name: 🔍 Inspect environment
         run: |
-          lenskit doctor
+          lenskit doctor --full
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |

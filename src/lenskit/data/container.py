@@ -16,6 +16,7 @@ from shutil import rmtree
 import pyarrow as pa
 from pyarrow.parquet import read_table, write_table
 
+from lenskit._accel import data as _data_accel
 from lenskit.logging import get_logger
 from lenskit.logging.stopwatch import Stopwatch
 
@@ -26,8 +27,46 @@ _log = get_logger(__name__)
 
 @dataclass(eq=False, order=False)
 class DataContainer:
+    """
+    A general container for the data backing a dataset.
+    """
+
     schema: DataSchema
     tables: dict[str, pa.Table]
+    _sorted: bool = False
+
+    def normalize(self):
+        """
+        Normalize data to adhere to the expectations of the most current schema.
+        """
+
+        self._sort_matrix_relationships()
+
+    def _sort_matrix_relationships(self):
+        log = _log.bind(dataset=self.schema.name)
+        if self._sorted or self.schema.version >= "2025.3":
+            return
+
+        for name, rel in self.schema.relationships.items():
+            if len(rel.entities) == 2 and not rel.repeats.is_present:
+                # make sure they are a sorted matrix
+                tbl = self.tables[name]
+                e_cols = [e + "_num" for e in rel.entities.keys()]
+                if not _data_accel.is_sorted_coo(tbl.to_batches(), *e_cols):
+                    log.debug("sorting non-repeating relationship %s", name)
+                    self.tables[name] = tbl.sort_by([(c, "ascending") for c in e_cols])
+
+        self._sorted = True
+
+    def __getstate__(self):
+        # work around Ray's broken serialization of extension types
+        state = dict(self.__dict__)
+        state["tables"] = {name: _make_compat_table(tbl) for name, tbl in self.tables.items()}
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.tables = {name: _resolve_compat_table(tbl) for name, tbl in state["tables"].items()}
 
     def save(self, path: str | PathLike[str]):
         """
@@ -83,3 +122,26 @@ class DataContainer:
 
         log.debug("finished loading data set in %s", timer, time=timer.elapsed())
         return cls(schema, tables)
+
+
+def _make_compat_table(tbl: pa.Table):
+    schema = tbl.schema
+    ftypes = {}
+
+    for name in schema.names:
+        print("field", name)
+        field = schema.field(name)
+        print("field", field)
+        if isinstance(field.type, pa.BaseExtensionType):
+            print("tweaking field", field)
+            ftypes[name] = field.type.storage_type
+        else:
+            ftypes[name] = field.type
+
+    compat_schema = pa.schema(ftypes)
+    return schema, tbl.cast(compat_schema, safe=True)
+
+
+def _resolve_compat_table(data: tuple[pa.Schema, pa.Table]):
+    schema, table = data
+    return table.cast(schema)

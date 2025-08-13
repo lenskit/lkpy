@@ -15,7 +15,7 @@ from .formats import friendly_duration
 from .progress import Progress, item_progress, set_progress_impl
 from .stopwatch import Stopwatch
 from .tasks import Task
-from .tracing import trace
+from .tracing import Tracer, get_tracer, trace
 
 __all__ = [
     "LoggingConfig",
@@ -26,7 +26,9 @@ __all__ = [
     "set_progress_impl",
     "Task",
     "get_logger",
+    "get_tracer",
     "trace",
+    "Tracer",
     "console",
     "stdout_console",
     "friendly_duration",

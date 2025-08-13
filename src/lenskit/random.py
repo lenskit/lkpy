@@ -64,6 +64,10 @@ def load_seed(file: Path | os.PathLike[str] | str, key: str = "random.seed") -> 
     """
     Load a seed from a configuration file.
 
+    .. deprecated:: 2025.3.0
+
+        No longer supported, use :ref:`settings` instead.
+
     Args:
         file:
             The path to the configuration file.

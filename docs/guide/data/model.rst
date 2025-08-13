@@ -49,9 +49,11 @@ entity-relationship database model:
         identifiers can be either integers or strings.
 
     Attribute
-        Entities can have one or more *attributes*.  Attributes are consistent
-        within an entity type, and are nullable (any individual entity may be
-        missing a value for an attribute).
+        Entities and relationships can have one or more *attributes*.
+        Attributes are consistent within an entity type (i.e., each entity or
+        relationship of a particular type has the same attributes with the same
+        types), and are nullable (any individual entity may be missing a value
+        for an attribute).
 
     Relationship
         A relationship connects two (or more) entities and may have additional
@@ -63,7 +65,10 @@ entity-relationship database model:
         Relationship classes are like entity classes, but describe the type of a
         particular relationship.  This allows for models or client code to query
         for records of a particular relationship, such as “follows” or
-        “purchased”.
+        “purchased”.  Each relationship class has a fixed list of entity classes
+        that participate in relationships of that class.  For example, a
+        ``rating`` class typically has the ``user`` and ``item`` entity classes
+        participating.
 
     Interaction
         An interaction is a specific type of relationship record that records an

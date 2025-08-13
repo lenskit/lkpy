@@ -237,7 +237,7 @@ class RunAnalysis:
         self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
     ) -> RunAnalysisResult:
         """
-        Measure a set of outputs against a set of dest data.
+        Measure a set of outputs against a set of test data.
         """
         self._validate_setup()
         index = pd.MultiIndex.from_tuples(outputs.keys())

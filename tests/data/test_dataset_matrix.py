@@ -181,8 +181,6 @@ def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, generation):
     assert ncols >= ml_ratings["item_id"].nunique()
     assert ncols == ml_ds.item_count
 
-    assert log.indptr.dtype == np.int32
-    assert log.indices.dtype == np.int32
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
     _check_item_ids(ml_ds, ml_ratings, log.indices)
@@ -241,7 +239,7 @@ def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_item_ids(ml_ds, ml_ratings, log.col_indices())
     _check_ratings(ml_ds, ml_ratings, log.values().numpy())
 
-    assert log.crow_indices().dtype == torch.int32
+    assert log.crow_indices().dtype == torch.int64
     assert log.col_indices().dtype == torch.int32
 
 

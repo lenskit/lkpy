@@ -15,10 +15,6 @@ notes in the primary documentation.  Older release notes are on GitHub.
 SemCalVer
 ---------
 
-.. warning::
-    This is the draft policy intended for the first 2025.x release of LensKit.  It is subject
-    to change until the official release of 2025.1.
-
 .. _CalVer: https://calver.org/
 
 Since 2025, LensKit uses “semantic calendar versioning”.  That is, it uses
