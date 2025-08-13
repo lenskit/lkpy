@@ -42,9 +42,11 @@ def test_blb_single_array(rng: np.random.Generator):
 @mark.skipif(not ray_available(), reason="bulk BLB test requires Ray")
 @mark.parametrize("size", [1000, 10_000, 100_000])
 @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
-def test_blb_array_normal(rng: np.random.Generator, size: int):
+def test_blb_array_normal(size: int):
     "Test BLB with arrays of normals."
     import ray
+
+    rng = np.random.default_rng()
 
     ensure_cluster()
     TRUE_MEAN = 1.0
@@ -96,7 +98,7 @@ def _blb_worker(
         mean = np.mean(xs).item()
 
         results.append(
-            (mean, blb_summary(xs, "mean", rng=rng, b_factor=0.6, s_window=5, r_window=20))
+            (mean, blb_summary(xs, "mean", rng=rng, b_factor=0.7, s_window=20, r_window=40))
         )
 
     return results
