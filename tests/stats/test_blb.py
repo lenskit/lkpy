@@ -95,7 +95,9 @@ def _blb_worker(
         xs = rng.normal(true_mean, true_sd, size)
         mean = np.mean(xs).item()
 
-        results.append((mean, blb_summary(xs, "mean", rng=rng, b_factor=0.6)))
+        results.append(
+            (mean, blb_summary(xs, "mean", rng=rng, b_factor=0.6, s_window=5, r_window=20))
+        )
 
     return results
 
