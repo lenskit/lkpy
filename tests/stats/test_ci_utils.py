@@ -20,3 +20,11 @@ def test_ci_bounds(width: float):
     qlo, qhi = ci_quantiles(width)
     assert qhi - qlo == approx(width)
     assert 1 - qhi == approx(qlo)
+
+
+@given(st.floats(0.1, 0.9))
+def test_ci_bounds_expanded(width: float):
+    oql, oqh = ci_quantiles(width)
+    qlo, qhi = ci_quantiles(width, expand=500)
+    assert qlo < oql
+    assert qhi > oqh

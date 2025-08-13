@@ -178,11 +178,11 @@ class _BLBootstrapper:
         self.rng = rng
         self.ss_stats = {}
 
-        self._ci_qmin, self._ci_qmax = ci_quantiles(config.ci_width)
         self._tracer = get_tracer(_log, stat=config.statistic.__name__)  # type: ignore
 
     def run_bootstraps(self, xs: NDArray[F]) -> _BootResult:
         n = len(xs)
+        self._ci_qmin, self._ci_qmax = ci_quantiles(self.config.ci_width, expand=n)
         b = int(n**self.config.b_factor)
 
         self._tracer.add_bindings(n=n, b=b)
@@ -255,14 +255,14 @@ class _BLBootstrapper:
             stats = means.values
             # ql, qh = _bca_range(estimate, stats, self.config.ci_margin, accel)
             # self._tracer.trace("bias-corrected quantiles: [%.4f, %.4f]", ql, qh, accel=accel)
-            ql, qh = ci_quantiles(self.config.ci_width)
-            lb, ub = np.quantile(stats, [ql, qh])
-            self._tracer.trace("initial bounds: %f < s < %f", lb, ub)
+            lb, ub = np.quantile(stats, [self._ci_qmin, self._ci_qmax])
+            self._tracer.trace("expanded bounds: %f < s < %f", lb, ub)
             # recenter bounds around estimate
-            ec = means.statistic
-            lb = estimate - (ec - lb)
-            ub = estimate + (ub - ec)
-            self._tracer.trace("adjusted bounds: %f < s < %f", lb, ub)
+            # this is the reverse-bootstrap percentile interval
+            # see: https://arxiv.org/pdf/1411.5279
+            # ec = means.statistic
+            # lb = estimate - (ec - lb)
+            # ub = estimate + (ub - ec)
             lbs.record(stat, lb)
             ubs.record(stat, ub)
             del stats
