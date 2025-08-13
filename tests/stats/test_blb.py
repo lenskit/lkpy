@@ -4,11 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import os
 from math import sqrt
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.stats import binomtest
+from scipy.stats import binomtest, describe, ttest_1samp, ttest_rel
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
@@ -17,7 +18,7 @@ from pytest import approx, mark, warns
 
 from lenskit.data.types import NPVector
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import get_logger
+from lenskit.logging import Stopwatch, get_logger
 from lenskit.parallel.ray import ensure_cluster, ray_available
 from lenskit.random import random_generator
 from lenskit.stats import blb_summary
@@ -54,26 +55,31 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     TRUE_MEAN = 1.0
     TRUE_SD = 1.0
     # TRUE_SVAR = TRUE_SD * TRUE_SD / size
+    THEORETICAL_SE = TRUE_SD / np.sqrt(size)
+    THEORETICAL_WIDTH = 2 * 1.96 * THEORETICAL_SE
     results = []
+    times = []
 
-    # Test: for 1000 runs, do approx. 95% of confidence intervals contain the
-    # true mean?
+    # Test: for NBATCHES * PERBATCH runs, do approx. 95% of confidence intervals
+    # contain the true mean?
 
     worker = ray.remote(num_cpus=2)(_blb_worker)
 
     NBATCHES = 20
-    PERBATCH = 50
+    PERBATCH = int(os.environ.get("BLB_TRIALS_PER_BATCH", 50))
     NTRIALS = NBATCHES * PERBATCH
     rngs = rng.spawn(NBATCHES)
     tasks = [worker.remote(PERBATCH, TRUE_MEAN, TRUE_SD, size, t) for t in rngs]
     for task in tasks:
         bres = ray.get(task)
-        for mean, summary in bres:
+        for mean, summary, time in bres:
             assert isinstance(summary, dict)
             assert summary["estimate"] == approx(mean)
 
             results.append(summary)
+            times.append(time)
 
+    _log.info("completed %d trials (avg %.2fms / trial)", len(results), np.mean(times) * 1000)
     n_lb_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN])
     f_lb_good = n_lb_good / NTRIALS
     n_ub_good = len([r for r in results if TRUE_MEAN <= r["ci_upper"]])
@@ -81,19 +87,53 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     n_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN <= r["ci_upper"]])
     f_good = n_good / NTRIALS
     bt = binomtest(n_good, NTRIALS, 0.95)
+    _log.info("binomal test for CI hit rate: stat=%.3f, p=%.3g", bt.statistic, bt.pvalue, test=bt)
+
+    smeans = np.array([r["estimate"] for r in results])
+    smt = ttest_1samp(smeans, TRUE_MEAN)
+    _log.info("sample means: %s", describe(smeans))
+    if smt.pvalue >= 0.05:
+        _log.info("t-test for sample means: stat=%.5f, p=%.3g", smt.statistic, smt.pvalue, test=smt)
+    else:
+        _log.warn("t-test for sample means: stat=%.5f, p=%.3g", smt.statistic, smt.pvalue, test=smt)
+    rmeans = np.array([r["rep_mean"] for r in results])
+    rmt = ttest_rel(rmeans, smeans)
+    _log.info("bootstrap means: %s", describe(rmeans))
+    if rmt.pvalue >= 0.05:
+        _log.info("t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt)
+    else:
+        _log.warn("t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt)
+
+    widths = np.array([r["ci_upper"] - r["ci_lower"] for r in results])
     _log.info(
-        "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.4f}".format(
-            f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
-        ),
-        test=bt,
+        "bootstrap CI widths (expected: {:.4f}): {}".format(THEORETICAL_WIDTH, describe(widths))
     )
+    wt = ttest_1samp(widths, THEORETICAL_WIDTH)
+    if wt.pvalue >= 0.05:
+        _log.info("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
+    else:
+        _log.warn("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
+
+    if bt.pvalue >= 0.05:
+        _log.info(
+            "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
+                f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
+            ),
+        )
+    else:
+        _log.error(
+            "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
+                f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
+            ),
+        )
+
     # leave some wiggle room
     assert bt.pvalue >= 0.05
 
 
 def _blb_worker(
     nreps: int, true_mean: float, true_sd: float, size: int, rng: np.random.Generator
-) -> list[tuple[float, dict[str, float]]]:
+) -> list[tuple[float, dict[str, float], float]]:
     results = []
     # bf = 0.7 if size > 50_000 else 0.8
 
@@ -101,9 +141,10 @@ def _blb_worker(
         xs = rng.normal(true_mean, true_sd, size)
         mean = np.mean(xs).item()
 
-        results.append(
-            (mean, blb_summary(xs, "mean", rng=rng, b_factor=0.7, s_window=10, r_window=20))
-        )
+        timer = Stopwatch()
+        s = blb_summary(xs, "mean", rng=rng, b_factor=0.8, s_window=20, r_window=50, rel_tol=0.01)
+
+        results.append((mean, s, timer.elapsed()))
 
     return results
 
