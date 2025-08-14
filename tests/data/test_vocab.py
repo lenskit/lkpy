@@ -181,6 +181,25 @@ def test_lookup_many_nums(terms: set[int], lookup: list[int]):
 
 
 @given(
+    st.sets(id_ints()),
+    st.lists(id_ints()),
+)
+def test_lookup_many_nums_null(terms: set[int], lookup: list[int]):
+    klist = sorted(terms)
+    kpos = dict(zip(klist, range(len(klist))))
+
+    vocab = Vocabulary(terms)
+
+    nums = vocab.numbers(lookup, format="arrow", missing="null")
+    assert len(nums) == len(lookup)
+    for n, k in zip(nums, lookup):
+        if n is None:
+            assert k not in terms
+        else:
+            assert n == kpos[k]
+
+
+@given(
     st.data(),
     st.sets(id_ints()),
 )
