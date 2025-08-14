@@ -28,6 +28,7 @@ from scipy.sparse import csr_array, sparray
 
 from lenskit._accel import data as _data_accel
 from lenskit.data.matrix import SparseRowArray
+from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
@@ -76,7 +77,7 @@ class DatasetBuilder:
 
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
-    _indexes: dict[str, pd.Index]
+    _vocabularies: dict[str, Vocabulary]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
         """
@@ -95,7 +96,7 @@ class DatasetBuilder:
             self.schema = name.schema.model_copy()
             self._tables = {n: t for (n, t) in name.tables.items()}
             self._indexes = {
-                n: pd.Index(name.tables[n].column(id_col_name(n)).to_numpy(zero_copy_only=False))
+                n: Vocabulary(name.tables[n].column(id_col_name(n)), name=n)
                 for n in name.schema.entities.keys()
             }
         else:
@@ -324,7 +325,7 @@ class DatasetBuilder:
             table = pa.concat_tables([table, new_tbl], promote_options="permissive")
 
         self._tables[cls] = table
-        self._indexes[cls] = pd.Index(table.column(id_name).to_numpy(zero_copy_only=False))
+        self._vocabularies[cls] = Vocabulary(table.column(id_name), name=cls)
 
     def add_relationships(
         self,
@@ -1016,16 +1017,15 @@ class DatasetBuilder:
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
     ) -> pa.Int32Array:
-        tgt_ids = np.array(ids)  # type: ignore
-        index = self._indexes.get(cls, None)
-        if index is None:
+        tgt_ids = pa.array(ids)  # type: ignore
+        vocab = self._vocabularies.get(cls, None)
+        if vocab is None:
             return pa.nulls(len(tgt_ids), type=pa.int32())
-        nums = np.require(index.get_indexer_for(tgt_ids), np.int32)
-        return pc.if_else(nums >= 0, nums, None)
+        return vocab.numbers(tgt_ids, format="arrow")
 
 
 def _expand_and_align_list_array(
-    out_len: int, rows: np.ndarray[int, np.dtype[np.int32]], lists: pa.ListArray
+    out_len: int, rows: NDArray[np.int32], lists: pa.ListArray
 ) -> pa.ListArray:
     """
     Expand a list array, so that its lists are on the specified rows of the
