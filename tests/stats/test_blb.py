@@ -202,5 +202,5 @@ class TestSimpleNormal(CITester):
 
     def compute_stats(self, xs, rng: np.random.Generator):
         return blb_summary(
-            xs, "mean", rng=rng, b_factor=0.6, s_window=20, r_window=25, r_min=100, rel_tol=0.01
+            xs, "mean", rng=rng, b_factor=0.8, s_window=20, r_window=25, r_min=100, rel_tol=0.01
         )
