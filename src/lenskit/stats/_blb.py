@@ -98,9 +98,11 @@ def blb_summary(
     if stat != "mean":
         raise ValueError(f"unsupported statistic {stat}")
 
+    n = len(xs)
     mask = np.isfinite(xs)
-    if ninf := int(np.sum(~mask)):
-        warnings.warn(f"ignoring {ninf} nonfinite values", DataWarning, stacklevel=2)
+    nfinite = np.sum(mask)
+    if nfinite < n:
+        warnings.warn(f"ignoring {n - nfinite} nonfinite values", DataWarning, stacklevel=2)
 
     xs = xs[mask]
     est = np.average(xs).item()
@@ -135,9 +137,9 @@ class _BootResult:
     "Statistic computed on original data."
 
     rep_mean: float
-    "Mean of the replicates."
+    "Mean of the statistic computed on the replicates."
     rep_var: float
-    "Variance of the replicates."
+    "Variance of the statistic computed on the replicates."
     ci_lower: float
     "CI lower bound."
     ci_upper: float
@@ -196,8 +198,8 @@ class _BLBootstrapper:
         lbs = StatAccum(np.mean)
         ubs = StatAccum(np.mean)
 
-        # self._tracer.trace("estimating acceleration term")
-        # accel = _bca_accel_term(xs, self.config.statistic)
+        self._tracer.trace("estimating acceleration term")
+        accel = _bca_accel_term(xs, self.config.statistic)
 
         self._rep_generator = ReplicateGenerator(n, b, self.rng)
         self._tracer.trace("let's go!")
@@ -206,7 +208,7 @@ class _BLBootstrapper:
             for i, ss in enumerate(self.blb_subsets(n, b)):
                 self._tracer.add_bindings(subset=i)
                 self._tracer.trace("starting subset")
-                res = self.measure_subset(xs, ss, estimate, 0)
+                res = self.measure_subset(xs, ss, estimate, accel)
                 ss_frames[i] = res.samples
                 means.record(res.rep_mean)
                 vars.record(res.rep_var)
@@ -256,13 +258,8 @@ class _BLBootstrapper:
             # ql, qh = _bca_range(estimate, stats, self.config.ci_margin, accel)
             # self._tracer.trace("bias-corrected quantiles: [%.4f, %.4f]", ql, qh, accel=accel)
             lb, ub = np.quantile(stats, [self._ci_qmin, self._ci_qmax])
-            self._tracer.trace("expanded bounds: %f < s < %f", lb, ub)
-            # recenter bounds around estimate
-            # this is the reverse-bootstrap percentile interval
-            # see: https://arxiv.org/pdf/1411.5279
-            # ec = means.statistic
-            # lb = estimate - (ec - lb)
-            # ub = estimate + (ub - ec)
+            # lb, ub = np.quantile(stats, [ql, qh])
+            self._tracer.trace("CI bounds: %f < s < %f", lb, ub)
             lbs.record(stat, lb)
             ubs.record(stat, ub)
             del stats
