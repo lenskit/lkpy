@@ -95,14 +95,14 @@ class DatasetBuilder:
         if isinstance(name, DataContainer):
             self.schema = name.schema.model_copy()
             self._tables = {n: t for (n, t) in name.tables.items()}
-            self._indexes = {
+            self._vocabularies = {
                 n: Vocabulary(name.tables[n].column(id_col_name(n)), name=n)
                 for n in name.schema.entities.keys()
             }
         else:
             self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
             self._tables = {"item": None}
-            self._indexes = {}
+            self._vocabularies = {}
 
         self._log = _log.bind(ds_name=name)
 
@@ -407,12 +407,11 @@ class DatasetBuilder:
                 raise DataError(f"no entities of class {e_type}")
 
             e_nums = self._resolve_entity_ids(e_type, ids, e_tbl)
-            e_valid = e_nums.is_valid()
-            if not pc.all(e_valid).as_py():
+            if e_nums.null_count:
                 if missing == "error":
-                    n_bad = len(e_nums) - pc.sum(e_valid).as_py()  # type: ignore
-                    raise DataError(f"{n_bad} unknown IDs for entity class {e_type}")
+                    raise DataError(f"{e_nums.null_count} unknown IDs for entity class {e_type}")
                 assert missing == "filter"
+                e_valid = e_nums.is_valid()
                 if link_mask is None:
                     link_mask = e_valid
                 else:
@@ -1021,7 +1020,7 @@ class DatasetBuilder:
         vocab = self._vocabularies.get(cls, None)
         if vocab is None:
             return pa.nulls(len(tgt_ids), type=pa.int32())
-        return vocab.numbers(tgt_ids, format="arrow")
+        return vocab.numbers(tgt_ids, format="arrow", missing="null")
 
 
 def _expand_and_align_list_array(
