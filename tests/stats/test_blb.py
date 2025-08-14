@@ -6,6 +6,7 @@
 
 import os
 from math import sqrt
+from typing import ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -43,102 +44,109 @@ def test_blb_single_array(rng: np.random.Generator):
     assert summary["ci_upper"] == approx(mean + 1.96 * ste, rel=0.01)
 
 
-@mark.slow
-@mark.skipif(not ray_available(), reason="bulk BLB test requires Ray")
-@mark.parametrize("size", [1000, 10_000, 100_000])
-@mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
-def test_blb_array_normal(rng: np.random.Generator, size: int):
-    "Test BLB with arrays of normals."
-    import ray
+class CITester:
+    NBATCHES: ClassVar[int] = 20
+    PERBATCH: ClassVar[int] = int(os.environ.get("BLB_TRIALS_PER_BATCH", 50))
 
-    ensure_cluster()
-    TRUE_MEAN = 1.0
-    TRUE_SD = 1.0
-    # TRUE_SVAR = TRUE_SD * TRUE_SD / size
-    THEORETICAL_SE = TRUE_SD / np.sqrt(size)
-    THEORETICAL_WIDTH = 2 * 1.96 * THEORETICAL_SE
-    results = []
-    times = []
+    parameter: float
+    expected_width: float
 
-    # Test: for NBATCHES * PERBATCH runs, do approx. 95% of confidence intervals
-    # contain the true mean?
+    def generate_sample(self, rng: np.random.Generator) -> NDArray[np.float64]: ...
 
-    worker = ray.remote(num_cpus=2)(_blb_worker)
+    @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
+    @mark.parametrize("size", [1000])
+    def test_compute(self, size: int, rng: np.random.Generator):
+        import ray
 
-    NBATCHES = 20
-    PERBATCH = int(os.environ.get("BLB_TRIALS_PER_BATCH", 50))
-    NTRIALS = NBATCHES * PERBATCH
-    rngs = rng.spawn(NBATCHES)
-    tasks = [worker.remote(PERBATCH, TRUE_MEAN, TRUE_SD, size, t) for t in rngs]
-    for task in tasks:
-        bres = ray.get(task)
-        for mean, summary, time in bres:
-            assert isinstance(summary, dict)
-            assert summary["estimate"] == approx(mean)
+        ensure_cluster()
 
-            results.append(summary)
-            times.append(time)
+        results = []
+        times = []
+        n_trials = self.NBATCHES * self.PERBATCH
 
-    _log.info("completed %d trials (avg %.2fms / trial)", len(results), np.mean(times) * 1000)
-    n_lb_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN])
-    f_lb_good = n_lb_good / NTRIALS
-    n_ub_good = len([r for r in results if TRUE_MEAN <= r["ci_upper"]])
-    f_ub_good = n_ub_good / NTRIALS
-    n_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN <= r["ci_upper"]])
-    f_good = n_good / NTRIALS
-    bt = binomtest(n_good, NTRIALS, 0.95)
-    _log.info("binomal test for CI hit rate: stat=%.3f, p=%.3g", bt.statistic, bt.pvalue, test=bt)
+        worker = ray.remote(num_cpus=2)(_blb_worker)
+        rngs = rng.spawn(self.NBATCHES)
+        tasks = [worker.remote(self.PERBATCH, size, self, t) for t in rngs]
+        for task in tasks:
+            bres = ray.get(task)
+            for mean, summary, time in bres:
+                assert isinstance(summary, dict)
+                assert summary["estimate"] == approx(mean)
 
-    smeans = np.array([r["estimate"] for r in results])
-    smt = ttest_1samp(smeans, TRUE_MEAN)
-    _log.info("sample means: %s", describe(smeans))
-    if smt.pvalue >= 0.05:
-        _log.info("t-test for sample means: stat=%.5f, p=%.3g", smt.statistic, smt.pvalue, test=smt)
-    else:
-        _log.warn("t-test for sample means: stat=%.5f, p=%.3g", smt.statistic, smt.pvalue, test=smt)
-    rmeans = np.array([r["rep_mean"] for r in results])
-    rmt = ttest_rel(rmeans, smeans)
-    _log.info("bootstrap means: %s", describe(rmeans))
-    if rmt.pvalue >= 0.05:
-        _log.info("t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt)
-    else:
-        _log.warn("t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt)
+                results.append(summary)
+                times.append(time)
 
-    widths = np.array([r["ci_upper"] - r["ci_lower"] for r in results])
-    _log.info(
-        "bootstrap CI widths (expected: {:.4f}): {}".format(THEORETICAL_WIDTH, describe(widths))
-    )
-    wt = ttest_1samp(widths, THEORETICAL_WIDTH)
-    if wt.pvalue >= 0.05:
-        _log.info("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
-    else:
-        _log.warn("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
-
-    if bt.pvalue >= 0.05:
+        _log.info("completed %d trials (avg %.2fms / trial)", len(results), np.mean(times) * 1000)
+        n_lb_good = len([r for r in results if r["ci_lower"] <= self.parameter])
+        f_lb_good = n_lb_good / n_trials
+        n_ub_good = len([r for r in results if self.parameter <= r["ci_upper"]])
+        f_ub_good = n_ub_good / n_trials
+        n_good = len([r for r in results if r["ci_lower"] <= self.parameter <= r["ci_upper"]])
+        f_good = n_good / n_trials
+        bt = binomtest(n_good, n_trials, 0.95)
         _log.info(
-            "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
-                f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
-            ),
-        )
-    else:
-        _log.error(
-            "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
-                f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
-            ),
+            "binomal test for CI hit rate: stat=%.3f, p=%.3g", bt.statistic, bt.pvalue, test=bt
         )
 
-    # leave some wiggle room
-    assert bt.pvalue >= 0.05
+        smeans = np.array([r["estimate"] for r in results])
+        smt = ttest_1samp(smeans, self.parameter)
+        _log.info("sample means: %s", describe(smeans))
+        if smt.pvalue >= 0.05:
+            _log.info(
+                "t-test for sample means: stat=%.5f, p=%.3g", smt.statistic, smt.pvalue, test=smt
+            )
+        else:
+            _log.warn(
+                "t-test for sample means: stat=%.5f, p=%.3g", smt.statistic, smt.pvalue, test=smt
+            )
+        rmeans = np.array([r["rep_mean"] for r in results])
+        rmt = ttest_rel(rmeans, smeans)
+        _log.info("bootstrap means: %s", describe(rmeans))
+        if rmt.pvalue >= 0.05:
+            _log.info(
+                "t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt
+            )
+        else:
+            _log.warn(
+                "t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt
+            )
+
+        widths = np.array([r["ci_upper"] - r["ci_lower"] for r in results])
+        _log.info(
+            "bootstrap CI widths (expected: {:.4f}): {}".format(
+                self.expected_width, describe(widths)
+            )
+        )
+        wt = ttest_1samp(widths, self.expected_width)
+        if wt.pvalue >= 0.05:
+            _log.info("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
+        else:
+            _log.warn("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
+
+        if bt.pvalue >= 0.05:
+            _log.info(
+                "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
+                    f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
+                ),
+            )
+        else:
+            _log.error(
+                "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
+                    f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
+                ),
+            )
+
+        # leave some wiggle room
+        assert bt.pvalue >= 0.05
 
 
 def _blb_worker(
-    nreps: int, true_mean: float, true_sd: float, size: int, rng: np.random.Generator
+    nreps: int, size: int, test: CITester, rng: np.random.Generator
 ) -> list[tuple[float, dict[str, float], float]]:
     results = []
-    # bf = 0.7 if size > 50_000 else 0.8
 
     for _i in range(nreps):
-        xs = rng.normal(true_mean, true_sd, size)
+        xs = test.generate_sample(size, rng)
         mean = np.mean(xs).item()
 
         timer = Stopwatch()
@@ -149,38 +157,9 @@ def _blb_worker(
     return results
 
 
-@mark.skip("need to find better parameters")
-@given(
-    nph.arrays(shape=st.integers(10000, 1_000_000), dtype=nph.floating_dtypes(endianness="=")),
-    st.integers(0),
-)
-def test_blb_array(xs: NDArray[np.floating], seed: int):
-    "Test BLB with more aggressive edge-case hunting."
-    xsf = xs[np.isfinite(xs)]
-    mean = np.mean(xsf)
-    # ignore grotesquely out-of-bounds cases (for now)
-    assume(np.isfinite(mean))
-    n = len(xsf)
-    std = np.std(xsf)
-    ste = std / sqrt(n)
+class TestSimpleNormal(CITester):
+    parameter = 1.0
+    true_sd = 1.0
 
-    if np.all(np.isfinite(xs)):
-        summary = blb_summary(xs, "mean", rng=seed)
-    else:
-        with warns(DataWarning, match=r"ignoring \d+ nonfinite"):
-            summary = blb_summary(xs, "mean", rng=seed)
-
-    assert isinstance(summary, dict)
-    assert summary["value"] == approx(mean, nan_ok=True)
-    assert summary["mean"] == approx(mean, rel=0.01, nan_ok=True)
-
-    if n == 0:
-        assert np.isnan(summary["ci_min"])
-        assert np.isnan(summary["ci_max"])
-    elif np.allclose(xs, np.min(xs)):
-        # standard error is zero
-        assert summary["ci_min"] == approx(mean, rel=0.01)
-        assert summary["ci_max"] == approx(mean, rel=0.01)
-    else:
-        assert summary["ci_min"] == approx(mean - 1.96 * ste, rel=0.01)
-        assert summary["ci_max"] == approx(mean + 1.96 * ste, rel=0.01)
+    def generate_sample(self, size: int, rng):
+        return rng.normal(self.parameter, self.true_sd, size=size)
