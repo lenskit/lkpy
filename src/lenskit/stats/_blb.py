@@ -98,9 +98,11 @@ def blb_summary(
     if stat != "mean":
         raise ValueError(f"unsupported statistic {stat}")
 
+    n = len(xs)
     mask = np.isfinite(xs)
-    if ninf := int(np.sum(~mask)):
-        warnings.warn(f"ignoring {ninf} nonfinite values", DataWarning, stacklevel=2)
+    nfinite = np.sum(mask)
+    if nfinite < n:
+        warnings.warn(f"ignoring {n - nfinite} nonfinite values", DataWarning, stacklevel=2)
 
     xs = xs[mask]
     est = np.average(xs).item()
