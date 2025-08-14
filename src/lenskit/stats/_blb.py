@@ -244,7 +244,7 @@ class _BLBootstrapper:
         lbs = StatAccum(None)
         ubs = StatAccum(None)
 
-        loop = self._rep_generator.subsets()
+        loop = self.miniboot_weights(n, b)
         for i, weights in enumerate(loop):
             self._tracer.add_bindings(rep=i)
             self._tracer.trace("starting replicate")
