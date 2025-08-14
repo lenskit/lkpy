@@ -9,7 +9,7 @@ from math import sqrt
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.stats import binomtest
+from scipy.stats import binomtest, ttest_1samp
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
@@ -55,6 +55,7 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     TRUE_MEAN = 1.0
     TRUE_SD = 1.0
     # TRUE_SVAR = TRUE_SD * TRUE_SD / size
+    THEORETICAL_SE = TRUE_SD / np.sqrt(size)
     results = []
     times = []
 
@@ -85,11 +86,20 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     n_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN <= r["ci_upper"]])
     f_good = n_good / NTRIALS
     bt = binomtest(n_good, NTRIALS, 0.95)
+    _log.info("binomal test for CI hit rate: stat=%.3f, p=%.3g", bt.statistic, bt.pvalue, test=bt)
+
+    rmeans = np.array([r["rep_mean"] for r in results])
+    rmt = ttest_1samp(rmeans, TRUE_MEAN)
+    _log.info("t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt)
+
+    widths = np.array([r["ci_upper"] - r["ci_lower"] for r in results])
+    wt = ttest_1samp(widths, 2 * 1.96 * THEORETICAL_SE)
+    _log.info("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
+
     _log.info(
         "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
             f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
         ),
-        test=bt,
     )
     # leave some wiggle room
     assert bt.pvalue >= 0.05
