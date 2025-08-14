@@ -13,7 +13,7 @@ use pyo3::{
 };
 
 use arrow::{
-    array::{make_array, Array, ArrayData, AsArray, Int32Builder, UInt32Builder},
+    array::{make_array, Array, ArrayData, AsArray, Int32Builder},
     datatypes::{Int16Type, Int32Type, Int64Type, UInt16Type, UInt32Type, UInt64Type},
     pyarrow::PyArrowType,
 };
