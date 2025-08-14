@@ -87,3 +87,4 @@ and may be useful in building new models and components for LensKit.
     lenskit.stats
     lenskit.testing
     lenskit.torch
+    lenskit._accel

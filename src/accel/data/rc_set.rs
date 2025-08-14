@@ -60,6 +60,7 @@ impl RCSEntry {
     }
 }
 
+/// Optimized set for checking row-column presence.
 #[pyclass]
 pub struct RowColumnSet {
     sets: Vec<RCSEntry>,
