@@ -49,9 +49,14 @@ class CITester:
     PERBATCH: ClassVar[int] = int(os.environ.get("BLB_TRIALS_PER_BATCH", 50))
 
     parameter: float
-    expected_width: float
 
-    def generate_sample(self, rng: np.random.Generator) -> NDArray[np.float64]: ...
+    def generate_sample(self, size: int, rng: np.random.Generator) -> NDArray[np.float64]: ...
+    def compute_stats(
+        self, xs: NDArray[np.float64], rng: np.random.Generator
+    ) -> dict[str, float]: ...
+
+    def expected_width(self, size: int) -> float | None:
+        return None
 
     @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
     @mark.parametrize("size", [1000])
@@ -99,42 +104,47 @@ class CITester:
             _log.warn(
                 "t-test for sample means: stat=%.5f, p=%.3g", smt.statistic, smt.pvalue, test=smt
             )
-        rmeans = np.array([r["rep_mean"] for r in results])
-        rmt = ttest_rel(rmeans, smeans)
-        _log.info("bootstrap means: %s", describe(rmeans))
-        if rmt.pvalue >= 0.05:
-            _log.info(
-                "t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt
-            )
-        else:
-            _log.warn(
-                "t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt
-            )
+        try:
+            rmeans = np.array([r["rep_mean"] for r in results])
+            rmt = ttest_rel(rmeans, smeans)
+            _log.info("bootstrap means: %s", describe(rmeans))
+            if rmt.pvalue >= 0.05:
+                _log.info(
+                    "t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt
+                )
+            else:
+                _log.warn(
+                    "t-test for CI centers: stat=%.5f, p=%.3g", rmt.statistic, rmt.pvalue, test=rmt
+                )
+        except KeyError:
+            pass
 
         widths = np.array([r["ci_upper"] - r["ci_lower"] for r in results])
-        _log.info(
-            "bootstrap CI widths (expected: {:.4f}): {}".format(
-                self.expected_width, describe(widths)
-            )
-        )
-        wt = ttest_1samp(widths, self.expected_width)
-        if wt.pvalue >= 0.05:
-            _log.info("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
-        else:
-            _log.warn("t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt)
+        ew = self.expected_width(size)
+        _log.info("bootstrap CI widths (expected: {:.4f}): {}".format(ew, describe(widths)))
+        if ew is not None:
+            wt = ttest_1samp(widths, ew)
+            if wt.pvalue >= 0.05:
+                _log.info(
+                    "t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt
+                )
+            else:
+                _log.warn(
+                    "t-test for CI width: stat=%.5f, p=%.3g", wt.statistic, wt.pvalue, test=wt
+                )
 
-        if bt.pvalue >= 0.05:
-            _log.info(
-                "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
-                    f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
-                ),
-            )
-        else:
-            _log.error(
-                "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
-                    f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
-                ),
-            )
+            if bt.pvalue >= 0.05:
+                _log.info(
+                    "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
+                        f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
+                    ),
+                )
+            else:
+                _log.error(
+                    "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
+                        f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
+                    ),
+                )
 
         # leave some wiggle room
         assert bt.pvalue >= 0.05
@@ -150,16 +160,47 @@ def _blb_worker(
         mean = np.mean(xs).item()
 
         timer = Stopwatch()
-        s = blb_summary(xs, "mean", rng=rng, b_factor=0.8, s_window=20, r_window=50, rel_tol=0.01)
+        s = test.compute_stats(xs, rng)
 
         results.append((mean, s, timer.elapsed()))
 
     return results
 
 
+class TestParamNormal(CITester):
+    parameter = 1.0
+    true_sd = 1.0
+
+    def expected_width(self, size: int):
+        se = self.true_sd / np.sqrt(size)
+        return 2 * 1.96 * se
+
+    def generate_sample(self, size: int, rng):
+        return rng.normal(self.parameter, self.true_sd, size=size)
+
+    def compute_stats(self, xs, rng: np.random.Generator):
+        mean = np.mean(xs)
+        ssd = np.std(xs, ddof=1)
+        sse = ssd / np.sqrt(len(xs))
+        return {
+            "estimate": mean,
+            "ci_lower": mean - 1.96 * sse,
+            "ci_upper": mean + 1.96 * sse,
+        }
+
+
 class TestSimpleNormal(CITester):
     parameter = 1.0
     true_sd = 1.0
 
+    def expected_width(self, size: int):
+        se = self.true_sd / np.sqrt(size)
+        return 2 * 1.96 * se
+
     def generate_sample(self, size: int, rng):
         return rng.normal(self.parameter, self.true_sd, size=size)
+
+    def compute_stats(self, xs, rng: np.random.Generator):
+        return blb_summary(
+            xs, "mean", rng=rng, b_factor=0.8, s_window=20, r_window=50, rel_tol=0.01
+        )
