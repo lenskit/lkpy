@@ -307,9 +307,9 @@ class DatasetBuilder:
             ids = ids.cast(id_type)
 
         if table is not None:
-            col = table.column(id_name)
-            is_known = pc.is_in(ids, col)
-            fresh_ids = pc.filter(ids, pc.invert(is_known))
+            vocab = self._vocabularies[cls]
+            nums = vocab.numbers(ids, format="arrow", missing="null")
+            fresh_ids = pc.filter(ids, pc.invert(nums.is_valid()))
         else:
             fresh_ids = ids
 
