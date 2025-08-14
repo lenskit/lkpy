@@ -155,14 +155,14 @@ class Vocabulary:
         missing: Literal["error", "negative", "null"] = "error",
         *,
         format: Literal["arrow"],
-    ) -> np.ndarray[tuple[int], np.dtype[np.int32]]: ...
+    ) -> pa.Int32Array: ...
     def numbers(
         self,
         terms: Sequence[Hashable] | ArrayLike,
         missing: Literal["error", "negative", "null"] = "error",
         *,
         format: Literal["numpy", "arrow"] = "numpy",
-    ) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
+    ) -> np.ndarray[tuple[int], np.dtype[np.int32]] | pa.Int32Array:
         "Look up the numbers for an array of terms or IDs."
         term_arr = pa.array(terms)  # type: ignore
         nums = self._index.get_indexes(term_arr)  # type: ignore
