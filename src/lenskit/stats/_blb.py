@@ -57,6 +57,7 @@ def blb_summary(
     rel_tol: float = 0.02,
     s_window: int = 10,
     r_window: int = 50,
+    r_min: int = 0,
     rng: RNGInput = None,
 ) -> dict[str, float]:
     r"""
@@ -112,6 +113,7 @@ def blb_summary(
         rel_tol=rel_tol,
         s_window=s_window,
         r_window=r_window,
+        r_min=r_min,
         b_factor=b_factor,
     )
     bootstrapper = _BLBootstrapper(config, rng)
@@ -153,6 +155,7 @@ class _BLBConfig:
     rel_tol: float
     s_window: int
     r_window: int
+    r_min: int
     b_factor: float
 
     @property
@@ -234,7 +237,7 @@ class _BLBootstrapper:
         lbs = StatAccum(None)
         ubs = StatAccum(None)
 
-        for i, weights in enumerate(self.miniboot_weights(n, b)):
+        for i, weights in enumerate(self.miniboot_weights(n, b), start=1):
             self._tracer.add_bindings(rep=i)
             self._tracer.trace("starting replicate")
             assert weights.shape == (b,)
@@ -253,7 +256,7 @@ class _BLBootstrapper:
             ubs.record(stat, ub)
             del stats
 
-            if self._check_convergence(
+            if i >= self.config.r_min and self._check_convergence(
                 means, vars, lbs, ubs, tol=self.config.rel_tol, w=self.config.r_window
             ):
                 break
