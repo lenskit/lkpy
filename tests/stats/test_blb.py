@@ -142,7 +142,7 @@ def _blb_worker(
         mean = np.mean(xs).item()
 
         timer = Stopwatch()
-        s = blb_summary(xs, "mean", rng=rng, b_factor=0.75, s_window=20, r_window=50, rel_tol=0.01)
+        s = blb_summary(xs, "mean", rng=rng, b_factor=0.8, s_window=20, r_window=50, rel_tol=0.01)
 
         results.append((mean, s, timer.elapsed()))
 
