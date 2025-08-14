@@ -310,6 +310,7 @@ class DatasetBuilder:
             vocab = self._vocabularies[cls]
             nums = vocab.numbers(ids, format="arrow", missing="null")
             fresh_ids = pc.filter(ids, pc.invert(nums.is_valid()))
+            assert len(fresh_ids) == nums.null_count
         else:
             fresh_ids = ids
 
@@ -317,15 +318,20 @@ class DatasetBuilder:
             n_dupes = n - len(fresh_ids)
             raise DataError(f"found {n_dupes} duplicate IDs, but re-inserts not allowed")
 
-        log.debug("adding %d new IDs", len(fresh_ids))
+        log.debug(
+            "adding %d new IDs (%d existing)",
+            len(fresh_ids),
+            0 if table is None else table.num_rows,
+        )
         new_tbl = pa.table({id_name: fresh_ids})
         if table is None:
             table = new_tbl
         else:
             table = pa.concat_tables([table, new_tbl], promote_options="permissive")
+        log.debug("have %d entities", table.num_rows)
 
         self._tables[cls] = table
-        self._vocabularies[cls] = Vocabulary(table.column(id_name), name=cls)
+        self._vocabularies[cls] = Vocabulary(table.column(id_name), name=cls, reorder=False)
 
     def add_relationships(
         self,
@@ -443,11 +449,16 @@ class DatasetBuilder:
             _log.debug("checking for repeated interactions")
             # we have to bounce to pandas for multi-column duplicate detection
             ndf = new_table.select(list(link_nums.keys())).to_pandas()
-            dupes = ndf.duplicated()
+            dupes = ndf.duplicated(keep=False)
             if np.any(dupes):
                 if rc_def.repeats.is_allowed:
                     rc_def.repeats = AllowableTroolean.PRESENT
                 else:
+                    _log.error(
+                        "found %d forbidden repeat interactions (of %d)",
+                        np.sum(dupes),
+                        new_table.num_rows,
+                    )
                     raise DataError(
                         f"repeated interactions not allowed for relationship class {cls}"
                     )
