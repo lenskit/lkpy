@@ -137,9 +137,9 @@ class _BootResult:
     "Statistic computed on original data."
 
     rep_mean: float
-    "Mean of the replicates."
+    "Mean of the statistic computed on the replicates."
     rep_var: float
-    "Variance of the replicates."
+    "Variance of the statistic computed on the replicates."
     ci_lower: float
     "CI lower bound."
     ci_upper: float
