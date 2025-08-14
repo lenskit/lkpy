@@ -34,6 +34,7 @@ struct FunkSVDTrainingData {
     ratings: Float32Array,
 }
 
+/// Train FunkSVD models.
 #[pyclass]
 pub struct FunkSVDTrainer {
     config: FunkSVDConfig,

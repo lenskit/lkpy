@@ -17,6 +17,7 @@ use pyo3::{
 
 use crate::data::RowColumnSet;
 
+/// Efficient-ish negative sampling.
 #[pyclass]
 pub struct NegativeSampler {
     rc_set: Py<RowColumnSet>,
@@ -27,6 +28,7 @@ pub struct NegativeSampler {
 
 #[pymethods]
 impl NegativeSampler {
+    /// Construct a new negative sampler.
     #[new]
     fn new<'py>(
         rc_set: Bound<'py, RowColumnSet>,
