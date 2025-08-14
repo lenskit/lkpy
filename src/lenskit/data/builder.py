@@ -1016,7 +1016,10 @@ class DatasetBuilder:
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
     ) -> pa.Int32Array:
-        tgt_ids = pa.array(ids)  # type: ignore
+        if isinstance(ids, pa.ChunkedArray):
+            tgt_ids = ids.combine_chunks()
+        else:
+            tgt_ids = pa.array(ids)  # type: ignore
         vocab = self._vocabularies.get(cls, None)
         if vocab is None:
             return pa.nulls(len(tgt_ids), type=pa.int32())
