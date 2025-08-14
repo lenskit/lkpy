@@ -19,6 +19,8 @@ Third release in 2026, with more feature updates and bug fixes.
 
 - Fixed graded NDCG when input item lists are empty and do not have the grade
   field (:issue:`1095`, :pr:`1096`).
+- Added support for PyArrow tables to
+  :meth:`lenksit.data.DatsetBuilder.add_scalar_attribute` (:pr:`1109`).
 
 .. _2026.2.0:
 

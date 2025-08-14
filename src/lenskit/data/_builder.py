@@ -817,6 +817,11 @@ class DatasetBuilder:
                     entities = entities[id_col].values
                 else:
                     entities = entities.index.values
+            elif isinstance(entities, pa.Table):
+                values = entities.column(name)
+                entities = entities.column(id_col)
+            else:  # pragma: nocover
+                raise TypeError(f"cannot extract values from {type(entities)}")
 
         e_tbl = self._tables[cls]
         if e_tbl is None:  # pragma: nocover

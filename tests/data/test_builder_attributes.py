@@ -494,3 +494,29 @@ def test_item_sparse_attribute(rng: np.random.Generator, items_df: pd.DataFrame)
         cols = mat.indices[start:end]
         mgs = gindex[cols].tolist()
         assert mgs == genre_lists.loc[movie]
+
+
+def test_item_table_attribute(items_df: pd.DataFrame):
+    dsb = DatasetBuilder()
+
+    dsb.add_entities("item", items_df.index.values)
+
+    tbl = pa.Table.from_pandas(items_df.reset_index())
+    print(tbl)
+    dsb.add_scalar_attribute("item", "title", tbl)
+
+    sa = dsb.schema.entities["item"].attributes["title"]
+    assert sa.layout == AttrLayout.SCALAR
+
+    ds = dsb.build()
+
+    df = ds.entities("item").pandas().set_index("item_id")
+    assert "title" in df.columns
+    ds_ts, orig_ts = df["title"].align(items_df["title"])
+    assert np.all(ds_ts == orig_ts)
+
+    assert ds.entities("item").attribute("title").is_scalar
+    df = ds.entities("item").attribute("title").pandas()
+    assert isinstance(df, pd.Series)
+    ds_ts, orig_ts = df.align(items_df["title"])
+    assert np.all(ds_ts == orig_ts)
