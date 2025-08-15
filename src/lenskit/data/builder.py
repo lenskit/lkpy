@@ -452,6 +452,13 @@ class DatasetBuilder:
         if not rc_def.repeats.is_present:
             _log.debug("checking for repeated interactions")
 
+            # FIXME: the coordinate table preservation will be out-of-order with
+            # respect to sorted tables. This will not affect correctness for the
+            # purposes of checking if duplicates exist, but will cause problems
+            # if we count on locations for other purposes.  It also can increase
+            # memory use, since the coordinate table keeps a reference to the
+            # pre-sorted data.
+
             # get the coordinate table for the previously-existing entries
             coords = self._rel_coords.get(cls, None)
             if coords is None:
