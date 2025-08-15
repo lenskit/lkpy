@@ -1,5 +1,7 @@
 @echo off
-mise run build:dist -- -sd
-if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
+goto :start
+#MISE description="Build conda packages"
+#MISE depends=["build:dist -sd"]
+:start
 bash %MISE_TASK_DIR%/conda.sh %*
 exit %ERRORLEVEL%
