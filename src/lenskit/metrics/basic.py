@@ -8,12 +8,14 @@
 Basic set statistics.
 """
 
+import numpy as np
+
 from lenskit.data.items import ItemList
 
-from ._base import Metric
+from ._base import ListMetric, Metric
 
 
-class ListLength(Metric):
+class ListLength(ListMetric):
     """
     Report the length of the output (recommendation list or predictions).
 
@@ -23,8 +25,11 @@ class ListLength(Metric):
 
     label = "N"  # type: ignore
 
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         return len(recs)
+
+    def summarize(self, values):
+        return float(np.mean(values))
 
 
 class TestItemCount(Metric):
