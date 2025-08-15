@@ -10,7 +10,7 @@ declare -A options
 declare -a build_args=()
 STAGE_SOURCE=build/staged-source
 
-while getopts cdh arg; do
+while getopts cdhs arg; do
     options[$arg]="${OPTARG:-1}"
 done
 
