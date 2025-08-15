@@ -34,6 +34,7 @@ class DataContainer:
     schema: DataSchema
     tables: dict[str, pa.Table]
     _sorted: bool = False
+    _rel_coords: dict[str, _data_accel.CoordinateTable] | None = None
 
     def normalize(self):
         """
