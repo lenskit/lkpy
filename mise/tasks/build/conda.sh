@@ -6,7 +6,7 @@ set -eo pipefail
 
 . "$MISE_PROJECT_ROOT/mise/task-functions.sh"
 
-export LK_PACKAGE_VERSION="$(python "${MISE_PROJECT_ROOT}/mise/tasks/version.py" -q)"
+export LK_PACKAGE_VERSION="$(uv run "${MISE_PROJECT_ROOT}/mise/tasks/version.py" -q)"
 export PYTHONPATH=
 
 declare -a flags=()
