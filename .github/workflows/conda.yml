@@ -34,19 +34,20 @@ jobs:
       - name: Install mise-en-place
         uses: jdx/mise-action@v2
 
-      - name: 🔬 Install Conda base
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-name: build
-          create-args: rattler-build uv
+      - name: Build LensKit source distribution
+        id: source
+        run: |
+          uv sync
+          mise run version --github
+          mise run build:dist -sd
 
       - name: 🔨 Build Conda packages
-        run: |
-          uv sync --only-group=scripting
-          mise run build:conda
-        shell: bash -el {0}
+        uses: prefix-dev/rattler-build-action@v0.2.34
+        with:
+          recipe-path: conda/recipe.yaml
+          build-args: --noarch-build-platform linux-64 --output-dir dist/conda
         env:
-          UV_LOCKED: 1
+          LK_PACKAGE_VERSION: ${{steps.source.outputs.version}}
 
       - name: Save package
         uses: actions/upload-artifact@v4
