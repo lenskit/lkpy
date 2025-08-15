@@ -17,7 +17,7 @@ use rustc_hash::FxHasher;
 use crate::indirect_hashing::{IndirectHashContent, IndirectSearcher};
 
 /// ID array implementation for string IDs.
-pub struct StringIDArray {
+pub struct StringContentArray {
     array: StringArray,
 }
 
@@ -26,13 +26,13 @@ pub struct StringSearch<'a> {
     other: StringArray,
 }
 
-impl StringIDArray {
+impl StringContentArray {
     pub fn new(array: StringArray) -> Self {
-        StringIDArray { array }
+        StringContentArray { array }
     }
 }
 
-impl IndirectHashContent for StringIDArray {
+impl IndirectHashContent for StringContentArray {
     type Searcher<'a> = StringSearch<'a>;
 
     fn hash_entry(&self, idx: u32) -> u64 {

@@ -22,12 +22,8 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 
-mod storage_int;
-mod storage_str;
-
-use storage_int::PrimitiveIDArray;
-use storage_str::StringIDArray;
-
+use crate::indirect_hashing::content_int::PrimitiveContentArray;
+use crate::indirect_hashing::content_string::StringContentArray;
 use crate::indirect_hashing::{IndirectHashTable, PositionLookup};
 
 /// Arrow-based ID index.
@@ -41,14 +37,14 @@ pub struct IDIndex {
 }
 
 /// Helper function for primitive array tables.
-fn prim_tbl<T>(arr: &dyn Array) -> PyResult<Box<IndirectHashTable<PrimitiveIDArray<T>>>>
+fn prim_tbl<T>(arr: &dyn Array) -> PyResult<Box<IndirectHashTable<PrimitiveContentArray<T>>>>
 where
     T: ArrowPrimitiveType,
     T::Native: Hash
         + for<'a> FromPyObject<'a>
         + for<'a> IntoPyObject<'a, Target = PyInt, Output = Bound<'a, PyInt>, Error = Infallible>,
 {
-    let arr = PrimitiveIDArray::new(arr.as_primitive::<T>().clone());
+    let arr = PrimitiveContentArray::new(arr.as_primitive::<T>().clone());
     let tbl = IndirectHashTable::from_unique(arr)?;
     Ok(Box::new(tbl))
 }
@@ -58,7 +54,7 @@ impl IDIndex {
     fn empty() -> Self {
         IDIndex {
             ids: Arc::new(Int32Builder::new().finish()),
-            index: Box::new(IndirectHashTable::<PrimitiveIDArray<Int32Type>>::default()),
+            index: Box::new(IndirectHashTable::<PrimitiveContentArray<Int32Type>>::default()),
         }
     }
 
@@ -73,7 +69,7 @@ impl IDIndex {
             DataType::UInt32 => prim_tbl::<UInt32Type>(&ids)?,
             DataType::Int64 => prim_tbl::<Int64Type>(&ids)?,
             DataType::UInt64 => prim_tbl::<UInt64Type>(&ids)?,
-            DataType::Utf8 => Box::new(IndirectHashTable::from_unique(StringIDArray::new(
+            DataType::Utf8 => Box::new(IndirectHashTable::from_unique(StringContentArray::new(
                 ids.as_string().clone(),
             ))?),
             // TODO: add support for large strings, views, and binaries

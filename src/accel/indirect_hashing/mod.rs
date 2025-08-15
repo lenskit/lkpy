@@ -8,6 +8,8 @@ use pyo3::{exceptions::PyValueError, prelude::*};
 
 use thiserror::Error;
 
+pub mod content_int;
+pub mod content_string;
 mod table;
 
 pub use table::{IndirectHashTable, PositionLookup};

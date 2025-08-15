@@ -20,7 +20,7 @@ use log::*;
 use crate::indirect_hashing::{IndirectHashContent, IndirectSearcher};
 
 /// Backend hash storage for primitive (integer) arrays.
-pub struct PrimitiveIDArray<T: ArrowPrimitiveType> {
+pub struct PrimitiveContentArray<T: ArrowPrimitiveType> {
     array: PrimitiveArray<T>,
 }
 
@@ -29,21 +29,21 @@ pub struct PrimSearcher<'a, T: ArrowPrimitiveType> {
     other: PrimitiveArray<T>,
 }
 
-impl<T: ArrowPrimitiveType> PrimitiveIDArray<T> {
+impl<T: ArrowPrimitiveType> PrimitiveContentArray<T> {
     pub fn new(array: PrimitiveArray<T>) -> Self {
-        PrimitiveIDArray { array }
+        PrimitiveContentArray { array }
     }
 }
 
-impl<T: ArrowPrimitiveType> Default for PrimitiveIDArray<T> {
+impl<T: ArrowPrimitiveType> Default for PrimitiveContentArray<T> {
     fn default() -> Self {
-        PrimitiveIDArray {
+        PrimitiveContentArray {
             array: PrimitiveBuilder::new().finish(),
         }
     }
 }
 
-impl<T> IndirectHashContent for PrimitiveIDArray<T>
+impl<T> IndirectHashContent for PrimitiveContentArray<T>
 where
     T: ArrowPrimitiveType,
     T::Native: Hash
