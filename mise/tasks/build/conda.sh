@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build Conda package"
-#MISE depends=["build:dist -s"]
+#MISE depends=["build:dist -sd"]
 
 set -eo pipefail
 
