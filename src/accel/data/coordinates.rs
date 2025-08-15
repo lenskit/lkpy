@@ -8,7 +8,10 @@
 
 use std::hash::{Hash, Hasher};
 
-use arrow::array::{array, AsArray, Int32Array, RecordBatch};
+use arrow::{
+    array::{AsArray, Int32Array, RecordBatch},
+    pyarrow::PyArrowType,
+};
 use hashbrown::{hash_table::Entry, HashTable};
 use log::*;
 use pyo3::{
@@ -17,30 +20,43 @@ use pyo3::{
 };
 use rustc_hash::FxHasher;
 
-use crate::indirect_hashing::{IndirectHashContent, IndirectSearcher};
+/// Two-element indices for chunked lookup.
+#[derive(Debug, Clone, Copy)]
+struct ChunkIndex {
+    /// The chunk number.
+    chunk: u32,
+    /// The index within a chunk.
+    item: u32,
+}
 
 /// A table of sparse matrix or tensor coordinates.
 #[pyclass]
 #[derive(Clone)]
 pub struct CoordinateTable {
     chunks: Vec<Vec<Int32Array>>,
-    n_dims: usize,
+    offsets: Vec<usize>,
+    n_dims: u32,
     n_rows: usize,
     n_unique: usize,
-    index: HashTable<(u32, u32)>,
+    index: HashTable<ChunkIndex>,
 }
 
 #[pymethods]
 impl CoordinateTable {
     #[new]
     /// Construct a new, empty coordinate table.
-    fn new(dims: usize) -> Self {
-        CoordinateTable {
-            chunks: Vec::new(),
-            n_dims: dims,
-            n_rows: 0,
-            n_unique: 0,
-            index: HashTable::new(),
+    fn new(dims: u32) -> PyResult<CoordinateTable> {
+        if dims < 1 {
+            Err(PyValueError::new_err("must have at least 1 dimension"))
+        } else {
+            Ok(CoordinateTable {
+                chunks: Vec::new(),
+                offsets: vec![0],
+                n_dims: dims,
+                n_rows: 0,
+                n_unique: 0,
+                index: HashTable::new(),
+            })
         }
     }
 
@@ -55,11 +71,18 @@ impl CoordinateTable {
         py: Python<'py>,
         coords: Bound<'py, PyAny>,
     ) -> PyResult<(usize, usize)> {
-        todo!()
+        if let Ok(PyArrowType(rb)) = coords.extract::<PyArrowType<RecordBatch>>() {
+            self.add_record_batch(&rb)
+        } else {
+            Err(PyTypeError::new_err(format!(
+                "invalid coordinate type {}",
+                coords
+            )))
+        }
     }
 
     /// Get the number of dimensions in which we store coordinates.
-    fn dimensions(&self) -> usize {
+    fn dimensions(&self) -> u32 {
         self.n_dims
     }
 
@@ -74,8 +97,15 @@ impl CoordinateTable {
     }
 
     /// Query if the index contains the specified coordinates.
+    #[pyo3(signature = (*coords))]
     fn contains(&self, coords: Vec<i32>) -> bool {
-        todo!()
+        self.find(coords).is_some()
+    }
+
+    /// Query if the index contains the specified coordinates.
+    #[pyo3(signature = (*coords))]
+    fn find(&self, coords: Vec<i32>) -> Option<usize> {
+        self.lookup(&coords).map(|cx| self.global_index(&cx))
     }
 }
 
@@ -84,8 +114,13 @@ impl CoordinateTable {
         self.n_rows
     }
 
+    fn global_index(&self, cx: &ChunkIndex) -> usize {
+        let base = self.offsets[cx.chunk_index()];
+        base + cx.item_index()
+    }
+
     fn add_record_batch(&mut self, records: &RecordBatch) -> PyResult<(usize, usize)> {
-        if records.num_columns() != self.dimensions() {
+        if records.num_columns() as u32 != self.dimensions() {
             return Err(PyValueError::new_err(format!(
                 "invalid batch size of {} columns (expected {})",
                 records.num_columns(),
@@ -110,17 +145,19 @@ impl CoordinateTable {
 
     /// Add coordinates from a slice of arrays.
     fn add_arrays(&mut self, n: usize, arrays: Vec<Int32Array>) -> PyResult<(usize, usize)> {
-        let ci = self.chunks.len() as u32;
+        let chunk = self.chunks.len() as u32;
+        self.offsets.push(arrays[0].len());
         self.chunks.push(arrays);
         let mut added = 0;
         let mut uq_added = 0;
         for i in 0..n {
             let i = i as u32;
-            let hash = hash_entry(&self.chunks, ci, i);
+            let cx = ChunkIndex::new(chunk, i);
+            let hash = hash_entry(&self.chunks, &cx);
             let e = self.index.entry(
                 hash,
-                |(c2, r2)| compare_entries(&self.chunks, (ci, i), (*c2, *r2)),
-                |(c2, r2)| hash_entry(&self.chunks, *c2, *r2),
+                |j| compare_entries(&self.chunks, &cx, j),
+                |j| hash_entry(&self.chunks, j),
             );
             added += 1;
             self.n_rows += 1;
@@ -128,16 +165,40 @@ impl CoordinateTable {
                 uq_added += 1;
                 self.n_unique += 1;
             }
-            e.insert((ci, i));
+            e.insert(cx);
         }
 
         Ok((added, uq_added))
     }
+
+    fn lookup(&self, coords: &[i32]) -> Option<ChunkIndex> {
+        let hash = hash_coords(coords);
+        self.index
+            .find(hash, |cx| compare_coords(&self.chunks, cx, coords))
+            .copied()
+    }
 }
 
-fn hash_entry(chunks: &[Vec<Int32Array>], ci: u32, ri: u32) -> u64 {
-    let chunk = &chunks[ci as usize];
-    hash_chunk_entry(&chunk, ri)
+impl ChunkIndex {
+    #[inline]
+    fn new(chunk: u32, item: u32) -> Self {
+        ChunkIndex { chunk, item }
+    }
+
+    #[inline]
+    fn chunk_index(&self) -> usize {
+        self.chunk as usize
+    }
+
+    #[inline]
+    fn item_index(&self) -> usize {
+        self.item as usize
+    }
+}
+
+fn hash_entry(chunks: &[Vec<Int32Array>], ix: &ChunkIndex) -> u64 {
+    let chunk = &chunks[ix.chunk_index()];
+    hash_chunk_entry(&chunk, ix.item)
 }
 
 fn hash_chunk_entry(chunk: &[Int32Array], ri: u32) -> u64 {
@@ -148,18 +209,43 @@ fn hash_chunk_entry(chunk: &[Int32Array], ri: u32) -> u64 {
     hash.finish()
 }
 
-fn compare_entries(chunks: &[Vec<Int32Array>], i1: (u32, u32), i2: (u32, u32)) -> bool {
-    let (c1, r1) = i1;
-    let (c2, r2) = i2;
-    let chunk1 = &chunks[c1 as usize];
-    let chunk2 = &chunks[c2 as usize];
+fn hash_coords(coords: &[i32]) -> u64 {
+    let mut hash = FxHasher::default();
+    for c in coords {
+        c.hash(&mut hash);
+    }
+    hash.finish()
+}
 
-    compare_chunk_entries(chunk1, r1, chunk2, r2)
+fn compare_entries(chunks: &[Vec<Int32Array>], i1: &ChunkIndex, i2: &ChunkIndex) -> bool {
+    let chunk1 = &chunks[i1.chunk_index()];
+    let chunk2 = &chunks[i2.chunk_index()];
+
+    compare_chunk_entries(chunk1, i1.item, chunk2, i2.item)
 }
 
 fn compare_chunk_entries(chunk1: &[Int32Array], i1: u32, chunk2: &[Int32Array], i2: u32) -> bool {
+    if chunk1.len() != chunk2.len() {
+        return false;
+    }
+
     for (a1, a2) in chunk1.iter().zip(chunk2.iter()) {
         if a1.value(i1 as usize) != a2.value(i2 as usize) {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn compare_coords(chunks: &[Vec<Int32Array>], idx: &ChunkIndex, coords: &[i32]) -> bool {
+    let chunk = &chunks[idx.chunk_index()];
+    if chunk.len() != coords.len() {
+        return false;
+    }
+
+    for (c1, c2) in chunk.iter().zip(coords.iter()) {
+        if c1.value(idx.item_index()) != *c2 {
             return false;
         }
     }
