@@ -31,6 +31,9 @@ jobs:
       - name: 🏷️ Fetch Git tags
         run: git fetch --tags
 
+      - name: Install mise-en-place
+        uses: jdx/mise-action@v2
+
       - name: 🔬 Install Conda base
         uses: mamba-org/setup-micromamba@v2
         with:
@@ -39,7 +42,8 @@ jobs:
 
       - name: 🔨 Build Conda packages
         run: |
-          uv run --only-group=scripting just build-conda
+          uv sync --only-group=scripting
+          mise run build:conda
         shell: bash -el {0}
         env:
           UV_LOCKED: 1
