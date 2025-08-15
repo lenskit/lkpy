@@ -164,13 +164,17 @@ class Vocabulary:
         format: Literal["numpy", "arrow"] = "numpy",
     ) -> np.ndarray[tuple[int], np.dtype[np.int32]] | pa.Int32Array:
         "Look up the numbers for an array of terms or IDs."
-        term_arr = pa.array(terms)  # type: ignore
-        nums = self._index.get_indexes(term_arr)  # type: ignore
+        if pa.types.is_null(self._array.type):
+            nums = pa.nulls(len(terms), type=pa.int32())
+        else:
+            term_arr = pa.array(terms, type=self._array.type)  # type: ignore
+            nums = self._index.get_indexes(term_arr)  # type: ignore
+
         trace(self._log, "resolved %d IDs, %d invalid", len(term_arr), nums.null_count)
         if missing == "error" and nums.null_count:
             raise KeyError(f"{nums.null_count} invalid keys")
         elif missing == "negative":
-            nums = pc.fill_null(nums, -1)
+            nums = pc.fill_null(nums, -1)  # type: ignore
 
         match format:
             case "numpy":
