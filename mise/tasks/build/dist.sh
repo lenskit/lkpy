@@ -1,39 +1,24 @@
 #!/usr/bin/env bash
 #MISE description="Build source distribution"
 #MISE depends=["init-dirs"]
+#USAGE flag "-s --sdist" help="build source dist only"
+#USAGE flag "-c --clean" help="clean staged sources before building"
+#USAGE flag "-d --dynamic-version" help="create dynamically-versioned sdist"
 
 set -eo pipefail
 
 . "$MISE_PROJECT_ROOT/mise/task-functions.sh"
 
-declare -A options
 declare -a build_args=()
 STAGE_SOURCE=build/staged-source
 
-while getopts cdhs arg; do
-    options[$arg]="${OPTARG:-1}"
-done
-
-if ((${options[h]})); then
-    cat <<EOD
-mise run build:sdist [-scdh]
-
-Options:
-    -s      build source dist only
-    -c      clean staged sources before building
-    -d      create dynamically-versioned sdist
-    -h      print this help message
-EOD
-    exit
-fi
-
-if ((${options[d]})); then
+if [[ $usage_dynamic_version = true ]]; then
     if ! git-is-clean; then
         msg "dynamically-versioned build requires fully-committed source"
         exit 3
     fi
 
-    if ((${options[c]})); then
+    if [[ $usage_clean = true ]]; then
         msg "cleaning $STAGE_SOURCE"
         rm -rf "$STAGE_SOURCE"
     fi
@@ -55,7 +40,7 @@ if ((${options[d]})); then
     cd "$STAGE_SOURCE"
 fi
 
-if ((${options[s]})); then
+if [[ $usage_sdist = true ]]; then
     msg "setting to only build source dist"
     build_args+=("--sdist")
 fi
