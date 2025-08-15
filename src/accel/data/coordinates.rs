@@ -66,12 +66,9 @@ impl CoordinateTable {
     }
 
     /// Extend a table with more records.
-    fn extend<'py>(
-        &mut self,
-        py: Python<'py>,
-        coords: Bound<'py, PyAny>,
-    ) -> PyResult<(usize, usize)> {
+    fn extend<'py>(&mut self, coords: Bound<'py, PyAny>) -> PyResult<(usize, usize)> {
         if let Ok(PyArrowType(rb)) = coords.extract::<PyArrowType<RecordBatch>>() {
+            debug!("extending coordinate with batch of {}", rb.num_rows());
             self.add_record_batch(&rb)
         } else {
             Err(PyTypeError::new_err(format!(
