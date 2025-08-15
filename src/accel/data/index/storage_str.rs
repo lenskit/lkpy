@@ -14,7 +14,7 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::types::PyAnyMethods;
 use rustc_hash::FxHasher;
 
-use crate::data::indirect_hash::{IndirectHashContent, IndirectSearcher};
+use crate::indirect_hashing::{IndirectHashContent, IndirectSearcher};
 
 /// ID array implementation for string IDs.
 pub struct StringIDArray {

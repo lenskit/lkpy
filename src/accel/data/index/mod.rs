@@ -28,7 +28,7 @@ mod storage_str;
 use storage_int::PrimitiveIDArray;
 use storage_str::StringIDArray;
 
-use crate::data::indirect_hash::{IndirectHashTable, PositionLookup};
+use crate::indirect_hashing::{IndirectHashTable, PositionLookup};
 
 /// Arrow-based ID index.
 #[pyclass]
