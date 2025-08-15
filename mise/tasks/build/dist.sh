@@ -57,7 +57,7 @@ fi
 
 if ((${options[s]})); then
     msg "setting to only build source dist"
-    build_args+="--sdist"
+    build_args+=("--sdist")
 fi
 
 msg "building distribution"
