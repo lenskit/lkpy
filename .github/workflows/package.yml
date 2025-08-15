@@ -31,6 +31,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install dependencies
+        run: uv sync --group=scripting
+        env:
+          UV_LOCKED: 1
+
       - name: Identify version
         id: version
         run: |
