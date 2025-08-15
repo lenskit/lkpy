@@ -39,6 +39,7 @@ if ((${options[d]})); then
     fi
 
     msg "staging sources"
+    mkdir -p build
     git archive --format=tar --prefix=staged-source/ HEAD |
         tar -C build -xf -
     if (($?)); then
