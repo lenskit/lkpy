@@ -78,6 +78,7 @@ class DatasetBuilder:
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
     _vocabularies: dict[str, Vocabulary]
+    _rel_coords: dict[str, _data_accel.CoordinateTable]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
         """
@@ -104,6 +105,7 @@ class DatasetBuilder:
             self._tables = {"item": None}
             self._vocabularies = {}
 
+        self._rel_coords = {}
         self._log = _log.bind(ds_name=name)
 
     @property
@@ -442,26 +444,42 @@ class DatasetBuilder:
             raise NotImplementedError("count attributes are not yet implemented")
 
         cur_table = self._tables[cls]
-        if cur_table is not None:
-            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         if not rc_def.repeats.is_present:
             _log.debug("checking for repeated interactions")
-            # we have to bounce to pandas for multi-column duplicate detection
-            ndf = new_table.select(list(link_nums.keys())).to_pandas()
-            dupes = ndf.duplicated(keep=False)
-            if np.any(dupes):
+
+            # get the coordinate table for the previously-existing entries
+            coords = self._rel_coords.get(cls, None)
+            if coords is None:
+                coords = _data_accel.CoordinateTable(len(rc_def.entities))
+                if cur_table is not None:
+                    _log.debug("building coord table from previous interactions")
+                    coo = cur_table.select(link_nums.keys())
+                    coords.extend(coo.to_batches())
+                    assert len(coo) == len(cur_table)
+                self._rel_coords[cls] = coords
+
+            # add the new data
+            coords.extend(new_table.select(link_nums.keys()).to_batches())
+            n_dupes = len(coords) - coords.unique_count()
+
+            if n_dupes:
                 if rc_def.repeats.is_allowed:
+                    _log.debug("found %d repeat interactions", n_dupes)
                     rc_def.repeats = AllowableTroolean.PRESENT
                 else:
                     _log.error(
                         "found %d forbidden repeat interactions (of %d)",
-                        np.sum(dupes),
+                        n_dupes,
                         new_table.num_rows,
                     )
                     raise DataError(
                         f"repeated interactions not allowed for relationship class {cls}"
                     )
+
+        # combine the tables to save them
+        if cur_table is not None:
+            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
