@@ -70,10 +70,20 @@ impl CoordinateTable {
         if let Ok(PyArrowType(rb)) = coords.extract::<PyArrowType<RecordBatch>>() {
             debug!("extending coordinate with batch of {}", rb.num_rows());
             self.add_record_batch(&rb)
+        } else if let Ok(batches) = coords.extract::<Vec<PyArrowType<RecordBatch>>>() {
+            debug!("adding {} record batches", batches.len());
+            let mut tot = 0;
+            let mut tot_uq = 0;
+            for PyArrowType(batch) in batches {
+                let (n, nuq) = self.add_record_batch(&batch)?;
+                tot += n;
+                tot_uq += nuq;
+            }
+            Ok((tot, tot_uq))
         } else {
             Err(PyTypeError::new_err(format!(
                 "invalid coordinate type {}",
-                coords
+                coords.get_type()
             )))
         }
     }
