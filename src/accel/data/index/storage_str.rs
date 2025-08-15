@@ -6,34 +6,35 @@
 
 use std::hash::{Hash, Hasher};
 
-use arrow::array::{Array, ArrayData, AsArray, StringArray, StringBuilder};
+use arrow::array::{make_array, Array, ArrayData, AsArray, StringArray, StringBuilder};
 use arrow::compute::cast;
+use arrow::pyarrow::PyArrowType;
 use arrow_schema::DataType;
 use pyo3::exceptions::PyTypeError;
 use pyo3::types::PyAnyMethods;
 use rustc_hash::FxHasher;
 
-use crate::data::index::storage::WrappedData;
-
-use super::storage::IDArray;
+use crate::data::indirect_hash::{IndirectHashContent, IndirectSearcher};
 
 /// ID array implementation for string IDs.
-pub struct IDStringArray {
+pub struct StringIDArray {
     array: StringArray,
 }
 
-struct StringWrapper<'a> {
+pub struct StringSearch<'a> {
     this: &'a StringArray,
     other: StringArray,
 }
 
-impl IDStringArray {
+impl StringIDArray {
     pub fn new(array: StringArray) -> Self {
-        IDStringArray { array }
+        StringIDArray { array }
     }
 }
 
-impl IDArray for IDStringArray {
+impl IndirectHashContent for StringIDArray {
+    type Searcher<'a> = StringSearch<'a>;
+
     fn hash_entry(&self, idx: u32) -> u64 {
         hash_array_idx(&self.array, idx as usize)
     }
@@ -42,48 +43,49 @@ impl IDArray for IDStringArray {
         compare_array_idx(&self.array, i1 as usize, &self.array, i2 as usize)
     }
 
-    fn data(&self) -> ArrayData {
-        self.array.clone().into_data()
-    }
-
     fn len(&self) -> usize {
         self.array.len()
     }
 
-    fn wrap_value<'py, 'a>(
+    fn create_searcher<'py, 'a>(
         &'a self,
+        _py: pyo3::Python<'py>,
         val: pyo3::Bound<'py, pyo3::PyAny>,
-    ) -> pyo3::PyResult<Box<dyn WrappedData + 'a>> {
-        let val: &str = val.extract()?;
-        let mut ab = StringBuilder::with_capacity(1, val.len() + 1);
-        ab.append_value(val);
-        Ok(Box::new(StringWrapper {
-            this: &self.array,
-            other: ab.finish(),
-        }))
-    }
+    ) -> pyo3::PyResult<StringSearch<'a>> {
+        let arr = if let Ok(val) = val.extract::<&str>() {
+            let mut ab = StringBuilder::with_capacity(1, val.len() + 1);
+            ab.append_value(val);
+            ab.finish()
+        } else if let Ok(PyArrowType(arr)) = val.extract::<PyArrowType<ArrayData>>() {
+            let arr = make_array(arr);
+            let arr = cast(&arr, &DataType::Utf8)
+                .map_err(|e| PyTypeError::new_err(format!("error casting arrays: {}", e)))?;
+            arr.as_string().clone()
+        } else {
+            return Err(PyTypeError::new_err(format!(
+                "invalid value type {}",
+                val.get_type()
+            )));
+        };
 
-    fn wrap_array<'py, 'a>(
-        &'a self,
-        arr: arrow::array::ArrayRef,
-    ) -> pyo3::PyResult<Box<dyn WrappedData + 'a>> {
-        let arr = cast(&arr, &DataType::Utf8)
-            .map_err(|e| PyTypeError::new_err(format!("error castting arrays: {}", e)))?;
-        let arr = arr.as_string();
-        Ok(Box::new(StringWrapper {
+        Ok(StringSearch {
             this: &self.array,
-            other: arr.clone(),
-        }))
+            other: arr,
+        })
     }
 }
 
-impl<'a> WrappedData for StringWrapper<'a> {
+impl<'a> IndirectSearcher<'a> for StringSearch<'a> {
+    fn len(&self) -> usize {
+        self.other.len()
+    }
+
     fn hash(&self, idx: usize) -> u64 {
         hash_array_idx(&self.other, idx)
     }
 
-    fn compare_with_entry(&self, w_idx: usize, a_idx: u32) -> bool {
-        compare_array_idx(self.this, a_idx as usize, &self.other, w_idx)
+    fn compare_with_entry(&self, search_idx: usize, table_idx: u32) -> bool {
+        compare_array_idx(self.this, table_idx as usize, &self.other, search_idx)
     }
 }
 

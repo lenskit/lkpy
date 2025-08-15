@@ -8,39 +8,54 @@ use std::convert::Infallible;
 use std::hash::{Hash, Hasher};
 
 use arrow::array::{
-    Array, ArrayData, ArrowPrimitiveType, AsArray, PrimitiveArray, PrimitiveBuilder,
+    make_array, Array, ArrayData, ArrowPrimitiveType, AsArray, PrimitiveArray, PrimitiveBuilder,
 };
 use arrow::compute::cast;
+use arrow::pyarrow::PyArrowType;
 use pyo3::{exceptions::PyTypeError, prelude::*, types::PyInt};
 use rustc_hash::FxHasher;
 
 use log::*;
 
-use super::storage::{IDArray, WrappedData};
+use crate::data::indirect_hash::{IndirectHashContent, IndirectSearcher};
 
-/// ID array implementation for primitive (integer) IDs.
-pub struct IDPrimArray<T: ArrowPrimitiveType> {
+/// Backend hash storage for primitive (integer) arrays.
+pub struct PrimitiveIDArray<T: ArrowPrimitiveType> {
     array: PrimitiveArray<T>,
 }
 
-struct PrimWrapper<'a, T: ArrowPrimitiveType> {
+pub struct PrimSearcher<'a, T: ArrowPrimitiveType> {
     this: &'a PrimitiveArray<T>,
     other: PrimitiveArray<T>,
 }
 
-impl<T: ArrowPrimitiveType> IDPrimArray<T> {
+impl<T: ArrowPrimitiveType> PrimitiveIDArray<T> {
     pub fn new(array: PrimitiveArray<T>) -> Self {
-        IDPrimArray { array }
+        PrimitiveIDArray { array }
     }
 }
 
-impl<T> IDArray for IDPrimArray<T>
+impl<T: ArrowPrimitiveType> Default for PrimitiveIDArray<T> {
+    fn default() -> Self {
+        PrimitiveIDArray {
+            array: PrimitiveBuilder::new().finish(),
+        }
+    }
+}
+
+impl<T> IndirectHashContent for PrimitiveIDArray<T>
 where
     T: ArrowPrimitiveType,
     T::Native: Hash
         + for<'a> FromPyObject<'a>
         + for<'a> IntoPyObject<'a, Target = PyInt, Output = Bound<'a, PyInt>, Error = Infallible>,
 {
+    type Searcher<'a> = PrimSearcher<'a, T>;
+
+    fn len(&self) -> usize {
+        self.array.len()
+    }
+
     fn hash_entry(&self, idx: u32) -> u64 {
         hash_array_idx(&self.array, idx as usize)
     }
@@ -49,59 +64,57 @@ where
         compare_array_idx(&self.array, i1 as usize, &self.array, i2 as usize)
     }
 
-    fn data(&self) -> ArrayData {
-        self.array.to_data()
-    }
-
-    fn len(&self) -> usize {
-        self.array.len()
-    }
-
-    fn wrap_value<'py, 'a>(
+    fn create_searcher<'py, 'a>(
         &'a self,
+        _py: Python<'py>,
         val: Bound<'py, PyAny>,
-    ) -> PyResult<Box<dyn WrappedData + 'a>> {
-        let val: T::Native = val.extract()?;
-        let mut ab = PrimitiveBuilder::new();
-        ab.append_value(val);
-        Ok(Box::new(PrimWrapper {
-            this: &self.array,
-            other: ab.finish(),
-        }))
-    }
+    ) -> PyResult<PrimSearcher<'a, T>> {
+        let search_array = if let Ok(val) = val.extract::<T::Native>() {
+            let mut ab = PrimitiveBuilder::new();
+            ab.append_value(val);
+            ab.finish()
+        } else if let Ok(PyArrowType(arr)) = val.extract::<PyArrowType<ArrayData>>() {
+            let arr = make_array(arr);
+            // convert the array to our type
+            trace!(
+                "casting {} IDs from {} to {}",
+                arr.len(),
+                arr.data_type(),
+                self.array.data_type()
+            );
+            let arr = cast(&arr, self.array.data_type())
+                .map_err(|e| PyTypeError::new_err(format!("error castting arrays: {}", e)))?;
+            let arr: &PrimitiveArray<T> = arr.as_primitive();
+            arr.clone()
+        } else {
+            return Err(PyTypeError::new_err(format!(
+                "invalid lookup type {}",
+                val.get_type()
+            )));
+        };
 
-    fn wrap_array<'py, 'a>(
-        &'a self,
-        arr: arrow::array::ArrayRef,
-    ) -> PyResult<Box<dyn WrappedData + 'a>> {
-        // convert the array to our type
-        trace!(
-            "casting {} IDs from {} to {}",
-            arr.len(),
-            arr.data_type(),
-            self.array.data_type()
-        );
-        let arr = cast(&arr, self.array.data_type())
-            .map_err(|e| PyTypeError::new_err(format!("error castting arrays: {}", e)))?;
-        let arr: &PrimitiveArray<T> = arr.as_primitive();
-        Ok(Box::new(PrimWrapper {
+        Ok(PrimSearcher {
             this: &self.array,
-            other: arr.clone(),
-        }))
+            other: search_array,
+        })
     }
 }
 
-impl<'a, T> WrappedData for PrimWrapper<'a, T>
+impl<'a, T> IndirectSearcher<'a> for PrimSearcher<'a, T>
 where
     T: ArrowPrimitiveType,
     T::Native: Hash,
 {
+    fn len(&self) -> usize {
+        self.other.len()
+    }
+
     fn hash(&self, idx: usize) -> u64 {
         hash_array_idx(&self.other, idx)
     }
 
-    fn compare_with_entry(&self, w_idx: usize, a_idx: u32) -> bool {
-        compare_array_idx(self.this, a_idx as usize, &self.other, w_idx)
+    fn compare_with_entry(&self, search_idx: usize, tbl_idx: u32) -> bool {
+        compare_array_idx(self.this, tbl_idx as usize, &self.other, search_idx)
     }
 }
 

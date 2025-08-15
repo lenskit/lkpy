@@ -15,6 +15,7 @@ use arrow::{
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
 mod index;
+mod indirect_hash;
 mod rc_set;
 mod selection;
 mod sorting;
