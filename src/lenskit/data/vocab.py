@@ -170,7 +170,7 @@ class Vocabulary:
             term_arr = pa.array(terms, type=self._array.type)  # type: ignore
             nums = self._index.get_indexes(term_arr)  # type: ignore
 
-        trace(self._log, "resolved %d IDs, %d invalid", len(term_arr), nums.null_count)
+        trace(self._log, "resolved %d IDs, %d invalid", len(terms), nums.null_count)
         if missing == "error" and nums.null_count:
             raise KeyError(f"{nums.null_count} invalid keys")
         elif missing == "negative":
