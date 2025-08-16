@@ -41,9 +41,9 @@ dask-worker-space/
 scratch/
 
 # build outputs
-build/
-dist/
-target/
+/build/
+/dist/
+/target/
 /output/
 *.egg-info
 *.pyd

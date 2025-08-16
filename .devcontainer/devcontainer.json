@@ -30,7 +30,7 @@
         "ms-azuretools.vscode-docker",
         "trond-snekvik.simple-rst",
         "rust-lang.rust-analyzer",
-        "nefrob.vscode-just-syntax"
+        "hverlin.mise-vscode"
       ]
     }
   }
