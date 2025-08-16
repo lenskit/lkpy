@@ -61,8 +61,8 @@ build-conda: build-sdist
     rattler-build build --recipe conda --output-dir dist/conda $flags
 
 # run the tests
-test slow="yes" +args='tests': build-accel
-    pytest {{ if slow == "yes" {""} else {"-m 'not slow'"} }} {{args}}
+test +args='tests': build-accel
+    pytest {{args}}
 
 # build the documentation
 docs: init-dirs

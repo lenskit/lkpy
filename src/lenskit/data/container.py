@@ -34,6 +34,7 @@ class DataContainer:
     schema: DataSchema
     tables: dict[str, pa.Table]
     _sorted: bool = False
+    _rel_coords: dict[str, _data_accel.CoordinateTable] | None = None
 
     def normalize(self):
         """
@@ -62,6 +63,7 @@ class DataContainer:
         # work around Ray's broken serialization of extension types
         state = dict(self.__dict__)
         state["tables"] = {name: _make_compat_table(tbl) for name, tbl in self.tables.items()}
+        state["_rel_coords"] = None
         return state
 
     def __setstate__(self, state):
