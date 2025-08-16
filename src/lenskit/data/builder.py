@@ -449,7 +449,7 @@ class DatasetBuilder:
             ndf = new_table.select(list(link_nums.keys())).to_pandas()
             dupes = ndf.duplicated()
             if np.any(dupes):
-                self._resolve_repeated_interactions(t=new_table, rel=rc_def)
+                new_table = self._resolve_repeated_interactions(t=new_table, rel=rc_def)
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
         )
@@ -952,12 +952,6 @@ class DatasetBuilder:
                         if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
                             log.debug("sorting non-repeating relationship %s", n)
                             t = t.sort_by([(c, "ascending") for c in e_cols])
-                    if rel.remove_duplicates and rel.remove_duplicates != "exact":
-                        t = self._remove_repeated_relationships(t, rel)
-                    if rel.remove_duplicates == "exact":
-                        temp_df = t.to_pandas()
-                        temp_df.drop_duplicates(inplace=True)
-                        t = pa.Table.from_pandas(temp_df, preserve_index=False)
 
                 tables[n] = t
 
@@ -974,6 +968,12 @@ class DatasetBuilder:
         """
         container = self.build_container()
         container.save(path)
+
+    def _remove_duplicated_relationships(self, t: pa.Table) -> pa.Table:
+        temp_df = t.to_pandas()
+        temp_df.drop_duplicates(inplace=True)
+        t = pa.Table.from_pandas(temp_df, preserve_index=False)
+        return t
 
     def _remove_repeated_relationships(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
         if "timestamp" in t.column_names:
@@ -996,13 +996,11 @@ class DatasetBuilder:
         nums = np.require(index.get_indexer_for(tgt_ids), np.int32)
         return pc.if_else(nums >= 0, nums, None)
 
-    def _resolve_repeated_interactions(self, t: pa.Table, rel: RelationshipSchema):
+    def _resolve_repeated_interactions(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
         remove_repeat = rel.remove_duplicates and rel.remove_duplicates != "exact"
         if rel.remove_duplicates:
             if rel.remove_duplicates == "exact":
-                temp_df = t.to_pandas()
-                temp_df.drop_duplicates(inplace=True)
-                t = pa.Table.from_pandas(temp_df, preserve_index=False)
+                t = self._remove_duplicated_relationships(t)
             else:
                 t = self._remove_repeated_relationships(t, rel)
 
@@ -1010,6 +1008,8 @@ class DatasetBuilder:
             rel.repeats = AllowableTroolean.PRESENT
         elif rel.repeats.is_forbidden and not remove_repeat:
             raise DataError("repeated interactions not allowed for relationship class")
+
+        return t
 
 
 def _expand_and_align_list_array(
