@@ -35,7 +35,6 @@ from .vocab import Vocabulary
 
 if TYPE_CHECKING:
     from .collection import ItemListCollection
-    from .dataset import Dataset
 
 _log = get_logger(__name__)
 
@@ -66,8 +65,7 @@ class RelationshipSet:
     The name of the relationship class for these relationships.
     """
     schema: RelationshipSchema
-    dataset: Dataset
-    mat_rset: dict[tuple[str, str], MatrixRelationshipSet]
+    _matrix_set: dict[tuple[str, str], MatrixRelationshipSet]
 
     _table: pa.Table
     """
@@ -80,16 +78,16 @@ class RelationshipSet:
     def __init__(
         self,
         name: str,
-        vocab: dict[str, Vocabulary],
+        vocabularies: dict[str, Vocabulary],
         schema: RelationshipSchema,
         table: pa.Table,
     ):
         self.name = name
         self.schema = schema
-        self.mat_rset = {}
+        self._matrix_set = {}
         self._table = table
 
-        self._vocabularies = vocab
+        self._vocabularies = vocabularies
         self._link_cols = [num_col_name(e) for e in schema.entities]
 
     def __getstate__(self):
@@ -185,17 +183,17 @@ class RelationshipSet:
 
     def matrix(
         self, *, row_entity: str = "user", col_entity: str = "item"
-    ) -> MatrixRelationshipSet:  # pragma: nocover
-        if (row_entity, col_entity) in self.mat_rset:
-            return self.mat_rset[(row_entity, col_entity)]
+    ) -> MatrixRelationshipSet:
+        if (row_entity, col_entity) in self._matrix_set:
+            return self._matrix_set[(row_entity, col_entity)]
         else:
             new_mat_rset = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
-            self.mat_rset[(row_entity, col_entity)] = new_mat_rset
+            self._matrix_set[(row_entity, col_entity)] = new_mat_rset
             return new_mat_rset
 
     def _make_matrix(
         self, *, row_entity: str = "user", col_entity: str = "item"
-    ) -> MatrixRelationshipSet:  # pragma: nocover
+    ) -> MatrixRelationshipSet:
         """
         Convert this relationship set into a matrix, coalescing duplicate
         observations.
