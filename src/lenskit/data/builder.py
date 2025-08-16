@@ -171,7 +171,6 @@ class DatasetBuilder:
         entities: RelationshipEntities,
         repeats: bool = True,
         interaction: bool = False,
-        remove_duplicates: bool | Literal["exact"] = False,
     ) -> None:
         """
         Add a relationship class to the dataset.  This usually doesn't need to
@@ -196,8 +195,6 @@ class DatasetBuilder:
                 are allowed.
             interaction:
                 Whether this is an interaction relationship.
-            remove_duplicates:
-                If ``True``, exact duplicate interactions will be removed.
         """
         if name in self._tables:
             raise ValueError(f"class name “{name}” already in use")
@@ -224,7 +221,6 @@ class DatasetBuilder:
             entities=e_dict,
             interaction=interaction,
             repeats=AllowableTroolean.ALLOWED if repeats else AllowableTroolean.FORBIDDEN,
-            remove_duplicates=remove_duplicates,
         )
         self._tables[name] = _empty_rel_table(enames)
 
@@ -336,7 +332,7 @@ class DatasetBuilder:
         repeats: bool = True,
         interaction: bool | Literal["default"] = False,
         _warning_parent: int = 0,
-        remove_duplicates: bool | Literal["exact"] = False,
+        remove_repeats: bool | Literal["duplicate"] = False,
     ) -> None:
         """
         Add relationship records to the data set.
@@ -366,8 +362,9 @@ class DatasetBuilder:
                 Whether this is an interaction relationship or not; can be
                 ``"default"`` to indicate this is the default interaction
                 relationship.
-            remove_duplicates:
-                If ``True``, exact duplicate interactions will be removed.
+            remove_repeats:
+                If ``True``, repeated interactions will be removed. If ``"exact"``,
+                duplicated interactions will be removed.
         """
         if isinstance(data, pd.DataFrame):
             table = pa.Table.from_pandas(data, preserve_index=False)
@@ -393,7 +390,6 @@ class DatasetBuilder:
                 entities,
                 repeats=repeats,
                 interaction=bool(interaction),
-                remove_duplicates=remove_duplicates,
             )
             if interaction == "default":
                 self.schema.default_interaction = cls
@@ -449,7 +445,9 @@ class DatasetBuilder:
             ndf = new_table.select(list(link_nums.keys())).to_pandas()
             dupes = ndf.duplicated()
             if np.any(dupes):
-                new_table = self._resolve_repeated_interactions(t=new_table, rel=rc_def)
+                new_table = self._resolve_repeated_interactions(
+                    t=new_table, rel=rc_def, remove_repeats=remove_repeats
+                )
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
         )
@@ -464,7 +462,7 @@ class DatasetBuilder:
         missing: MissingEntityAction = "error",
         repeats: bool = True,
         default: bool = False,
-        remove_duplicates: bool | Literal["exact"] = False,
+        remove_repeats: bool | Literal["duplicate"] = False,
     ) -> None:
         """
         Add a interaction records to the data set.
@@ -499,8 +497,9 @@ class DatasetBuilder:
             default:
                 If ``True``, set this as the default interaction class (if the
                 dataset has more than one interaction class).
-            remove_duplicates:
-                If ``True``, exact duplicate interactions will be removed.
+            remove_repeats:
+                If ``True``, repeated interactions will be removed. If ``"exact"``,
+                duplicated interactions will be removed.
         """
         self.add_relationships(
             cls,
@@ -510,7 +509,7 @@ class DatasetBuilder:
             repeats=repeats,
             interaction="default" if default else True,
             _warning_parent=1,
-            remove_duplicates=remove_duplicates,
+            remove_repeats=remove_repeats,
         )
 
     def filter_interactions(
@@ -996,17 +995,19 @@ class DatasetBuilder:
         nums = np.require(index.get_indexer_for(tgt_ids), np.int32)
         return pc.if_else(nums >= 0, nums, None)
 
-    def _resolve_repeated_interactions(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
-        remove_repeat = rel.remove_duplicates and rel.remove_duplicates != "exact"
-        if rel.remove_duplicates:
-            if rel.remove_duplicates == "exact":
+    def _resolve_repeated_interactions(
+        self, t: pa.Table, rel: RelationshipSchema, remove_repeats: bool | Literal["duplicate"]
+    ) -> pa.Table:
+        remove_repeats_only = remove_repeats and remove_repeats != "duplicate"
+        if remove_repeats:
+            if remove_repeats == "duplicate":
                 t = self._remove_duplicated_relationships(t)
             else:
                 t = self._remove_repeated_relationships(t, rel)
 
-        if rel.repeats.is_allowed and not remove_repeat:
+        if rel.repeats.is_allowed and not remove_repeats_only:
             rel.repeats = AllowableTroolean.PRESENT
-        elif rel.repeats.is_forbidden and not remove_repeat:
+        elif rel.repeats.is_forbidden and not remove_repeats_only:
             raise DataError("repeated interactions not allowed for relationship class")
 
         return t

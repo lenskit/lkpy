@@ -47,9 +47,7 @@ def test_add_repeated_interactions():
 
 def test_remove_repeat_in_repeated_interactions():
     dsb = DatasetBuilder()
-    dsb.add_relationship_class(
-        "click", ["user", "item"], repeats=True, interaction=True, remove_duplicates=True
-    )
+    dsb.add_relationship_class("click", ["user", "item"], repeats=True, interaction=True)
     dsb.add_interactions(
         "click",
         pd.DataFrame(
@@ -60,6 +58,7 @@ def test_remove_repeat_in_repeated_interactions():
             }
         ),
         missing="insert",
+        remove_repeats=True,
     )
 
     ds = dsb.build()
@@ -72,9 +71,7 @@ def test_remove_repeat_in_repeated_interactions():
 
 def test_remove_repeat_with_forbidden_repeat():
     dsb = DatasetBuilder()
-    dsb.add_relationship_class(
-        "click", ["user", "item"], repeats=False, interaction=True, remove_duplicates=True
-    )
+    dsb.add_relationship_class("click", ["user", "item"], repeats=False, interaction=True)
     dsb.add_interactions(
         "click",
         pd.DataFrame(
@@ -85,6 +82,7 @@ def test_remove_repeat_with_forbidden_repeat():
             }
         ),
         missing="insert",
+        remove_repeats=True,
     )
 
     ds = dsb.build()
@@ -97,9 +95,7 @@ def test_remove_repeat_with_forbidden_repeat():
 
 def test_remove_duplicate_in_repeated_interactions():
     dsb = DatasetBuilder()
-    dsb.add_relationship_class(
-        "click", ["user", "item"], repeats=True, interaction=True, remove_duplicates="exact"
-    )
+    dsb.add_relationship_class("click", ["user", "item"], repeats=True, interaction=True)
     dsb.add_interactions(
         "click",
         pd.DataFrame(
@@ -110,6 +106,7 @@ def test_remove_duplicate_in_repeated_interactions():
             }
         ),
         missing="insert",
+        remove_repeats="duplicate",
     )
 
     ds = dsb.build()

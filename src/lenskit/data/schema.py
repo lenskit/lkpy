@@ -223,10 +223,6 @@ class RelationshipSchema(BaseModel):
     """
     Relationship attribute definitions.
     """
-    remove_duplicates: bool | Literal["exact"] = False
-    """
-    Whether this relationship should remove repeated interactions or exact duplicates.
-    """
 
     @property
     def entity_class_names(self) -> list[str]:

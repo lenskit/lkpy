@@ -222,7 +222,6 @@ class RelationshipSet:
             interaction=self.schema.interaction,
             repeats=self.schema.repeats,
             attributes=self.schema.attributes,
-            remove_duplicates=self.schema.remove_duplicates,
         )
         new_table = self._table
 
