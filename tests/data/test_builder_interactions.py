@@ -195,7 +195,7 @@ def test_add_interactions_filter_bad_ids():
 
 def test_add_interactions_forbidden_repeat():
     dsb = DatasetBuilder()
-    dsb.add_relationship_class("click", ["user", "item"], repeats=False)
+    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=False)
     with raises(DataError, match="repeated"):
         dsb.add_interactions(
             "click",

@@ -169,7 +169,7 @@ class DatasetBuilder:
         self,
         name: str,
         entities: RelationshipEntities,
-        repeats: bool = True,
+        allow_repeats: bool = True,
         interaction: bool = False,
     ) -> None:
         """
@@ -220,7 +220,7 @@ class DatasetBuilder:
         self.schema.relationships[name] = RelationshipSchema(
             entities=e_dict,
             interaction=interaction,
-            repeats=AllowableTroolean.ALLOWED if repeats else AllowableTroolean.FORBIDDEN,
+            repeats=AllowableTroolean.ALLOWED if allow_repeats else AllowableTroolean.FORBIDDEN,
         )
         self._tables[name] = _empty_rel_table(enames)
 
@@ -329,7 +329,7 @@ class DatasetBuilder:
         *,
         entities: RelationshipEntities | None = None,
         missing: MissingEntityAction = "error",
-        repeats: bool = True,
+        allow_repeats: bool = True,
         interaction: bool | Literal["default"] = False,
         _warning_parent: int = 0,
         remove_repeats: bool | Literal["duplicate"] = False,
@@ -388,7 +388,7 @@ class DatasetBuilder:
             self.add_relationship_class(
                 cls,
                 entities,
-                repeats=repeats,
+                allow_repeats=allow_repeats,
                 interaction=bool(interaction),
             )
             if interaction == "default":
@@ -460,7 +460,7 @@ class DatasetBuilder:
         *,
         entities: RelationshipEntities | None = None,
         missing: MissingEntityAction = "error",
-        repeats: bool = True,
+        allow_repeats: bool = True,
         default: bool = False,
         remove_repeats: bool | Literal["duplicate"] = False,
     ) -> None:
@@ -492,7 +492,7 @@ class DatasetBuilder:
             missing:
                 What to do when interactions reference nonexisting entities; can
                 be ``"error"`` or ``"insert"``.
-            repeats:
+            allow_repeats:
                 Whether repeated interactions are allowed, forbidden, or removed.
             default:
                 If ``True``, set this as the default interaction class (if the
@@ -506,7 +506,7 @@ class DatasetBuilder:
             data,
             entities=entities,
             missing=missing,
-            repeats=repeats,
+            allow_repeats=allow_repeats,
             interaction="default" if default else True,
             _warning_parent=1,
             remove_repeats=remove_repeats,
