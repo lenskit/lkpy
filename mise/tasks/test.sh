@@ -14,6 +14,7 @@ declare -a build_args=()
 if [[ $usage_coverage = true ]]; then
     msg "running tests with coverage"
     test_args+=(--cov=src/lenskit --cov-report=xml --cov-report=term)
+    export RUSTFLAGS="-C instrument-coverage"
 fi
 
 if [[ $usage_release = true ]]; then
@@ -29,4 +30,5 @@ fi
 
 # need eval to properly quote these arguments
 eval "test_args+=($usage_arg)"
+export LLVM_PROFILE_FILE="$PWD/.coverage-prof/lenskit-test-%p-%m.profraw"
 echo-run pytest "${test_args[@]}"
