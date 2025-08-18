@@ -78,6 +78,7 @@ class DatasetBuilder:
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
     _vocabularies: dict[str, Vocabulary]
+    _rel_coords: dict[str, _data_accel.CoordinateTable | None]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
         """
@@ -89,6 +90,8 @@ class DatasetBuilder:
                 which will initialize this builder with its contents to extend
                 or modify.
         """
+        self._rel_coords = {}
+
         if isinstance(name, Dataset):
             name._ensure_loaded()
             name = name._data
@@ -99,6 +102,9 @@ class DatasetBuilder:
                 n: Vocabulary(name.tables[n].column(id_col_name(n)), name=n)
                 for n in name.schema.entities.keys()
             }
+            # reuse _rel_coords if we have them
+            if name._rel_coords is not None:
+                self._rel_coords = {n: coo.copy() for n, coo in name._rel_coords.items()}
         else:
             self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
             self._tables = {"item": None}
@@ -442,26 +448,55 @@ class DatasetBuilder:
             raise NotImplementedError("count attributes are not yet implemented")
 
         cur_table = self._tables[cls]
-        if cur_table is not None:
-            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         if not rc_def.repeats.is_present:
             _log.debug("checking for repeated interactions")
-            # we have to bounce to pandas for multi-column duplicate detection
-            ndf = new_table.select(list(link_nums.keys())).to_pandas()
-            dupes = ndf.duplicated(keep=False)
-            if np.any(dupes):
+
+            # FIXME: the coordinate table preservation will be out-of-order with
+            # respect to sorted tables. This will not affect correctness for the
+            # purposes of checking if duplicates exist, but will cause problems
+            # if we count on locations for other purposes.  It also can increase
+            # memory use, since the coordinate table keeps a reference to the
+            # pre-sorted data.
+
+            # get the coordinate table for the previously-existing entries
+            coords = self._rel_coords.get(cls, None)
+            if coords is None:
+                coords = _data_accel.CoordinateTable(len(rc_def.entities))
+                if cur_table is not None:
+                    _log.debug("building coord table from previous interactions")
+                    coo = cur_table.select(link_nums.keys())
+                    coords.extend(coo.to_batches())
+                    assert len(coo) == len(cur_table)
+                self._rel_coords[cls] = coords
+
+            # add the new data
+            coords.extend(new_table.select(link_nums.keys()).to_batches())
+            n_dupes = len(coords) - coords.unique_count()
+            _log.debug(
+                "coordinates: %d total, %d unique, %d dupe",
+                len(coords),
+                coords.unique_count(),
+                n_dupes,
+            )
+
+            if n_dupes:
                 if rc_def.repeats.is_allowed:
+                    _log.debug("found %d repeat interactions", n_dupes)
                     rc_def.repeats = AllowableTroolean.PRESENT
                 else:
                     _log.error(
                         "found %d forbidden repeat interactions (of %d)",
-                        np.sum(dupes),
+                        n_dupes,
                         new_table.num_rows,
                     )
                     raise DataError(
                         f"repeated interactions not allowed for relationship class {cls}"
                     )
+
+        # combine the tables to save them
+        if cur_table is not None:
+            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
@@ -597,6 +632,7 @@ class DatasetBuilder:
             tbl = tbl.join(remove, remove.column_names, join_type="left anti")
 
         self._tables[cls] = tbl
+        self._rel_coords[cls] = None
 
     def binarize_ratings(
         self,
@@ -644,12 +680,14 @@ class DatasetBuilder:
             raise ValueError("method must be 'zero' or 'remove'")
 
         self._tables[cls] = tbl
+        self._rel_coords[cls] = None
 
     def clear_relationships(self, cls: str):
         """
         Remove all records for a specified relationship class.
         """
         self._tables[cls] = _empty_rel_table(self.schema.relationships[cls].entity_class_names)
+        self._rel_coords[cls] = None
 
     @overload
     def add_scalar_attribute(
@@ -1010,7 +1048,7 @@ class DatasetBuilder:
 
                 tables[n] = t
 
-        return DataContainer(self.schema.model_copy(), tables)
+        return DataContainer(self.schema.model_copy(), tables, _rel_coords=self._rel_coords)
 
     def save(self, path: str | PathLike[str]):
         """

@@ -14,7 +14,6 @@ declare -a build_args=()
 if [[ $usage_coverage = true ]]; then
     msg "running tests with coverage"
     test_args+=(--cov=src/lenskit --cov-report=xml --cov-report=term)
-    export RUSTFLAGS="-C instrument-coverage"
 fi
 
 if [[ $usage_release = true ]]; then

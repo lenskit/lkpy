@@ -8,6 +8,8 @@
 *.pdb
 *.prof
 *.profraw
+*.profdata
+lcov.info
 *.lcov
 *.lprof
 emissions.csv
