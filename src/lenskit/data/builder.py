@@ -78,7 +78,7 @@ class DatasetBuilder:
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
     _vocabularies: dict[str, Vocabulary]
-    _rel_coords: dict[str, _data_accel.CoordinateTable]
+    _rel_coords: dict[str, _data_accel.CoordinateTable | None]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
         """
@@ -473,6 +473,12 @@ class DatasetBuilder:
             # add the new data
             coords.extend(new_table.select(link_nums.keys()).to_batches())
             n_dupes = len(coords) - coords.unique_count()
+            _log.debug(
+                "coordinates: %d total, %d unique, %d dupe",
+                len(coords),
+                coords.unique_count(),
+                n_dupes,
+            )
 
             if n_dupes:
                 if rc_def.repeats.is_allowed:
@@ -626,6 +632,7 @@ class DatasetBuilder:
             tbl = tbl.join(remove, remove.column_names, join_type="left anti")
 
         self._tables[cls] = tbl
+        self._rel_coords[cls] = None
 
     def binarize_ratings(
         self,
@@ -673,12 +680,14 @@ class DatasetBuilder:
             raise ValueError("method must be 'zero' or 'remove'")
 
         self._tables[cls] = tbl
+        self._rel_coords[cls] = None
 
     def clear_relationships(self, cls: str):
         """
         Remove all records for a specified relationship class.
         """
         self._tables[cls] = _empty_rel_table(self.schema.relationships[cls].entity_class_names)
+        self._rel_coords[cls] = None
 
     @overload
     def add_scalar_attribute(
