@@ -33,7 +33,7 @@ def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = F
     native format.
     """
 
-    log = _log.bind(src=str(src))
+    log = _log.bind(src=[str(p) for p in src])
 
     match format:
         case None:
