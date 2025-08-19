@@ -13,6 +13,7 @@ mod als;
 mod atomic;
 mod data;
 mod funksvd;
+mod indirect_hashing;
 mod knn;
 mod progress;
 mod sampling;

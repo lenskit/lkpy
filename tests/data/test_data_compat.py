@@ -37,7 +37,16 @@ def test_data_backwards_compat(version, tmpdir: Path):
     pkg = f"lenskit=={version}"
 
     sp.check_call(
-        ["uvx", pkg, "data", "convert", "--movielens", fspath(ml_test_dir), fspath(out_path)],
+        [
+            "uvx",
+            "--isolated",
+            pkg,
+            "data",
+            "convert",
+            "--movielens",
+            fspath(ml_test_dir),
+            fspath(out_path),
+        ],
         env=environ | {"UV_TORCH_BACKEND": "cpu"},
     )
 
@@ -62,7 +71,16 @@ def test_data_backwards_ml20m(version, tmpdir: Path):
     pkg = f"lenskit=={version}"
 
     sp.check_call(
-        ["uvx", pkg, "data", "convert", "--movielens", fspath(_ml_path), fspath(out_path)],
+        [
+            "uvx",
+            "--isolated",
+            pkg,
+            "data",
+            "convert",
+            "--movielens",
+            fspath(_ml_path),
+            fspath(out_path),
+        ],
         env=environ | {"UV_TORCH_BACKEND": "cpu"},
     )
 

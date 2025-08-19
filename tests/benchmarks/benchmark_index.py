@@ -13,6 +13,8 @@ import pyarrow.compute as pc
 
 from pytest import mark
 
+from lenskit import _accel
+
 VOCAB_SIZE = 50000
 
 
@@ -116,5 +118,57 @@ def test_arrow_string_500(rng: np.random.Generator, benchmark):
 
     def search():
         _val = pc.index_in(query, index)
+
+    benchmark(search)
+
+
+@mark.benchmark(group="single")
+def test_rust_integer_single(rng: np.random.Generator, benchmark):
+    ids = rng.choice(VOCAB_SIZE * 1000, VOCAB_SIZE, replace=False)
+    index = _accel.data.IDIndex(pa.array(ids))
+
+    query = rng.choice(ids, 1).item()
+
+    def search():
+        _val = index.get_index(query)
+
+    benchmark(search)
+
+
+@mark.benchmark(group="array")
+def test_rust_integer_500(rng: np.random.Generator, benchmark):
+    ids = rng.choice(VOCAB_SIZE * 1000, VOCAB_SIZE, replace=False)
+    index = _accel.data.IDIndex(pa.array(ids))
+
+    query = pa.array(rng.choice(ids, 500, replace=False))
+
+    def search():
+        _val = index.get_indexes(query)
+
+    benchmark(search)
+
+
+@mark.benchmark(group="single")
+def test_rust_string_single(rng: np.random.Generator, benchmark):
+    ids = [str(uuid4()) for i in range(VOCAB_SIZE)]
+    index = _accel.data.IDIndex(pa.array(ids))
+
+    query = rng.choice(ids, 1).item()
+
+    def search():
+        _val = index.get_index(query)
+
+    benchmark(search)
+
+
+@mark.benchmark(group="array")
+def test_rust_string_500(rng: np.random.Generator, benchmark):
+    ids = [str(uuid4()) for i in range(VOCAB_SIZE)]
+    index = _accel.data.IDIndex(pa.array(ids))
+
+    query = pa.array(rng.choice(ids, 500, replace=False))
+
+    def search():
+        _val = index.get_indexes(query)
 
     benchmark(search)

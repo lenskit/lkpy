@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime
 from typing import Literal
 
@@ -16,10 +15,11 @@ from pydantic import BaseModel
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, Vocabulary
+from lenskit.logging import get_logger
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 class PopConfig(BaseModel):
@@ -50,7 +50,7 @@ class PopScorer(Component[ItemList], Trainable):
     config: PopConfig
 
     items_: Vocabulary
-    item_scores_: np.ndarray[int, np.dtype[np.float32]]
+    item_scores_: np.ndarray[tuple[int], np.dtype[np.float32]]
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
@@ -60,32 +60,30 @@ class PopScorer(Component[ItemList], Trainable):
         _log.info("counting item popularity")
         self.items_ = data.items
         stats = data.item_stats()
-        scores = stats["count"].reindex(self.items_.ids())
-        self.item_scores_ = np.require(
-            self._train_internal(scores).reindex(self.items_.ids()).values, np.float32
-        )
+        scores = stats["count"]
+        self.item_scores_ = np.require(self._train_internal(scores).values, np.float32)
 
     def _train_internal(self, scores: pd.Series) -> pd.Series:
         if self.config.score == "rank":
             _log.info("ranking %d items", len(scores))
-            scores = scores.rank().sort_index()
+            return scores.rank()
         elif self.config.score == "quantile":
             _log.info("computing quantiles for %d items", len(scores))
             cmass = scores.sort_values()
             cmass = cmass.cumsum()
             cdens = cmass / scores.sum()
-            scores = cdens.sort_index()
+            return cdens.reindex(scores.index)
         elif self.config.score == "count":
             _log.info("scoring items with their rating counts")
-            scores = scores.sort_index()
+            return scores
         else:
             raise ValueError("invalid scoring method " + repr(self.config.score))
-
-        return scores
 
     def __call__(self, items: ItemList) -> ItemList:
         inums = items.numbers(vocabulary=self.items_, missing="negative")
         mask = inums >= 0
+        good_inums = inums[mask]
+        _log.debug("getting popularity scores", n_good=len(good_inums), n_all=len(inums))
         scores = np.full(len(items), np.nan, np.float32)
         scores[mask] = self.item_scores_[inums[mask]]
         return ItemList(items, scores=scores)

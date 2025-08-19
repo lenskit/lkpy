@@ -9,9 +9,10 @@ Tests for the Vocabulary class.
 """
 
 import pickle
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
+import pyarrow as pa
 
 import hypothesis.strategies as st
 from hypothesis import assume, given
@@ -181,6 +182,46 @@ def test_lookup_many_nums(terms: set[int], lookup: list[int]):
 
 
 @given(
+    st.sets(id_ints()),
+    st.lists(id_ints()),
+)
+def test_lookup_many_nums_null(terms: set[int], lookup: list[int]):
+    klist = sorted(terms)
+    kpos = dict(zip(klist, range(len(klist))))
+
+    vocab = Vocabulary(terms, reorder=True)
+
+    nums = vocab.numbers(lookup, format="arrow", missing="null")
+    assert len(nums) == len(lookup)
+    assert nums.null_count == len([i for i in lookup if i not in terms])
+    for n, k in zip(nums, lookup):
+        if n.is_valid:
+            assert n.as_py() == kpos[k]
+        else:
+            assert k not in terms
+
+
+@given(
+    st.sets(st.emails()),
+    st.lists(st.emails()),
+)
+def test_lookup_many_nums_null(terms: set[str], lookup: list[str]):
+    klist = sorted(terms)
+    kpos = dict(zip(klist, range(len(klist))))
+
+    vocab = Vocabulary(terms, reorder=True)
+
+    nums = vocab.numbers(lookup, format="arrow", missing="null")
+    assert len(nums) == len(lookup)
+    assert nums.null_count == len([i for i in lookup if i not in terms])
+    for n, k in zip(nums, lookup):
+        if n.is_valid:
+            assert n.as_py() == kpos[k]
+        else:
+            assert k not in terms
+
+
+@given(
     st.data(),
     st.sets(id_ints()),
 )
@@ -206,6 +247,30 @@ def test_all_terms(initial: set[int] | set[str]):
     terms = vocab.terms()
     assert isinstance(terms, np.ndarray)
     assert all(terms == tl)
+
+
+def test_lots_of_strings(rng: np.random.Generator):
+    "make sure a lot of strings work"
+    N = 10_000
+
+    ids = [str(uuid4()) for _i in range(N)]
+    vocab = Vocabulary(ids, reorder=True)
+
+    arr = vocab.id_array()
+    assert len(arr) == N
+    assert arr.null_count == 0
+
+    id_arr = arr.to_numpy(zero_copy_only=False)
+
+    q_pos = rng.choice(N, 5000, replace=True)
+    query = id_arr[q_pos]
+
+    nums = vocab.numbers(query, format="arrow", missing="null")
+    assert nums.type == pa.int32()
+    assert nums.null_count == 0
+    assert np.all(nums.to_numpy() >= 0)
+    assert np.all(nums.to_numpy() < N)
+    assert np.all(id_arr[nums.to_numpy()] == query)
 
 
 @given(st.one_of(st.lists(id_ints()), st.lists(st.emails()), st.lists(st.emails())))

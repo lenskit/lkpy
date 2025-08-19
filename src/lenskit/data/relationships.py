@@ -257,7 +257,6 @@ class MatrixRelationshipSet(RelationshipSet):
         }
 
     def __setstate__(self, state):
-        print("rebuilding relationship set")
         self.name = state["name"]
         self.schema = state["schema"]
         self._link_cols = state["columns"]
