@@ -12,7 +12,7 @@ import click
 from xopen import xopen
 
 import lenskit.operations as ops
-from lenskit.data import Dataset
+from lenskit.data import Dataset, ItemList
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.random import random_generator
 
@@ -27,6 +27,7 @@ _log = get_logger(__name__)
     metavar="FILE",
     help="Output file for recommendations.",
 )
+@click.option("--print/--no-print", "print_recs", default=True, help="Print recommendations.")
 @click.option("-n", "--list-length", type=int, help="Recommendation list length.")
 @click.option("-d", "--dataset", metavar="DATA", type=Path, help="Use dataset DATA.")
 @click.option("-u", "--users-file", type=Path, metavar="FILE", help="Load list of users from FILE.")
@@ -36,6 +37,7 @@ _log = get_logger(__name__)
 def recommend(
     out_file: Path,
     users_file: Path | None,
+    print_recs: bool,
     random_users: int | None,
     list_length: int | None,
     dataset: Path | None,
@@ -79,17 +81,9 @@ def recommend(
                 time="{:.1f}ms".format(timer.elapsed(accumulated=False) * 1000),
             )
 
-            titles = None
-            if data is not None:
-                items = data.entities("item")
-                if "title" in items.attributes:
-                    titles = items.select(ids=recs.ids()).attribute("title").pandas()
+            if print_recs:
+                print_recommendation_list(recs, data)
 
-            for item in recs.ids():
-                if titles is not None:
-                    print("item {}: {}".format(item, titles.loc[item]))
-                else:
-                    print("item {}".format(item))
             pb.update()
 
     log.info(
@@ -98,3 +92,17 @@ def recommend(
         timer,
         timer.elapsed() * 1000 / len(users),
     )
+
+
+def print_recommendation_list(recs: ItemList, data: Dataset | None):
+    titles = None
+    if data is not None:
+        items = data.entities("item")
+        if "title" in items.attributes:
+            titles = items.select(ids=recs.ids()).attribute("title").pandas()
+
+    for item in recs.ids():
+        if titles is not None:
+            print("item {}: {}".format(item, titles.loc[item]))
+        else:
+            print("item {}".format(item))
