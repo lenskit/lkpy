@@ -12,7 +12,7 @@ import click
 from xopen import xopen
 
 import lenskit.operations as ops
-from lenskit.data import Dataset, ItemList
+from lenskit.data import Dataset, ItemList, ListILC, UserIDKey
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.random import random_generator
 
@@ -69,6 +69,8 @@ def recommend(
         users = rng.choice(data.users.ids(), random_users)  # type: ignore
 
     timer = Stopwatch(start=False)
+
+    all_recs = None if out_file is None else ListILC(UserIDKey)
     with item_progress("user recommendations", len(users)) as pb:
         for user in users:
             ulog = log.bind(user=user)
@@ -81,6 +83,9 @@ def recommend(
                 time="{:.1f}ms".format(timer.elapsed(accumulated=False) * 1000),
             )
 
+            if all_recs is not None:
+                all_recs.add(recs, user_id=user)
+
             if print_recs:
                 print_recommendation_list(recs, data)
 
@@ -92,6 +97,11 @@ def recommend(
         timer,
         timer.elapsed() * 1000 / len(users),
     )
+
+    if out_file is not None:
+        assert all_recs is not None
+        log.info("saving recommendations to %s", str(out_file), count=len(all_recs))
+        all_recs.save_parquet(out_file)
 
 
 def print_recommendation_list(recs: ItemList, data: Dataset | None):
