@@ -213,7 +213,7 @@ class RunAnalysis:
         for metric_wrapper in global_metrics:
             try:
                 result = metric_wrapper.measure_run(outputs, test)
-                global_results[metric_wrapper.label] = result
+                global_results[metric_wrapper.label] = result if result is not None else np.nan
             except Exception as e:
                 _log.warning("error computing global metric %s: %s", metric_wrapper.label, e)
                 global_results[metric_wrapper.label] = metric_wrapper.default or 0.0

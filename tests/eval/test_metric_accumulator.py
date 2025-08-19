@@ -8,13 +8,15 @@ import logging
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from pytest import approx, mark, raises
 
 from lenskit.basic import PopScorer
-from lenskit.data import ItemList
+from lenskit.data import ItemList, ItemListCollection
 from lenskit.metrics import NDCG, Recall
-from lenskit.metrics._accum import MetricAccumulator
+from lenskit.metrics._accum import MetricAccumulator, MetricWrapper
+from lenskit.metrics._base import GlobalMetric
 from lenskit.metrics.basic import ListLength
 from lenskit.metrics.predict import RMSE
 from lenskit.splitting import split_temporal_fraction
@@ -219,3 +221,42 @@ def test_measure_list_mixed_result_types():
 
     df = acc.list_metrics()
     assert "D.b" in df.columns
+
+
+@mark.parametrize(
+    "values,expected",
+    [
+        ([], {"mean": None, "median": None, "std": None}),
+        ([None, None], {"mean": None, "median": None, "std": None}),
+        ([42], {"mean": 42.0, "median": 42.0, "std": 0.0}),
+        ([1, 2, 3, 4], None),
+        (pa.array([1, 2, 3]), None),
+        (pa.chunked_array([[1, 2], [3]]), None),
+    ],
+)
+def test_default_summarize(values, expected):
+    mw = MetricWrapper(metric=None, label="test")
+    result = mw._default_summarize(values)
+
+    if expected is not None:
+        assert result == expected
+    else:
+        vals = [1, 2, 3, 4] if isinstance(values, list) else [1, 2, 3]
+        assert result["mean"] == approx(np.mean(vals))
+        assert result["median"] == approx(np.median(vals))
+        assert result["std"] == approx(np.std(vals, ddof=1))
+
+
+def test_measure_run_with_global_metric():
+    class DummyGlobal(GlobalMetric):
+        def measure_run(self, run, test):
+            return 123.0
+
+    gm = DummyGlobal()
+    mw = MetricWrapper(metric=gm, label="g")
+
+    run = ItemListCollection([])
+    test = ItemListCollection([])
+
+    result = mw.measure_run(run, test)
+    assert result == 123.0
