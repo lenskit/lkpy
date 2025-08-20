@@ -395,17 +395,12 @@ class ItemListCollection(Generic[KL], ABC):
         for batch in chunked(self.items(), batch_size):
             keys = pa.Table.from_pylist([key_dict(k) for (k, _il) in batch])
             schema = pa.list_(pa.struct(columns))  # type: ignore
-            tbl = keys.add_column(
-                keys.num_columns,
-                "items",
-                pa.array(
-                    [
-                        il.to_arrow(ids=True, numbers=False, type="array", columns=columns)
-                        for (_k, il) in batch
-                    ],
-                    schema,
-                ),
-            )
+            col_elts = [
+                il.to_arrow(ids=True, numbers=False, type="array", columns=columns)
+                for (_k, il) in batch
+            ]
+            col = pa.array(col_elts, schema)
+            tbl = keys.add_column(keys.num_columns, "items", col)
             if layout == "flat":
                 tbl = explode_column(tbl, "items").flatten()
                 tbl = tbl.rename_columns(

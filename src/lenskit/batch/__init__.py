@@ -11,7 +11,7 @@ Batch-run recommendation pipelines for evaluation.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Mapping
+from typing import Literal, Mapping
 
 import pandas as pd
 
@@ -28,7 +28,7 @@ def predict(
     pipeline: Pipeline,
     test: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | pd.DataFrame,
     *,
-    n_jobs: int | None = None,
+    n_jobs: int | Literal["ray"] | None = None,
 ) -> ItemListCollection[GenericKey]:
     """
     Convenience function to batch-generate rating predictions (or other per-item
@@ -53,7 +53,7 @@ def score(
     pipeline: Pipeline,
     test: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | pd.DataFrame,
     *,
-    n_jobs: int | None = None,
+    n_jobs: int | Literal["ray"] | None = None,
 ) -> ItemListCollection[GenericKey]:
     """
     Convenience function to batch-generate personalized scores from a pipeline.
@@ -82,7 +82,7 @@ def recommend(
     | pd.DataFrame,
     n: int | None = None,
     *,
-    n_jobs: int | None = None,
+    n_jobs: int | Literal["ray"] | None = None,
 ) -> ItemListCollection[UserIDKey]:
     """
     Convenience function to batch-generate recommendations from a pipeline. This
