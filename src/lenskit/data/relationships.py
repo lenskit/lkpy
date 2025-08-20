@@ -194,13 +194,11 @@ class RelationshipSet:
             col_entity:
                 The specified column entity of the matrix
         """
-
-        if (row_entity, col_entity) in self._matrix_set:
-            return self._matrix_set[(row_entity, col_entity)]
-        else:
-            new_mat_rset = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
-            self._matrix_set[(row_entity, col_entity)] = new_mat_rset
-            return new_mat_rset
+        mat = self._matrix_set.get((row_entity, col_entity), None)
+        if mat is None:
+            mat = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
+            self._matrix_set[(row_entity, col_entity)] = mat
+        return mat
 
     def _make_matrix(
         self, *, row_entity: str = "user", col_entity: str = "item"
