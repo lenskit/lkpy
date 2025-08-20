@@ -299,11 +299,11 @@ class MatrixRelationshipSet(RelationshipSet):
     def __init__(
         self,
         name: str,
-        vocab: dict[str, Vocabulary],
+        vocabularies: dict[str, Vocabulary],
         schema: RelationshipSchema,
         table: pa.Table,
     ):
-        super().__init__(name, vocab, schema, table)
+        super().__init__(name, vocabularies, schema, table)
         self._init_structures()
 
     def _init_structures(self, *, ds_name: str | None = None, _trust_table_sort: bool = False):
