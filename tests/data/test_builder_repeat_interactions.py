@@ -118,6 +118,54 @@ def test_remove_duplicate_in_repeated_interactions():
     assert len(log[log.user_num == 2]) == 3
 
 
+def test_remove_repeat_interaction_at_builder_saves_last_interaction():
+    dsb = DatasetBuilder()
+    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=True, interaction=True)
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                "timestamp": np.arange(1, 8) * 10,
+                "rating": [3, 4, 5, 4, 3, 2, 3],
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+        remove_repeats=True,
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().pandas()
+    repeat_row = log.loc[2]
+    assert repeat_row["rating"] == 3
+
+
+def test_remove_repeat_interaction_at_matrix_saves_last_interaction():
+    dsb = DatasetBuilder()
+    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=True, interaction=True)
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                "timestamp": np.arange(1, 8) * 10,
+                "rating": [3, 4, 5, 4, 3, 2, 3],
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+        allow_repeats=True,
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().matrix().pandas()
+    repeat_row = log.loc[2]
+    assert repeat_row["rating"] == 3
+
+
 def test_bad_interaction_matrix_call():
     dsb = DatasetBuilder()
     with raises(ValueError):

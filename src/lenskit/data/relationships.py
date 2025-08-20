@@ -214,7 +214,10 @@ class RelationshipSet:
             raise ValueError("row and column entity should not be the same")
 
         e_dict: dict[str, str | None]
-        e_dict = {row_entity: None, col_entity: None}
+        e_dict = {
+            row_entity: self.schema.entities[row_entity],
+            col_entity: self.schema.entities[col_entity],
+        }
         matrix_schema = RelationshipSchema(
             entities=e_dict,
             interaction=self.schema.interaction,
@@ -223,14 +226,7 @@ class RelationshipSet:
         )
         new_table = self._table
 
-        if "timestamp" in new_table.column_names:
-            new_table = new_table.sort_by([("timestamp", "ascending")])
-
-        if "count" not in new_table.column_names:
-            new_table = new_table.add_column(
-                new_table.num_columns, "count", pa.array(np.ones(new_table.num_rows))
-            )
-        else:
+        if "count" in new_table.column_names:
             null_filled = new_table["count"].fill_null(1)
             new_table = new_table.set_column(
                 new_table.schema.get_field_index("count"),
@@ -238,13 +234,27 @@ class RelationshipSet:
                 null_filled,  # type: ignore
             )
 
-        group_keys = [entity + "_num" for entity in e_dict]
-        table_group = new_table.group_by(group_keys)
-
         aggregates: list[tuple[str, str]]
         column_renames: dict[str, str]
-        aggregates = []
-        column_renames = {}
+        use_threads = True
+
+        group_keys = [entity + "_num" for entity in e_dict]
+        exclude_last = group_keys + ["timestamp", "count"]
+
+        aggregates = [
+            (col_name, "last")
+            for col_name in new_table.column_names
+            if col_name not in exclude_last
+        ]
+        column_renames = {
+            f"{col_name}_last": col_name
+            for col_name in new_table.column_names
+            if col_name not in exclude_last
+        }
+        if aggregates:
+            use_threads = False
+
+        table_group = new_table.group_by(group_keys, use_threads=use_threads)
 
         if "timestamp" in new_table.column_names:
             aggregates.extend([("timestamp", "max"), ("timestamp", "min")])
@@ -255,10 +265,12 @@ class RelationshipSet:
         if "count" in new_table.column_names:
             aggregates.append(("count", "sum"))
             column_renames.update({"count_sum": "count"})
+        else:
+            aggregates.append((row_entity + "_num", "count"))
+            column_renames.update({row_entity + "_num_count": "count"})
 
-        if aggregates:
-            aggregated_table = table_group.aggregate(aggregates)
-            aggregated_table = aggregated_table.rename_columns(column_renames)
+        aggregated_table = table_group.aggregate(aggregates)
+        aggregated_table = aggregated_table.rename_columns(column_renames)
 
         return MatrixRelationshipSet(self.name, self._vocabularies, matrix_schema, aggregated_table)
 
