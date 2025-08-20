@@ -184,16 +184,6 @@ class RelationshipSet:
     def matrix(
         self, *, row_entity: str = "user", col_entity: str = "item"
     ) -> MatrixRelationshipSet:
-        if (row_entity, col_entity) in self._matrix_set:
-            return self._matrix_set[(row_entity, col_entity)]
-        else:
-            new_mat_rset = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
-            self._matrix_set[(row_entity, col_entity)] = new_mat_rset
-            return new_mat_rset
-
-    def _make_matrix(
-        self, *, row_entity: str = "user", col_entity: str = "item"
-    ) -> MatrixRelationshipSet:
         """
         Convert this relationship set into a matrix, coalescing duplicate
         observations.
@@ -204,6 +194,17 @@ class RelationshipSet:
             col_entity:
                 The specified column entity of the matrix
         """
+
+        if (row_entity, col_entity) in self._matrix_set:
+            return self._matrix_set[(row_entity, col_entity)]
+        else:
+            new_mat_rset = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
+            self._matrix_set[(row_entity, col_entity)] = new_mat_rset
+            return new_mat_rset
+
+    def _make_matrix(
+        self, *, row_entity: str = "user", col_entity: str = "item"
+    ) -> MatrixRelationshipSet:
         if row_entity not in self.schema.entities.keys():
             raise FieldError(self.name, row_entity)
 
