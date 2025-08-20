@@ -118,9 +118,9 @@ class RelationshipSet:
         return [c for c in self._table.column_names if c not in self._link_cols]
 
     def count(self):
-        if "count" in self._table.column_names:  # pragma: nocover
-            count_column = self._table.column("count").combine_chunks().slice(0)
-            count_column.fill_null(pa.scalar(1, type=pa.int8()))
+        if "count" in self._table.column_names:
+            count_column = self._table.column("count")
+            count_column = count_column.fill_null(pa.scalar(1, type=pa.int8()))
             count = pc.sum(count_column)
             return count.as_py()
 

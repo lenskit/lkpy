@@ -104,6 +104,48 @@ def test_add_interactions_table():
     assert np.all(mat.rowptrs == [0, 2, 3, 6])
 
 
+def test_add_interactions_count_method():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c"],
+                "item_id": ["x", "y", "z", "x", "y", "z"],
+                "count": np.arange(1, 7),
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().count()
+    assert log == 21
+
+
+def test_add_interactions_count_method_with_null():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c"],
+                "item_id": ["x", "y", "z", "x", "y", "z"],
+                "count": [1, 2, None, 4, 5, 6],
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().count()
+    assert log == 19
+
+
 def test_add_interactions_error_bad_ids():
     dsb = DatasetBuilder()
     dsb.add_entities("user", ["a", "b", "c"])
