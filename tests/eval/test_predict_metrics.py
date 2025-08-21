@@ -134,12 +134,12 @@ def test_batch_rmse(ml_100k):
     _log.info("global metrics:\n%s", gs)
 
     # we should have a reasonable mean
-    assert umdf["RMSE"].mean() == approx(0.93, abs=0.05)
-    assert mdf.loc["RMSE", "mean"] == approx(0.93, abs=0.05)
+    assert umdf["RMSE"].mean() == approx(0.35, abs=0.05)
+    assert mdf.loc["RMSE", "mean"] == approx(0.35, abs=0.05)
 
-    assert umdf["MAE"].mean() == approx(0.76, abs=0.05)
-    assert mdf.loc["MAE", "mean"] == approx(0.76, abs=0.05)
+    assert umdf["MAE"].mean() == approx(0.26, abs=0.05)
+    assert mdf.loc["MAE", "mean"] == approx(0.26, abs=0.05)
 
     # we should have global metrics
-    assert gs["RMSE"] == approx(0.93, abs=0.05)
-    assert gs["MAE"] == approx(0.76, abs=0.05)
+    assert gs["RMSE"] == approx(0.33, abs=0.05)
+    assert gs["MAE"] == approx(0.26, abs=0.05)

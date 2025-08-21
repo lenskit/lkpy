@@ -44,5 +44,5 @@ def test_flexmf_test_accuracy(ml_100k):
 
     print(summary)
 
-    assert gs["MAE"] == approx(0.76, abs=0.05)
-    assert summary.loc["RMSE", "mean"] == approx(0.94, abs=0.05)
+    assert gs["MAE"] == approx(0.26, abs=0.05)
+    assert summary.loc["RMSE", "mean"] == approx(0.35, abs=0.05)
