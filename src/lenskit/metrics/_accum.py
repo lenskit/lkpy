@@ -251,11 +251,16 @@ class MetricAccumulator:
                 continue
 
             data = self._list_data[wrapper.label]
-            clean_data = [x for x in data if x is not None]
+            numeric_values = [
+                x
+                for x in data
+                if x is not None
+                and not (isinstance(x, dict) and all(v is None for v in x.values()))
+            ]
 
-            if clean_data:
+            if numeric_values:
                 try:
-                    summary = wrapper.summarize(clean_data)
+                    summary = wrapper.summarize(numeric_values)
                     if isinstance(summary, dict):
                         summaries[wrapper.label] = summary
                     else:
