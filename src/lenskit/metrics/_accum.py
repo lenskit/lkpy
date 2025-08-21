@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from lenskit.data import ItemListCollection
+from lenskit.data import ItemList, ItemListCollection
 
 from ._base import DecomposedMetric, GlobalMetric, ListMetric, Metric, MetricFunction
 
@@ -51,7 +51,7 @@ class MetricWrapper:
         "Check if this metric is decomposed."
         return isinstance(self.metric, DecomposedMetric)
 
-    def measure_list(self, list: ItemList, test: ItemList | None) -> float | dict[str, float]:
+    def measure_list(self, list: ItemList, test: ItemList) -> float | dict[str, float]:
         """Measure a single list and return metric result(s)."""
         if isinstance(self.metric, Metric):
             return self.metric.measure_list(list, test)
