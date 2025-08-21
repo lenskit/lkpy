@@ -160,6 +160,10 @@ class MetricAccumulator:
                     continue
 
                 metric_result = wrapper.measure_list(output, test)
+
+                if (test is None or len(test) == 0) and metric_result is None:
+                    metric_result = wrapper.default or 0.0
+
                 self._list_data[wrapper.label].append(metric_result)
                 self._list_metrics[wrapper.label].append(metric_result)
             except Exception as e:
