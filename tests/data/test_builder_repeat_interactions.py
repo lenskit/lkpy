@@ -39,6 +39,8 @@ def test_add_repeated_interactions():
     assert np.all(ds.users.ids() == ["a", "b", "c"])
     assert np.all(ds.items.ids() == ["x", "y", "z"])
 
+    log = ds.interactions()
+    assert log.schema.repeats == AllowableTroolean.PRESENT
     log = ds.interactions().pandas()
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_num", "item_num"])
@@ -62,6 +64,8 @@ def test_remove_repeat_in_repeated_interactions():
     )
 
     ds = dsb.build()
+    log = ds.interactions()
+    assert log.schema.repeats == AllowableTroolean.ALLOWED
     log = ds.interactions().pandas()
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_num", "item_num", "timestamp"])
@@ -86,6 +90,8 @@ def test_remove_repeat_with_forbidden_repeat():
     )
 
     ds = dsb.build()
+    log = ds.interactions()
+    assert log.schema.repeats == AllowableTroolean.FORBIDDEN
     log = ds.interactions().pandas()
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_num", "item_num", "timestamp"])
