@@ -28,6 +28,7 @@ from scipy.sparse import csr_array, sparray
 
 from lenskit._accel import data as _data_accel
 from lenskit.data.matrix import SparseRowArray
+from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
@@ -76,7 +77,8 @@ class DatasetBuilder:
 
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
-    _indexes: dict[str, pd.Index]
+    _vocabularies: dict[str, Vocabulary]
+    _rel_coords: dict[str, _data_accel.CoordinateTable | None]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
         """
@@ -88,20 +90,25 @@ class DatasetBuilder:
                 which will initialize this builder with its contents to extend
                 or modify.
         """
+        self._rel_coords = {}
+
         if isinstance(name, Dataset):
             name._ensure_loaded()
             name = name._data
         if isinstance(name, DataContainer):
             self.schema = name.schema.model_copy()
             self._tables = {n: t for (n, t) in name.tables.items()}
-            self._indexes = {
-                n: pd.Index(name.tables[n].column(id_col_name(n)).to_numpy(zero_copy_only=False))
+            self._vocabularies = {
+                n: Vocabulary(name.tables[n].column(id_col_name(n)), name=n)
                 for n in name.schema.entities.keys()
             }
+            # reuse _rel_coords if we have them
+            if name._rel_coords is not None:
+                self._rel_coords = {n: coo.copy() for n, coo in name._rel_coords.items()}
         else:
             self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
             self._tables = {"item": None}
-            self._indexes = {}
+            self._vocabularies = {}
 
         self._log = _log.bind(ds_name=name)
 
@@ -306,9 +313,10 @@ class DatasetBuilder:
             ids = ids.cast(id_type)
 
         if table is not None:
-            col = table.column(id_name)
-            is_known = pc.is_in(ids, col)
-            fresh_ids = pc.filter(ids, pc.invert(is_known))
+            vocab = self._vocabularies[cls]
+            nums = vocab.numbers(ids, format="arrow", missing="null")
+            fresh_ids = pc.filter(ids, pc.invert(nums.is_valid()))
+            assert len(fresh_ids) == nums.null_count
         else:
             fresh_ids = ids
 
@@ -316,15 +324,20 @@ class DatasetBuilder:
             n_dupes = n - len(fresh_ids)
             raise DataError(f"found {n_dupes} duplicate IDs, but re-inserts not allowed")
 
-        log.debug("adding %d new IDs", len(fresh_ids))
+        log.debug(
+            "adding %d new IDs (%d existing)",
+            len(fresh_ids),
+            0 if table is None else table.num_rows,
+        )
         new_tbl = pa.table({id_name: fresh_ids})
         if table is None:
             table = new_tbl
         else:
             table = pa.concat_tables([table, new_tbl], promote_options="permissive")
+        log.debug("have %d entities", table.num_rows)
 
         self._tables[cls] = table
-        self._indexes[cls] = pd.Index(table.column(id_name).to_numpy(zero_copy_only=False))
+        self._vocabularies[cls] = Vocabulary(table.column(id_name), name=cls, reorder=False)
 
     def add_relationships(
         self,
@@ -406,12 +419,11 @@ class DatasetBuilder:
                 raise DataError(f"no entities of class {e_type}")
 
             e_nums = self._resolve_entity_ids(e_type, ids, e_tbl)
-            e_valid = e_nums.is_valid()
-            if not pc.all(e_valid).as_py():
+            if e_nums.null_count:
                 if missing == "error":
-                    n_bad = len(e_nums) - pc.sum(e_valid).as_py()  # type: ignore
-                    raise DataError(f"{n_bad} unknown IDs for entity class {e_type}")
+                    raise DataError(f"{e_nums.null_count} unknown IDs for entity class {e_type}")
                 assert missing == "filter"
+                e_valid = e_nums.is_valid()
                 if link_mask is None:
                     link_mask = e_valid
                 else:
@@ -436,21 +448,55 @@ class DatasetBuilder:
             raise NotImplementedError("count attributes are not yet implemented")
 
         cur_table = self._tables[cls]
-        if cur_table is not None:
-            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         if not rc_def.repeats.is_present:
             _log.debug("checking for repeated interactions")
-            # we have to bounce to pandas for multi-column duplicate detection
-            ndf = new_table.select(list(link_nums.keys())).to_pandas()
-            dupes = ndf.duplicated()
-            if np.any(dupes):
+
+            # FIXME: the coordinate table preservation will be out-of-order with
+            # respect to sorted tables. This will not affect correctness for the
+            # purposes of checking if duplicates exist, but will cause problems
+            # if we count on locations for other purposes.  It also can increase
+            # memory use, since the coordinate table keeps a reference to the
+            # pre-sorted data.
+
+            # get the coordinate table for the previously-existing entries
+            coords = self._rel_coords.get(cls, None)
+            if coords is None:
+                coords = _data_accel.CoordinateTable(len(rc_def.entities))
+                if cur_table is not None:
+                    _log.debug("building coord table from previous interactions")
+                    coo = cur_table.select(link_nums.keys())
+                    coords.extend(coo.to_batches())
+                    assert len(coo) == len(cur_table)
+                self._rel_coords[cls] = coords
+
+            # add the new data
+            coords.extend(new_table.select(link_nums.keys()).to_batches())
+            n_dupes = len(coords) - coords.unique_count()
+            _log.debug(
+                "coordinates: %d total, %d unique, %d dupe",
+                len(coords),
+                coords.unique_count(),
+                n_dupes,
+            )
+
+            if n_dupes:
                 if rc_def.repeats.is_allowed:
+                    _log.debug("found %d repeat interactions", n_dupes)
                     rc_def.repeats = AllowableTroolean.PRESENT
                 else:
+                    _log.error(
+                        "found %d forbidden repeat interactions (of %d)",
+                        n_dupes,
+                        new_table.num_rows,
+                    )
                     raise DataError(
                         f"repeated interactions not allowed for relationship class {cls}"
                     )
+
+        # combine the tables to save them
+        if cur_table is not None:
+            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
@@ -586,6 +632,7 @@ class DatasetBuilder:
             tbl = tbl.join(remove, remove.column_names, join_type="left anti")
 
         self._tables[cls] = tbl
+        self._rel_coords[cls] = None
 
     def binarize_ratings(
         self,
@@ -633,12 +680,14 @@ class DatasetBuilder:
             raise ValueError("method must be 'zero' or 'remove'")
 
         self._tables[cls] = tbl
+        self._rel_coords[cls] = None
 
     def clear_relationships(self, cls: str):
         """
         Remove all records for a specified relationship class.
         """
         self._tables[cls] = _empty_rel_table(self.schema.relationships[cls].entity_class_names)
+        self._rel_coords[cls] = None
 
     @overload
     def add_scalar_attribute(
@@ -999,7 +1048,7 @@ class DatasetBuilder:
 
                 tables[n] = t
 
-        return DataContainer(self.schema.model_copy(), tables)
+        return DataContainer(self.schema.model_copy(), tables, _rel_coords=self._rel_coords)
 
     def save(self, path: str | PathLike[str]):
         """
@@ -1016,16 +1065,18 @@ class DatasetBuilder:
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
     ) -> pa.Int32Array:
-        tgt_ids = np.array(ids)  # type: ignore
-        index = self._indexes.get(cls, None)
-        if index is None:
+        if isinstance(ids, pa.ChunkedArray):
+            tgt_ids = ids.combine_chunks()
+        else:
+            tgt_ids = pa.array(ids)  # type: ignore
+        vocab = self._vocabularies.get(cls, None)
+        if vocab is None:
             return pa.nulls(len(tgt_ids), type=pa.int32())
-        nums = np.require(index.get_indexer_for(tgt_ids), np.int32)
-        return pc.if_else(nums >= 0, nums, None)
+        return vocab.numbers(tgt_ids, format="arrow", missing="null")
 
 
 def _expand_and_align_list_array(
-    out_len: int, rows: np.ndarray[int, np.dtype[np.int32]], lists: pa.ListArray
+    out_len: int, rows: NDArray[np.int32], lists: pa.ListArray
 ) -> pa.ListArray:
     """
     Expand a list array, so that its lists are on the specified rows of the

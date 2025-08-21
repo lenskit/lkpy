@@ -23,20 +23,28 @@ jobs:
       - name: 🏷️ Fetch Git tags
         run: git fetch --tags
 
+      - name: Install mise-en-place
+        uses: jdx/mise-action@v2
+
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
 
+      - name: Install dependencies
+        run: uv sync --group=scripting
+        env:
+          UV_LOCKED: 1
+
       - name: Identify version
         id: version
         run: |
-          uv run --only-group=scripting just ci-version
+          mise run version -- --github
 
       - name: Build source distribution
         id: sdist
         run: |
-          uv run --only-group=scripting just build-sdist
+          mise run build:dist -- -ds
 
       - name: Save archive
         uses: actions/upload-artifact@v4
