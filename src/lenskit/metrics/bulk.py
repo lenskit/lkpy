@@ -13,7 +13,7 @@ from typing import TypeVar
 import numpy as np
 import pandas as pd
 
-from lenskit.data import ItemListCollection
+from lenskit.data import ItemListCollection, ItemList
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import item_progress
 from lenskit.metrics._accum import MetricAccumulator
@@ -197,6 +197,7 @@ class RunAnalysis:
                 list_test = test.lookup_projected(key)
                 if list_test is None:
                     no_test_count += 1
+                    list_test = ItemList([])
                 self._accumulator.measure_list(out, list_test, **key_kwargs)
                 pb.update()
 

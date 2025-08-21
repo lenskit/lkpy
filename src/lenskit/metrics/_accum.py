@@ -53,8 +53,6 @@ class MetricWrapper:
 
     def measure_list(self, list: ItemList, test: ItemList | None) -> float | dict[str, float]:
         """Measure a single list and return metric result(s)."""
-        if test is None:
-            test = ItemList([])
         if isinstance(self.metric, Metric):
             return self.metric.measure_list(list, test)
         elif isinstance(self.metric, Callable):
