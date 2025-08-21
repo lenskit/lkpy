@@ -137,39 +137,39 @@ class MetricAccumulator:
         self._list_data[wrapper.label] = []
         self._list_metrics[wrapper.label] = []
 
-    def measure_list(self, output: ItemList, test: ItemList, **keys: Any):
-        """
-        Measure a single list and accumulate the results.
+def measure_list(self, output: ItemList, test: ItemList, **keys: Any):
+    """
+    Measure a single list and accumulate the results.
 
-        Args:
-            output: The recommendation list to measure.
-            test: The ground truth test data.
-            **keys: Identifying keys for this list (e.g., user_id).
-        """
-        if not self._key_fields:
-            self._key_fields = list(keys.keys())
+    Args:
+        output: The recommendation list to measure.
+        test: The ground truth test data.
+        **keys: Identifying keys for this list (e.g., user_id).
+    """
+    if not self._key_fields:
+        self._key_fields = list(keys.keys())
 
-        key_tuple = tuple(keys.get(k) for k in self._key_fields)
-        self._list_keys.append(key_tuple)
+    key_tuple = tuple(keys.get(k) for k in self._key_fields)
+    self._list_keys.append(key_tuple)
 
-        for wrapper in self.metrics:
-            try:
-                if wrapper.is_global:
-                    self._list_data[wrapper.label].append(None)
-                    self._list_metrics[wrapper.label].append(None)
-                    continue
-
-                metric_result = wrapper.measure_list(output, test)
-
-                if (test is None or len(test) == 0) and metric_result is None:
-                    metric_result = wrapper.default or 0.0
-
-                self._list_data[wrapper.label].append(metric_result)
-                self._list_metrics[wrapper.label].append(metric_result)
-            except Exception as e:
-                _log.warning(f"Error computing metric {wrapper.label}: {e}")
+    for wrapper in self.metrics:
+        try:
+            if wrapper.is_global:
                 self._list_data[wrapper.label].append(None)
                 self._list_metrics[wrapper.label].append(None)
+                continue
+
+            metric_result = wrapper.measure_list(output, test)
+
+            if metric_result is None:
+                metric_result = wrapper.default or 0.0
+
+            self._list_data[wrapper.label].append(metric_result)
+            self._list_metrics[wrapper.label].append(metric_result)
+        except Exception as e:
+            _log.warning(f"Error computing metric {wrapper.label}: {e}")
+            self._list_data[wrapper.label].append(None)
+            self._list_metrics[wrapper.label].append(None)
 
     def list_metrics(self, fill_missing: bool = True) -> pd.DataFrame:
         """
