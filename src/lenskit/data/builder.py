@@ -439,15 +439,9 @@ class DatasetBuilder:
         if cur_table is not None:
             new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
-        if not rc_def.repeats.is_present:
-            _log.debug("checking for repeated interactions")
-            # we have to bounce to pandas for multi-column duplicate detection
-            ndf = new_table.select(list(link_nums.keys())).to_pandas()
-            dupes = ndf.duplicated()
-            if np.any(dupes):
-                new_table = self._resolve_repeated_interactions(
-                    t=new_table, rel=rc_def, remove_repeats=remove_repeats
-                )
+        new_table = self._resolve_repeated_interactions(
+            t=new_table, rel=rc_def, remove_repeats=remove_repeats
+        )
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
         )
@@ -946,6 +940,7 @@ class DatasetBuilder:
             else:
                 rel = self.schema.relationships.get(n, None)
                 if rel is not None:
+                    self._check_repeat_interactions(t, rel)
                     if not rel.repeats.is_forbidden and len(rel.entities) == 2:
                         e_cols = [e + "_num" for e in rel.entities.keys()]
                         if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
@@ -967,6 +962,18 @@ class DatasetBuilder:
         """
         container = self.build_container()
         container.save(path)
+
+    def _check_repeat_interactions(self, t: pa.Table, rel: RelationshipSchema):
+        _log.debug("checking for repeated interactions")
+        temp_t = t.group_by([entity + "_num" for entity in rel.entity_class_names]).aggregate(
+            [([], "count_all")]
+        )
+        repeat = pc.any(pc.greater(temp_t["count_all"], pa.scalar(1))).as_py()
+        if repeat:
+            if rel.repeats.is_allowed:
+                rel.repeats = AllowableTroolean.PRESENT
+            if rel.repeats.is_forbidden:
+                raise DataError("repeated interactions not allowed for relationship class")
 
     def _remove_duplicated_relationships(self, t: pa.Table) -> pa.Table:
         temp_df = t.to_pandas()
@@ -998,18 +1005,11 @@ class DatasetBuilder:
     def _resolve_repeated_interactions(
         self, t: pa.Table, rel: RelationshipSchema, remove_repeats: bool | Literal["duplicate"]
     ) -> pa.Table:
-        remove_repeats_only = remove_repeats and remove_repeats != "duplicate"
         if remove_repeats:
             if remove_repeats == "duplicate":
                 t = self._remove_duplicated_relationships(t)
             else:
                 t = self._remove_repeated_relationships(t, rel)
-
-        if rel.repeats.is_allowed and not remove_repeats_only:
-            rel.repeats = AllowableTroolean.PRESENT
-        elif rel.repeats.is_forbidden and not remove_repeats_only:
-            raise DataError("repeated interactions not allowed for relationship class")
-
         return t
 
 
