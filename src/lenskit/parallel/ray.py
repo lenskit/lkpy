@@ -71,7 +71,7 @@ def init_cluster(
     proc_slots: int | None = None,
     resources: dict[str, float] | None = None,
     worker_parallel: ParallelConfig | None = None,
-    global_logging: bool = False,
+    global_logging: bool = True,
     **kwargs,
 ):
     """
@@ -130,7 +130,7 @@ def init_cluster(
     setup = _worker_setup if global_logging else None
     runtime = ray.runtime_env.RuntimeEnv(env_vars=env, worker_process_setup_hook=setup)
 
-    _log.info("starting Ray cluster")
+    _log.info("starting Ray cluster", logging=global_logging)
     ray.init(num_cpus=num_cpus, resources=resources, runtime_env=runtime, **kwargs)
 
 
@@ -421,6 +421,8 @@ def init_worker(*, autostart: bool = True) -> WorkerContext:
         context = WorkerContext(log_cfg)
         if autostart:
             context.start()
+
+        _log.debug("worker context initialized")
 
     ensure_parallel_init()
     return context
