@@ -104,7 +104,9 @@ class DatasetBuilder:
             }
             # reuse _rel_coords if we have them
             if name._rel_coords is not None:
-                self._rel_coords = {n: coo.copy() for n, coo in name._rel_coords.items()}
+                self._rel_coords = {
+                    n: coo.copy() for n, coo in name._rel_coords.items() if coo is not None
+                }
         else:
             self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
             self._tables = {"item": None}
