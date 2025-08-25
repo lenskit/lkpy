@@ -219,12 +219,6 @@ class RunAnalysis:
                 _log.warning("error computing global metric %s: %s", metric_wrapper.label, e)
                 global_results[metric_wrapper.label] = metric_wrapper.default or 0.0
 
-        summary_df = self._accumulator.summary_metrics()
-        if not summary_df.empty:
-            for col in summary_df.columns:
-                if "." not in col:
-                    global_results.update(summary_df[col].to_dict())
-
         global_results = pd.Series(global_results, dtype=np.float64)
 
         defaults = {
