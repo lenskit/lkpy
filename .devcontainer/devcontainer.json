@@ -1,0 +1,37 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/debian
+{
+  "name": "LensKit",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {}
+  },
+  // put the Python environment inside the container
+  "containerEnv": {
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/lenskit-venv"
+  },
+  "remoteEnv": {
+    "VIRTUAL_ENV": "${containerEnv:UV_PROJECT_ENVIRONMENT}",
+    "PATH": "${containerEnv:UV_PROJECT_ENVIRONMENT}/bin:${containerEnv:PATH}"
+  },
+  "postCreateCommand": ".devcontainer/setup.sh",
+  // VS Code settings
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "EditorConfig.EditorConfig",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml",
+        "ms-toolsai.jupyter",
+        "ms-azuretools.vscode-docker",
+        "trond-snekvik.simple-rst",
+        "rust-lang.rust-analyzer",
+        "nefrob.vscode-just-syntax"
+      ]
+    }
+  }
+}

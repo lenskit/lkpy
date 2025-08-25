@@ -57,6 +57,8 @@ class ItemList:
     data, do not do in-place modifications of the list itself or the arrays or
     data frame it returns.
 
+    To get the length of an item list, use the standard :func:`len` function.
+
     An item list logically a list of rows, each of which is an item with
     multiple fields.  A designated field, ``score``, is available through the
     :meth:`scores` method, and is always single-precision floating-point.

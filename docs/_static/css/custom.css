@@ -5,7 +5,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-@import url(https://fonts.bunny.net/css?family=source-sans-3:300,300i,400,400i,500,500i,700,700i|source-code-pro:300,300i,400,400i,500,500i,600,600i,700,700i);
+@import url(https://fonts.bunny.net/css?family=source-sans-3:300,300i,400,400i,500,500i,600,600i,700,700i|source-code-pro:300,300i,400,400i,500,500i,600,600i,700,700i);
+@import url(https://esm.sh/emfed@1/toots.css);
 
 html {
     --pst-font-family-base: "Source Sans 3", var(--pst-font-family-base-system);
@@ -20,4 +21,59 @@ html {
 
 code.xref, a code {
     font-weight: 600;
+}
+
+/* News display customization. */
+.toots {
+    font-family: unset;
+}
+.toots .toot {
+    display: grid;
+    grid: auto-flow / 2fr 3fr;
+}
+
+@media (max-width: 700px) {
+    .toots .toot + .toot + .toot {
+        display: none;
+    }
+}
+
+.toots .toot .permalink {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: center;
+    justify-self: right;
+    text-align: right;
+}
+.toots .toot .user {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: center;
+}
+.toots .toot .body {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    min-width: unset;
+}
+
+.toots .toot .display-name {
+    display: none;
+}
+.toots .toot .username {
+    color: var(--pst-color-text-base);
+    font-weight: 600;
+}
+
+@media (min-width: 1200px) {
+#lenskit #news {
+    order: -1;
+    width: 40%;
+    min-width: 420px;
+    float: right;
+    margin-left: 1em;
+}
+
+#lenskit #news > h2 {
+    margin-top: calc(2.75rem - 1.5625rem);
+}
 }

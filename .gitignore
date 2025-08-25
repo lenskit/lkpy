@@ -1,3 +1,8 @@
+# local configuration files
+.env
+.envrc
+*.local.toml
+
 # log and debug outputs
 *.log
 *.pdb

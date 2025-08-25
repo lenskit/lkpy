@@ -23,7 +23,7 @@ from structlog.dev import RichTracebackFormatter
 
 from ._console import ConsoleHandler, console, setup_console
 from .processors import filter_exceptions, format_timestamp, log_warning, remove_internal
-from .tracing import lenskit_filtering_logger
+from .tracing import activate_tracing, lenskit_filtering_logger
 
 LVL_TRACE = 5
 CORE_PROCESSORS = [
@@ -200,6 +200,8 @@ class LoggingConfig:  # pragma: nocover
 
         term.setFormatter(formatter)
         root.addHandler(term)
+        if eff_lvl <= LVL_TRACE:
+            activate_tracing(True)
 
         if self.file:
             file_level = self.file_level if self.file_level is not None else self.level

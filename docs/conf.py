@@ -37,6 +37,8 @@ extensions = [
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.mermaid",
+    "sphinx_copybutton",
+    "sphinx_new_tab_link",
     "lk_stability",
 ]
 
@@ -82,6 +84,12 @@ html_theme_options = {
             "name": "Mastodon",
             "url": "https://recsys.social/@LensKit",
             "icon": "fa-brands fa-mastodon",
+            "type": "fontawesome",
+        },
+        {
+            "name": "BlueSky",
+            "url": "https://bsky.app/profile/lenskit.org",
+            "icon": "fa-brands fa-bluesky",
             "type": "fontawesome",
         },
     ],

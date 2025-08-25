@@ -11,7 +11,7 @@ import re
 import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from subprocess import check_output
+from subprocess import CalledProcessError, check_output
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -88,7 +88,10 @@ def lk_git_version() -> Version:
 
 def lenskit_version() -> str:
     if is_git_install():
-        return str(lk_git_version())
+        try:
+            return str(lk_git_version())
+        except CalledProcessError:
+            pass
 
     try:
         return version("lenskit")

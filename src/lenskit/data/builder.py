@@ -157,7 +157,8 @@ class DatasetBuilder:
                 The name of the entity class.
         """
         if name in self._tables:
-            raise ValueError(f"class name “{name}” already in use")
+            _log.debug(f"class name “{name}” already in use")
+            return
 
         check_name(name)
 
@@ -176,6 +177,11 @@ class DatasetBuilder:
         Add a relationship class to the dataset.  This usually doesn't need to
         be called; :meth:`add_relationships` and :meth:`add_interactions` will
         automatically add the relationship class if needed.
+
+        As noted in :ref:`data-model`, a *relationship* records a relationship
+        or interaction between two or more *entities*.  Interactions are usually
+        between users and items.  The ``entities`` option to this method defines
+        the names of the entity classes participating.
 
         .. note::
 
@@ -197,7 +203,7 @@ class DatasetBuilder:
                 Whether this is an interaction relationship.
         """
         if name in self._tables:
-            raise ValueError(f"class name “{name}” already in use")
+            raise ValueError(f"relationship class name “{name}” already defined")
 
         check_name(name)
 
@@ -579,6 +585,53 @@ class DatasetBuilder:
 
             remove = pa.table(rtbl_cols)
             tbl = tbl.join(remove, remove.column_names, join_type="left anti")
+
+        self._tables[cls] = tbl
+
+    def binarize_ratings(
+        self,
+        cls: str = "rating",
+        min_pos_rating: float = 3.0,
+        method: str = "remove",
+    ):
+        """
+        Binarize the ratings in a relationship class.
+
+        Args:
+            cls : The relationship class to binarize (default: "rating").
+            min_pos_rating : Minimum rating to consider as positive.
+            method: 'zero' to set ratings to 0/1, 'remove' to drop rows below min_rating.
+        """
+        tbl = self._tables.get(cls, None)
+        if tbl is None:
+            raise ValueError(f"relationship class {cls} is empty")
+
+        if "rating" not in tbl.column_names:
+            raise ValueError(f"relationship class {cls} does not have a 'rating' column")
+
+        min_rating = pa.scalar(min_pos_rating, tbl.column("rating").type)
+        rating_col = tbl.column("rating")
+        if not (
+            pc.min(tbl.column("rating")).as_py()
+            <= min_pos_rating
+            <= pc.max(tbl.column("rating")).as_py()
+        ):
+            raise ValueError(
+                f"min_pos_rating {min_pos_rating} is not in the range of ratings "
+                f"[{pc.min(tbl.column('rating')).as_py()}, {pc.max(tbl.column('rating')).as_py()}]"
+            )
+
+        if method == "zero":
+            # Set rating to 1 if >= min_rating, else 0
+            mask = pc.greater_equal(tbl.column("rating"), min_rating)
+            binarized = pc.cast(mask, rating_col.type)
+            tbl = tbl.set_column(tbl.schema.get_field_index("rating"), "rating", binarized)
+        elif method == "remove":
+            # Keep only rows where rating >= min_rating
+            mask = pc.greater_equal(tbl.column("rating"), min_rating)
+            tbl = tbl.filter(mask)
+        else:
+            raise ValueError("method must be 'zero' or 'remove'")
 
         self._tables[cls] = tbl
 

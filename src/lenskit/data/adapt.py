@@ -105,6 +105,7 @@ def from_interactions_df(
     timestamp_col: str | None = None,
     users: IDSequence | pd.Index | Iterable[ID] | Vocabulary | None = None,
     items: IDSequence | pd.Index | Iterable[ID] | Vocabulary | None = None,
+    class_name: str = "rating",
 ) -> Dataset:
     """
     Create a dataset from a data frame of ratings or other user-item
@@ -130,6 +131,8 @@ def from_interactions_df(
             A vocabulary of user IDs.  The data frame is subset to this set of IDs.
         item_ids:
             A vocabulary of item IDs.  The data frame is subset to this set of IDs.
+        name:
+            The interaction class name.
     Returns:
         The initiated data set.
     """

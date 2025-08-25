@@ -23,7 +23,7 @@ import scipy.sparse as sps
 import torch
 from humanize import metric
 from numpy.typing import NDArray
-from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload
+from typing_extensions import Any, Literal, TypeAlias, TypedDict, TypeVar, overload
 
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
@@ -55,6 +55,10 @@ def _uses_data(func):
         return func(self, *args, **kwargs)
 
     return wrapper
+
+
+class DatasetState(TypedDict):
+    data: DataContainer
 
 
 class Dataset:
@@ -143,6 +147,7 @@ class Dataset:
     def _init_caches(self):
         "Initialize internal caches for this dataset."
         log = _log.bind(dataset=self.name)
+        self._data.normalize()
 
         self._entities = {}
         self._relationships = {}
@@ -512,6 +517,16 @@ class Dataset:
         if iset.row_type != "user":
             raise RuntimeError("default interactions do not have user columns")
         return iset.row_stats()
+
+    def __getstate__(self) -> DatasetState:
+        self._ensure_loaded()
+        return {
+            "data": self._data,
+        }
+
+    def __setstate__(self, state: DatasetState):
+        self._data = state["data"]
+        self._init_caches()
 
     def __str__(self) -> str:
         s = "<Dataset"

@@ -22,7 +22,6 @@ from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
 from lenskit._accel import NegativeSampler, RowColumnSet
-from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
@@ -284,7 +283,7 @@ class MatrixRelationshipSet(RelationshipSet):
         a relationship set's :meth:`~RelationshipSet.matrix` method.
     """
 
-    _row_ptrs: np.ndarray[tuple[int], np.dtype[np.int32]]
+    _row_ptrs: np.ndarray[tuple[int], np.dtype[np.int64]]
     _structure: SparseRowArray
     row_type: str
     _row_nums: pa.Int32Array
@@ -306,7 +305,7 @@ class MatrixRelationshipSet(RelationshipSet):
         super().__init__(name, vocabularies, schema, table)
         self._init_structures()
 
-    def _init_structures(self, *, ds_name: str | None = None, _trust_table_sort: bool = False):
+    def _init_structures(self, *, ds_name: str | None = None):
         log = _log.bind(dataset=ds_name, relationship=self.name)
 
         # order the table to compute the sparse matrix
@@ -318,25 +317,19 @@ class MatrixRelationshipSet(RelationshipSet):
         self.col_type = col
 
         e_cols = [num_col_name(e) for e in entities]
-        log.debug("checking relationship table sorting")
-        if _trust_table_sort or _data_accel.is_sorted_coo(self._table.to_batches(), *e_cols):
-            log.debug("relationship table already sorted 😊")
-        else:
-            log.warning("sorting relationship table (might take time)")
-            self._table = self._table.sort_by([(c, "ascending") for c in e_cols])
 
         self._table = self._table.combine_chunks()
 
         # compute the row pointers
         log.debug("computing CSR data")
         n_rows = len(self.row_vocabulary)
-        row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
+        row_sizes = np.zeros(n_rows + 1, dtype=np.int64)
         self._row_nums = self._table.column(e_cols[0]).combine_chunks()  # type: ignore
         rsz_struct = pc.value_counts(self._row_nums)
         rsz_nums = rsz_struct.field("values")
         rsz_counts = rsz_struct.field("counts").cast(pa.int32())
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
-        self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
+        self._row_ptrs = np.cumsum(row_sizes, dtype=np.int64)  # type: ignore
 
         self._col_nums = self._table.column(e_cols[1]).combine_chunks()  # type: ignore
         self._structure = SparseRowArray.from_arrays(
@@ -360,12 +353,13 @@ class MatrixRelationshipSet(RelationshipSet):
         }
 
     def __setstate__(self, state):
+        print("rebuilding relationship set")
         self.name = state["name"]
         self.schema = state["schema"]
         self._link_cols = state["columns"]
         self._table = state["table"]
         self._vocabularies = state["vocabularies"]
-        self._init_structures(_trust_table_sort=True)
+        self._init_structures()
 
     @property
     def row_vocabulary(self):
