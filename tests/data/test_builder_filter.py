@@ -205,3 +205,23 @@ def test_filter_ratings_ids_tbl(rng, ml_ds: Dataset):
     si_counts = si_counts.reindex(new_istats.index, fill_value=0)
 
     assert np.all(new_istats["count"] == orig_istats["count"] - si_counts)
+
+
+def test_filter_ratings_readd(rng, ml_ds: Dataset):
+    "check that adding again after removal works"
+    dsb = DatasetBuilder(ml_ds)
+
+    rates = ml_ds.interactions().pandas(attributes=[], ids=True)
+    samp_df = rates.sample(1000, replace=False, random_state=rng, ignore_index=True)
+    samp = pa.Table.from_pandas(samp_df, preserve_index=False)
+
+    dsb.filter_interactions("rating", remove=samp)
+
+    ds = dsb.build()
+    assert ds.interaction_count == ml_ds.interaction_count - 1000
+
+    dsb2 = DatasetBuilder(ds)
+    dsb2.add_interactions("rating", samp)
+
+    ds2 = dsb2.build()
+    assert ds2.interaction_count == ml_ds.interaction_count
