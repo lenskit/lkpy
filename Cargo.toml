@@ -3,6 +3,7 @@ name = "lenskit"
 version = "2025.3.0-alpha.4"
 edition = "2021"
 license = "MIT"
+rust-version = "1.87"
 
 [lib]
 name = "_accel"
