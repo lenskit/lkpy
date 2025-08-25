@@ -332,7 +332,7 @@ class DatasetBuilder:
         allow_repeats: bool = True,
         interaction: bool | Literal["default"] = False,
         _warning_parent: int = 0,
-        remove_repeats: bool | Literal["duplicate"] = False,
+        remove_repeats: bool | Literal["exact"] = False,
     ) -> None:
         """
         Add relationship records to the data set.
@@ -456,7 +456,7 @@ class DatasetBuilder:
         missing: MissingEntityAction = "error",
         allow_repeats: bool = True,
         default: bool = False,
-        remove_repeats: bool | Literal["duplicate"] = False,
+        remove_repeats: bool | Literal["exact"] = False,
     ) -> None:
         """
         Add a interaction records to the data set.
@@ -1003,10 +1003,10 @@ class DatasetBuilder:
         return pc.if_else(nums >= 0, nums, None)
 
     def _resolve_repeated_interactions(
-        self, t: pa.Table, rel: RelationshipSchema, remove_repeats: bool | Literal["duplicate"]
+        self, t: pa.Table, rel: RelationshipSchema, remove_repeats: bool | Literal["exact"]
     ) -> pa.Table:
         if remove_repeats:
-            if remove_repeats == "duplicate":
+            if remove_repeats == "exact":
                 t = self._remove_duplicated_relationships(t)
             else:
                 t = self._remove_repeated_relationships(t, rel)

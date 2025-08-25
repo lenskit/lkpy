@@ -112,7 +112,7 @@ def test_remove_duplicate_in_repeated_interactions():
             }
         ),
         missing="insert",
-        remove_repeats="duplicate",
+        remove_repeats="exact",
     )
 
     ds = dsb.build()
