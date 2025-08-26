@@ -2,7 +2,7 @@
 name = "flexmf-warp"
 
 [options]
-extends = "std:topn"
+base = "std:topn"
 
 [components.scorer]
 class = "lenskit.flexmf.FlexMFImplicitScorer"

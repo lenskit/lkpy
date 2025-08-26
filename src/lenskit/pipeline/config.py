@@ -20,7 +20,7 @@ from types import FunctionType
 from typing import Annotated, Literal, Mapping
 
 from annotated_types import Predicate
-from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
+from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
 from ._hooks import HookEntry
@@ -53,6 +53,11 @@ class PipelineHooks(BaseModel):
     run: dict[str, list[PipelineHook]] = {}
 
 
+class PipelineOptions(BaseModel, extra="forbid"):
+    base: str | None = None
+    "Apply this configuration to a base pipeline."
+
+
 class PipelineConfig(BaseModel):
     """
     Root type for serialized pipeline configuration.  A pipeline config contains
@@ -63,6 +68,8 @@ class PipelineConfig(BaseModel):
         Full
     """
 
+    options: PipelineOptions | None = None
+    "Options for assembling the final pipeline."
     meta: PipelineMeta
     "Pipeline metadata."
     inputs: list[PipelineInput] = []
@@ -126,7 +133,7 @@ class PipelineComponent(BaseModel):
     Specification of a pipeline component.
     """
 
-    code: str
+    code: str = Field(validation_alias=AliasChoices("code", "class"))
     """
     The path to the component's implementation, either a class or a function.
     This is a Python qualified path of the form ``module:name``.
