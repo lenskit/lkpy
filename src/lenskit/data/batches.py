@@ -14,7 +14,11 @@ import math
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+from lenskit.logging import get_logger
+
 from .types import Extent
+
+_log = get_logger(__name__)
 
 
 @dataclass
@@ -39,6 +43,7 @@ class BatchIter:
         return self.batch_count
 
     def __iter__(self) -> Iterator[Extent]:
+        _log.debug("iterating batches", N=self.n, count=self.batch_count, batch_size=self.size)
         for start in range(0, self.n, self.size):
             end = min(start + self.size, self.n)
             yield Extent(start, end)
