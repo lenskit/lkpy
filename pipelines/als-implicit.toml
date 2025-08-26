@@ -1,0 +1,8 @@
+[meta]
+name = "als-implicit"
+
+[options]
+extends = "std:topn"
+
+[components.scorer]
+class = "lenskit.als.ImplicitMFScorer"
