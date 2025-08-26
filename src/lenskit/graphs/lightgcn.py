@@ -270,7 +270,7 @@ class LightGCNTrainer(ModelTrainer):
                 neg = neg.to(self.device, non_blocking=True)
                 neg = torch.stack([pos[0], neg[:, 0]])
 
-                mb_edges = torch.cat([pos, neg], 1)
+                mb_edges = torch.cat([pos, neg], 1).to(torch.int64)
                 assert mb_edges.shape == (2, (be - bs) * 2)
 
                 scores = self.model(self.edges, mb_edges)
