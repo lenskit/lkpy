@@ -216,6 +216,7 @@ class LightGCNTrainer(ModelTrainer):
         e_src = torch.tensor(coo.row_numbers + self.user_base)
         e_dst = torch.tensor(coo.col_numbers)
         self.edges = torch.stack([e_src, e_dst]).to(self.device)
+        print(self.coo)
 
         self.model = LightGCN(
             node_count, scorer.config.embedding_size, scorer.config.layer_count, blend
