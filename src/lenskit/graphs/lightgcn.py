@@ -148,7 +148,7 @@ class LightGCNScorer(UsesTrainer, Component[ItemList]):
 
         # look up the item columns in the embedding matrix
         i_cols = items.numbers(vocabulary=self.items, missing="negative", format="torch")
-        i_cols = i_cols.to(self._edges.device)
+        i_cols = i_cols.to(self._edges.device, dtype=torch.int64)
 
         # unknown items will have column -1 - limit to the
         # ones we know, and remember which item IDs those are
@@ -156,7 +156,9 @@ class LightGCNScorer(UsesTrainer, Component[ItemList]):
         i_cols = i_cols.masked_select(scorable_mask)
 
         # set up the edge tensor
-        u_tensor = torch.from_numpy(np.repeat([u_row + self._user_base], len(i_cols)))
+        u_tensor = torch.from_numpy(
+            np.repeat(np.array([u_row + self._user_base], dtype=np.int64), len(i_cols))
+        )
         u_tensor = u_tensor.to(self._edges.device)
         edges = torch.stack([u_tensor, i_cols])
         scores = self.model(self._edges, edges)
@@ -216,7 +218,6 @@ class LightGCNTrainer(ModelTrainer):
         e_src = torch.tensor(coo.row_numbers + self.user_base)
         e_dst = torch.tensor(coo.col_numbers)
         self.edges = torch.stack([e_src, e_dst]).to(self.device)
-        print(self.coo)
 
         self.model = LightGCN(
             node_count, scorer.config.embedding_size, scorer.config.layer_count, blend
