@@ -117,3 +117,18 @@ def test_reject_duplicate_ids():
 
     with raises(DataError):
         dsb.add_entities("item", ["a", "b", "a"])
+
+
+def test_add_entities_twice():
+    dsb = DatasetBuilder()
+
+    dsb.add_entities("user", ["a", "b", "x", "y", "z"])
+    ecs = dsb.entity_classes()
+    assert set(ecs.keys()) == {"user", "item"}
+
+    dsb.add_entities("user", ["q", "r", "s"])
+
+    ds = dsb.build()
+    assert ds.item_count == 0
+    assert ds.user_count == 8
+    assert np.all(ds.users.ids() == ["a", "b", "x", "y", "z", "q", "r", "s"])

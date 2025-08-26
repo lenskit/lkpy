@@ -12,6 +12,13 @@
   "containerEnv": {
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/lenskit-venv"
   },
+  "mounts": [
+    {
+      "source": "lenskit-target",
+      "type": "volume",
+      "target": "${containerWorkspaceFolder}/target"
+    }
+  ],
   "remoteEnv": {
     "VIRTUAL_ENV": "${containerEnv:UV_PROJECT_ENVIRONMENT}",
     "PATH": "${containerEnv:UV_PROJECT_ENVIRONMENT}/bin:${containerEnv:PATH}"
@@ -30,7 +37,7 @@
         "ms-azuretools.vscode-docker",
         "trond-snekvik.simple-rst",
         "rust-lang.rust-analyzer",
-        "nefrob.vscode-just-syntax"
+        "hverlin.mise-vscode"
       ]
     }
   }

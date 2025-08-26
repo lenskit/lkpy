@@ -8,6 +8,8 @@
 *.pdb
 *.prof
 *.profraw
+*.profdata
+lcov.info
 *.lcov
 *.lprof
 emissions.csv
@@ -41,9 +43,9 @@ dask-worker-space/
 scratch/
 
 # build outputs
-build/
-dist/
-target/
+/build/
+/dist/
+/target/
 /output/
 *.egg-info
 *.pyd
