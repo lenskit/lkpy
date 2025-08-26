@@ -15,6 +15,7 @@ from lenskit.diagnostics import FieldError
 from .adapt import from_interactions_df
 from .amazon import load_amazon_ratings
 from .attributes import AttributeSet
+from .batches import BatchIter
 from .builder import DatasetBuilder
 from .collection import (
     GenericKey,
@@ -64,4 +65,5 @@ __all__ = [
     "Vocabulary",
     "RecQuery",
     "QueryInput",
+    "BatchIter",
 ]
