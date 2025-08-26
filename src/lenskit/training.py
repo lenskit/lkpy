@@ -314,7 +314,7 @@ class ModelTrainer(ABC):
         """
 
     @abstractmethod
-    def finalize(self):
+    def finalize(self) -> None:
         """
         Finish the training process, cleaning up any unneeded data structures
         and doing any finalization steps to the model.
