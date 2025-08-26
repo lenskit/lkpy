@@ -59,6 +59,9 @@ class RelationshipSet:
         Client code does not need to construct this class; obtain instances from
         a dataset's :meth:`~lenskit.data.Dataset.relationships` or
         :meth:`~lenskit.data.Dataset.interactions` method.
+
+    Stability:
+        Caller
     """
 
     name: str
