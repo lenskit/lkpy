@@ -1,0 +1,11 @@
+[meta]
+name = "flexmf-bpr"
+
+[options]
+extends = "std:topn"
+
+[components.scorer]
+class = "lenskit.flexmf.FlexMFImplicitScorer"
+
+[components.scorer.config]
+loss = "pairwise"
