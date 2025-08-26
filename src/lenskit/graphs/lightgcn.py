@@ -252,7 +252,8 @@ class LightGCNTrainer(ModelTrainer):
 
         batches = BatchIter(self.coo.nnz, config.batch_size)
 
-        tot_loss = 0.0
+        tot_loss = torch.tensor(0.0).to(self.device)
+        avg_loss = np.nan
         with item_progress(f"Training epoch {epoch}", len(batches), {"loss": ".3f"}) as pb:
             elog.debug("beginning epoch")
             for i, (bs, be) in enumerate(batches, start=1):
@@ -265,7 +266,8 @@ class LightGCNTrainer(ModelTrainer):
                     n=config.negative_count,
                     rng=self.rng,
                 )
-                neg = torch.from_numpy(neg).to(self.device)
+                neg = torch.from_numpy(neg)
+                neg = neg.to(self.device, non_blocking=True)
                 neg = torch.stack([pos[0], neg[:, 0]])
 
                 mb_edges = torch.cat([pos, neg], 1)
@@ -277,8 +279,9 @@ class LightGCNTrainer(ModelTrainer):
                 loss.backward()
                 self.optimizer.step()
 
-                loss = loss.item()
-                pb.update(loss=loss)
+                if i % 100 == 0:
+                    avg_loss = (tot_loss / i).item()
+                pb.update(loss=avg_loss)
                 tot_loss += loss
 
         avg_loss = tot_loss / len(batches)
@@ -305,4 +308,4 @@ class PairwiseLightGCNTrainer(LightGCNTrainer):
         (n,) = scores.shape
         pos_score, neg_score = scores.chunk(2)
         # FIXME: set up better regularization
-        return self.model.recommendation_loss(pos_score, neg_score, node_id=mb_edges.unique())
+        return self.model.recommendation_loss(pos_score, neg_score, node_id=mb_edges.ravel())
