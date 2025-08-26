@@ -279,12 +279,12 @@ class LightGCNTrainer(ModelTrainer):
                 loss.backward()
                 self.optimizer.step()
 
-                if i % 100 == 0:
-                    avg_loss = (tot_loss / i).item()
+                if i % 20 == 0:
+                    avg_loss = tot_loss.item() / i
                 pb.update(loss=avg_loss)
                 tot_loss += loss
 
-        avg_loss = tot_loss / len(batches)
+        avg_loss = tot_loss.item() / len(batches)
         elog.debug("epoch complete", loss=avg_loss)
         self.epochs_trained += 1
         return {"loss": avg_loss}
