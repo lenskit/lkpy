@@ -97,6 +97,10 @@ class RelationshipSet:
         return self.schema.interaction
 
     @property
+    def entities(self) -> list[str]:
+        return [(c if e is None else e) for c, e in self.schema.entities.items()]
+
+    @property
     def attribute_names(self) -> list[str]:
         return [c for c in self._table.column_names if c not in self._link_cols]
 
