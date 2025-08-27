@@ -44,7 +44,7 @@ from .nodes import (
     LiteralNode,
     Node,
 )
-from .types import TypecheckWarning, parse_type_string
+from .types import TypecheckWarning, resolve_type_string
 
 _log = get_logger(__name__)
 
@@ -637,7 +637,7 @@ class PipelineBuilder:
         for inpt in cfg.inputs:
             types: list[type[Any] | None] = []
             if inpt.types is not None:
-                types += [parse_type_string(t) for t in inpt.types]
+                types += [resolve_type_string(t) for t in inpt.types]
             builder.create_input(inpt.name, *types)
 
         # we now add the components and other nodes in multiple passes to ensure
@@ -670,7 +670,7 @@ class PipelineBuilder:
 
         builder._default = cfg.default
         builder._run_hooks = {
-            name: [HookEntry(parse_type_string(h.function), h.priority) for h in hooks]
+            name: [HookEntry(resolve_type_string(h.function), h.priority) for h in hooks]
             for name, hooks in cfg.hooks.run.items()
         }
 

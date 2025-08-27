@@ -30,7 +30,7 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning, parse_type_string
+from .types import Lazy, TypecheckWarning, resolve_type_string
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -215,7 +215,7 @@ def instantiate_component(
         Internal
     """
     if isinstance(comp, str):
-        comp = parse_type_string(comp)
+        comp = resolve_type_string(comp)
 
     # make the type checker happy
     assert not isinstance(comp, str)

@@ -227,10 +227,11 @@ def type_string(typ: type | None) -> str:
         return f"{typ.__module__}:{typ.__qualname__}"
 
 
-def parse_type_string(tstr: str) -> type:
+def resolve_type_string(tstr: str) -> type:
     """
-    Compute a string representation of a type that is both resolvable and
-    human-readable.  Type parameterizations are lost.
+    Resolve a type string into an actual type or function.  This parses a string
+    referenceing a class or function (as returned by :fun:`type_string`),
+    imports the module, and resolves the final member.
 
     Stability:
         Internal

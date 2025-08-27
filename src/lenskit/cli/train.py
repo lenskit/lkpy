@@ -13,7 +13,7 @@ from xopen import xopen
 from lenskit.data import Dataset
 from lenskit.logging import get_logger
 from lenskit.pipeline import Component, topn_pipeline
-from lenskit.pipeline.types import parse_type_string
+from lenskit.pipeline.types import resolve_type_string
 
 _log = get_logger(__name__)
 
@@ -50,7 +50,7 @@ def train(
     _log.warning("the training CLI is experimental and may change without notice")
 
     if scorer_class is not None:
-        scorer = parse_type_string(scorer_class)
+        scorer = resolve_type_string(scorer_class)
         if name is None:
             name = scorer.__name__
         assert issubclass(scorer, Component)
