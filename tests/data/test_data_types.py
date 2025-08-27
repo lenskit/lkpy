@@ -16,5 +16,5 @@ def test_extent_size(lb: int, ub: int):
 
     extent = Extent(lb, ub)
     assert extent.start == lb
-    assert extent.end == lb
+    assert extent.end == ub
     assert extent.size == ub - lb
