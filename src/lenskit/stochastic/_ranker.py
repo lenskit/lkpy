@@ -72,7 +72,7 @@ class StochasticTopNRanker(Component[ItemList]):
         When no transformation is used, negative scores are still clamped to
         (approximately) zero.
 
-    .. _`Tim Vieiera`: https://timvieira.github.io/blog/post/2019/09/16/algorithms-for-sampling-without-replacement/
+    .. _Tim Vieira: https://timvieira.github.io/blog/post/2019/09/16/algorithms-for-sampling-without-replacement/
 
     Stability:
         Caller
