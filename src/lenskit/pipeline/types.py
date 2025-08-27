@@ -244,10 +244,11 @@ def parse_type_string(tstr: str) -> type:
             mod_name, typ_name = tstr.split(":", 1)
         else:
             # separate last element from module
-            parts = re.match(r"(.*)\.(\w+)$", tstr)
+            parts = tstr.split(".")
             if not parts:
                 raise ValueError(f"unparsable type string {tstr}")
-            mod_name, typ_name = parts.groups()
+            mod_name = ".".join(parts[:-1])
+            typ_name = parts[-1]
 
         mod = import_module(mod_name)
         return getattr(mod, typ_name)
