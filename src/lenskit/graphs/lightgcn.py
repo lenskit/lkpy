@@ -148,7 +148,7 @@ class LightGCNScorer(UsesTrainer, Component[ItemList]):
 
         # look up the item columns in the embedding matrix
         i_cols = items.numbers(vocabulary=self.items, missing="negative", format="torch")
-        i_cols = i_cols.to(self._edges.device, dtype=torch.int64)
+        i_cols = i_cols.to(self._edges.device, dtype=self._torch_edge_dtype())
 
         # unknown items will have column -1 - limit to the
         # ones we know, and remember which item IDs those are
@@ -156,10 +156,8 @@ class LightGCNScorer(UsesTrainer, Component[ItemList]):
         i_cols = i_cols.masked_select(scorable_mask)
 
         # set up the edge tensor
-        u_tensor = torch.from_numpy(
-            np.repeat(np.array([u_row + self._user_base], dtype=np.int64), len(i_cols))
-        )
-        u_tensor = u_tensor.to(self._edges.device)
+        u_tensor = torch.from_numpy(np.repeat(np.array([u_row + self._user_base]), len(i_cols)))
+        u_tensor = u_tensor.to(self._edges.device, dtype=self._torch_edge_dtype())
         edges = torch.stack([u_tensor, i_cols])
         scores = self.model(self._edges, edges)
 
@@ -178,6 +176,17 @@ class LightGCNScorer(UsesTrainer, Component[ItemList]):
                 return PairwiseLightGCNTrainer(self, data, options)
             case _:  # pragam: nocover
                 raise ValueError("invalid loss")
+
+    def _torch_edge_dtype(self, *, device: str | torch.device | None = None) -> torch.dtype:
+        if device is None:
+            device = self._edges.device
+        elif isinstance(device, str):
+            device = torch.device(device)
+
+        if device.type == "cuda":
+            return torch.int32
+        else:
+            return torch.int64
 
 
 class LightGCNTrainer(ModelTrainer):
@@ -217,7 +226,9 @@ class LightGCNTrainer(ModelTrainer):
         self.coo = coo = self.matrix.coo_structure()
         e_src = torch.tensor(coo.row_numbers + self.user_base)
         e_dst = torch.tensor(coo.col_numbers)
-        self.edges = torch.stack([e_src, e_dst]).to(self.device)
+        self.edges = torch.stack([e_src, e_dst]).to(
+            self.device, dtype=scorer._torch_edge_dtype(device=self.device)
+        )
 
         self.model = LightGCN(
             node_count, scorer.config.embedding_size, scorer.config.layer_count, blend
@@ -271,7 +282,9 @@ class LightGCNTrainer(ModelTrainer):
                 neg = neg.to(self.device, non_blocking=True)
                 neg = torch.stack([pos[0], neg[:, 0]])
 
-                mb_edges = torch.cat([pos, neg], 1).to(torch.int64)
+                mb_edges = torch.cat([pos, neg], 1).to(
+                    self.scorer._torch_edge_dtype(device=self.device)
+                )
                 assert mb_edges.shape == (2, (be - bs) * 2)
 
                 scores = self.model(self.edges, mb_edges)
