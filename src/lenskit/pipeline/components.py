@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
-from importlib import import_module
 from inspect import isabstract, signature
 from types import FunctionType, NoneType
 
@@ -31,7 +30,7 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning
+from .types import Lazy, TypecheckWarning, parse_type_string
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -216,9 +215,7 @@ def instantiate_component(
         Internal
     """
     if isinstance(comp, str):
-        mname, oname = comp.split(":", 1)
-        mod = import_module(mname)
-        comp = getattr(mod, oname)
+        comp = parse_type_string(comp)
 
     # make the type checker happy
     assert not isinstance(comp, str)
