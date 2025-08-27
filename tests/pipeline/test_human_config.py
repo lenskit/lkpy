@@ -10,7 +10,7 @@ from lenskit.als import ImplicitMFScorer
 from lenskit.basic import TopNRanker
 from lenskit.config import load_config_data
 from lenskit.pipeline import Pipeline, PipelineConfig
-from lenskit.pipeline.nodes import ComponentConstructorNode
+from lenskit.pipeline.nodes import ComponentInstanceNode
 
 config_dir = Path("pipelines")
 
@@ -27,9 +27,9 @@ def test_apply_scorer_config():
     als_pipe = Pipeline.load_config(als_file)
 
     node = als_pipe.node("scorer")
-    assert isinstance(node, ComponentConstructorNode)
-    assert node.constructor == ImplicitMFScorer
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, ImplicitMFScorer)
 
     node = als_pipe.node("recommender")
-    assert isinstance(node, ComponentConstructorNode)
-    assert node.constructor == TopNRanker
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, TopNRanker)
