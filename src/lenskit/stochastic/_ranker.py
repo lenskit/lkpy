@@ -76,13 +76,6 @@ class StochasticTopNRanker(Component[ItemList]):
 
     Stability:
         Caller
-
-    Args:
-        n:
-            The number of items to return (-1 to return unlimited).
-        rng:
-            The random number generator or specification (see :ref:`rng`).  This
-            class supports derivable RNGs.
     """
 
     config: StochasticTopNConfig
