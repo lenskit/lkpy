@@ -6,8 +6,11 @@
 
 from pathlib import Path
 
+from lenskit.als import ImplicitMFScorer
+from lenskit.basic import TopNRanker
 from lenskit.config import load_config_data
-from lenskit.pipeline.config import PipelineConfig
+from lenskit.pipeline import Pipeline, PipelineConfig
+from lenskit.pipeline.nodes import ComponentConstructorNode
 
 config_dir = Path("pipelines")
 
@@ -20,4 +23,13 @@ def test_load_config():
 
 
 def test_apply_scorer_config():
-    pass
+    als_file = config_dir / "als-implicit.toml"
+    als_pipe = Pipeline.load_config(als_file)
+
+    node = als_pipe.node("scorer")
+    assert isinstance(node, ComponentConstructorNode)
+    assert node.constructor == ImplicitMFScorer
+
+    node = als_pipe.node("recommender")
+    assert isinstance(node, ComponentConstructorNode)
+    assert node.constructor == TopNRanker
