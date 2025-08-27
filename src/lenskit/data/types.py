@@ -94,4 +94,7 @@ class Extent(NamedTuple):
 
     @property
     def size(self) -> int:
+        """
+        The size of the extent.
+        """
         return self.end - self.start
