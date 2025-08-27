@@ -68,6 +68,11 @@ Action to take when a relationship references a missing entity.
 class DatasetBuilder:
     """
     Construct data sets from data and tables.
+
+    Args:
+        name:
+            The name of the new dataset, or a data container or dataset to
+            use as the basis for building a new dataset.
     """
 
     schema: DataSchema
@@ -81,15 +86,6 @@ class DatasetBuilder:
     _rel_coords: dict[str, _data_accel.CoordinateTable | None]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
-        """
-        Create a new dataset builder.
-
-        Args:
-            name:
-                The dataset name. Can also be a data container or a dataset,
-                which will initialize this builder with its contents to extend
-                or modify.
-        """
         self._rel_coords = {}
 
         if isinstance(name, Dataset):
