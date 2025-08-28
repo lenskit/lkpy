@@ -40,6 +40,17 @@ information on how to upgrade your code.
     input wiring are now provided as a note on the exception, instead of in the
     main exception message.
 
+Compatibility Changes
+.....................
+
+.. important::
+    These changes should not break most programs, but do introduce and document
+    stricter requirements on pipeline input names.
+
+-   Pipeline component input names are not allowed to be prefixed with `_`, as
+    such names are reserved for LensKit internal operation.  This is not yet
+    enforced, but will be enforced beginning in LensKit 2026.
+
 Component Changes
 .................
 
