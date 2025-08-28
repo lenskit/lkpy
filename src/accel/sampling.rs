@@ -7,15 +7,22 @@
 //! Accelerated sampling support.
 use std::mem;
 
+use arrow::{
+    array::{make_array, Array, ArrayData, AsArray, Int32Builder},
+    datatypes::Int32Type,
+    pyarrow::PyArrowType,
+};
 use log::*;
 use ndarray::Array2;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::{
-    exceptions::{PyRuntimeError, PyValueError},
+    exceptions::{PyRuntimeError, PyTypeError, PyValueError},
     prelude::*,
 };
+use rand::{Rng, SeedableRng};
+use rand_pcg::Pcg64;
 
-use crate::data::RowColumnSet;
+use crate::data::{CoordinateTable, RowColumnSet};
 
 /// Efficient-ish negative sampling.
 #[pyclass]
@@ -113,4 +120,43 @@ impl NegativeSampler {
         let array = PyArray2::from_owned_array(py, array);
         Ok(array)
     }
+}
+
+#[pyfunction]
+pub fn sample_negatives<'py>(
+    py: Python<'py>,
+    coords: &CoordinateTable,
+    rows: PyArrowType<ArrayData>,
+    n_cols: i32,
+    max_attempts: i32,
+    seed: u64,
+) -> PyResult<PyArrowType<ArrayData>> {
+    let mut rng = Pcg64::seed_from_u64(seed);
+
+    let rows = make_array(rows.0);
+    let rows = rows
+        .as_primitive_opt::<Int32Type>()
+        .ok_or_else(|| PyTypeError::new_err(format!("invalid row type {}", rows.data_type())))?;
+
+    let mut result = Int32Builder::with_capacity(rows.len());
+
+    for row in rows {
+        if let Some(row) = row {
+            let mut attempts = 0;
+            loop {
+                let c = rng.random_range(0..n_cols);
+                let pair = [row, c];
+                if coords.lookup(&pair).is_none() || attempts >= max_attempts {
+                    result.append_value(c);
+                    break;
+                } else {
+                    attempts += 1
+                }
+            }
+        } else {
+            result.append_null();
+        }
+    }
+
+    Ok(result.finish().into_data().into())
 }

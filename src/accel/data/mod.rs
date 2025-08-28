@@ -14,17 +14,17 @@ use arrow::{
 };
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
+use sha1::{Digest, Sha1};
+
 mod coordinates;
 mod index;
 mod rc_set;
 mod selection;
 mod sorting;
 
-use index::IDIndex;
+pub use coordinates::CoordinateTable;
+pub use index::IDIndex;
 pub use rc_set::RowColumnSet;
-use sha1::{Digest, Sha1};
-
-use coordinates::CoordinateTable;
 
 /// Register the lenskit._accel.als module
 pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {

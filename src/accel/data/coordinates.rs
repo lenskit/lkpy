@@ -22,7 +22,7 @@ use rustc_hash::FxHasher;
 
 /// Two-element indices for chunked lookup.
 #[derive(Debug, Clone, Copy)]
-struct ChunkIndex {
+pub struct ChunkIndex {
     /// The chunk number.
     chunk: u32,
     /// The index within a chunk.
@@ -125,11 +125,11 @@ impl CoordinateTable {
 }
 
 impl CoordinateTable {
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.n_rows
     }
 
-    fn global_index(&self, cx: &ChunkIndex) -> usize {
+    pub fn global_index(&self, cx: &ChunkIndex) -> usize {
         let base = self.offsets[cx.chunk_index()];
         base + cx.item_index()
     }
@@ -186,7 +186,7 @@ impl CoordinateTable {
         Ok((added, uq_added))
     }
 
-    fn lookup(&self, coords: &[i32]) -> Option<ChunkIndex> {
+    pub fn lookup(&self, coords: &[i32]) -> Option<ChunkIndex> {
         let hash = hash_coords(coords);
         self.index
             .find(hash, |cx| compare_coords(&self.chunks, cx, coords))

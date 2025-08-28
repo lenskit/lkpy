@@ -7,10 +7,12 @@
 from pathlib import Path
 
 import numpy as np
+import pyarrow as pa
 
 from pytest import fixture, mark, skip
 
 from lenskit._accel import data as _data_accel
+from lenskit._accel import sample_negatives
 from lenskit.data import Dataset
 
 ML_32M = Path("data/ml-32m")
@@ -59,5 +61,22 @@ def test_neg_vweighted(rng: np.random.Generator, ml_ds: Dataset, benchmark):
 
     def sample():
         _items = matrix.sample_negatives(users, weighting="popularity", rng=rng)
+
+    benchmark(sample)
+
+
+@mark.benchmark()
+def test_neg_rust(rng: np.random.Generator, ml_ds: Dataset, benchmark):
+    matrix = ml_ds.interactions().matrix()
+
+    users = rng.choice(ml_ds.user_count, 8192, replace=True)
+    users = pa.array(users, pa.int32())
+
+    tbl = matrix.arrow(attributes=[])
+    coo = _data_accel.CoordinateTable(2)
+    coo.extend(tbl.to_batches())
+
+    def sample():
+        _items = sample_negatives(coo, users, matrix.n_cols, 10, 2048108031)
 
     benchmark(sample)
