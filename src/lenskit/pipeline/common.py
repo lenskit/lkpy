@@ -162,8 +162,8 @@ def topn_builder(
     Args:
         name:
             The pipeline name.
-        n:
-            The default recommendation list length.
+        options:
+            The pipeline options to configure the base pipeline.
     """
 
     from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
@@ -206,8 +206,8 @@ def topn_predict_builder(
     Args:
         name:
             The pipeline name.
-        n:
-            The default recommendation list length.
+        options:
+            The pipeline options to configure the base pipeline.
     """
     from lenskit.basic import BiasScorer, FallbackScorer
 

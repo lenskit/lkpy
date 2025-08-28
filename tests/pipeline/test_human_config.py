@@ -78,3 +78,24 @@ def test_apply_no_fallback():
 
     node = bias_pipe.node("fallback-predictor", missing=None)
     assert node is None
+
+
+def test_apply_config():
+    config = {
+        "meta": {"name": "als-large"},
+        "options": {"base": "std:topn", "default_length": 100},
+        "components": {
+            "scorer": {"class": "lenskit.als.ImplicitMFScorer", "config": {"embedding_size": 256}}
+        },
+    }
+    als_pipe = Pipeline.from_config(config)
+
+    node = als_pipe.node("scorer")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, ImplicitMFScorer)
+    assert node.component.config.embedding_size == 256
+
+    node = als_pipe.node("recommender")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, TopNRanker)
+    assert node.component.config.n == 100
