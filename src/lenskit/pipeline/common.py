@@ -186,6 +186,32 @@ def topn_builder(
     return pipe
 
 
+def topn_predict_builder(name: str | None = None, n: int | None = None):
+    """
+    Construct a new pipeline builder set up for top-*N* with rating predictions.
+
+    This is used as the "std:topn-predict" base.
+
+    Args:
+        name:
+            The pipeline name.
+        n:
+            The default recommendation list length.
+    """
+    from lenskit.basic import BiasScorer, FallbackScorer
+
+    pipe = topn_builder(name, n)
+    lookup = pipe.node("history-lookup")
+    candidates = pipe.node("candidates")
+    scorer = pipe.node("scorer")
+
+    fb = pipe.add_component("fallback-predictor", BiasScorer, query=lookup, items=candidates)
+    rater = pipe.add_component("rating-merger", FallbackScorer, primary=scorer, backup=fb)
+    pipe.alias("rating-predictor", rater)
+
+    return pipe
+
+
 def topn_pipeline(
     scorer: Component | ComponentConstructor,
     config: object | None = None,
@@ -250,7 +276,8 @@ def predict_pipeline(
             When configured, the `scorer` node is the scorer, and the
             `rating-predictor` node applies the fallback.
         n:
-            The recommendation list length to configure in the pipeline.
+            The recommendation list length to configure in the pipeline.  This
+            parameter is ignored, and will be removed in 2026.
         name:
             The pipeline name.
     """

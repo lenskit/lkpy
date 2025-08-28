@@ -636,7 +636,7 @@ class PipelineBuilder:
                 configuration includes a hash but the constructed pipeline does
                 not have a matching hash.
         """
-        from .common import topn_builder
+        from .common import topn_builder, topn_predict_builder
 
         cfg = PipelineConfig.model_validate(config)
 
@@ -649,6 +649,8 @@ class PipelineBuilder:
             match base:
                 case "std:topn":
                     builder = topn_builder(cfg.meta.name)
+                case "std:topn-predict":
+                    builder = topn_predict_builder(cfg.meta.name)
                 case s if s.startswith("std:"):
                     raise ValueError(f"unknown pipeline base {s}")
                 case _:

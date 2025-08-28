@@ -6,8 +6,8 @@
 
 from pathlib import Path
 
-from lenskit.als import ImplicitMFScorer
-from lenskit.basic import TopNRanker
+from lenskit.als import BiasedMFScorer, ImplicitMFScorer
+from lenskit.basic import BiasScorer, FallbackScorer, TopNRanker
 from lenskit.config import load_config_data
 from lenskit.pipeline import Pipeline, PipelineConfig
 from lenskit.pipeline.nodes import ComponentInstanceNode
@@ -33,3 +33,24 @@ def test_apply_scorer_config():
     node = als_pipe.node("recommender")
     assert isinstance(node, ComponentInstanceNode)
     assert isinstance(node.component, TopNRanker)
+
+
+def test_apply_predictor_config():
+    als_file = config_dir / "als-explicit.toml"
+    als_pipe = Pipeline.load_config(als_file)
+
+    node = als_pipe.node("scorer")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, BiasedMFScorer)
+
+    node = als_pipe.node("recommender")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, TopNRanker)
+
+    node = als_pipe.node("rating-predictor")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, FallbackScorer)
+
+    node = als_pipe.node("fallback-predictor")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, BiasScorer)
