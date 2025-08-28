@@ -122,13 +122,15 @@ impl NegativeSampler {
     }
 }
 
+/// Sample negative columns for given rows from a coordinate table.
 #[pyfunction]
+#[pyo3(signature=(coords, rows, n_cols, *, max_attempts=10, pop_weighted=false, seed))]
 pub fn sample_negatives<'py>(
-    py: Python<'py>,
     coords: &CoordinateTable,
     rows: PyArrowType<ArrayData>,
     n_cols: i32,
     max_attempts: i32,
+    pop_weighted: bool,
     seed: u64,
 ) -> PyResult<PyArrowType<ArrayData>> {
     let mut rng = Pcg64::seed_from_u64(seed);
@@ -144,7 +146,12 @@ pub fn sample_negatives<'py>(
         if let Some(row) = row {
             let mut attempts = 0;
             loop {
-                let c = rng.random_range(0..n_cols);
+                let c = if pop_weighted {
+                    let i = rng.random_range(0..coords.len());
+                    coords.get(1, i)
+                } else {
+                    rng.random_range(0..n_cols)
+                };
                 let pair = [row, c];
                 if coords.lookup(&pair).is_none() || attempts >= max_attempts {
                     result.append_value(c);

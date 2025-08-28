@@ -24,6 +24,15 @@ __all__ = [
 
 def init_accel_pool(n_threads: int): ...
 def thread_count() -> int: ...
+def sample_negatives(
+    coords: data.CoordinateTable,
+    rows: pa.Int32Array,
+    n_cols: int,
+    *,
+    max_attempts: int = 10,
+    pop_weighted: bool = False,
+    seed: int,
+): ...
 
 class RowColumnSet:
     def __init__(self, matrix: SparseRowArray): ...

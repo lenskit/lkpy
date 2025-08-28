@@ -161,7 +161,8 @@ impl CoordinateTable {
     /// Add coordinates from a slice of arrays.
     fn add_arrays(&mut self, n: usize, arrays: Vec<Int32Array>) -> PyResult<(usize, usize)> {
         let chunk = self.chunks.len() as u32;
-        self.offsets.push(arrays[0].len());
+        self.offsets
+            .push(self.offsets[chunk as usize] + arrays[0].len());
         self.chunks.push(arrays);
         let mut added = 0;
         let mut uq_added = 0;
@@ -191,6 +192,18 @@ impl CoordinateTable {
         self.index
             .find(hash, |cx| compare_coords(&self.chunks, cx, coords))
             .copied()
+    }
+
+    pub fn get(&self, dim: usize, entry: usize) -> i32 {
+        let chunk = match self.offsets.binary_search(&entry) {
+            // Exact match: offset points to beginning, so will be first element of chunk
+            Ok(c) => c,
+            // Non-exact match: index of the _next_ item, because we would
+            // insert item after the offset.
+            Err(c) => c - 1,
+        };
+        let row = entry - self.offsets[chunk];
+        self.chunks[chunk][dim].value(row)
     }
 }
 

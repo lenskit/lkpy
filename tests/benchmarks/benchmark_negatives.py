@@ -77,6 +77,6 @@ def test_neg_rust(rng: np.random.Generator, ml_ds: Dataset, benchmark):
     coo.extend(tbl.to_batches())
 
     def sample():
-        _items = sample_negatives(coo, users, matrix.n_cols, 10, 2048108031)
+        _items = sample_negatives(coo, users, matrix.n_cols, seed=2048108031)
 
     benchmark(sample)
