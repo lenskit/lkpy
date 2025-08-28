@@ -10,7 +10,7 @@ from lenskit.data import ID, ItemList, RecQuery
 
 from ._impl import Pipeline
 from .builder import PipelineBuilder
-from .components import Component, ComponentConstructor
+from .components import Component, ComponentConstructor, Placeholder
 
 
 class CompRec(NamedTuple):
@@ -145,6 +145,45 @@ class RecPipelineBuilder:
         pipe.default_component("recommender")
 
         return pipe.build()
+
+
+def topn_builder(
+    name: str | None = None,
+    n: int | None = None,
+) -> PipelineBuilder:
+    """
+    Construct a new pipeline builder set up for top-*N*.
+
+    This is used as the "std:topn" base.
+
+    Args:
+        name:
+            The pipeline name.
+        n:
+            The default recommendation list length.
+    """
+
+    from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
+    from lenskit.basic.history import UserTrainingHistoryLookup
+    from lenskit.basic.topn import TopNRanker
+
+    pipe = PipelineBuilder(name=name)
+    query = pipe.create_input("query", RecQuery, ID, ItemList)
+    items = pipe.create_input("items", ItemList)
+    n_n = pipe.create_input("n", int, None)
+
+    lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
+    cand_sel = pipe.add_component(
+        "candidate-selector", UnratedTrainingItemsCandidateSelector, query=lookup
+    )
+    candidates = pipe.use_first_of("candidates", items, cand_sel)
+
+    n_score = pipe.add_component("scorer", Placeholder, query=lookup, items=candidates)
+
+    rank = pipe.add_component("ranker", TopNRanker, {n: n}, items=n_score, n=n_n)
+    pipe.alias("recommender", rank)
+    pipe.default_component("recommender")
+    return pipe
 
 
 def topn_pipeline(

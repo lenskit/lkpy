@@ -53,7 +53,7 @@ class PipelineHooks(BaseModel):
     run: dict[str, list[PipelineHook]] = {}
 
 
-class PipelineOptions(BaseModel, extra="forbid"):
+class PipelineOptions(BaseModel, extra="allow"):
     base: str | None = None
     "Apply this configuration to a base pipeline."
 
