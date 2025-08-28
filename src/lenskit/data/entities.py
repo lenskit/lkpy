@@ -92,7 +92,7 @@ class EntitySet:
         else:
             return self.vocabulary.ids()
 
-    def numbers(self) -> np.ndarray[int, np.dtype[np.int32]]:
+    def numbers(self) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         """
         Get the numbers (from the vocabulary) for the entities in this set.
         """
@@ -130,13 +130,17 @@ class EntitySet:
     def select(
         self,
         *,
-        numbers: np.ndarray[int, np.dtype[np.integer[Any]]] | pa.IntegerArray[Any] | None = None,
+        numbers: np.ndarray[tuple[int], np.dtype[np.integer[Any]]]
+        | pa.IntegerArray[Any]
+        | None = None,
     ) -> EntitySet: ...
     def select(
         self,
         *,
         ids: IDSequence | None = None,
-        numbers: np.ndarray[int, np.dtype[np.integer[Any]]] | pa.IntegerArray[Any] | None = None,
+        numbers: np.ndarray[tuple[int], np.dtype[np.integer[Any]]]
+        | pa.IntegerArray[Any]
+        | None = None,
     ) -> EntitySet:
         """
         Select a subset of the entities in this set.

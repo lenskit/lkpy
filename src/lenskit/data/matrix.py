@@ -86,7 +86,7 @@ class COOStructure(NamedTuple):
 
     @property
     def nnz(self):
-        return self.row_numbers[self.nrows]
+        return self.row_numbers.shape[0]
 
 
 class SparseIndexType(pa.ExtensionType):

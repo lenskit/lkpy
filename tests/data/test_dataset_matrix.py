@@ -360,3 +360,19 @@ def test_count_synthetic(ml_ds: Dataset):
     matrix = ml_ds.interactions().matrix().scipy("count")
     assert isinstance(matrix, sps.csr_array)
     assert np.all(matrix.data == 1.0)
+
+
+def test_matrix_csr_structure(ml_ds: Dataset):
+    matrix = ml_ds.interactions().matrix()
+    csr = matrix.csr_structure()
+    assert csr.nrows == ml_ds.user_count
+    assert csr.ncols == ml_ds.item_count
+    assert csr.nnz == ml_ds.interaction_count
+
+
+def test_matrix_coo_structure(ml_ds: Dataset):
+    matrix = ml_ds.interactions().matrix()
+    coo = matrix.coo_structure()
+    assert coo.nrows == ml_ds.user_count
+    assert coo.ncols == ml_ds.item_count
+    assert coo.nnz == ml_ds.interaction_count
