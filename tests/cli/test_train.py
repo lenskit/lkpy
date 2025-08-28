@@ -22,7 +22,7 @@ def test_train_config(tmpdir: Path, ml_ds: Dataset):
     ds_path = tmpdir / "ml-data"
     ml_ds.save(ds_path)
 
-    out_file = tmpdir / "als.pkl.zst"
+    out_file = tmpdir / "als.pkl.gz"
 
     runner = CliRunner()
     result = runner.invoke(
