@@ -54,8 +54,25 @@ class PipelineHooks(BaseModel):
 
 
 class PipelineOptions(BaseModel, extra="allow"):
+    """
+    Options used for pipeline assembly, particularly for extending pipelines.
+    """
+
     base: str | None = None
     "Apply this configuration to a base pipeline."
+
+    default_length: int | None = Field(
+        default=None, validation_alias=AliasChoices("default_length", "n")
+    )
+    """
+    For top-*N* base pipelines, the default ranking length to configure.
+    """
+
+    fallback_predictor: bool | None = None
+    """
+    For rating prediction pipelines, enable or disable the default fallback
+    predictor.
+    """
 
 
 class PipelineConfig(BaseModel):

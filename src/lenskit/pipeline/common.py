@@ -6,7 +6,10 @@
 
 from typing import Literal, NamedTuple
 
+from pydantic import JsonValue
+
 from lenskit.data import ID, ItemList, RecQuery
+from lenskit.pipeline.config import PipelineOptions
 
 from ._impl import Pipeline
 from .builder import PipelineBuilder
@@ -149,7 +152,7 @@ class RecPipelineBuilder:
 
 def topn_builder(
     name: str | None = None,
-    n: int | None = None,
+    options: PipelineOptions | dict[str, JsonValue] | None = None,
 ) -> PipelineBuilder:
     """
     Construct a new pipeline builder set up for top-*N*.
@@ -167,6 +170,8 @@ def topn_builder(
     from lenskit.basic.history import UserTrainingHistoryLookup
     from lenskit.basic.topn import TopNRanker
 
+    options = PipelineOptions.model_validate(options or {})
+
     pipe = PipelineBuilder(name=name)
     query = pipe.create_input("query", RecQuery, ID, ItemList)
     items = pipe.create_input("items", ItemList)
@@ -180,17 +185,23 @@ def topn_builder(
 
     n_score = pipe.add_component("scorer", Placeholder, query=lookup, items=candidates)
 
-    rank = pipe.add_component("ranker", TopNRanker, {n: n}, items=n_score, n=n_n)
+    rank = pipe.add_component(
+        "ranker", TopNRanker, {"n": options.default_length}, items=n_score, n=n_n
+    )
     pipe.alias("recommender", rank)
     pipe.default_component("recommender")
     return pipe
 
 
-def topn_predict_builder(name: str | None = None, n: int | None = None):
+def topn_predict_builder(
+    name: str | None = None, options: PipelineOptions | dict[str, JsonValue] | None = None
+):
     """
     Construct a new pipeline builder set up for top-*N* with rating predictions.
 
-    This is used as the "std:topn-predict" base.
+    This is used as the "std:topn-predict" base.  It respects the
+    :attr:`~PipelineOptions.fallback_predictor` option, which defaults to
+    ``True``.
 
     Args:
         name:
@@ -200,14 +211,19 @@ def topn_predict_builder(name: str | None = None, n: int | None = None):
     """
     from lenskit.basic import BiasScorer, FallbackScorer
 
-    pipe = topn_builder(name, n)
+    options = PipelineOptions.model_validate(options or {})
+
+    pipe = topn_builder(name, options)
     lookup = pipe.node("history-lookup")
     candidates = pipe.node("candidates")
     scorer = pipe.node("scorer")
 
-    fb = pipe.add_component("fallback-predictor", BiasScorer, query=lookup, items=candidates)
-    rater = pipe.add_component("rating-merger", FallbackScorer, primary=scorer, backup=fb)
-    pipe.alias("rating-predictor", rater)
+    if options.fallback_predictor is False:
+        pipe.alias("rating-predictor", scorer)
+    else:
+        fb = pipe.add_component("fallback-predictor", BiasScorer, query=lookup, items=candidates)
+        rater = pipe.add_component("rating-merger", FallbackScorer, primary=scorer, backup=fb)
+        pipe.alias("rating-predictor", rater)
 
     return pipe
 

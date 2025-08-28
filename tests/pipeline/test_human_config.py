@@ -54,3 +54,27 @@ def test_apply_predictor_config():
     node = als_pipe.node("fallback-predictor")
     assert isinstance(node, ComponentInstanceNode)
     assert isinstance(node.component, BiasScorer)
+
+
+def test_apply_no_fallback():
+    config = {
+        "meta": {"name": "bias"},
+        "options": {"base": "std:topn-predict", "fallback_predictor": False},
+        "components": {"scorer": {"class": "lenskit.basic.BiasScorer"}},
+    }
+    bias_pipe = Pipeline.from_config(config)
+
+    node = bias_pipe.node("scorer")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, BiasScorer)
+
+    node = bias_pipe.node("recommender")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, TopNRanker)
+
+    node = bias_pipe.node("rating-predictor")
+    assert isinstance(node, ComponentInstanceNode)
+    assert isinstance(node.component, BiasScorer)
+
+    node = bias_pipe.node("fallback-predictor", missing=None)
+    assert node is None

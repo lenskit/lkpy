@@ -648,9 +648,9 @@ class PipelineBuilder:
             extend = True
             match base:
                 case "std:topn":
-                    builder = topn_builder(cfg.meta.name)
+                    builder = topn_builder(cfg.meta.name, cfg.options)
                 case "std:topn-predict":
-                    builder = topn_predict_builder(cfg.meta.name)
+                    builder = topn_predict_builder(cfg.meta.name, cfg.options)
                 case s if s.startswith("std:"):
                     raise ValueError(f"unknown pipeline base {s}")
                 case _:
