@@ -39,6 +39,8 @@ information on how to upgrade your code.
     :class:`PipelineError`, as this is a type error.  Details on a type error's
     input wiring are now provided as a note on the exception, instead of in the
     main exception message.
+-   Pipelines can now be specified in configuration files, and used from the
+    command line.
 
 Compatibility Changes
 .....................
