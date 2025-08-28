@@ -110,6 +110,14 @@ impl CoordinateTable {
     }
 
     /// Query if the index contains the specified coordinates.
+    fn contains_pair(&self, r: i32, c: i32) -> bool {
+        let coords = [r, c];
+        self.lookup(&coords)
+            .map(|cx| self.global_index(&cx))
+            .is_some()
+    }
+
+    /// Query if the index contains the specified coordinates.
     #[pyo3(signature = (*coords))]
     fn find(&self, coords: Vec<i32>) -> Option<usize> {
         self.lookup(&coords).map(|cx| self.global_index(&cx))
