@@ -74,6 +74,7 @@ outputs:
             - tests/
             - conftest.py
             - data/
+            - pipelines/
             - pyproject.toml
         requirements:
           run:

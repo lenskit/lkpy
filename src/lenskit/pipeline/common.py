@@ -6,11 +6,14 @@
 
 from typing import Literal, NamedTuple
 
+from pydantic import JsonValue
+
 from lenskit.data import ID, ItemList, RecQuery
+from lenskit.pipeline.config import PipelineOptions
 
 from ._impl import Pipeline
 from .builder import PipelineBuilder
-from .components import Component, ComponentConstructor
+from .components import Component, ComponentConstructor, Placeholder
 
 
 class CompRec(NamedTuple):
@@ -147,6 +150,84 @@ class RecPipelineBuilder:
         return pipe.build()
 
 
+def topn_builder(
+    name: str | None = None,
+    options: PipelineOptions | dict[str, JsonValue] | None = None,
+) -> PipelineBuilder:
+    """
+    Construct a new pipeline builder set up for top-*N*.
+
+    This is used as the "std:topn" base.
+
+    Args:
+        name:
+            The pipeline name.
+        options:
+            The pipeline options to configure the base pipeline.
+    """
+
+    from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
+    from lenskit.basic.history import UserTrainingHistoryLookup
+    from lenskit.basic.topn import TopNRanker
+
+    options = PipelineOptions.model_validate(options or {})
+
+    pipe = PipelineBuilder(name=name)
+    query = pipe.create_input("query", RecQuery, ID, ItemList)
+    items = pipe.create_input("items", ItemList)
+    n_n = pipe.create_input("n", int, None)
+
+    lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
+    cand_sel = pipe.add_component(
+        "candidate-selector", UnratedTrainingItemsCandidateSelector, query=lookup
+    )
+    candidates = pipe.use_first_of("candidates", items, cand_sel)
+
+    n_score = pipe.add_component("scorer", Placeholder, query=lookup, items=candidates)
+
+    rank = pipe.add_component(
+        "ranker", TopNRanker, {"n": options.default_length}, items=n_score, n=n_n
+    )
+    pipe.alias("recommender", rank)
+    pipe.default_component("recommender")
+    return pipe
+
+
+def topn_predict_builder(
+    name: str | None = None, options: PipelineOptions | dict[str, JsonValue] | None = None
+):
+    """
+    Construct a new pipeline builder set up for top-*N* with rating predictions.
+
+    This is used as the "std:topn-predict" base.  It respects the
+    :attr:`~PipelineOptions.fallback_predictor` option, which defaults to
+    ``True``.
+
+    Args:
+        name:
+            The pipeline name.
+        options:
+            The pipeline options to configure the base pipeline.
+    """
+    from lenskit.basic import BiasScorer, FallbackScorer
+
+    options = PipelineOptions.model_validate(options or {})
+
+    pipe = topn_builder(name, options)
+    lookup = pipe.node("history-lookup")
+    candidates = pipe.node("candidates")
+    scorer = pipe.node("scorer")
+
+    if options.fallback_predictor is False:
+        pipe.alias("rating-predictor", scorer)
+    else:
+        fb = pipe.add_component("fallback-predictor", BiasScorer, query=lookup, items=candidates)
+        rater = pipe.add_component("rating-merger", FallbackScorer, primary=scorer, backup=fb)
+        pipe.alias("rating-predictor", rater)
+
+    return pipe
+
+
 def topn_pipeline(
     scorer: Component | ComponentConstructor,
     config: object | None = None,
@@ -211,7 +292,8 @@ def predict_pipeline(
             When configured, the `scorer` node is the scorer, and the
             `rating-predictor` node applies the fallback.
         n:
-            The recommendation list length to configure in the pipeline.
+            The recommendation list length to configure in the pipeline.  This
+            parameter is ignored, and will be removed in 2026.
         name:
             The pipeline name.
     """

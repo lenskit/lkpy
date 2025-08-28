@@ -378,6 +378,21 @@ parallelism in its batch-inference code.
 See :ref:`component-impl` for more information on implementing your own
 components.
 
+.. _component-inputs:
+
+Component Inputs
+----------------
+
+A component's inputs are defined by the **keyword arguments** in its function
+call interface.  The function signature (of the ``__call__`` method on a
+class-based component, or the function itself for a function component) provide
+the names and, optionally, the types of the inputs that can be connected to
+other components or to pipeline inputs.
+
+.. note::
+    Component input names cannot begin with ``_``, as such names are reserved
+    for internal LensKit use.
+
 .. _component-config:
 
 Configuring Components

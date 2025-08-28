@@ -227,10 +227,11 @@ def type_string(typ: type | None) -> str:
         return f"{typ.__module__}:{typ.__qualname__}"
 
 
-def parse_type_string(tstr: str) -> type:
+def resolve_type_string(tstr: str) -> type:
     """
-    Compute a string representation of a type that is both resolvable and
-    human-readable.  Type parameterizations are lost.
+    Resolve a type string into an actual type or function.  This parses a string
+    referenceing a class or function (as returned by :fun:`type_string`),
+    imports the module, and resolves the final member.
 
     Stability:
         Internal
@@ -244,10 +245,11 @@ def parse_type_string(tstr: str) -> type:
             mod_name, typ_name = tstr.split(":", 1)
         else:
             # separate last element from module
-            parts = re.match(r"(.*)\.(\w+)$", tstr)
+            parts = tstr.split(".")
             if not parts:
                 raise ValueError(f"unparsable type string {tstr}")
-            mod_name, typ_name = parts.groups()
+            mod_name = ".".join(parts[:-1])
+            typ_name = parts[-1]
 
         mod = import_module(mod_name)
         return getattr(mod, typ_name)

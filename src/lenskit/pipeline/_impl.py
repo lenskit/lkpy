@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
+from os import PathLike
+from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
 from numpy.random import BitGenerator, Generator, SeedSequence
@@ -22,6 +24,7 @@ from typing_extensions import (
     overload,
 )
 
+from lenskit.config import load_config_data
 from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger
@@ -226,7 +229,7 @@ class Pipeline:
         return self._config.meta.hash
 
     @staticmethod
-    def from_config(config: object) -> Pipeline:
+    def from_config(config: object, file_path: Path | None = None) -> Pipeline:
         """
         Reconstruct a pipeline from a serialized configuration.
 
@@ -234,11 +237,17 @@ class Pipeline:
             config:
                 The configuration object, as loaded from JSON, TOML, YAML, or
                 similar. Will be validated into a :class:`PipelineConfig`.
+            file_path:
+                The path of the file from which the configuration was read,
+                when available.
+
         Returns:
             The configured (but not trained) pipeline.
+
         Raises:
             PipelineError:
                 If there is a configuration error reconstructing the pipeline.
+
         Warns:
             PipelineWarning:
                 If the configuration is funny but usable; for example, the
@@ -250,6 +259,26 @@ class Pipeline:
         config = PipelineConfig.model_validate(config)
         builder = PipelineBuilder.from_config(config)
         return builder.build()
+
+    @classmethod
+    def load_config(cls, cfg_file: Path | PathLike[str]) -> Pipeline:
+        """
+        Load a pipeline from a saved configuration file.
+
+        Args:
+            cfg_file:
+                The path to a TOML, YAML, or JSON file containing the pipeline
+                configuration.
+
+        Returns:
+            The consructed pipeline.
+
+        See Also:
+            :meth:`from_config` for the actual pipeline instantiation logic.
+        """
+        cfg_file = Path(cfg_file)
+        data = load_config_data(cfg_file, PipelineConfig)
+        return cls.from_config(data, file_path=cfg_file)
 
     def modify(self) -> PipelineBuilder:
         """

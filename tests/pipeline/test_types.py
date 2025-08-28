@@ -26,7 +26,7 @@ from lenskit.pipeline.types import (
     TypecheckWarning,
     is_compatible_data,
     is_compatible_type,
-    parse_type_string,
+    resolve_type_string,
     type_string,
 )
 
@@ -139,16 +139,16 @@ def test_type_string_class():
 
 
 def test_parse_string_None():
-    assert parse_type_string("None") == NoneType
+    assert resolve_type_string("None") == NoneType
 
 
 def test_parse_string_int():
-    assert parse_type_string("int") is int
+    assert resolve_type_string("int") is int
 
 
 def test_parse_string_class():
-    assert parse_type_string("pathlib.Path") is Path
+    assert resolve_type_string("pathlib.Path") is Path
 
 
 def test_parse_string_mod_class():
-    assert parse_type_string("pathlib:Path") is Path
+    assert resolve_type_string("pathlib:Path") is Path

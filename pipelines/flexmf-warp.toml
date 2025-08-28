@@ -1,0 +1,11 @@
+[meta]
+name = "flexmf-warp"
+
+[options]
+base = "std:topn"
+
+[components.scorer]
+class = "lenskit.flexmf.FlexMFImplicitScorer"
+
+[components.scorer.config]
+loss = "warp"

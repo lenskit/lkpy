@@ -12,14 +12,17 @@ from xopen import xopen
 
 from lenskit.data import Dataset
 from lenskit.logging import get_logger
-from lenskit.pipeline import Component, topn_pipeline
-from lenskit.pipeline.types import parse_type_string
+from lenskit.pipeline import Component, Pipeline, topn_pipeline
+from lenskit.pipeline.types import resolve_type_string
 
 _log = get_logger(__name__)
 
 
 @click.command("train")
 @click.option("-C", "--scorer-class", metavar="CLS", help="Train a model with scorer CLS.")
+@click.option(
+    "-c", "--config", type=Path, metavar="FILE", help="Load pipeline configuration from FILE."
+)
 @click.option(
     "-o",
     "--output",
@@ -38,6 +41,7 @@ _log = get_logger(__name__)
 @click.argument("dataset", metavar="DATA", type=Path)
 def train(
     scorer_class: str | None,
+    config: Path | None,
     out_file: Path,
     name: str | None,
     list_length: int | None,
@@ -49,12 +53,20 @@ def train(
     """
     _log.warning("the training CLI is experimental and may change without notice")
 
-    if scorer_class is not None:
-        scorer = parse_type_string(scorer_class)
+    if config is not None:
+        if scorer_class is not None:
+            _log.error("cannot specify both scorer class and configuration file")
+            raise SystemExit(3)
+
+        pipe = Pipeline.load_config(config)
+
+    elif scorer_class is not None:
+        scorer = resolve_type_string(scorer_class)
         if name is None:
             name = scorer.__name__
         assert issubclass(scorer, Component)
         pipe = topn_pipeline(scorer, predicts_ratings=rating_predictor, n=list_length, name=name)
+
     else:
         _log.error("no scorer specified")
         raise SystemExit(5)
