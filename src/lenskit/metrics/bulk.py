@@ -221,9 +221,11 @@ class RunAnalysis:
 
         summary_df = self._accumulator.summary_metrics()
         if not summary_df.empty:
-            if "mean" in summary_df.columns:
-                for metric_name in summary_df.index:
-                    if "." not in metric_name:
+            for metric_name in summary_df.index:
+                if "." not in metric_name and metric_name not in global_results:
+                    if "value" in summary_df.columns:
+                        global_results[metric_name] = summary_df.loc[metric_name, "value"]
+                    elif "mean" in summary_df.columns:
                         global_results[metric_name] = summary_df.loc[metric_name, "mean"]
 
         global_results = pd.Series(global_results, dtype=np.float64)
