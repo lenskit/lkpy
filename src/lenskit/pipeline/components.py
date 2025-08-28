@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from inspect import isabstract, signature
 from types import FunctionType, NoneType
 
-from pydantic import JsonValue, TypeAdapter
+from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
     Any,
     Callable,
@@ -202,6 +202,23 @@ class Component(ABC, Generic[COut, CArgs]):
     def __repr__(self) -> str:
         params = json.dumps(self.dump_config(), indent=4)
         return f"<{self.__class__.__name__} {params}>"
+
+
+class PlaceholderConfig(BaseModel, extra="allow"):
+    """
+    Configuration for the placeholder component.
+    """
+
+    pass
+
+
+class Placeholder(Component[Any]):
+    """
+    Simple no-op component to use as a placeholder in partial pipelines.
+    """
+
+    def __call__(self, **kwargs: Any) -> Any:
+        raise NotImplementedError("attempted to invoke placeholder component")
 
 
 def instantiate_component(
