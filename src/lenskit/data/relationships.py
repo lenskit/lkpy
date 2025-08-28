@@ -507,10 +507,10 @@ class MatrixRelationshipSet(RelationshipSet):
                 raise ValueError(f"unknown weighting strategy {weighting}")
 
     def _sample_unweighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
-        return rng.choice(self.n_cols, size=size, replace=True)
+        return rng.integers(0, self.n_cols, size=size)
 
     def _sample_weighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
-        return rng.choice(self._col_nums.to_numpy(), size=size, replace=True)
+        return rng.choice(self._col_nums.to_numpy(), size=size, replace=False)
 
     @overload
     def row_table(self, id: ID) -> pa.Table | None: ...
