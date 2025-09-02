@@ -22,7 +22,8 @@ import torch
 from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
-from lenskit._accel import NegativeSampler, RowColumnSet
+from lenskit._accel import data as _accel_data
+from lenskit._accel import sample_negatives
 from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
@@ -197,7 +198,7 @@ class MatrixRelationshipSet(RelationshipSet):
     _col_nums: pa.Int32Array
     _col_stats: pd.DataFrame | None = None
 
-    _rc_set: RowColumnSet
+    _coords: _accel_data.CoordinateTable
 
     def __init__(
         self,
@@ -224,6 +225,11 @@ class MatrixRelationshipSet(RelationshipSet):
 
         self._table = self._table.combine_chunks()
 
+        # set up the coordinate table
+        # TODO: make this use the cached coordinate table if possible
+        self._coords = _accel_data.CoordinateTable(2)
+        self._coords.extend(self._table.select(e_cols).to_batches())
+
         # compute the row pointers
         log.debug("computing CSR data")
         n_rows = len(self.row_vocabulary)
@@ -242,9 +248,6 @@ class MatrixRelationshipSet(RelationshipSet):
             shape=(len(self.row_vocabulary), len(self.col_vocabulary)),
         )
 
-        # make the index
-        log.debug("computing row-column index")
-        self._rc_set = RowColumnSet(self._structure)
         log.debug("relationship set ready to use")
 
     def __getstate__(self):
@@ -469,18 +472,16 @@ class MatrixRelationshipSet(RelationshipSet):
         eff_n = n or 1
 
         if verify:
-            sampler = NegativeSampler(self._rc_set, np.require(rows, np.int32), eff_n)  # type: ignore
+            row_arr = pa.array(rows, pa.int32())
+            columns = sample_negatives(
+                self._coords,
+                row_arr,
+                self.n_cols,
+                max_attempts=max_attempts,
+                pop_weighted=weighting != "uniform",
+                seed=rng.bit_generator.random_raw(),
+            ).to_numpy()
 
-            count = 0
-            while nr := sampler.num_remaining():
-                count += 1
-                last = count >= max_attempts
-                candidates = self._sample_columns(rng, nr, weighting)
-                sampler.accumulate(np.require(candidates, np.int32), last)
-                if last:
-                    break
-
-            columns = sampler.result()
         else:
             columns = self._sample_columns(rng, eff_n, weighting)
 
