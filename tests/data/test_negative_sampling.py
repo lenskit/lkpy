@@ -41,7 +41,7 @@ def test_negative(rng: np.random.Generator, ml_ds: Dataset, weighting):
         row = ml_ds.user_row(user_num=u)
         ulog = ulog.bind(u_nitems=len(row))
         ulog.debug("checking if item is negative")
-        assert not matrix._rc_set.contains_pair(u, i)
+        assert not matrix._coords.contains(u, i)
         print(ml_ds.users.id(u), row.ids())
         assert i not in row.numbers()
 
@@ -72,7 +72,7 @@ def test_negative_multiple(rng: np.random.Generator, ml_ds: Dataset, weighting):
             row = ml_ds.user_row(user_num=u)
             ulog = ulog.bind(u_nitems=len(row))
             ulog.debug("checking if item is negative")
-            assert not matrix._rc_set.contains_pair(u, i)
+            assert not matrix._coords.contains(u, i)
             print(ml_ds.users.id(u), row.ids())
             assert i not in row.numbers()
 
