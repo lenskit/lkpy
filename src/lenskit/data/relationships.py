@@ -23,7 +23,6 @@ from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
 from lenskit._accel import data as _accel_data
-from lenskit._accel import sample_negatives
 from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
@@ -475,7 +474,7 @@ class MatrixRelationshipSet(RelationshipSet):
             rows = np.require(rows, np.int32)
             columns = np.empty((len(rows), eff_n), dtype=np.int32)
             for i in range(eff_n):
-                cc = sample_negatives(
+                cc = _accel_data.sample_negatives(
                     self._coords,
                     rows,
                     self.n_cols,

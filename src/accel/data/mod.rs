@@ -18,6 +18,7 @@ use sha1::{Digest, Sha1};
 
 mod coordinates;
 mod index;
+mod sampling;
 mod selection;
 mod sorting;
 
@@ -35,6 +36,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     data.add_function(wrap_pyfunction!(sorting::is_sorted_coo, &data)?)?;
     data.add_function(wrap_pyfunction!(sorting::argsort_descending, &data)?)?;
     data.add_function(wrap_pyfunction!(selection::negative_mask, &data)?)?;
+    data.add_function(wrap_pyfunction!(sampling::sample_negatives, &data)?)?;
     data.add_function(wrap_pyfunction!(hash_array, &data)?)?;
 
     Ok(())
