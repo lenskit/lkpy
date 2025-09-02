@@ -472,17 +472,14 @@ class MatrixRelationshipSet(RelationshipSet):
 
         if verify:
             rows = np.require(rows, np.int32)
-            columns = np.empty((len(rows), eff_n), dtype=np.int32)
-            for i in range(eff_n):
-                cc = _accel_data.sample_negatives(
-                    self._coords,
-                    rows,
-                    self.n_cols,
-                    max_attempts=max_attempts,
-                    pop_weighted=weighting != "uniform",
-                    seed=rng.bit_generator.random_raw(),
-                )
-                columns[:, i] = cc
+            columns = _accel_data.sample_negatives(
+                self._coords,
+                rows,
+                self.n_cols,
+                max_attempts=max_attempts,
+                pop_weighted=weighting != "uniform",
+                seed=rng.bit_generator.random_raw(),
+            )
 
         elif weighting == "uniform":
             columns = self._sample_unweighted(rng, eff_n)
