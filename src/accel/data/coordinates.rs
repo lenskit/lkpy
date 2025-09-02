@@ -122,6 +122,11 @@ impl CoordinateTable {
     fn find(&self, coords: Vec<i32>) -> Option<usize> {
         self.lookup(&coords).map(|cx| self.global_index(&cx))
     }
+
+    /// Get the cooridnate value for the specified dimension and psoition.
+    pub fn _get_coord(&self, dim: usize, position: usize) -> i32 {
+        self.get(dim, position)
+    }
 }
 
 impl CoordinateTable {
