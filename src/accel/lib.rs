@@ -29,7 +29,6 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     data::register_data(m)?;
 
     m.add_class::<funksvd::FunkSVDTrainer>()?;
-    m.add_class::<sampling::NegativeSampler>()?;
     m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
     m.add_function(wrap_pyfunction!(thread_count, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_row_debug, m)?)?;

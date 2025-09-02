@@ -18,18 +18,14 @@ use sha1::{Digest, Sha1};
 
 mod coordinates;
 mod index;
-mod rc_set;
 mod selection;
 mod sorting;
 
 pub use coordinates::CoordinateTable;
 pub use index::IDIndex;
-pub use rc_set::RowColumnSet;
 
 /// Register the lenskit._accel.als module
 pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-    parent.add_class::<RowColumnSet>()?;
-
     let data = PyModule::new(parent.py(), "data")?;
     parent.add_submodule(&data)?;
 
