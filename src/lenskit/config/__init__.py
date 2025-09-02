@@ -301,10 +301,10 @@ def load_config_data(path: Path | PathLike[str], model: type[M] | None = None):
             data = json.loads(text)
         case ".toml":
             data = tomllib.loads(text)
-        case ".yaml":
+        case ".yaml" | ".yml":
             import yaml
 
-            data = yaml.parse(text, yaml.SafeLoader)
+            data = yaml.load(text, yaml.SafeLoader)
 
         case _:
             raise ValueError(f"unsupported configuration type for {path}")
