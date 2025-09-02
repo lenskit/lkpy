@@ -126,44 +126,40 @@ impl NegativeSampler {
 #[pyfunction]
 #[pyo3(signature=(coords, rows, n_cols, *, max_attempts=10, pop_weighted=false, seed))]
 pub fn sample_negatives<'py>(
+    py: Python<'py>,
     coords: &CoordinateTable,
-    rows: PyArrowType<ArrayData>,
+    rows: Bound<'py, PyArray1<i32>>,
     n_cols: i32,
     max_attempts: i32,
     pop_weighted: bool,
     seed: u64,
-) -> PyResult<PyArrowType<ArrayData>> {
+) -> PyResult<Bound<'py, PyArray1<i32>>> {
     let mut rng = Pcg64::seed_from_u64(seed);
 
-    let rows = make_array(rows.0);
-    let rows = rows
-        .as_primitive_opt::<Int32Type>()
-        .ok_or_else(|| PyTypeError::new_err(format!("invalid row type {}", rows.data_type())))?;
+    let n = rows.len()?;
+    let rows_py = rows.readonly();
+    let rows = rows_py.as_array();
+    let mut result = Vec::with_capacity(n);
 
-    let mut result = Int32Builder::with_capacity(rows.len());
-
-    for row in rows {
-        if let Some(row) = row {
-            let mut attempts = 0;
-            loop {
-                let c = if pop_weighted {
-                    let i = rng.random_range(0..coords.len());
-                    coords.get(1, i)
-                } else {
-                    rng.random_range(0..n_cols)
-                };
-                let pair = [row, c];
-                if coords.lookup(&pair).is_none() || attempts >= max_attempts {
-                    result.append_value(c);
-                    break;
-                } else {
-                    attempts += 1
-                }
+    for i in 0..n {
+        let row = rows[i];
+        let mut attempts = 0;
+        loop {
+            let c = if pop_weighted {
+                let i = rng.random_range(0..coords.len());
+                coords.get(1, i)
+            } else {
+                rng.random_range(0..n_cols)
+            };
+            let pair = [row, c];
+            if coords.lookup(&pair).is_none() || attempts >= max_attempts {
+                result.push(c);
+                break;
+            } else {
+                attempts += 1
             }
-        } else {
-            result.append_null();
         }
     }
 
-    Ok(result.finish().into_data().into())
+    Ok(PyArray1::from_vec(py, result))
 }

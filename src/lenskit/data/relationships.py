@@ -472,18 +472,25 @@ class MatrixRelationshipSet(RelationshipSet):
         eff_n = n or 1
 
         if verify:
-            row_arr = pa.array(rows, pa.int32())
-            columns = sample_negatives(
-                self._coords,
-                row_arr,
-                self.n_cols,
-                max_attempts=max_attempts,
-                pop_weighted=weighting != "uniform",
-                seed=rng.bit_generator.random_raw(),
-            ).to_numpy()
+            rows = np.require(rows, np.int32)
+            columns = np.empty((len(rows), eff_n), dtype=np.int32)
+            for i in range(eff_n):
+                cc = sample_negatives(
+                    self._coords,
+                    rows,
+                    self.n_cols,
+                    max_attempts=max_attempts,
+                    pop_weighted=weighting != "uniform",
+                    seed=rng.bit_generator.random_raw(),
+                )
+                columns[:, i] = cc
 
-        else:
-            columns = self._sample_columns(rng, eff_n, weighting)
+        elif weighting == "uniform":
+            columns = self._sample_unweighted(rng, eff_n)
+        elif weighting == "popular" or weighting == "popularity":
+            columns = self._sample_weighted(rng, eff_n)
+        else:  # pragma: nocover
+            raise ValueError(f"unsupported weighting {weighting}")
 
         columns = np.require(columns, np.int32)
         if n is None:
@@ -492,20 +499,6 @@ class MatrixRelationshipSet(RelationshipSet):
             columns = columns.reshape(-1, n)
 
         return columns
-
-    def _sample_columns(
-        self,
-        rng: np.random.Generator,
-        size: int | tuple[int, int],
-        weighting: Literal["uniform", "popular", "popularity"],
-    ):
-        match weighting:
-            case "uniform":
-                return self._sample_unweighted(rng, size)
-            case "popular" | "popularity":
-                return self._sample_weighted(rng, size)
-            case _:
-                raise ValueError(f"unknown weighting strategy {weighting}")
 
     def _sample_unweighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
         return rng.integers(0, self.n_cols, size=size)
