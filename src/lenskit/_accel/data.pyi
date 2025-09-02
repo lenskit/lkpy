@@ -18,6 +18,7 @@ def sample_negatives(
     rows: np.ndarray[tuple[int], np.dtype[np.int32]],
     n_cols: int,
     *,
+    n: int = 1,
     max_attempts: int = 10,
     pop_weighted: bool = False,
     seed: int,

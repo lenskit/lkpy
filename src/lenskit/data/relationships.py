@@ -476,6 +476,7 @@ class MatrixRelationshipSet(RelationshipSet):
                 self._coords,
                 rows,
                 self.n_cols,
+                n=eff_n,
                 max_attempts=max_attempts,
                 pop_weighted=weighting != "uniform",
                 seed=rng.bit_generator.random_raw(),
