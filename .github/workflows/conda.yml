@@ -37,7 +37,7 @@ jobs:
       - name: Build LensKit source distribution
         id: source
         run: |
-          uv sync
+          uv sync --only-group=scripting
           mise run version --github
           mise run build:dist -sd
 
