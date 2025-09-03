@@ -1533,7 +1533,6 @@ dev = [
     { name = "pytest-retry" },
     { name = "pyyaml" },
     { name = "ruff" },
-    { name = "rust-just" },
     { name = "scipy-stubs" },
     { name = "seaborn" },
     { name = "sphinx" },
@@ -1576,7 +1575,6 @@ scripting = [
     { name = "lazy-loader" },
     { name = "maturin" },
     { name = "packaging" },
-    { name = "rust-just" },
     { name = "tomlkit" },
 ]
 test = [
@@ -1660,7 +1658,6 @@ dev = [
     { name = "pytest-retry", specifier = "~=1.7" },
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "ruff", specifier = ">=0.2" },
-    { name = "rust-just", specifier = "~=1.40" },
     { name = "scipy-stubs", specifier = ">=1.14.1.6,<2" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14" },
     { name = "sphinx", specifier = ">=4.2" },
@@ -1699,7 +1696,6 @@ scripting = [
     { name = "lazy-loader", specifier = ">=0.4" },
     { name = "maturin", specifier = "~=1.0" },
     { name = "packaging", specifier = ">=25.0" },
-    { name = "rust-just", specifier = "~=1.40" },
     { name = "tomlkit", specifier = "~=0.13.2" },
 ]
 test = [
@@ -2288,7 +2284,7 @@ name = "nvidia-cudnn-cu12"
 version = "9.10.2.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(sys_platform != 'darwin' and extra != 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
+    { name = "nvidia-cublas-cu12", marker = "sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/41/e79269ce215c857c935fd86bcfe91a451a584dfc27f1e068f568b9ad1ab7/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c9132cc3f8958447b4910a1720036d9eff5928cc3179b0a51fb6d167c6cc87d8", size = 705026878, upload-time = "2025-06-06T21:52:51.348Z" },
@@ -2301,7 +2297,7 @@ name = "nvidia-cufft-cu12"
 version = "11.3.3.83"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' and extra != 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/bc/7771846d3a0272026c416fbb7e5f4c1f146d6d80704534d0b187dd6f4800/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:848ef7224d6305cdb2a4df928759dca7b1201874787083b6e7550dd6765ce69a", size = 193109211, upload-time = "2025-03-07T01:44:56.873Z" },
@@ -2333,9 +2329,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.7.3.90"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(sys_platform != 'darwin' and extra != 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
-    { name = "nvidia-cusparse-cu12", marker = "(sys_platform != 'darwin' and extra != 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
-    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' and extra != 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
+    { name = "nvidia-cublas-cu12", marker = "sys_platform != 'darwin'" },
+    { name = "nvidia-cusparse-cu12", marker = "sys_platform != 'darwin'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/32/f7cd6ce8a7690544d084ea21c26e910a97e077c9b7f07bf5de623ee19981/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:db9ed69dbef9715071232caa9b69c52ac7de3a95773c2db65bdba85916e4e5c0", size = 267229841, upload-time = "2025-03-07T01:46:54.356Z" },
@@ -2348,7 +2344,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.5.8.93"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' and extra != 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/f7/cd777c4109681367721b00a106f491e0d0d15cfa1fd59672ce580ce42a97/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9b6c161cb130be1a07a27ea6923df8141f3c295852f4b260c65f18f3e0a091dc", size = 288117129, upload-time = "2025-03-07T01:47:40.407Z" },
@@ -3464,28 +3460,6 @@ wheels = [
 ]
 
 [[package]]
-name = "rust-just"
-version = "1.42.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4e/15/cd770f900a77f838246bfd32d526b51be461e5374cef81fcc4b902e130cd/rust_just-1.42.4.tar.gz", hash = "sha256:7af0987b74fa174abd01bd055faa75fffb962998d4f30385973ff73a281b44e1", size = 1419037, upload-time = "2025-07-25T02:08:56.079Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/08/f6/81b0c89594eef6c73a27230dfe9448967d836b3ada4b2d8ba5bc57537a5b/rust_just-1.42.4-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:881252a47b9d242e54aebf8c8a51c8954f4dbc0afc0c9eebb6bb1b886aeb4fcf", size = 1696449, upload-time = "2025-07-25T02:08:20.165Z" },
-    { url = "https://files.pythonhosted.org/packages/bf/f7/7066df97701d55f7d0b9eb83e8238ce72dd3c1a5f99248e2d78970633e3a/rust_just-1.42.4-py3-none-macosx_11_0_arm64.whl", hash = "sha256:624017b124499a0328ed4b63582da4332143eb6777b2b557d9e98413a73add90", size = 1559553, upload-time = "2025-07-25T02:08:22.909Z" },
-    { url = "https://files.pythonhosted.org/packages/da/34/425d1d81f6a217957fac654a559dc5297d282606fe0a22596e0da8f0b449/rust_just-1.42.4-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8c1d01f5cc39285a2f3ac13a814f0730ad045fb21990d9e2925b2aef0c70f6d0", size = 1628474, upload-time = "2025-07-25T02:08:26.816Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/e2/056289d4dce1f1d68a70c62728e2969a5f18c3dec238580c2f3eca0a882e/rust_just-1.42.4-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:0fba47d942fc03ab3a1f2dd59eec7d3f8c43f90fc6af9f4dc8605b0b24f5c7ca", size = 1623915, upload-time = "2025-07-25T02:08:29.27Z" },
-    { url = "https://files.pythonhosted.org/packages/5d/e9/92b3fc84fc8ef8d04c02ca908ca675a54b64b80b0a36fc33b4c2a34c4c94/rust_just-1.42.4-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e54d0e54a6fa1e17f9def689f3135c12b865ab76f9678852e1303aa46524acab", size = 1791955, upload-time = "2025-07-25T02:08:31.436Z" },
-    { url = "https://files.pythonhosted.org/packages/a9/e9/8576ed5ee629475d60be8371abb41044b5a1f55ba5b32e5c673e262d8eaa/rust_just-1.42.4-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:32315ad82051e13e08dd919ea8ae752508a4b9239886026a53e6c7e0dc7f9cc1", size = 1865521, upload-time = "2025-07-25T02:08:33.866Z" },
-    { url = "https://files.pythonhosted.org/packages/55/38/0a20f8bf96236dcbfed368184baeb1e851bd04789d067864ddf62ecdefd1/rust_just-1.42.4-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:1cb48b4c5644094a49527aeda39c8549464d3a637af4807239e061aba5f5f43f", size = 1967744, upload-time = "2025-07-25T02:08:36.367Z" },
-    { url = "https://files.pythonhosted.org/packages/ad/d3/5fccfc374a5d4986aafa13fb1b9022ca82d38f3f29e958e321b739ff9d71/rust_just-1.42.4-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:20f018fc62bfd26e4d17c92bada600a009c94c949cdf2af054de9453c6073c77", size = 1792627, upload-time = "2025-07-25T02:08:39.014Z" },
-    { url = "https://files.pythonhosted.org/packages/80/1f/9f2d6f5b8fe5d39ff115a466485ea2c5ace8ba418af72947859a21cc3566/rust_just-1.42.4-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:4c399281125c3a83930a43083a993ea1fbea6d067d0039938ad14ca55d43a5be", size = 1637040, upload-time = "2025-07-25T02:08:41.701Z" },
-    { url = "https://files.pythonhosted.org/packages/10/39/02fa7ca5e6c5131e92410c5e17e817af0ccf17d9df17ff36d20f5cf59d4b/rust_just-1.42.4-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:a74be43f220d114510bee63ea51e1d82764a0554639e5e931e4196e2b6fcd606", size = 1641078, upload-time = "2025-07-25T02:08:44.119Z" },
-    { url = "https://files.pythonhosted.org/packages/b4/db/6a9df555ef31341aa60f6d6590d92f08123710813759c931d5346e71cdae/rust_just-1.42.4-py3-none-musllinux_1_2_i686.whl", hash = "sha256:2e5c251a1974dd3026eaccde3a74919f223f4ca90b96fa5f2d003a7a09748fe3", size = 1782159, upload-time = "2025-07-25T02:08:46.258Z" },
-    { url = "https://files.pythonhosted.org/packages/bd/c8/44b0963d88cc889e31ab49eb53260ce5d8711ff2b78628512673605f72b8/rust_just-1.42.4-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:679ad008facc231b1a9fe926d209c77c1d971bfc05a87f3a848df6121d1cb057", size = 1845222, upload-time = "2025-07-25T02:08:48.53Z" },
-    { url = "https://files.pythonhosted.org/packages/c8/8c/a49cde2512272d8e1f8cc63cd5481c742e7287ff555b754b2840bd20947f/rust_just-1.42.4-py3-none-win32.whl", hash = "sha256:2726667ca074cdf7b7bbefd358ae4f91c2e859e5d4ed723cd33898d10c7a07cc", size = 1591226, upload-time = "2025-07-25T02:08:51.388Z" },
-    { url = "https://files.pythonhosted.org/packages/08/b1/766946adb4c0d049fa9e76954ab261623f9cf3d8105eef2046dc39e3b612/rust_just-1.42.4-py3-none-win_amd64.whl", hash = "sha256:5b8f15a11f28a18550ddebe5935f49162769d8dd3ec53afa6ad3edf713e362c0", size = 1735709, upload-time = "2025-07-25T02:08:53.921Z" },
-]
-
-[[package]]
 name = "scikit-learn"
 version = "1.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4252,7 +4226,7 @@ name = "triton"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "setuptools", marker = "(sys_platform != 'darwin' and extra != 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
+    { name = "setuptools", marker = "sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7d/39/43325b3b651d50187e591eefa22e236b2981afcebaefd4f2fc0ea99df191/triton-3.4.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7b70f5e6a41e52e48cfc087436c8a28c17ff98db369447bcaff3b887a3ab4467", size = 155531138, upload-time = "2025-07-30T19:58:29.908Z" },

@@ -67,7 +67,7 @@ def test_add_dupes():
     assert tbl.find(1, 3) is None
 
 
-def test_add_batches(ml_ratings: pd.DataFrame):
+def test_add_batches(ml_ratings: pd.DataFrame, rng: np.random.Generator):
     ml_tbl = pa.Table.from_pandas(ml_ratings, preserve_index=False)
 
     items = Vocabulary(ml_tbl.column("item_id"), reorder=True)
@@ -89,3 +89,10 @@ def test_add_batches(ml_ratings: pd.DataFrame):
     assert tbl.dimensions() == 2
     assert len(tbl) == n
     assert tbl.unique_count() == n
+
+    for pos in rng.choice(ml_tbl.num_rows, size=500):
+        uno = tbl._get_coord(0, pos)
+        assert uno == ui_tbl.column("user_num")[pos].as_py()
+
+        ino = tbl._get_coord(1, pos)
+        assert ino == ui_tbl.column("item_num")[pos].as_py()

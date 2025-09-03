@@ -14,22 +14,19 @@ use arrow::{
 };
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
+use sha1::{Digest, Sha1};
+
 mod coordinates;
 mod index;
-mod rc_set;
+mod sampling;
 mod selection;
 mod sorting;
 
-use index::IDIndex;
-pub use rc_set::RowColumnSet;
-use sha1::{Digest, Sha1};
-
-use coordinates::CoordinateTable;
+pub use coordinates::CoordinateTable;
+pub use index::IDIndex;
 
 /// Register the lenskit._accel.als module
 pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-    parent.add_class::<RowColumnSet>()?;
-
     let data = PyModule::new(parent.py(), "data")?;
     parent.add_submodule(&data)?;
 
@@ -39,6 +36,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     data.add_function(wrap_pyfunction!(sorting::is_sorted_coo, &data)?)?;
     data.add_function(wrap_pyfunction!(sorting::argsort_descending, &data)?)?;
     data.add_function(wrap_pyfunction!(selection::negative_mask, &data)?)?;
+    data.add_function(wrap_pyfunction!(sampling::sample_negatives, &data)?)?;
     data.add_function(wrap_pyfunction!(hash_array, &data)?)?;
 
     Ok(())
