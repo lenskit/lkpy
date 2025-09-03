@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import numpy as np
 import pyarrow as pa
 
 from lenskit.data.types import ID
@@ -10,6 +13,16 @@ def negative_mask(n: int, indices: pa.Int32Array) -> pa.BooleanArray:
     """
     ...
 
+def sample_negatives(
+    coords: CoordinateTable,
+    rows: np.ndarray[tuple[int], np.dtype[np.int32]],
+    n_cols: int,
+    *,
+    n: int = 1,
+    max_attempts: int = 10,
+    pop_weighted: bool = False,
+    seed: int,
+) -> np.ndarray[tuple[int, int], np.dtype[np.int32]]: ...
 def hash_array(arr: pa.Array, /) -> str: ...
 
 class IDIndex:
@@ -32,3 +45,4 @@ class CoordinateTable:
     def extend(self, batch: pa.RecordBatch | list[pa.RecordBatch]) -> tuple[int, int]: ...
     def contains(self, *coords: int) -> bool: ...
     def find(self, *coords: int) -> int | None: ...
+    def _get_coord(self, dim: int, position: int) -> int: ...
