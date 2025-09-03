@@ -53,9 +53,12 @@ class FlexMFConfigBase:
     The number of training epochs.
     """
 
-    regularization: float = 0.1
+    regularization: float = 0.01
     """
     The regularization strength.
+
+    .. note::
+        The explicit-feedback model uses a different default strength.
     """
 
     reg_method: Literal["AdamW", "L2"] | None = "AdamW"
@@ -66,6 +69,9 @@ class FlexMFConfigBase:
     :class:`~torch.optim.AdamW` optimizer with weight decay. With L2
     regularization, training will use sparse gradients and the
     :class:`torch.optim.SparseAdam` optimizer.
+
+    .. note::
+        The explicit-feedback model defaults this setting to ``"L2"``.
 
     ``None``
         Use no regularization.
