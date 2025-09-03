@@ -62,15 +62,17 @@ class FlexMFConfigBase:
     """
     The regularization method to use.
 
-    With the default L2 regularization, training will use sparse gradients and
-    the :class:`torch.optim.SparseAdam` optimizer.
+    With the default AdamW regularization, training will use the
+    :class:`~torch.optim.AdamW` optimizer with weight decay. With L2
+    regularization, training will use sparse gradients and the
+    :class:`torch.optim.SparseAdam` optimizer.
 
     ``None``
         Use no regularization.
 
     ``"L2"``
-        Use L2 regularization on the parameters used in each training batch.
-        The strength is applied to the _mean_ norms in a batch, so that the
+        Use L2 regularization on the parameters used in each training batch. The
+        strength is applied to the _mean_ norms in a batch, so that the
         regularization term scale is not dependent on the batch size.
 
     ``"AdamW"``
