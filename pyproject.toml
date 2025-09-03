@@ -41,6 +41,8 @@ dependencies = [
   "prettytable ~=3.14",
   "xopen ~=2.0",
   "lazy-loader >=0.4",
+  # torch inductor needs setuptools
+  "setuptools >=0.80",
 ]
 
 [dependency-groups]
