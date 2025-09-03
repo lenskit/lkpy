@@ -414,6 +414,11 @@ class DatasetBuilder:
                 self.schema.default_interaction = cls
             rc_def = self.schema.relationships[cls]
 
+        # FIXME: remove this segment when we can make it work
+
+        if allow_repeats and not rc_def.repeats.is_forbidden:
+            rc_def.repeats = AllowableTroolean.PRESENT
+
         link_id_cols = set()
         link_nums = {}
         link_mask = None
@@ -455,58 +460,62 @@ class DatasetBuilder:
 
         cur_table = self._tables[cls]
 
-        if not rc_def.repeats.is_present:
-            _log.debug("checking for repeated interactions")
+        if remove_repeats and remove_repeats != "exact":
+            new_table = self._remove_repeated_relationships(t=new_table, rel=rc_def)
+        else:
+            if remove_repeats == "exact":
+                new_table = self._remove_duplicated_relationships(t=new_table)
+                self._rel_coords[cls] = None
 
-            # FIXME: the coordinate table preservation will be out-of-order with
-            # respect to sorted tables. This will not affect correctness for the
-            # purposes of checking if duplicates exist, but will cause problems
-            # if we count on locations for other purposes.  It also can increase
-            # memory use, since the coordinate table keeps a reference to the
-            # pre-sorted data.
+            if rc_def.repeats.is_forbidden:
+                _log.debug("checking for repeated interactions")
 
-            # get the coordinate table for the previously-existing entries
-            coords = self._rel_coords.get(cls, None)
-            if coords is None:
-                coords = _data_accel.CoordinateTable(len(rc_def.entities))
-                if cur_table is not None:
-                    _log.debug("building coord table from previous interactions")
-                    coo = cur_table.select(link_nums.keys())
-                    coords.extend(coo.to_batches())
-                    assert len(coo) == len(cur_table)
-                self._rel_coords[cls] = coords
+                # FIXME: the coordinate table preservation will be out-of-order with
+                # respect to sorted tables. This will not affect correctness for the
+                # purposes of checking if duplicates exist, but will cause problems
+                # if we count on locations for other purposes.  It also can increase
+                # memory use, since the coordinate table keeps a reference to the
+                # pre-sorted data.
 
-            # add the new data
-            coords.extend(new_table.select(link_nums.keys()).to_batches())
-            n_dupes = len(coords) - coords.unique_count()
-            _log.debug(
-                "coordinates: %d total, %d unique, %d dupe",
-                len(coords),
-                coords.unique_count(),
-                n_dupes,
-            )
+                # get the coordinate table for the previously-existing entries
+                coords = self._rel_coords.get(cls, None)
+                if coords is None:
+                    coords = _data_accel.CoordinateTable(len(rc_def.entities))
+                    if cur_table is not None:
+                        _log.debug("building coord table from previous interactions")
+                        coo = cur_table.select(link_nums.keys())
+                        coords.extend(coo.to_batches())
+                        assert len(coo) == len(cur_table)
+                    self._rel_coords[cls] = coords
 
-            if n_dupes:
-                if rc_def.repeats.is_allowed:
-                    _log.debug("found %d repeat interactions", n_dupes)
-                    rc_def.repeats = AllowableTroolean.PRESENT
-                else:
-                    _log.error(
-                        "found %d forbidden repeat interactions (of %d)",
-                        n_dupes,
-                        new_table.num_rows,
-                    )
-                    raise DataError(
-                        f"repeated interactions not allowed for relationship class {cls}"
-                    )
+                # add the new data
+                coords.extend(new_table.select(link_nums.keys()).to_batches())
+                n_dupes = len(coords) - coords.unique_count()
+                _log.debug(
+                    "coordinates: %d total, %d unique, %d dupe",
+                    len(coords),
+                    coords.unique_count(),
+                    n_dupes,
+                )
+
+                if n_dupes:
+                    if rc_def.repeats.is_allowed:
+                        _log.debug("found %d repeat interactions", n_dupes)
+                        rc_def.repeats = AllowableTroolean.PRESENT
+                    else:
+                        _log.error(
+                            "found %d forbidden repeat interactions (of %d)",
+                            n_dupes,
+                            new_table.num_rows,
+                        )
+                        raise DataError(
+                            f"repeated interactions not allowed for relationship class {cls}"
+                        )
 
         # combine the tables to save them
         if cur_table is not None:
             new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
-        new_table = self._resolve_repeated_interactions(
-            t=new_table, rel=rc_def, remove_repeats=remove_repeats
-        )
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
         )
@@ -1055,8 +1064,9 @@ class DatasetBuilder:
             else:
                 rel = self.schema.relationships.get(n, None)
                 if rel is not None:
-                    self._check_repeat_interactions(t, rel)
-                    if not rel.repeats.is_forbidden and len(rel.entities) == 2:
+                    # currently not used due to coordinate table
+                    # self._check_repeat_interactions(t, rel)
+                    if rel.repeats.is_forbidden and len(rel.entities) == 2:
                         e_cols = [e + "_num" for e in rel.entities.keys()]
                         if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
                             log.debug("sorting non-repeating relationship %s", n)
