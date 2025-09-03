@@ -41,7 +41,6 @@ dependencies = [
   "prettytable ~=3.14",
   "xopen ~=2.0",
   "lazy-loader >=0.4",
-  "scikit-learn>=1.7.1",
 ]
 
 [dependency-groups]
