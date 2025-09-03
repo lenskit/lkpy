@@ -1611,7 +1611,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.5" },
     { name = "scikit-learn", marker = "extra == 'sklearn'", specifier = "~=1.2" },
     { name = "scipy", specifier = ">=1.11" },
-    { name = "setuptools", specifier = ">=0.80" },
+    { name = "setuptools", specifier = ">=80" },
     { name = "structlog", specifier = ">=23.2" },
     { name = "threadpoolctl", specifier = ">=3.0" },
     { name = "torch", specifier = "~=2.4" },

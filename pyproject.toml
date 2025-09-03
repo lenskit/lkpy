@@ -42,7 +42,7 @@ dependencies = [
   "xopen ~=2.0",
   "lazy-loader >=0.4",
   # torch inductor needs setuptools
-  "setuptools >=0.80",
+  "setuptools >=80",
 ]
 
 [dependency-groups]
