@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import math
+import platform
 from abc import abstractmethod
 from collections.abc import Callable, Generator, Sequence
 from dataclasses import dataclass, field, replace
@@ -83,7 +84,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     A logger, that is bound the current training status / position.
     """
 
-    fast_model: Callable[..., torch.Tensor]
+    train_model_call: Callable[..., torch.Tensor]
 
     def __init__(self, component: Comp, data: Dataset, options: TrainingOptions):
         ensure_parallel_init()
@@ -109,7 +110,12 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.component.model = self.model.to(self.device)
         self.model.train(True)
 
-        self.fast_model = torch.compile(self.model)
+        if platform.platform() in ("Linux", "Darwin"):
+            _log.debug("requesting inductor-compiled model")
+            self.train_model_call = torch.compile(self.model)
+        else:
+            _log.warn("inductor disabled on Windows")
+            self.train_model_call = self.model
 
         self.setup_optimizer()
 

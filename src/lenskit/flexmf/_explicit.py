@@ -108,11 +108,11 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
     @override
     def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
         if self.explicit_norm:
-            result = self.fast_model(batch.users, batch.items, return_norm=True)
+            result = self.train_model_call(batch.users, batch.items, return_norm=True)
             pred = result[0, :]
             norm = torch.mean(result[1, :]) * self.config.regularization
         else:
-            pred = self.fast_model(batch.users, batch.items, return_norm=False)
+            pred = self.train_model_call(batch.users, batch.items, return_norm=False)
             norm = 0.0
 
         loss = F.mse_loss(pred, batch.fields["ratings"])
