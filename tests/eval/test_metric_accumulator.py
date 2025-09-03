@@ -18,13 +18,13 @@ from lenskit.metrics import NDCG, Recall
 from lenskit.metrics._accum import MetricAccumulator, MetricWrapper
 from lenskit.metrics._base import GlobalMetric
 from lenskit.metrics.basic import ListLength
-from lenskit.metrics.predict import RMSE
 from lenskit.splitting import split_temporal_fraction
 
 _log = logging.getLogger(__name__)
 
 
 def test_accumulator_initial_state():
+    """Test MetricAccumulator has empty state."""
     acc = MetricAccumulator()
     assert acc.metrics == []
     assert acc.list_metrics().empty
@@ -32,6 +32,7 @@ def test_accumulator_initial_state():
 
 
 def test_unmeasured_metrics():
+    """Test that unmeasured metrics return default values in summary."""
     acc = MetricAccumulator()
     acc.add_metric(Recall(5))
     acc.add_metric(NDCG(5))
@@ -45,6 +46,7 @@ def test_unmeasured_metrics():
 
 
 def test_basic_metric_flow():
+    """Test basic metric measurement and aggregation flow."""
     acc = MetricAccumulator()
     acc.add_metric(ListLength())
 
@@ -65,6 +67,7 @@ def test_basic_metric_flow():
 
 
 def test_metric_accum(ml_ds):
+    """Test full metric accumulation workflow with real dataset."""
     split = split_temporal_fraction(ml_ds, 0.2, filter_test_users=True)
 
     scorer = PopScorer()
@@ -103,6 +106,7 @@ def test_metric_accum(ml_ds):
 
 
 def test_to_result_conversion():
+    """Test conversion of MetricAccumulator to RunAnalysisResult."""
     acc = MetricAccumulator()
     acc.add_metric(Recall(5))
     acc.add_metric(NDCG(5))
@@ -136,6 +140,7 @@ def test_to_result_conversion():
 
 
 def test_measure_list_multiple_key_fields():
+    """Test measuring lists with multiple identifying key fields."""
     acc = MetricAccumulator()
     acc.add_metric(ListLength())
 
@@ -186,6 +191,7 @@ def test_duplicate_metric_labels_raise():
 
 
 def test_metric_measure_list_exception_logs_warning(caplog):
+    """Test that exceptions during metric measurement are logged as warnings."""
     acc = MetricAccumulator()
 
     class BadMetric:
@@ -200,6 +206,7 @@ def test_metric_measure_list_exception_logs_warning(caplog):
 
 
 def test_measure_list_mixed_result_types():
+    """Test handling of metrics that return both scalar and dictionary results."""
     acc = MetricAccumulator()
 
     class DummyMetric(ListLength):
@@ -223,6 +230,133 @@ def test_measure_list_mixed_result_types():
     assert "D.b" in df.columns
 
 
+def test_global_metric_in_measure_list():
+    """Test that global metrics store None values during list measurement."""
+
+    class DummyGlobalMetric(GlobalMetric):
+        label = "Global"
+
+        def measure_run(self, run, test):
+            return 4.0
+
+    acc = MetricAccumulator()
+    acc.add_metric(DummyGlobalMetric())
+
+    acc.measure_list(ItemList([1, 2], user=["u1"] * 2), ItemList([1]), user="u1")
+
+    assert acc._list_data["Global"] == [None]
+    assert acc._list_metrics["Global"] == [None]
+
+    df = acc.list_metrics()
+    assert "Global" not in df.columns
+
+
+def test_add_metric_with_class_type():
+    """Test adding metric by passing class type instead of instance."""
+    acc = MetricAccumulator()
+
+    acc.add_metric(ListLength)
+
+    assert len(acc.metrics) == 1
+    assert isinstance(acc.metrics[0].metric, ListLength)
+    assert acc.metrics[0].label == "N"
+
+
+def test_metric_label_derivation():
+    """Test different ways metric labels are derived from various input types."""
+    acc = MetricAccumulator()
+
+    # Metric instance (has .label attribute)
+    metric_with_label = ListLength()
+    acc.add_metric(metric_with_label)
+    assert acc.metrics[0].label == "N"
+
+    # class type
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength)
+    assert acc.metrics[0].label == "N"
+
+    # callable
+    def dummy_metric_func(recs, test):
+        return 1.0
+
+    acc = MetricAccumulator()
+    acc.add_metric(dummy_metric_func)
+    assert acc.metrics[0].label == "function"
+
+
+def test_custom_label_override():
+    """Test that custom labels override default metric labels."""
+    acc = MetricAccumulator()
+
+    # custom label should override default
+    acc.add_metric(ListLength(), label="CustomLength")
+    assert acc.metrics[0].label == "CustomLength"
+
+
+def test_invalid_default_type():
+    """Test that invalid default types raise TypeError."""
+
+    class MetricWithBadDefault(ListLength):
+        label = "BadDefault"
+        default = "not_a_number"
+
+        def measure_list(self, recs, test):
+            return 1.0
+
+    acc = MetricAccumulator()
+
+    with raises(TypeError, match="metric .* has unsupported default"):
+        acc.add_metric(MetricWithBadDefault())
+
+
+def test_to_result_with_complex_summary():
+    """Test to_result method with complex nested summary data structures."""
+
+    class ComplexMetric:
+        label = "Complex"
+        default = 0.0
+
+        def measure_list(self, recs, test):
+            return {"sub1": 1.0, "sub2": 2.0}
+
+        def summarize(self, values):
+            return {"sub1": {"mean": 1.5, "std": 0.5}, "sub2": {"mean": 2.5, "std": 0.7}}
+
+    acc = MetricAccumulator()
+    acc.add_metric(ComplexMetric())
+
+    acc.measure_list(ItemList([1], user=["u1"]), ItemList([1]), user="u1")
+
+    result = acc.to_result()
+
+    global_metrics = result.global_metrics()
+    assert len(global_metrics) > 0
+
+
+def test_measure_run_with_non_global_metric():
+    """Test that measure_run fails with non-global metrics."""
+    mw = MetricWrapper(metric=ListLength(), label="test")
+
+    run = ItemListCollection([])
+    test = ItemListCollection([])
+
+    with raises(TypeError, match="does not support global measurement"):
+        mw.measure_run(run, test)
+
+
+def test_measure_list_with_non_metric():
+    """Test that measure_list fails with unsupported metric types."""
+
+    class UnsupportedMetric:
+        pass
+
+    mw = MetricWrapper(metric=UnsupportedMetric(), label="test")
+
+    with raises(TypeError, match="does not support list measurement"):
+        mw.measure_list(ItemList([1]), ItemList([1]))
+
+
 @mark.parametrize(
     "values,expected",
     [
@@ -235,6 +369,7 @@ def test_measure_list_mixed_result_types():
     ],
 )
 def test_default_summarize(values, expected):
+    """Test default summarization behavior with various input types."""
     mw = MetricWrapper(metric=None, label="test")
     result = mw._default_summarize(values)
 
@@ -248,6 +383,8 @@ def test_default_summarize(values, expected):
 
 
 def test_measure_run_with_global_metric():
+    """Test measure_run with global metrics."""
+
     class DummyGlobal(GlobalMetric):
         def measure_run(self, run, test):
             return 123.0
@@ -260,3 +397,32 @@ def test_measure_run_with_global_metric():
 
     result = mw.measure_run(run, test)
     assert result == 123.0
+
+
+def test_default_value_handling():
+    """Test different default value scenarios and inheritance."""
+
+    # ListMetric with default
+    class MetricWithDefault(ListLength):
+        label = "WithDefault"
+        default = 42.0
+
+        def measure_list(self, recs, test):
+            return 1.0
+
+    acc = MetricAccumulator()
+    acc.add_metric(MetricWithDefault())
+    assert acc.metrics[0].default == 42.0
+
+    # non-ListMetric (should default to 0.0)
+    def simple_metric(recs, test):
+        return 1.0
+
+    acc = MetricAccumulator()
+    acc.add_metric(simple_metric)
+    assert acc.metrics[0].default == 0.0
+
+    # custom default override
+    acc = MetricAccumulator()
+    acc.add_metric(MetricWithDefault(), default=99.0)
+    assert acc.metrics[0].default == 99.0
