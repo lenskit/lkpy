@@ -12,11 +12,10 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
-from importlib import import_module
 from inspect import isabstract, signature
 from types import FunctionType, NoneType
 
-from pydantic import JsonValue, TypeAdapter
+from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
     Any,
     Callable,
@@ -31,7 +30,7 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning
+from .types import Lazy, TypecheckWarning, resolve_type_string
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -205,6 +204,23 @@ class Component(ABC, Generic[COut, CArgs]):
         return f"<{self.__class__.__name__} {params}>"
 
 
+class PlaceholderConfig(BaseModel, extra="allow"):
+    """
+    Configuration for the placeholder component.
+    """
+
+    pass
+
+
+class Placeholder(Component[Any]):
+    """
+    Simple no-op component to use as a placeholder in partial pipelines.
+    """
+
+    def __call__(self, **kwargs: Any) -> Any:
+        raise NotImplementedError("attempted to invoke placeholder component")
+
+
 def instantiate_component(
     comp: str | type | FunctionType, config: Mapping[str, Any] | None
 ) -> Callable[..., object]:
@@ -216,9 +232,7 @@ def instantiate_component(
         Internal
     """
     if isinstance(comp, str):
-        mname, oname = comp.split(":", 1)
-        mod = import_module(mname)
-        comp = getattr(mod, oname)
+        comp = resolve_type_string(comp)
 
     # make the type checker happy
     assert not isinstance(comp, str)

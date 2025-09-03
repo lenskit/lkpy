@@ -86,7 +86,7 @@ Connecting with LensKit
     <i class="fa-solid fa-hammer"></i>
 
 
--   |subscribe| **Follow us** on |blusesky| or |mastodon|.  We post LensKit-related
+-   |subscribe| **Follow us** on |bluesky| or |mastodon|.  We post LensKit-related
     announcements and information, and love to hear what you're doing with
     LensKit.
 
