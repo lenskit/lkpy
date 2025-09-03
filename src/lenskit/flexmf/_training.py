@@ -110,7 +110,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.component.model = self.model.to(self.device)
         self.model.train(True)
 
-        if platform.platform() in ("Linux", "Darwin"):
+        if platform.system() in ("Linux", "Darwin"):
             _log.debug("requesting inductor-compiled model")
             self.train_model_call = torch.compile(self.model)
         else:
