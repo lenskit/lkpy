@@ -22,6 +22,8 @@ cov-reports/
 test-logs/
 htmlcov/
 perf.data*
+*.linux-perf.txt
+*.speedscope.json
 *.pkl
 *.zst
 *.gz
