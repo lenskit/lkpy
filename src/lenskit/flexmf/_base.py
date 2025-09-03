@@ -58,7 +58,7 @@ class FlexMFConfigBase:
     The regularization strength.
     """
 
-    reg_method: Literal["AdamW", "L2"] | None = "L2"
+    reg_method: Literal["AdamW", "L2"] | None = "AdamW"
     """
     The regularization method to use.
 
@@ -77,8 +77,8 @@ class FlexMFConfigBase:
 
     ``"AdamW"``
         Use :class:`torch.optim.AdamW` with the specified regularization
-        strength.  This configuration does *not* use sparse gradients and may
-        train more slowly.
+        strength.  This configuration does *not* use sparse gradients, but
+        training time is often comparable.
 
     .. note::
         Regularization values do not necessarily have the same range or meaning
