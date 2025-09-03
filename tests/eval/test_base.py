@@ -6,7 +6,7 @@
 
 import numpy as np
 
-from pytest import approx, fixture, mark
+from pytest import approx, fixture, mark, raises
 
 from lenskit.metrics._base import Metric
 from lenskit.testing import demo_recs
@@ -45,10 +45,10 @@ class DummyGlobalMetric(Metric):
         return True
 
     def measure_list(self, output, test, /):
-        return 0.0
+        raise NotImplementedError
 
     def summarize(self, values, /):
-        return {"mean": 0.0}
+        raise NotImplementedError
 
     def measure_run(self, outputs, test, /):
         return 0.0
@@ -85,7 +85,7 @@ def test_summarize(metric):
     }
 
 
-def test_global_metric(demo_recs):
+def test_globalmetric(demo_recs):
     split, recs = demo_recs
     from lenskit.metrics.bulk import RunAnalysis
 
@@ -96,3 +96,54 @@ def test_global_metric(demo_recs):
     global_results = result.global_metrics()
 
     assert global_results["DummyGlobalMetric"] == 0.0
+
+
+def test_listmetric():
+    class LM(Metric):
+        def measure_list(self, output, test, /):
+            return 1.0
+
+        def summarize(self, values, /):
+            return {"mean": 1.0}
+
+    m = LM()
+    assert m.extract_list_metrics(5) == 5.0
+    assert m.extract_list_metrics("non-numeric") is None
+
+
+def test_decomposedmetric():
+    class DM(Metric):
+        def compute_list_data(self, output, test, /):
+            return {"val": 4}
+
+        def extract_list_metric(self, data, /):
+            return 99
+
+        def measure_list(self, output, test, /):
+            return self.compute_list_data(output, test)
+
+        def extract_list_metrics(self, data, /):
+            return self.extract_list_metric(data)
+
+        def summarize(self, values, /):
+            result = {"agg": float(len(values))}
+            return result
+
+    dm = DM()
+
+    result = dm.measure_list([], [])
+    assert result == {"val": 4}
+
+    extracted = dm.extract_list_metrics(result)
+    assert extracted == 99
+
+    summary = dm.summarize([{"val": 1}, {"val": 2}])
+    assert summary == {"agg": 2.0}
+
+
+def test_globalmetric_notimplemented():
+    gm = DummyGlobalMetric()
+    with raises(NotImplementedError):
+        gm.measure_list([], [])
+    with raises(NotImplementedError):
+        gm.summarize([1, 2, 3])
