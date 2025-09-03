@@ -101,7 +101,7 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
         )
 
     @override
-    def train_batch(self, batch: FlexMFTrainingBatch) -> float:
+    def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
         if self.explicit_norm:
             result = self.model(batch.users, batch.items, return_norm=True)
             pred = result[0, :]
@@ -117,4 +117,4 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
         loss_all.backward()
         self.opt.step()
 
-        return loss.item()
+        return loss

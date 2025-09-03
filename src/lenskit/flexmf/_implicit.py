@@ -190,9 +190,9 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
         return scores, norms
 
-    def train_batch(self, batch: FlexMFTrainingBatch) -> float:
-        users = torch.as_tensor(batch.users.reshape(-1, 1)).to(self.device)
-        positives = torch.as_tensor(batch.items.reshape(-1, 1)).to(self.device)
+    def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
+        users = torch.as_tensor(batch.users.reshape(-1, 1)).to(self.device, non_blocking=True)
+        positives = torch.as_tensor(batch.items.reshape(-1, 1)).to(self.device, non_blocking=True)
 
         pos_pred, pos_norm = self.score(users, positives)
 
@@ -206,7 +206,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         loss.backward()
         self.opt.step()
 
-        return loss.item()
+        return loss
 
     def scored_negatives(
         self, batch: FlexMFTrainingBatch, users: torch.Tensor, pos_scores: torch.Tensor
@@ -220,7 +220,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
                 n=self.config.negative_count,
                 rng=self.rng,
             )
-        ).to(users.device)
+        ).to(users.device, non_blocking=True)
         scores, norms = self.score(users, items)
         return items, scores, norms, None
 

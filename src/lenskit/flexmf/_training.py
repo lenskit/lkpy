@@ -129,7 +129,8 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         elog.debug("creating epoch training data")
         epoch_data = self.epoch_data()
 
-        tot_loss = 0.0
+        tot_loss = torch.tensor(0.0).to(self.device)
+        avg_loss = np.nan
         with item_progress(
             f"Training epoch {epoch}", epoch_data.batch_count, {"loss": ".3f"}
         ) as pb:
@@ -140,10 +141,12 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
                 self.opt.zero_grad()
                 loss = self.train_batch(batch)
 
-                pb.update(loss=loss)
+                if i % 20 == 0:
+                    avg_loss = tot_loss.item() / epoch_data.batch_count
+                pb.update(loss=avg_loss)
                 tot_loss += loss
 
-        avg_loss = tot_loss / epoch_data.batch_count
+        avg_loss = tot_loss.item() / epoch_data.batch_count
         elog.debug("epoch complete", loss=avg_loss)
         self.epochs_trained += 1
         return {"loss": avg_loss}
