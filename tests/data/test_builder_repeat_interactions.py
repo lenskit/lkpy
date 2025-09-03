@@ -49,7 +49,6 @@ def test_add_repeated_interactions():
 
 def test_remove_repeat_in_repeated_interactions():
     dsb = DatasetBuilder()
-    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=True, interaction=True)
     dsb.add_interactions(
         "click",
         pd.DataFrame(
@@ -60,12 +59,13 @@ def test_remove_repeat_in_repeated_interactions():
             }
         ),
         missing="insert",
+        allow_repeats=True,
         remove_repeats=True,
     )
 
     ds = dsb.build()
     log = ds.interactions()
-    assert log.schema.repeats == AllowableTroolean.ALLOWED
+    assert log.schema.repeats.is_allowed
     log = ds.interactions().pandas()
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_num", "item_num", "timestamp"])
@@ -75,7 +75,6 @@ def test_remove_repeat_in_repeated_interactions():
 
 def test_remove_repeat_with_forbidden_repeat():
     dsb = DatasetBuilder()
-    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=False, interaction=True)
     dsb.add_interactions(
         "click",
         pd.DataFrame(
@@ -86,6 +85,7 @@ def test_remove_repeat_with_forbidden_repeat():
             }
         ),
         missing="insert",
+        allow_repeats=False,
         remove_repeats=True,
     )
 
@@ -144,8 +144,9 @@ def test_remove_repeat_interaction_at_builder_saves_last_interaction():
 
     ds = dsb.build()
     log = ds.interactions().pandas()
-    repeat_row = log.loc[2]
-    assert repeat_row["rating"] == 3
+    log = log[(log["user_num"] == 1) & (log["item_num"] == 2)]
+    assert len(log) == 1
+    assert log["rating"][5] == 3
 
 
 def test_remove_repeat_interaction_at_matrix_saves_last_interaction():
@@ -168,8 +169,9 @@ def test_remove_repeat_interaction_at_matrix_saves_last_interaction():
 
     ds = dsb.build()
     log = ds.interactions().matrix().pandas()
-    repeat_row = log.loc[2]
-    assert repeat_row["rating"] == 3
+    log = log[(log["user_num"] == 1) & (log["item_num"] == 2)]
+    assert len(log) == 1
+    assert log["rating"][2] == 3
 
 
 def test_bad_interaction_matrix_call():
