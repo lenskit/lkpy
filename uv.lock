@@ -1614,14 +1614,14 @@ requires-dist = [
     { name = "setuptools", specifier = ">=80" },
     { name = "structlog", specifier = ">=23.2" },
     { name = "threadpoolctl", specifier = ">=3.0" },
-    { name = "torch", specifier = "~=2.5" },
+    { name = "torch", specifier = "~=2.6" },
     { name = "typing-extensions", specifier = "~=4.12" },
     { name = "xopen", specifier = "~=2.0" },
 ]
 provides-extras = ["sklearn", "funksvd", "hpf", "implicit", "notebook", "ray"]
 
 [package.metadata.requires-dev]
-cpu = [{ name = "torch", specifier = "~=2.5", index = "https://download.pytorch.org/whl/cpu/", conflict = { package = "lenskit", group = "cpu" } }]
+cpu = [{ name = "torch", specifier = "~=2.6", index = "https://download.pytorch.org/whl/cpu/", conflict = { package = "lenskit", group = "cpu" } }]
 demo = [
     { name = "matplotlib", specifier = "~=3.4" },
     { name = "nbformat", specifier = ">=5.2" },
@@ -1686,7 +1686,7 @@ doc = [
     { name = "sphinxcontrib-mermaid", specifier = ">=1.0.0,<2" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
 ]
-gpu = [{ name = "torch", specifier = "~=2.5", index = "https://download.pytorch.org/whl/cu128/", conflict = { package = "lenskit", group = "gpu" } }]
+gpu = [{ name = "torch", specifier = "~=2.6", index = "https://download.pytorch.org/whl/cu128/", conflict = { package = "lenskit", group = "gpu" } }]
 package = [
     { name = "lazy-loader", specifier = ">=0.4" },
     { name = "maturin", specifier = "~=1.0" },
