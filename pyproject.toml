@@ -25,7 +25,7 @@ dependencies = [
   "pyarrow >=20,<21",
   "numpy >=1.25",
   "scipy >=1.11",
-  "torch ~=2.4",
+  "torch ~=2.5",
   "more-itertools >=9.0",
   "threadpoolctl >=3.0",
   "structlog >=23.2",
@@ -109,8 +109,8 @@ dev = [
   "maturin>=1.8.3",
   "py-spy>=0.4.1",
 ]
-cpu = ["torch ~=2.4"]
-gpu = ["torch ~=2.4"]
+cpu = ["torch ~=2.5"]
+gpu = ["torch ~=2.5"]
 
 [project.optional-dependencies]
 sklearn = ["scikit-learn ~=1.2"]
