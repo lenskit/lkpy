@@ -84,7 +84,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     A logger, that is bound the current training status / position.
     """
 
-    train_model_call: Callable[..., torch.Tensor]
+    _compiled_model: Callable[..., torch.Tensor] | None
 
     def __init__(self, component: Comp, data: Dataset, options: TrainingOptions):
         ensure_parallel_init()
@@ -110,12 +110,13 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.component.model = self.model.to(self.device)
         self.model.train(True)
 
-        if platform.system() in ("Linux", "Darwin"):
-            _log.debug("requesting inductor-compiled model")
-            self.train_model_call = torch.compile(self.model)
+        if platform.system() not in ("Linux", "Darwin"):
+            _log.warn("compiled models are only usable on Linux and macOS")
+        elif torch.__version__ < "2.8":
+            _log.warn("compiled models require Torch >=2.8")
         else:
-            _log.warn("inductor disabled on Windows")
-            self.train_model_call = self.model
+            _log.debug("compiling FlexMF model")
+            self._compiled_model = torch.compile(self.model)
 
         self.setup_optimizer()
 
@@ -132,6 +133,15 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         Get model being trained.
         """
         return self.component.model
+
+    def call_model(self, *args, **kwargs) -> torch.Tensor:
+        """
+        Invoke the model, using the compiled version if available.
+        """
+        if self._compiled_model is not None:
+            return self._compiled_model(*args, **kwargs)
+        else:
+            return self.model(*args, **kwargs)
 
     def train_epoch(self) -> dict[str, float]:
         epoch = self.epochs_trained + 1

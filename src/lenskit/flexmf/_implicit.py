@@ -185,7 +185,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
             norms = result[1, ...]
         else:
-            scores = self.train_model_call(users, items, return_norm=False)
+            scores = self.call_model(users, items, return_norm=False)
             norms = torch.tensor(0.0)
 
         return scores, norms
