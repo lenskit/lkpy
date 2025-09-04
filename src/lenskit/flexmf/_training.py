@@ -84,7 +84,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     A logger, that is bound the current training status / position.
     """
 
-    _compiled_model: Callable[..., torch.Tensor] | None
+    _compiled_model: Callable[..., torch.Tensor] | None = None
 
     def __init__(self, component: Comp, data: Dataset, options: TrainingOptions):
         ensure_parallel_init()
