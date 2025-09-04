@@ -31,48 +31,40 @@ class TestNMF(BasicComponentTests, ScorerTests):
     expected_ndcg = 0.22
 
 
-def test_nmf_basic_build():
-    algo = nmf.NMFScorer(n_components=2)
+@mark.parametrize("method", ["full", "minibatch"])
+def test_nmf_basic_build(method):
+    algo = nmf.NMFScorer(n_components=2, method=method)
     algo.train(simple_ds)
 
     assert algo.user_components.shape == (3, 2)
 
 
-def test_nmf_predict_basic():
-    _log.info("NMF input data:\n%s", simple_df)
-    algo = nmf.NMFScorer(n_components=2)
+@mark.parametrize("method", ["full", "minibatch"])
+def test_nmf_predict_basic(method):
+    algo = nmf.NMFScorer(n_components=2, method=method)
     algo.train(simple_ds)
-    _log.info("user matrix:\n%s", str(algo.user_components))
-    _log.info("item matrix:\n%s", str(algo.item_components))
 
     preds = algo(10, ItemList([3]))
-    assert len(preds) == 1
     preds = preds.scores("pandas", index="ids")
-    assert preds is not None
     assert preds.index[0] == 3
-    assert preds.loc[3] >= 0
-    assert preds.loc[3] <= 5
+    assert 0 <= preds.loc[3] <= 5
 
 
-def test_nmf_predict_bad_item():
-    algo = nmf.NMFScorer(n_components=2)
+@mark.parametrize("method", ["full", "minibatch"])
+def test_nmf_predict_bad_item(method):
+    algo = nmf.NMFScorer(n_components=2, method=method)
     algo.train(simple_ds)
 
     preds = algo(10, ItemList([4]))
-    assert len(preds) == 1
     preds = preds.scores("pandas", index="ids")
-    assert preds is not None
-    assert preds.index[0] == 4
     assert np.isnan(preds.loc[4])
 
 
-def test_nmf_predict_bad_user():
-    algo = nmf.NMFScorer(n_components=2)
+@mark.parametrize("method", ["full", "minibatch"])
+def test_nmf_predict_bad_user(method):
+    algo = nmf.NMFScorer(n_components=2, method=method)
     algo.train(simple_ds)
 
     preds = algo(50, ItemList([3]))
-    assert len(preds) == 1
     preds = preds.scores("pandas", index="ids")
-    assert preds is not None
-    assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])

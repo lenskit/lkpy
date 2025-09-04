@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import numpy as np
 from pydantic import AliasChoices, BaseModel, Field
-from sklearn.decomposition import non_negative_factorization
+from sklearn.decomposition import non_negative_factorization, MiniBatchNMF
 from typing_extensions import Literal, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
@@ -44,6 +44,7 @@ class NMFConfig(BaseModel, extra="forbid"):
     alpha_W: float = 0.0
     alpha_H: float | Literal["same"] = "same"
     l1_ratio: float = 0.0
+    method: Literal["full", "minibatch"] = "full"
 
 
 class NMFScorer(Component[ItemList], Trainable):
@@ -73,16 +74,31 @@ class NMFScorer(Component[ItemList], Trainable):
         _log.info("[%s] sparsifying and normalizing matrix", timer)
         r_mat = data.interactions().matrix().scipy(layout="csr", legacy=True)
 
-        _log.info("[%s] training NMF", timer)
-        W, H, n_iter = non_negative_factorization(
-            r_mat,
-            beta_loss=self.config.beta_loss,
-            max_iter=self.config.max_iter,
-            n_components=self.config.n_components,
-            alpha_W=self.config.alpha_W,
-            alpha_H=self.config.alpha_H,
-            l1_ratio=self.config.l1_ratio,
-        )
+        _log.info("[%s] training NMF (%s)", timer, self.config.method)
+
+        if self.config.method == "full":
+            W, H, n_iter = non_negative_factorization(
+                r_mat,
+                beta_loss=self.config.beta_loss,
+                max_iter=self.config.max_iter,
+                n_components=self.config.n_components,
+                alpha_W=self.config.alpha_W,
+                alpha_H=self.config.alpha_H,
+                l1_ratio=self.config.l1_ratio,
+            )
+        else:  # minibatch
+            model = MiniBatchNMF(
+                beta_loss=self.config.beta_loss,
+                max_iter=self.config.max_iter,
+                n_components=self.config.n_components,
+                alpha_W=self.config.alpha_W,
+                alpha_H=self.config.alpha_H,
+                l1_ratio=self.config.l1_ratio,
+            )
+            W = model.fit_transform(r_mat)
+            H = model.components_
+            n_iter = model.n_iter_
+
         _log.info("[%s] Trained NMF in %d iterations", timer, n_iter)
 
         self.user_components = np.require(W, dtype=np.float32)
