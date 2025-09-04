@@ -108,6 +108,7 @@ dev = [
   "zstandard>=0.23.0",
   "maturin>=1.8.3",
   "py-spy>=0.4.1",
+  "nox>=2025.5.1",
 ]
 cpu = ["torch ~=2.4"]
 gpu = ["torch ~=2.4"]

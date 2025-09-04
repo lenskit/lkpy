@@ -38,6 +38,7 @@ dask-worker-space/
 .*_cache/
 .hypothesis/
 .tox/
+.nox/
 .vagrant/
 .venv/
 .pixi/
