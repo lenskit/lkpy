@@ -104,6 +104,48 @@ def test_add_interactions_table():
     assert np.all(mat.rowptrs == [0, 2, 3, 6])
 
 
+def test_add_interactions_count_method():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c"],
+                "item_id": ["x", "y", "z", "x", "y", "z"],
+                "count": np.arange(1, 7),
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().count()
+    assert log == 21
+
+
+def test_add_interactions_count_method_with_null():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c"],
+                "item_id": ["x", "y", "z", "x", "y", "z"],
+                "count": [1, 2, None, 4, 5, 6],
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    log = ds.interactions().count()
+    assert log == 19
+
+
 def test_add_interactions_error_bad_ids():
     dsb = DatasetBuilder()
     dsb.add_entities("user", ["a", "b", "c"])
@@ -193,53 +235,9 @@ def test_add_interactions_filter_bad_ids():
     assert len(ds.user_row("c")) == 2
 
 
-@mark.xfail(reason="repeated interactions not yet implemented")
-def test_add_repeated_interactions():
-    dsb = DatasetBuilder()
-
-    dsb.add_interactions(
-        "click",
-        pd.DataFrame(
-            {
-                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
-                "item_id": ["x", "y", "z", "x", "y", "z", "z"],
-                "timestamp": np.arange(1, 8) * 10,
-            }
-        ),
-        entities=["user", "item"],
-        missing="insert",
-    )
-
-    ds = dsb.build()
-    assert ds.user_count == 3
-    assert ds.item_count == 3
-    assert np.all(ds.users.ids() == ["a", "b", "c"])
-    assert np.all(ds.items.ids() == ["x", "y", "z"])
-
-    log = ds.interaction_table(format="pandas", original_ids=True)
-    assert isinstance(log, pd.DataFrame)
-    assert all(log.columns == ["user_id", "item_id"])
-    assert len(log) == 7
-
-    mat = ds.interaction_matrix(format="structure")
-    assert mat.nnz == 6
-    assert np.all(mat.rowptrs == [0, 2, 3, 5])
-
-    mat = ds.interaction_matrix(format="scipy", field="timestamp", combine="last")
-    assert mat[1, 1] == 70
-
-    mat = ds.interaction_matrix(format="scipy", field="timestamp", combine="first")
-    assert mat[1, 1] == 30
-
-    assert len(ds.user_row("a")) == 2
-    assert len(ds.user_row("b")) == 1
-    assert len(ds.user_row("c")) == 3
-
-
 def test_add_interactions_forbidden_repeat():
     dsb = DatasetBuilder()
     dsb.add_relationship_class("click", ["user", "item"], allow_repeats=False)
-
     with raises(DataError, match="repeated"):
         dsb.add_interactions(
             "click",
@@ -252,6 +250,36 @@ def test_add_interactions_forbidden_repeat():
             ),
             missing="insert",
         )
+        dsb.build()
+
+
+def test_add_multiple_interactions_forbidden_repeat():
+    dsb = DatasetBuilder()
+    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=False)
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c"],
+                "item_id": ["x", "y", "z", "x"],
+                "timestamp": np.arange(1, 5) * 10,
+            }
+        ),
+        missing="insert",
+    )
+    with raises(DataError, match="repeated"):
+        dsb.add_interactions(
+            "click",
+            pd.DataFrame(
+                {
+                    "user_id": ["c", "c", "b"],
+                    "item_id": ["y", "z", "z"],
+                    "timestamp": np.arange(5, 8) * 10,
+                }
+            ),
+            missing="insert",
+        )
+        dsb.build()
 
 
 def test_add_auto_entities():
@@ -270,6 +298,7 @@ def test_add_auto_entities():
             missing="insert",
         )
 
+    dsb.build()
     rsc = dsb.relationship_classes()["click"]
     assert rsc.repeats == AllowableTroolean.PRESENT
     assert rsc.entity_class_names == ["user", "item"]
