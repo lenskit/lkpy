@@ -453,7 +453,9 @@ class DatasetBuilder:
         log.debug("adding %d new rows", new_table.num_rows)
 
         cur_table = self._tables[cls]
+
         # combine the tables to save them
+        incoming_table = new_table
         if cur_table is not None:
             new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
@@ -486,7 +488,7 @@ class DatasetBuilder:
                     self._rel_coords[cls] = coords
 
                 # add the new data
-                coords.extend(new_table.select(link_nums.keys()).to_batches())
+                coords.extend(incoming_table.select(link_nums.keys()).to_batches())
                 n_dupes = len(coords) - coords.unique_count()
                 _log.debug(
                     "coordinates: %d total, %d unique, %d dupe",
