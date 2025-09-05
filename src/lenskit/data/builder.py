@@ -63,10 +63,6 @@ MissingEntityAction: TypeAlias = Literal["insert", "filter", "error"]
 """
 Action to take when a relationship references a missing entity.
 """
-RepeatOption: TypeAlias = Literal["allow", "forbid", "remove", "remove-duplicate"]
-"""
-Defines how should repeated interactions be handled.
-"""
 
 
 class DatasetBuilder:
@@ -561,7 +557,7 @@ class DatasetBuilder:
                 What to do when interactions reference nonexisting entities; can
                 be ``"error"`` or ``"insert"``.
             allow_repeats:
-                Whether repeated interactions are allowed, forbidden, or removed.
+                Whether repeated interactions are allowed.
             default:
                 If ``True``, set this as the default interaction class (if the
                 dataset has more than one interaction class).
@@ -1088,18 +1084,6 @@ class DatasetBuilder:
         container = self.build_container()
         container.save(path)
 
-    def _check_repeat_interactions(self, t: pa.Table, rel: RelationshipSchema):
-        _log.debug("checking for repeated interactions")
-        temp_t = t.group_by([entity + "_num" for entity in rel.entity_class_names]).aggregate(
-            [([], "count_all")]
-        )
-        repeat = pc.any(pc.greater(temp_t["count_all"], pa.scalar(1))).as_py()
-        if repeat:
-            if rel.repeats.is_allowed:
-                rel.repeats = AllowableTroolean.PRESENT
-            if rel.repeats.is_forbidden:
-                raise DataError("repeated interactions not allowed for relationship class")
-
     def _remove_duplicated_relationships(self, t: pa.Table) -> pa.Table:
         temp_df = t.to_pandas()
         temp_df.drop_duplicates(inplace=True)
@@ -1128,16 +1112,6 @@ class DatasetBuilder:
         if vocab is None:
             return pa.nulls(len(tgt_ids), type=pa.int32())
         return vocab.numbers(tgt_ids, format="arrow", missing="null")
-
-    def _resolve_repeated_interactions(
-        self, t: pa.Table, rel: RelationshipSchema, remove_repeats: bool | Literal["exact"]
-    ) -> pa.Table:
-        if remove_repeats:
-            if remove_repeats == "exact":
-                t = self._remove_duplicated_relationships(t)
-            else:
-                t = self._remove_repeated_relationships(t, rel)
-        return t
 
 
 def _expand_and_align_list_array(
