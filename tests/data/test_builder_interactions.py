@@ -253,6 +253,35 @@ def test_add_interactions_forbidden_repeat():
         dsb.build()
 
 
+def test_add_multiple_interactions_forbidden_repeat():
+    dsb = DatasetBuilder()
+    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=False)
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c"],
+                "item_id": ["x", "y", "z", "x"],
+                "timestamp": np.arange(1, 5) * 10,
+            }
+        ),
+        missing="insert",
+    )
+    with raises(DataError, match="repeated"):
+        dsb.add_interactions(
+            "click",
+            pd.DataFrame(
+                {
+                    "user_id": ["c", "c", "b"],
+                    "item_id": ["y", "z", "z"],
+                    "timestamp": np.arange(5, 8) * 10,
+                }
+            ),
+            missing="insert",
+        )
+        dsb.build()
+
+
 def test_add_auto_entities():
     dsb = DatasetBuilder()
 
