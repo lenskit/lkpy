@@ -455,6 +455,9 @@ class DatasetBuilder:
         log.debug("adding %d new rows", new_table.num_rows)
 
         cur_table = self._tables[cls]
+        # combine the tables to save them
+        if cur_table is not None:
+            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         if remove_repeats and remove_repeats != "exact":
             new_table = self._remove_repeated_relationships(t=new_table, rel=rc_def)
@@ -507,10 +510,6 @@ class DatasetBuilder:
                         raise DataError(
                             f"repeated interactions not allowed for relationship class {cls}"
                         )
-
-        # combine the tables to save them
-        if cur_table is not None:
-            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
