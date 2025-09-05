@@ -3,6 +3,7 @@ name = "lenskit"
 version = "2025.3.0-alpha.4"
 edition = "2021"
 license = "MIT"
+rust-version = "1.87"
 
 [lib]
 name = "_accel"
@@ -20,6 +21,8 @@ rayon = "^1.10"
 hashbrown = "^0.15"
 hex = "^0.4"
 ordered-float = "^5"
+rand = "^0.9"
+rand_pcg = "^0.9"
 rustc-hash = "^2.1.1"
 sha1 = "^0.10"
 

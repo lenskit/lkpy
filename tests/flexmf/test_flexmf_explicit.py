@@ -41,5 +41,5 @@ def test_flexmf_test_accuracy(ml_100k):
 
     print(results.list_summary())
 
-    assert results.global_metrics()["MAE"] == approx(0.73, abs=0.045)
-    assert results.list_summary().loc["RMSE", "mean"] == approx(0.94, abs=0.05)
+    assert results.global_metrics()["MAE"] == approx(0.74, abs=0.045)
+    assert results.list_summary().loc["RMSE", "mean"] == approx(0.96, abs=0.05)

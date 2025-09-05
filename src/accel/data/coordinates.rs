@@ -22,7 +22,7 @@ use rustc_hash::FxHasher;
 
 /// Two-element indices for chunked lookup.
 #[derive(Debug, Clone, Copy)]
-struct ChunkIndex {
+pub struct ChunkIndex {
     /// The chunk number.
     chunk: u32,
     /// The index within a chunk.
@@ -110,18 +110,31 @@ impl CoordinateTable {
     }
 
     /// Query if the index contains the specified coordinates.
+    fn contains_pair(&self, r: i32, c: i32) -> bool {
+        let coords = [r, c];
+        self.lookup(&coords)
+            .map(|cx| self.global_index(&cx))
+            .is_some()
+    }
+
+    /// Query if the index contains the specified coordinates.
     #[pyo3(signature = (*coords))]
     fn find(&self, coords: Vec<i32>) -> Option<usize> {
         self.lookup(&coords).map(|cx| self.global_index(&cx))
     }
+
+    /// Get the cooridnate value for the specified dimension and psoition.
+    pub fn _get_coord(&self, dim: usize, position: usize) -> i32 {
+        self.get(dim, position)
+    }
 }
 
 impl CoordinateTable {
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.n_rows
     }
 
-    fn global_index(&self, cx: &ChunkIndex) -> usize {
+    pub fn global_index(&self, cx: &ChunkIndex) -> usize {
         let base = self.offsets[cx.chunk_index()];
         base + cx.item_index()
     }
@@ -153,7 +166,8 @@ impl CoordinateTable {
     /// Add coordinates from a slice of arrays.
     fn add_arrays(&mut self, n: usize, arrays: Vec<Int32Array>) -> PyResult<(usize, usize)> {
         let chunk = self.chunks.len() as u32;
-        self.offsets.push(arrays[0].len());
+        self.offsets
+            .push(self.offsets[chunk as usize] + arrays[0].len());
         self.chunks.push(arrays);
         let mut added = 0;
         let mut uq_added = 0;
@@ -178,11 +192,23 @@ impl CoordinateTable {
         Ok((added, uq_added))
     }
 
-    fn lookup(&self, coords: &[i32]) -> Option<ChunkIndex> {
+    pub fn lookup(&self, coords: &[i32]) -> Option<ChunkIndex> {
         let hash = hash_coords(coords);
         self.index
             .find(hash, |cx| compare_coords(&self.chunks, cx, coords))
             .copied()
+    }
+
+    pub fn get(&self, dim: usize, entry: usize) -> i32 {
+        let chunk = match self.offsets.binary_search(&entry) {
+            // Exact match: offset points to beginning, so will be first element of chunk
+            Ok(c) => c,
+            // Non-exact match: index of the _next_ item, because we would
+            // insert item after the offset.
+            Err(c) => c - 1,
+        };
+        let row = entry - self.offsets[chunk];
+        self.chunks[chunk][dim].value(row)
     }
 }
 

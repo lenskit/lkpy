@@ -18,7 +18,7 @@ from graphlib import CycleError, TopologicalSorter
 from types import UnionType
 from uuid import NAMESPACE_URL, uuid5
 
-from typing_extensions import Any, Literal, Self, TypeVar, cast, overload
+from typing_extensions import Any, Literal, TypeVar, cast, overload
 
 from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
@@ -44,7 +44,7 @@ from .nodes import (
     LiteralNode,
     Node,
 )
-from .types import TypecheckWarning, parse_type_string
+from .types import TypecheckWarning, resolve_type_string
 
 _log = get_logger(__name__)
 
@@ -281,7 +281,7 @@ class PipelineBuilder:
             else:
                 raise e
 
-    def alias(self, alias: str, node: Node[Any] | str) -> None:
+    def alias(self, alias: str, node: Node[Any] | str, *, _replace: bool = False) -> None:
         """
         Create an alias for a node.  After aliasing, the node can be retrieved
         from :meth:`node` using either its original name or its alias.
@@ -297,7 +297,11 @@ class PipelineBuilder:
                 if the alias is already used as an alias or node name.
         """
         node = self.node(node)
-        self._check_available_name(alias)
+        if _replace:
+            if alias in self._nodes:
+                del self._nodes[alias]
+        else:
+            self._check_available_name(alias)
         self._aliases[alias] = node
 
     @overload
@@ -613,7 +617,7 @@ class PipelineBuilder:
         return config.hash_config(cfg)
 
     @classmethod
-    def from_config(cls, config: object) -> Self:
+    def from_config(cls, config: object) -> PipelineBuilder:
         """
         Reconstruct a pipeline builder from a serialized configuration.
 
@@ -632,57 +636,93 @@ class PipelineBuilder:
                 configuration includes a hash but the constructed pipeline does
                 not have a matching hash.
         """
+        from .common import topn_builder, topn_predict_builder
+
         cfg = PipelineConfig.model_validate(config)
-        builder = cls()
-        for inpt in cfg.inputs:
+
+        base = cfg.options.base if cfg.options else None
+        if base is None:
+            extend = False
+            builder = cls()
+        else:
+            extend = True
+            match base:
+                case "std:topn":
+                    builder = topn_builder(cfg.meta.name, cfg.options)
+                case "std:topn-predict":
+                    builder = topn_predict_builder(cfg.meta.name, cfg.options)
+                case s if s.startswith("std:"):
+                    raise ValueError(f"unknown pipeline base {s}")
+                case _:
+                    raise NotImplementedError("non-standard bases not yet supported")
+
+        builder.apply_config(cfg, extend=extend)
+
+        return builder
+
+    def apply_config(self, config: PipelineConfig, *, extend: bool = False):
+        """
+        Apply a configuration to this builder.
+
+        Args:
+            config:
+                The pipeline configuration to apply.
+            extend:
+                Whether the configuration should extend the current pipeline, or
+                fail when there are conflicting definitions.
+        """
+        for inpt in config.inputs:
             types: list[type[Any] | None] = []
             if inpt.types is not None:
-                types += [parse_type_string(t) for t in inpt.types]
-            builder.create_input(inpt.name, *types)
+                types += [resolve_type_string(t) for t in inpt.types]
+            self.create_input(inpt.name, *types)
 
         # we now add the components and other nodes in multiple passes to ensure
         # that nodes are available before they are wired (since `connect` can
         # introduce out-of-order dependencies).
 
         # pass 1: add literals
-        for name, data in cfg.literals.items():
-            builder.literal(data.decode(), name=name)
+        for name, data in config.literals.items():
+            self.literal(data.decode(), name=name)
 
         # pass 2: add components
         to_wire: list[config.PipelineComponent] = []
-        for name, comp in cfg.components.items():
+        for name, comp in config.components.items():
             if comp.code.startswith("@"):
                 # ignore special nodes in first pass
                 continue
 
             obj = instantiate_component(comp.code, comp.config)
-            builder.add_component(name, obj)
+            if extend and name in self._aliases:
+                del self._aliases[name]
+            if extend and name in self._nodes:
+                self.replace_component(name, obj)
+            else:
+                self.add_component(name, obj)
             to_wire.append(comp)
 
         # pass 3: wiring
-        for name, comp in cfg.components.items():
-            inputs = {n: builder.node(t) for (n, t) in comp.inputs.items()}
-            builder.connect(name, **inputs)
+        for name, comp in config.components.items():
+            inputs = {n: self.node(t) for (n, t) in comp.inputs.items()}
+            self.connect(name, **inputs)
 
         # pass 4: aliases
-        for n, t in cfg.aliases.items():
-            builder.alias(n, t)
+        for n, t in config.aliases.items():
+            self.alias(n, t, _replace=extend)
 
-        builder._default = cfg.default
-        builder._run_hooks = {
-            name: [HookEntry(parse_type_string(h.function), h.priority) for h in hooks]
-            for name, hooks in cfg.hooks.run.items()
+        self._default = config.default
+        self._run_hooks = {
+            name: [HookEntry(resolve_type_string(h.function), h.priority) for h in hooks]
+            for name, hooks in config.hooks.run.items()
         }
 
-        if cfg.meta.hash is not None:
-            h2 = builder.config_hash()
-            if h2 != cfg.meta.hash:
+        if config.meta.hash is not None:
+            h2 = self.config_hash()
+            if h2 != config.meta.hash:
                 _log.warning("loaded pipeline does not match hash")
                 warnings.warn(
                     "loaded pipeline config does not match hash", PipelineWarning, stacklevel=2
                 )
-
-        return builder
 
     def use_first_of(self, name: str, primary: Node[T | None], fallback: Node[T]) -> Node[T]:
         """

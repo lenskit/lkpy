@@ -32,6 +32,9 @@ from pathlib import Path
 import tomlkit
 from docopt import docopt
 
+if prj_root := os.environ.get("MISE_PROJECT_ROOT", None):
+    sys.path.insert(0, f"{prj_root}/src")
+
 from lenskit._version import lenskit_version
 
 _log = logging.getLogger("lenskit.version-tool")
