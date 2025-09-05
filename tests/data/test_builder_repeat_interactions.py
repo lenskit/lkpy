@@ -176,7 +176,7 @@ def test_remove_repeat_interaction_at_matrix_saves_last_interaction():
     assert log["rating"][2] == 3
 
 
-def test_remove_repeat_in_two_added_interactions():
+def test_remove_repeat_in_multiple_added_interactions():
     dsb = DatasetBuilder()
     dsb.add_relationship_class("click", ["user", "item"], allow_repeats=True, interaction=True)
     dsb.add_interactions(
@@ -216,7 +216,7 @@ def test_remove_repeat_in_two_added_interactions():
     assert len(log[log.user_num == 1]) == 1
 
 
-def test_remove_duplicate_in_two_added_interactions():
+def test_remove_duplicate_in_multiple_added_interactions():
     dsb = DatasetBuilder()
     dsb.add_relationship_class("click", ["user", "item"], allow_repeats=True, interaction=True)
     dsb.add_interactions(
