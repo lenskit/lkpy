@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import torch
 from torch.nn import functional as F
-from typing_extensions import override
+from typing_extensions import Literal, override
 
 from lenskit.data import Dataset
 from lenskit.flexmf._model import FlexMFModel
@@ -26,11 +26,15 @@ from ._training import (
 @dataclass
 class FlexMFExplicitConfig(FlexMFConfigBase):
     """
-    Configuration for :class:`FlexMFExplicitScorer`.
+    Configuration for :class:`FlexMFExplicitScorer`.  This class overrides
+    certain base class defaults for better explicit-feedback performance.
 
     Stability:
         Experimental
     """
+
+    regularization: float = 0.1
+    reg_method: Literal["AdamW", "L2"] | None = "L2"
 
 
 class FlexMFExplicitScorer(FlexMFScorerBase):
@@ -44,6 +48,7 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
     """
 
     global_bias: float
+    config: FlexMFExplicitConfig
 
     def create_trainer(self, data, options):
         return FlexMFExplicitTrainer(self, data, options)
@@ -101,13 +106,13 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
         )
 
     @override
-    def train_batch(self, batch: FlexMFTrainingBatch) -> float:
+    def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
         if self.explicit_norm:
-            result = self.model(batch.users, batch.items, return_norm=True)
+            result = self.call_model(batch.users, batch.items, return_norm=True)
             pred = result[0, :]
             norm = torch.mean(result[1, :]) * self.config.regularization
         else:
-            pred = self.model(batch.users, batch.items)
+            pred = self.call_model(batch.users, batch.items, return_norm=False)
             norm = 0.0
 
         loss = F.mse_loss(pred, batch.fields["ratings"])
@@ -117,4 +122,4 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
         loss_all.backward()
         self.opt.step()
 
-        return loss.item()
+        return loss

@@ -7,8 +7,9 @@
 from __future__ import annotations
 
 import math
+import platform
 from abc import abstractmethod
-from collections.abc import Generator, Sequence
+from collections.abc import Callable, Generator, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Mapping
 
@@ -83,6 +84,8 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     A logger, that is bound the current training status / position.
     """
 
+    _compiled_model: Callable[..., torch.Tensor] | None = None
+
     def __init__(self, component: Comp, data: Dataset, options: TrainingOptions):
         ensure_parallel_init()
 
@@ -107,6 +110,14 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.component.model = self.model.to(self.device)
         self.model.train(True)
 
+        if platform.system() not in ("Linux", "Darwin"):
+            _log.warn("compiled models are only usable on Linux and macOS")
+        elif torch.__version__ < "2.8":
+            _log.warn("compiled models require Torch >=2.8")
+        else:
+            _log.debug("compiling FlexMF model")
+            self._compiled_model = torch.compile(self.model)
+
         self.setup_optimizer()
 
     @property
@@ -123,13 +134,23 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         """
         return self.component.model
 
+    def call_model(self, *args, **kwargs) -> torch.Tensor:
+        """
+        Invoke the model, using the compiled version if available.
+        """
+        if self._compiled_model is not None:
+            return self._compiled_model(*args, **kwargs)
+        else:
+            return self.model(*args, **kwargs)
+
     def train_epoch(self) -> dict[str, float]:
         epoch = self.epochs_trained + 1
         self.log = elog = self.log.bind(epoch=epoch)
         elog.debug("creating epoch training data")
         epoch_data = self.epoch_data()
 
-        tot_loss = 0.0
+        tot_loss = torch.tensor(0.0).to(self.device)
+        avg_loss = np.nan
         with item_progress(
             f"Training epoch {epoch}", epoch_data.batch_count, {"loss": ".3f"}
         ) as pb:
@@ -137,13 +158,15 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
             for i, batch in enumerate(epoch_data.batches(), 1):
                 self.log = blog = elog.bind(batch=i)
                 blog.debug("training batch")
-                self.opt.zero_grad()
                 loss = self.train_batch(batch)
+                self.opt.zero_grad()
 
-                pb.update(loss=loss)
+                if i % 20 == 0:
+                    avg_loss = tot_loss.item() / epoch_data.batch_count
+                pb.update(loss=avg_loss)
                 tot_loss += loss
 
-        avg_loss = tot_loss / epoch_data.batch_count
+        avg_loss = tot_loss.item() / epoch_data.batch_count
         elog.debug("epoch complete", loss=avg_loss)
         self.epochs_trained += 1
         return {"loss": avg_loss}
