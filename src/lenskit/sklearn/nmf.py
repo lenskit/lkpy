@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import numpy as np
 from pydantic import AliasChoices, BaseModel, Field
-from sklearn.decomposition import non_negative_factorization, MiniBatchNMF
+from sklearn.decomposition import MiniBatchNMF, non_negative_factorization
 from typing_extensions import Literal, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
