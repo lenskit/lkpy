@@ -207,8 +207,6 @@ class DatasetBuilder:
             raise ValueError(f"relationship class name “{name}” already defined")
 
         check_name(name)
-        if len(entities) != 2:
-            raise NotImplementedError("datasets currently only support 2-entity relationships")
 
         self._log.debug("adding relationship class", class_name=name)
         e_dict: dict[str, str | None]
@@ -347,6 +345,7 @@ class DatasetBuilder:
         allow_repeats: bool = True,
         interaction: bool | Literal["default"] = False,
         _warning_parent: int = 0,
+        remove_repeats: bool | Literal["exact"] = False,
     ) -> None:
         """
         Add relationship records to the data set.
@@ -376,6 +375,9 @@ class DatasetBuilder:
                 Whether this is an interaction relationship or not; can be
                 ``"default"`` to indicate this is the default interaction
                 relationship.
+            remove_repeats:
+                If ``True``, repeated interactions will be removed. If ``"exact"``,
+                duplicated interactions will be removed.
         """
         if isinstance(data, pd.DataFrame):
             table = pa.Table.from_pandas(data, preserve_index=False)
@@ -397,11 +399,19 @@ class DatasetBuilder:
                 )
                 entities = [c[:-3] for c in table.column_names if c.endswith("_id")]
             self.add_relationship_class(
-                cls, entities, allow_repeats=allow_repeats, interaction=bool(interaction)
+                cls,
+                entities,
+                allow_repeats=allow_repeats,
+                interaction=bool(interaction),
             )
             if interaction == "default":
                 self.schema.default_interaction = cls
             rc_def = self.schema.relationships[cls]
+
+        # FIXME: remove this segment when we can make it work
+
+        if allow_repeats and not rc_def.repeats.is_forbidden:
+            rc_def.repeats = AllowableTroolean.PRESENT
 
         link_id_cols = set()
         link_nums = {}
@@ -442,59 +452,64 @@ class DatasetBuilder:
             new_table = new_table.filter(link_mask)
         log.debug("adding %d new rows", new_table.num_rows)
 
-        if "count" in new_table.column_names:  # pragma: nocover
-            raise NotImplementedError("count attributes are not yet implemented")
-
         cur_table = self._tables[cls]
 
-        if not rc_def.repeats.is_present:
-            _log.debug("checking for repeated interactions")
-
-            # FIXME: the coordinate table preservation will be out-of-order with
-            # respect to sorted tables. This will not affect correctness for the
-            # purposes of checking if duplicates exist, but will cause problems
-            # if we count on locations for other purposes.  It also can increase
-            # memory use, since the coordinate table keeps a reference to the
-            # pre-sorted data.
-
-            # get the coordinate table for the previously-existing entries
-            coords = self._rel_coords.get(cls, None)
-            if coords is None:
-                coords = _data_accel.CoordinateTable(len(rc_def.entities))
-                if cur_table is not None:
-                    _log.debug("building coord table from previous interactions")
-                    coo = cur_table.select(link_nums.keys())
-                    coords.extend(coo.to_batches())
-                    assert len(coo) == len(cur_table)
-                self._rel_coords[cls] = coords
-
-            # add the new data
-            coords.extend(new_table.select(link_nums.keys()).to_batches())
-            n_dupes = len(coords) - coords.unique_count()
-            _log.debug(
-                "coordinates: %d total, %d unique, %d dupe",
-                len(coords),
-                coords.unique_count(),
-                n_dupes,
-            )
-
-            if n_dupes:
-                if rc_def.repeats.is_allowed:
-                    _log.debug("found %d repeat interactions", n_dupes)
-                    rc_def.repeats = AllowableTroolean.PRESENT
-                else:
-                    _log.error(
-                        "found %d forbidden repeat interactions (of %d)",
-                        n_dupes,
-                        new_table.num_rows,
-                    )
-                    raise DataError(
-                        f"repeated interactions not allowed for relationship class {cls}"
-                    )
-
         # combine the tables to save them
+        incoming_table = new_table
         if cur_table is not None:
             new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
+
+        if remove_repeats is True:
+            new_table = self._remove_repeated_relationships(t=new_table, rel=rc_def)
+        else:
+            if remove_repeats == "exact":
+                new_table = self._remove_duplicated_relationships(t=new_table)
+                self._rel_coords[cls] = None
+
+            if rc_def.repeats.is_forbidden:
+                _log.debug("checking for repeated interactions")
+
+                # FIXME: the coordinate table preservation will be out-of-order with
+                # respect to sorted tables. This will not affect correctness for the
+                # purposes of checking if duplicates exist, but will cause problems
+                # if we count on locations for other purposes.  It also can increase
+                # memory use, since the coordinate table keeps a reference to the
+                # pre-sorted data.
+
+                # get the coordinate table for the previously-existing entries
+                coords = self._rel_coords.get(cls, None)
+                if coords is None:
+                    coords = _data_accel.CoordinateTable(len(rc_def.entities))
+                    if cur_table is not None:
+                        _log.debug("building coord table from previous interactions")
+                        coo = cur_table.select(link_nums.keys())
+                        coords.extend(coo.to_batches())
+                        assert len(coo) == len(cur_table)
+                    self._rel_coords[cls] = coords
+
+                # add the new data
+                coords.extend(incoming_table.select(link_nums.keys()).to_batches())
+                n_dupes = len(coords) - coords.unique_count()
+                _log.debug(
+                    "coordinates: %d total, %d unique, %d dupe",
+                    len(coords),
+                    coords.unique_count(),
+                    n_dupes,
+                )
+
+                if n_dupes:
+                    if rc_def.repeats.is_allowed:
+                        _log.debug("found %d repeat interactions", n_dupes)
+                        rc_def.repeats = AllowableTroolean.PRESENT
+                    else:
+                        _log.error(
+                            "found %d forbidden repeat interactions (of %d)",
+                            n_dupes,
+                            new_table.num_rows,
+                        )
+                        raise DataError(
+                            f"repeated interactions not allowed for relationship class {cls}"
+                        )
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
@@ -510,6 +525,7 @@ class DatasetBuilder:
         missing: MissingEntityAction = "error",
         allow_repeats: bool = True,
         default: bool = False,
+        remove_repeats: bool | Literal["exact"] = False,
     ) -> None:
         """
         Add a interaction records to the data set.
@@ -544,6 +560,9 @@ class DatasetBuilder:
             default:
                 If ``True``, set this as the default interaction class (if the
                 dataset has more than one interaction class).
+            remove_repeats:
+                If ``True``, repeated interactions will be removed. If ``"exact"``,
+                duplicated interactions will be removed.
         """
         self.add_relationships(
             cls,
@@ -553,6 +572,7 @@ class DatasetBuilder:
             allow_repeats=allow_repeats,
             interaction="default" if default else True,
             _warning_parent=1,
+            remove_repeats=remove_repeats,
         )
 
     def filter_interactions(
@@ -1038,11 +1058,14 @@ class DatasetBuilder:
                 tables[n] = pa.table({id_col_name(n): pa.array([], type=pa.int64())})
             else:
                 rel = self.schema.relationships.get(n, None)
-                if rel is not None and rel.repeats.is_forbidden and len(rel.entities) == 2:
-                    e_cols = [e + "_num" for e in rel.entities.keys()]
-                    if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
-                        log.debug("sorting non-repeating relationship %s", n)
-                        t = t.sort_by([(c, "ascending") for c in e_cols])
+                if rel is not None:
+                    # currently not used due to coordinate table
+                    # self._check_repeat_interactions(t, rel)
+                    if rel.repeats.is_forbidden and len(rel.entities) == 2:
+                        e_cols = [e + "_num" for e in rel.entities.keys()]
+                        if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
+                            log.debug("sorting non-repeating relationship %s", n)
+                            t = t.sort_by([(c, "ascending") for c in e_cols])
 
                 tables[n] = t
 
@@ -1059,6 +1082,23 @@ class DatasetBuilder:
         """
         container = self.build_container()
         container.save(path)
+
+    def _remove_duplicated_relationships(self, t: pa.Table) -> pa.Table:
+        temp_df = t.to_pandas()
+        temp_df.drop_duplicates(inplace=True)
+        t = pa.Table.from_pandas(temp_df, preserve_index=False)
+        return t
+
+    def _remove_repeated_relationships(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
+        if "timestamp" in t.column_names:
+            t = t.sort_by([("timestamp", "ascending")])
+        t_modified = t.add_column(0, "_row_number", pa.array(np.arange(t.num_rows)))
+        t_modified = t_modified.group_by(
+            [entity + "_num" for entity in rel.entity_class_names]
+        ).aggregate([("_row_number", "max")])
+        t_modified = t_modified.sort_by([("_row_number_max", "ascending")])
+        t = t.take(t_modified.column("_row_number_max"))
+        return t
 
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
