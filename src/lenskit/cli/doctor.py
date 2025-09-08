@@ -24,7 +24,12 @@ from rich.table import Table
 from lenskit import __version__, _accel
 from lenskit.logging import get_logger, stdout_console
 from lenskit.parallel import ensure_parallel_init
-from lenskit.parallel.config import effective_cpu_count
+from lenskit.parallel.config import (
+    ParallelConfig,
+    effective_cpu_count,
+    get_parallel_config,
+    subprocess_config,
+)
 from lenskit.parallel.ray import ray_available
 
 _log = get_logger(__name__)
@@ -56,6 +61,7 @@ def doctor(gh_output: Path | None, packages: bool, paths: bool, full: bool):
     console.print(inspect_compute(), highlight=False)
     if ray_available():
         console.print(inspect_ray(), highlight=False)
+    console.print(inspect_parallel_config(), highlight=False)
     console.print(inspect_env(paths or full), highlight=False)
     if packages or full:
         console.print(inspect_packages(), highlight=False)
@@ -127,6 +133,25 @@ def inspect_system():
         f" ({naturalsize(vmem.available, binary=True)} available)",
         level=2,
     )
+
+
+@group()
+def inspect_parallel_config():
+    yield ""
+    yield "[bold]Parallel configuration[/bold]:"
+    yield "  [cyan]Main configuration[/cyan]:"
+    pc = get_parallel_config()
+    yield _inspect_pc(pc, level=3)
+    pc = subprocess_config()
+    yield "  [blue]Default worker configuration[/blue]:"
+    yield _inspect_pc(pc, level=3)
+
+
+@group()
+def _inspect_pc(pc: ParallelConfig, *, level: int):
+    yield kvp("processes", pc.processes, level=level)
+    yield kvp("threads", pc.threads, level=level)
+    yield kvp("backend threads", pc.backend_threads, level=level)
 
 
 @group()
