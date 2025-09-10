@@ -41,6 +41,8 @@ dependencies = [
   "prettytable ~=3.14",
   "xopen ~=2.0",
   "lazy-loader >=0.4",
+  # torch inductor needs setuptools
+  "setuptools >=80",
 ]
 
 [dependency-groups]
@@ -106,6 +108,7 @@ dev = [
   "zstandard>=0.23.0",
   "maturin>=1.8.3",
   "py-spy>=0.4.1",
+  "nox>=2025.5.1",
 ]
 cpu = ["torch ~=2.4"]
 gpu = ["torch ~=2.4"]
@@ -204,7 +207,7 @@ testing = ["pytest", "hypothesis"]
 
 [tool.pyright]
 typeCheckingMode = "basic"
-exclude = ["docs/*", ".pixi", ".venv", "target", "build", "dist", "output"]
+exclude = ["docs/*", ".pixi", ".venv", ".nox", "target", "build", "dist", "output"]
 reportMissingImports = true
 reportMissingTypeStubs = false
 

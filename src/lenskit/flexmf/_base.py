@@ -53,30 +53,38 @@ class FlexMFConfigBase:
     The number of training epochs.
     """
 
-    regularization: float = 0.1
+    regularization: float = 0.01
     """
     The regularization strength.
+
+    .. note::
+        The explicit-feedback model uses a different default strength.
     """
 
-    reg_method: Literal["AdamW", "L2"] | None = "L2"
+    reg_method: Literal["AdamW", "L2"] | None = "AdamW"
     """
     The regularization method to use.
 
-    With the default L2 regularization, training will use sparse gradients and
-    the :class:`torch.optim.SparseAdam` optimizer.
+    With the default AdamW regularization, training will use the
+    :class:`~torch.optim.AdamW` optimizer with weight decay. With L2
+    regularization, training will use sparse gradients and the
+    :class:`torch.optim.SparseAdam` optimizer.
+
+    .. note::
+        The explicit-feedback model defaults this setting to ``"L2"``.
 
     ``None``
         Use no regularization.
 
     ``"L2"``
-        Use L2 regularization on the parameters used in each training batch.
-        The strength is applied to the _mean_ norms in a batch, so that the
+        Use L2 regularization on the parameters used in each training batch. The
+        strength is applied to the _mean_ norms in a batch, so that the
         regularization term scale is not dependent on the batch size.
 
     ``"AdamW"``
         Use :class:`torch.optim.AdamW` with the specified regularization
-        strength.  This configuration does *not* use sparse gradients and may
-        train more slowly.
+        strength.  This configuration does *not* use sparse gradients, but
+        training time is often comparable.
 
     .. note::
         Regularization values do not necessarily have the same range or meaning

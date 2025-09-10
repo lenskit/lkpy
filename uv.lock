@@ -68,6 +68,15 @@ wheels = [
 ]
 
 [[package]]
+name = "argcomplete"
+version = "3.6.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/16/0f/861e168fc813c56a78b35f3c30d91c6757d1fd185af1110f1aec784b35d0/argcomplete-3.6.2.tar.gz", hash = "sha256:d0519b1bc867f5f4f4713c41ad0aba73a4a5f007449716b16f385f2166dc6adf", size = 73403, upload-time = "2025-04-03T04:57:03.52Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/da/e42d7a9d8dd33fa775f467e4028a47936da2f01e4b0e561f9ba0d74cb0ca/argcomplete-3.6.2-py3-none-any.whl", hash = "sha256:65b3133a29ad53fb42c48cf5114752c7ab66c1c38544fdf6460f450c09b42591", size = 43708, upload-time = "2025-04-03T04:57:01.591Z" },
+]
+
+[[package]]
 name = "argon2-cffi"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -401,6 +410,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d7/1a/31ff00a33569a3b59d65bbdc445c73e12f92ad28195b7ace299f68b9af70/colorclass-2.2.2.tar.gz", hash = "sha256:6d4fe287766166a98ca7bc6f6312daf04a0481b1eda43e7173484051c0ab4366", size = 16709, upload-time = "2021-12-09T00:41:35.661Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl", hash = "sha256:6f10c273a0ef7a1150b1120b6095cbdd68e5cf36dfd5d0fc957a2500bbf99a55", size = 18995, upload-time = "2021-12-09T00:41:34.653Z" },
+]
+
+[[package]]
+name = "colorlog"
+version = "6.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d3/7a/359f4d5df2353f26172b3cc39ea32daa39af8de522205f512f458923e677/colorlog-6.9.0.tar.gz", hash = "sha256:bfba54a1b93b94f54e1f4fe48395725a3d92fd2a4af702f6bd70946bdc0c6ac2", size = 16624, upload-time = "2024-10-29T18:34:51.011Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e3/51/9b208e85196941db2f0654ad0357ca6388ab3ed67efdbfc799f35d1f83aa/colorlog-6.9.0-py3-none-any.whl", hash = "sha256:5906e71acd67cb07a71e779c47c4bcb45fb8c2993eebe9e5adcd6a6f1b283eff", size = 11424, upload-time = "2024-10-29T18:34:49.815Z" },
 ]
 
 [[package]]
@@ -1464,6 +1485,7 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
     { name = "scipy" },
+    { name = "setuptools" },
     { name = "structlog" },
     { name = "threadpoolctl" },
     { name = "torch", version = "2.8.0", source = { registry = "https://download.pytorch.org/whl/cpu/" }, marker = "(python_full_version < '3.14' and sys_platform == 'darwin' and extra == 'group-7-lenskit-cpu') or (python_full_version >= '3.14' and extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu') or (sys_platform != 'darwin' and extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
@@ -1518,6 +1540,7 @@ dev = [
     { name = "nbformat" },
     { name = "nbval" },
     { name = "notebook" },
+    { name = "nox" },
     { name = "packaging" },
     { name = "pandas-stubs" },
     { name = "pre-commit" },
@@ -1610,6 +1633,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.5" },
     { name = "scikit-learn", marker = "extra == 'sklearn'", specifier = "~=1.2" },
     { name = "scipy", specifier = ">=1.11" },
+    { name = "setuptools", specifier = ">=80" },
     { name = "structlog", specifier = ">=23.2" },
     { name = "threadpoolctl", specifier = ">=3.0" },
     { name = "torch", specifier = "~=2.4" },
@@ -1643,6 +1667,7 @@ dev = [
     { name = "nbformat", specifier = ">=5.2" },
     { name = "nbval", specifier = ">=0.9" },
     { name = "notebook", specifier = ">=6" },
+    { name = "nox", specifier = ">=2025.5.1" },
     { name = "packaging", specifier = ">=25.0" },
     { name = "pandas-stubs", specifier = ">=1.5,<3" },
     { name = "pre-commit", specifier = "~=4.0" },
@@ -2144,6 +2169,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/54/d2/92fa3243712b9a3e8bafaf60aac366da1cada3639ca767ff4b5b3654ec28/notebook_shim-0.2.4.tar.gz", hash = "sha256:b4b2cfa1b65d98307ca24361f5b30fe785b53c3fd07b7a47e89acb5e6ac638cb", size = 13167, upload-time = "2024-02-14T23:35:18.353Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/33/bd5b9137445ea4b680023eb0469b2bb969d61303dedb2aac6560ff3d14a1/notebook_shim-0.2.4-py3-none-any.whl", hash = "sha256:411a5be4e9dc882a074ccbcae671eda64cceb068767e9a3419096986560e1cef", size = 13307, upload-time = "2024-02-14T23:35:16.286Z" },
+]
+
+[[package]]
+name = "nox"
+version = "2025.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "argcomplete" },
+    { name = "attrs" },
+    { name = "colorlog" },
+    { name = "dependency-groups" },
+    { name = "packaging" },
+    { name = "virtualenv" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b4/80/47712208c410defec169992e57c179f0f4d92f5dd17ba8daca50a8077e23/nox-2025.5.1.tar.gz", hash = "sha256:2a571dfa7a58acc726521ac3cd8184455ebcdcbf26401c7b737b5bc6701427b2", size = 4023334, upload-time = "2025-05-01T16:35:48.056Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a6/be/7b423b02b09eb856beffe76fe8c4121c99852db74dd12a422dcb72d1134e/nox-2025.5.1-py3-none-any.whl", hash = "sha256:56abd55cf37ff523c254fcec4d152ed51e5fe80e2ab8317221d8b828ac970a31", size = 71753, upload-time = "2025-05-01T16:35:46.037Z" },
 ]
 
 [[package]]

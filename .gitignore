@@ -22,6 +22,8 @@ cov-reports/
 test-logs/
 htmlcov/
 perf.data*
+*.linux-perf.txt
+*.speedscope.json
 *.pkl
 *.zst
 *.gz
@@ -36,6 +38,7 @@ dask-worker-space/
 .*_cache/
 .hypothesis/
 .tox/
+.nox/
 .vagrant/
 .venv/
 .pixi/
