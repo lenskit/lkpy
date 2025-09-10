@@ -52,10 +52,14 @@ class MetricWrapper:
         return isinstance(self.metric, DecomposedMetric)
 
     def measure_list(self, list: ItemList, test: ItemList) -> float | dict[str, float]:
-        """Measure a single list and return metric result(s)."""
         if isinstance(self.metric, Metric):
-            return self.metric.measure_list(list, test)
-        elif isinstance(self.metric, Callable):
+            val = self.metric.measure_list(list, test)
+            if hasattr(self.metric, "extract_list_metrics"):
+                extracted = self.metric.extract_list_metrics(val)
+                if extracted is not None:
+                    return extracted
+            return val
+        elif callable(self.metric):
             return self.metric(list, test)
         else:
             raise TypeError(f"metric {self.metric} does not support list measurement")
