@@ -83,12 +83,7 @@ class Metric(ABC):
             - A dict mapping metric names to values for multi-metric classes
             - None if no per-list metrics are available
         """
-        if isinstance(data, (float, int, np.floating, np.integer)):
-            return float(data)
-        elif isinstance(data, dict):
-            return data
-        else:
-            return None
+        return None
 
     @abstractmethod
     def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> dict[str, float]:
@@ -127,13 +122,11 @@ class ListMetric(Metric):
         """
         raise NotImplementedError()
 
-    def extract_list_metrics(self, data: Any, /) -> float | None:
+    def extract_list_metrics(self, data: Any, /) -> float:
         """
         Return the given per-list metric result.
         """
-        if isinstance(data, (float, int, np.floating, np.integer)):
-            return float(data)
-        return None
+        return data
 
     def summarize(
         self, values: list[Any] | pa.Array | pa.ChunkedArray, /

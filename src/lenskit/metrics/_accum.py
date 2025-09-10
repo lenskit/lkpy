@@ -105,9 +105,7 @@ class MetricAccumulator:
 
     def __init__(self):
         self.metrics: list[MetricWrapper] = []
-        self._list_data: dict[str, list[Any]] = {}
-        self._list_metrics: dict[str, list[float | dict[str, float] | None]] = {}
-        self._list_keys: list[tuple] = []
+        self._records: list[dict[str, Any]] = []
         self._key_fields: list[str] = []
 
     def add_metric(
@@ -132,8 +130,6 @@ class MetricAccumulator:
         """
         wrapper = self._wrap_metric(metric, label, default)
         self.metrics.append(wrapper)
-        self._list_data[wrapper.label] = []
-        self._list_metrics[wrapper.label] = []
 
     def measure_list(self, output: ItemList, test: ItemList, **keys: Any):
         """
@@ -147,27 +143,22 @@ class MetricAccumulator:
         if not self._key_fields:
             self._key_fields = list(keys.keys())
 
-        key_tuple = tuple(keys.get(k) for k in self._key_fields)
-        self._list_keys.append(key_tuple)
-
+        rec = dict(keys)
         for wrapper in self.metrics:
-            try:
-                if wrapper.is_global:
-                    self._list_data[wrapper.label].append(None)
-                    self._list_metrics[wrapper.label].append(None)
-                    continue
+            if wrapper.is_global:
+                continue
 
-                metric_result = wrapper.measure_list(output, test)
+            val = wrapper.measure_list(output, test)
+            if val is None and wrapper.default is not None:
+                val = wrapper.default
 
-                if metric_result is None:
-                    metric_result = wrapper.default or 0.0
+            if isinstance(val, dict):
+                for k, v in val.items():
+                    rec[f"{wrapper.label}.{k}"] = v
+            else:
+                rec[wrapper.label] = val
 
-                self._list_data[wrapper.label].append(metric_result)
-                self._list_metrics[wrapper.label].append(metric_result)
-            except Exception as e:
-                _log.warning(f"Error computing metric {wrapper.label}: {e}")
-                self._list_data[wrapper.label].append(None)
-                self._list_metrics[wrapper.label].append(None)
+        self._records.append(rec)
 
     def list_metrics(self, fill_missing: bool = True) -> pd.DataFrame:
         """
@@ -179,99 +170,67 @@ class MetricAccumulator:
         Returns:
             DataFrame with one row per list and one column per metric.
         """
-        if not self._list_keys:
+        if not self._records:
             return pd.DataFrame()
 
+        df = pd.json_normalize(self._records, sep=".")
+
         if self._key_fields:
-            index = pd.MultiIndex.from_tuples(self._list_keys, names=self._key_fields)
-        else:
-            index = pd.Index(self._list_keys)
-
-        data = {}
-        for wrapper in self.metrics:
-            if wrapper.is_global:
-                continue
-
-            metric_results = self._list_metrics[wrapper.label]
-
-            result_types = set(type(r).__name__ for r in metric_results if r is not None)
-            if len(result_types) > 1:
-                _log.warning(f"mixed result types for metric {wrapper.label}: {result_types}")
-            has_dict_results = any(isinstance(r, dict) for r in metric_results if r is not None)
-
-            if has_dict_results:
-                all_keys = set()
-                for result in metric_results:
-                    if isinstance(result, dict):
-                        all_keys.update(result.keys())
-
-                for key in sorted(all_keys):
-                    col_name = f"{wrapper.label}.{key}"
-                    col_values = []
-                    for result in metric_results:
-                        if isinstance(result, dict):
-                            col_values.append(result.get(key))
-                        else:
-                            col_values.append(None)
-                    data[col_name] = col_values
-
-            else:
-                scalar_values = []
-                for result in metric_results:
-                    if isinstance(result, dict):
-                        scalar_values.append(None)
-                    else:
-                        scalar_values.append(result)
-
-                if not all(v is None for v in scalar_values):
-                    data[wrapper.label] = scalar_values
-
-        if not data:
-            return pd.DataFrame(index=index)
-
-        df = pd.DataFrame(data, index=index)
+            df.set_index(self._key_fields, inplace=True, drop=True)
 
         if fill_missing:
-            defaults = {
-                wrapper.label: wrapper.default
-                for wrapper in self.metrics
-                if wrapper.default is not None and not wrapper.is_global
-            }
-            df = df.fillna(defaults)
-
+            defaults = {}
+            for wrapper in self.metrics:
+                if wrapper.default is not None and not wrapper.is_global:
+                    label = wrapper.label
+                    nested_cols = [c for c in df.columns if c.startswith(f"{label}.")]
+                    if nested_cols:
+                        for col in nested_cols:
+                            defaults[col] = wrapper.default
+                    else:
+                        defaults[label] = wrapper.default
+            if defaults:
+                df = df.fillna(defaults)
         return df
 
     def summary_metrics(self) -> pd.DataFrame:
+        """
+        Compute summary statistics by calling each metric's summarize() method.
+
+        Returns:
+            A DataFrame indexed by metric label.
+        """
         summaries = {}
 
         for wrapper in self.metrics:
             if wrapper.is_global:
                 continue
 
-            data = self._list_data[wrapper.label]
-            clean_data = [
-                x for x, m in zip(data, self._list_metrics[wrapper.label]) if m is not None
-            ]
+            label = wrapper.label
 
-            if clean_data:
-                try:
-                    summary = wrapper.summarize(clean_data)
-                    if isinstance(summary, dict):
-                        summaries[wrapper.label] = summary
-                    else:
-                        summaries[wrapper.label] = {"mean": summary}
-                except Exception as e:
-                    _log.warning(f"Error summarizing metric {wrapper.label}: {e}")
-                    summaries[wrapper.label] = {"mean": wrapper.default or 0.0}
+            if self._records:
+                df = self.list_metrics(fill_missing=False)
+                values = df[label].dropna().tolist() if label in df.columns else []
             else:
-                summaries[wrapper.label] = {"mean": wrapper.default or 0.0}
+                values = []
 
-        if summaries:
-            df = pd.DataFrame(summaries).T
-            df.index.name = "metric"
-            return df
-        else:
-            return pd.DataFrame()
+            if values:
+                summary = wrapper.summarize(values)
+            else:
+                default_val = wrapper.default if wrapper.default is not None else 0.0
+                summary = {"mean": default_val, "median": None, "std": None}
+
+            if not isinstance(summary, dict):
+                summary = {"mean": summary, "median": None, "std": None}
+
+            summaries[label] = summary
+
+        if not summaries:
+            return pd.DataFrame(columns=["mean", "median", "std"]).rename_axis("metric")
+
+        df = pd.DataFrame.from_dict(summaries, orient="index")
+        df.index.name = "metric"
+        return df
 
     def _wrap_metric(
         self,
@@ -314,24 +273,3 @@ class MetricAccumulator:
             if lbl in seen:
                 raise RuntimeError(f"duplicate metric: {lbl}")
             seen.add(lbl)
-
-    def to_result(self):
-        """
-        Convert this MetricAccumulator into a RunAnalysisResult.
-        """
-        from .bulk import RunAnalysisResult
-
-        list_results = self.list_metrics(fill_missing=False)
-
-        summary_df = self.summary_metrics()
-        global_results = {}
-
-        if not summary_df.empty:
-            for col in summary_df.columns:
-                if "." not in col:
-                    global_results.update(summary_df[col].to_dict())
-
-        global_results = pd.Series(global_results, dtype=np.float64)
-        defaults = {wrapper.label: wrapper.default for wrapper in self.metrics}
-
-        return RunAnalysisResult(list_results, global_results, defaults)  # type: ignore

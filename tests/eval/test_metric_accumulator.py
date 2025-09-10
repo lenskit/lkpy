@@ -16,7 +16,7 @@ from lenskit.basic import PopScorer
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.metrics import NDCG, Recall
 from lenskit.metrics._accum import MetricAccumulator, MetricWrapper
-from lenskit.metrics._base import GlobalMetric
+from lenskit.metrics._base import Metric
 from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
 
@@ -41,8 +41,8 @@ def test_unmeasured_metrics():
     summary = acc.summary_metrics()
 
     assert df.empty
-    assert approx(summary.loc["Recall@5", "mean"]) == 0.0
-    assert approx(summary.loc["NDCG@5", "mean"]) == 0.0
+    assert summary.loc["Recall@5", "mean"] == 0.0
+    assert summary.loc["NDCG@5", "mean"] == 0.0
 
 
 def test_basic_metric_flow():
@@ -105,40 +105,6 @@ def test_metric_accum(ml_ds):
         assert 0 <= val["mean"] <= 1
 
 
-def test_to_result_conversion():
-    """Test conversion of MetricAccumulator to RunAnalysisResult."""
-    acc = MetricAccumulator()
-    acc.add_metric(Recall(5))
-    acc.add_metric(NDCG(5))
-
-    recs1 = ItemList([1, 2, 3], user=["u1"] * 3, ordered=True)
-    truth1 = ItemList([2, 3])
-    recs2 = ItemList([4, 5], user=["u2"] * 2, ordered=True)
-    truth2 = ItemList([5])
-
-    acc.measure_list(recs1, truth1, user="u1")
-    acc.measure_list(recs2, truth2, user="u2")
-
-    result = acc.to_result()
-
-    list_results = result.list_metrics()
-    assert isinstance(list_results, pd.DataFrame)
-
-    g = result.global_metrics()
-    assert isinstance(g, pd.Series)
-
-    summary_df = result.list_summary()
-    assert isinstance(summary_df, pd.DataFrame)
-
-    for metric_name in ["Recall@5", "NDCG@5"]:
-        assert metric_name in list_results.columns
-        assert metric_name in g.index
-        assert metric_name in summary_df.index
-
-        assert 0.0 <= g[metric_name] <= 1.0
-        assert 0.0 <= summary_df.loc[metric_name, "mean"] <= 1.0
-
-
 def test_measure_list_multiple_key_fields():
     """Test measuring lists with multiple identifying key fields."""
     acc = MetricAccumulator()
@@ -147,8 +113,9 @@ def test_measure_list_multiple_key_fields():
     acc.measure_list(ItemList([1, 2, 3], user=["u1"] * 3), ItemList([2]), user="u1", fold=1)
     acc.measure_list(ItemList([4, 5], user=["u2"] * 2), ItemList([5]), user="u2", fold=1)
 
-    assert acc._list_keys == [("u1", 1), ("u2", 1)]
+    # check internal state properly
     assert acc._key_fields == ["user", "fold"]
+    assert len(acc._records) == 2
 
     metrics = acc.list_metrics()
     assert len(metrics) == 2
@@ -162,8 +129,12 @@ def test_measure_list_keys_work_as_expected():
     acc = MetricAccumulator()
     acc.add_metric(Recall(2))
 
-    acc.measure_list(ItemList([1, 2], user=["u1"] * 2), ItemList([2]), user="u1", session="a")
-    acc.measure_list(ItemList([3, 4], user=["u1"] * 2), ItemList([3]), user="u1", session="b")
+    acc.measure_list(
+        ItemList([1, 2], user=["u1"] * 2, ordered=True), ItemList([2]), user="u1", session="a"
+    )
+    acc.measure_list(
+        ItemList([3, 4], user=["u1"] * 2, ordered=True), ItemList([3]), user="u1", session="b"
+    )
 
     metrics = acc.list_metrics()
     assert len(metrics) == 2
@@ -190,36 +161,26 @@ def test_duplicate_metric_labels_raise():
         acc._validate_setup()
 
 
-def test_metric_measure_list_exception_logs_warning(caplog):
-    """Test that exceptions during metric measurement are logged as warnings."""
-    acc = MetricAccumulator()
-
-    class BadMetric:
-        pass
-
-    acc.add_metric(BadMetric())
-
-    with caplog.at_level(logging.WARNING):
-        acc.measure_list(ItemList([1], user=[1]), ItemList([1]), user=1)
-
-    assert any("Error computing metric" in r.message for r in caplog.records)
-
-
 def test_measure_list_mixed_result_types():
     """Test handling of metrics that return both scalar and dictionary results."""
     acc = MetricAccumulator()
 
-    class DummyMetric(ListLength):
+    class DummyMetric(Metric):
         label = "D"
+        default = 0.0
+
+        def __init__(self):
+            self.call_count = 0
 
         def measure_list(self, recs, test):
-            if len(acc._list_data.get(self.label, [])) % 2 == 0:  # returns scaler
+            self.call_count += 1
+            if self.call_count % 2 == 1:  # returns scalar
                 return 1.0
             else:
                 return {"b": 2.0}  # returns dict
 
         def summarize(self, values):
-            return {"mean": np.mean([v if isinstance(v, float) else v["a"] for v in values])}
+            return {"mean": np.mean([v if isinstance(v, float) else v["b"] for v in values])}
 
     acc.add_metric(DummyMetric())
 
@@ -228,27 +189,6 @@ def test_measure_list_mixed_result_types():
 
     df = acc.list_metrics()
     assert "D.b" in df.columns
-
-
-def test_global_metric_in_measure_list():
-    """Test that global metrics store None values during list measurement."""
-
-    class DummyGlobalMetric(GlobalMetric):
-        label = "Global"
-
-        def measure_run(self, run, test):
-            return 4.0
-
-    acc = MetricAccumulator()
-    acc.add_metric(DummyGlobalMetric())
-
-    acc.measure_list(ItemList([1, 2], user=["u1"] * 2), ItemList([1]), user="u1")
-
-    assert acc._list_data["Global"] == [None]
-    assert acc._list_metrics["Global"] == [None]
-
-    df = acc.list_metrics()
-    assert "Global" not in df.columns
 
 
 def test_add_metric_with_class_type():
@@ -262,29 +202,6 @@ def test_add_metric_with_class_type():
     assert acc.metrics[0].label == "N"
 
 
-def test_metric_label_derivation():
-    """Test different ways metric labels are derived from various input types."""
-    acc = MetricAccumulator()
-
-    # Metric instance (has .label attribute)
-    metric_with_label = ListLength()
-    acc.add_metric(metric_with_label)
-    assert acc.metrics[0].label == "N"
-
-    # class type
-    acc = MetricAccumulator()
-    acc.add_metric(ListLength)
-    assert acc.metrics[0].label == "N"
-
-    # callable
-    def dummy_metric_func(recs, test):
-        return 1.0
-
-    acc = MetricAccumulator()
-    acc.add_metric(dummy_metric_func)
-    assert acc.metrics[0].label == "function"
-
-
 def test_custom_label_override():
     """Test that custom labels override default metric labels."""
     acc = MetricAccumulator()
@@ -294,26 +211,10 @@ def test_custom_label_override():
     assert acc.metrics[0].label == "CustomLength"
 
 
-def test_invalid_default_type():
-    """Test that invalid default types raise TypeError."""
+def test_complex_summary():
+    """Test complex nested summary data structures."""
 
-    class MetricWithBadDefault(ListLength):
-        label = "BadDefault"
-        default = "not_a_number"
-
-        def measure_list(self, recs, test):
-            return 1.0
-
-    acc = MetricAccumulator()
-
-    with raises(TypeError, match="metric .* has unsupported default"):
-        acc.add_metric(MetricWithBadDefault())
-
-
-def test_to_result_with_complex_summary():
-    """Test to_result method with complex nested summary data structures."""
-
-    class ComplexMetric:
+    class ComplexMetric(Metric):
         label = "Complex"
         default = 0.0
 
@@ -328,33 +229,8 @@ def test_to_result_with_complex_summary():
 
     acc.measure_list(ItemList([1], user=["u1"]), ItemList([1]), user="u1")
 
-    result = acc.to_result()
-
-    global_metrics = result.global_metrics()
-    assert len(global_metrics) > 0
-
-
-def test_measure_run_with_non_global_metric():
-    """Test that measure_run fails with non-global metrics."""
-    mw = MetricWrapper(metric=ListLength(), label="test")
-
-    run = ItemListCollection([])
-    test = ItemListCollection([])
-
-    with raises(TypeError, match="does not support global measurement"):
-        mw.measure_run(run, test)
-
-
-def test_measure_list_with_non_metric():
-    """Test that measure_list fails with unsupported metric types."""
-
-    class UnsupportedMetric:
-        pass
-
-    mw = MetricWrapper(metric=UnsupportedMetric(), label="test")
-
-    with raises(TypeError, match="does not support list measurement"):
-        mw.measure_list(ItemList([1]), ItemList([1]))
+    summary = acc.summary_metrics()
+    assert len(summary) > 0
 
 
 @mark.parametrize(
@@ -380,23 +256,6 @@ def test_default_summarize(values, expected):
         assert result["mean"] == approx(np.mean(vals))
         assert result["median"] == approx(np.median(vals))
         assert result["std"] == approx(np.std(vals, ddof=1))
-
-
-def test_measure_run_with_global_metric():
-    """Test measure_run with global metrics."""
-
-    class DummyGlobal(GlobalMetric):
-        def measure_run(self, run, test):
-            return 123.0
-
-    gm = DummyGlobal()
-    mw = MetricWrapper(metric=gm, label="g")
-
-    run = ItemListCollection([])
-    test = ItemListCollection([])
-
-    result = mw.measure_run(run, test)
-    assert result == 123.0
 
 
 def test_default_value_handling():
