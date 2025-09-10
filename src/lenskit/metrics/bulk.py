@@ -195,11 +195,9 @@ class RunAnalysis:
             for key, out in outputs:
                 key_kwargs = dict(zip(outputs.key_fields, key))
                 list_test = test.lookup_projected(key)
-                if out is None:
-                    continue
-                elif list_test is None:
+                if out is None or list_test is None:
                     no_test_count += 1
-                    list_test = ItemList([])
+                    continue
                 self._accumulator.measure_list(out, list_test, **key_kwargs)
                 pb.update()
 
