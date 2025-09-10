@@ -240,8 +240,12 @@ class RunAnalysis:
         Measure a set of outputs against a set of test data.
         """
         self._validate_setup()
-        index = pd.MultiIndex.from_tuples(outputs.keys())
-        index.names = list(outputs.key_fields)
+        if len(outputs.key_fields) > 1:
+            index = pd.MultiIndex.from_tuples(outputs.keys())
+            index.names = list(outputs.key_fields)
+        else:
+            index = pd.Index([k[0] for k in outputs.keys()])
+            index.name = outputs.key_fields[0]
 
         lms = [m for m in self.metrics if m.is_listwise or m.is_decomposed]
         gms = [m for m in self.metrics if m.is_global]
