@@ -40,7 +40,6 @@ def test_flexmf_test_accuracy(ml_100k):
     )
 
     summary = results.list_summary()
-    gs = results.global_metrics()
 
     print(summary)
 
