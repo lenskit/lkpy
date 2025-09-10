@@ -13,7 +13,7 @@ from typing import TypeVar
 import numpy as np
 import pandas as pd
 
-from lenskit.data import ItemList, ItemListCollection
+from lenskit.data import ItemListCollection
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import item_progress
 from lenskit.metrics._accum import MetricAccumulator
