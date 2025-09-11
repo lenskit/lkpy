@@ -182,15 +182,14 @@ class RunAnalysis:
         """
         Measure a set of outputs against a set of test data.
         """
-        self._validate_setup()
+        self._accumulator._validate_setup()
+
         if len(outputs.key_fields) > 1:
             index = pd.MultiIndex.from_tuples(outputs.keys())
             index.names = list(outputs.key_fields)
         else:
             index = pd.Index([k[0] for k in outputs.keys()])
             index.name = outputs.key_fields[0]
-
-        self._accumulator._validate_setup()
 
         n = len(outputs)
         _log.debug("measuring %d metrics for %d output lists", len(self._accumulator.metrics), n)
