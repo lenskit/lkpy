@@ -185,6 +185,14 @@ class RunAnalysis:
         This method now uses the MetricAccumulator internally, which provides
         better separation of concerns and supports external evaluation loops.
         """
+        self._validate_setup()
+        if len(outputs.key_fields) > 1:
+            index = pd.MultiIndex.from_tuples(outputs.keys())
+            index.names = list(outputs.key_fields)
+        else:
+            index = pd.Index([k[0] for k in outputs.keys()])
+            index.name = outputs.key_fields[0]
+
         self._accumulator._validate_setup()
 
         n = len(outputs)
