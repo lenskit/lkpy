@@ -179,6 +179,9 @@ def test_measure_list_mixed_result_types():
             else:
                 return {"b": 2.0}  # returns dict
 
+        def extract_list_metrics(self, data):
+            return data
+
         def summarize(self, values):
             return {"mean": np.mean([v if isinstance(v, float) else v["b"] for v in values])}
 
@@ -220,6 +223,9 @@ def test_complex_summary():
 
         def measure_list(self, recs, test):
             return {"sub1": 1.0, "sub2": 2.0}
+
+        def extract_list_metrics(self, data):
+            return data
 
         def summarize(self, values):
             return {"sub1": {"mean": 1.5, "std": 0.5}, "sub2": {"mean": 2.5, "std": 0.7}}

@@ -181,9 +181,6 @@ class RunAnalysis:
     ) -> RunAnalysisResult:
         """
         Measure a set of outputs against a set of test data.
-
-        This method now uses the MetricAccumulator internally, which provides
-        better separation of concerns and supports external evaluation loops.
         """
         self._accumulator._validate_setup()
 

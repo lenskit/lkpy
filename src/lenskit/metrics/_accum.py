@@ -51,30 +51,28 @@ class MetricWrapper:
         "Check if this metric is decomposed."
         return isinstance(self.metric, DecomposedMetric)
 
-    def measure_list(self, list: ItemList, test: ItemList) -> float | dict[str, float]:
-        if isinstance(self.metric, Metric):
-            val = self.metric.measure_list(list, test)
-            if hasattr(self.metric, "extract_list_metrics"):
-                extracted = self.metric.extract_list_metrics(val)
-                if extracted is not None:
-                    return extracted
-            return val
-        elif callable(self.metric):
+    def measure_list(self, list: ItemList, test: ItemList) -> Any:
+        """Get intermediate measurement data from the metric."""
+        if isinstance(self.metric, Callable):
             return self.metric(list, test)
-        else:
-            raise TypeError(f"metric {self.metric} does not support list measurement")
+        return self.metric.measure_list(list, test)
+
+    def extract_list_metrics(self, intermediate_data: Any) -> float | dict[str, float] | None:
+        """Extract per-list metrics from intermediate data."""
+        result = self.metric.extract_list_metrics(intermediate_data)
+        return intermediate_data if result is None else result
 
     def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray) -> dict[str, float | None]:
         """Aggregate intermediate values into summary statistics."""
-        if hasattr(self.metric, "summarize"):
-            result = self.metric.summarize(values)
-            if isinstance(result, dict):
-                return result
-            return {"mean": float(result), "median": None, "std": None}
-        return self._default_summarize(values)
+        result = self.metric.summarize(values)
+        if result is None:
+            return self._default_summarize(values)
+        if isinstance(result, dict):
+            return result
+        return {"mean": float(result), "median": None, "std": None}
 
     def _default_summarize(self, values) -> dict[str, float | None]:
-        """Calculate summary statistics."""
+        """A fallback for metrics that do not implement their own summarize method."""
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
             values = values.to_pylist()
         numeric_values = [v for v in values if v is not None]
@@ -101,7 +99,7 @@ class MetricAccumulator:
     """
     Accumulates metric measurements over multiple recommendation lists.
 
-    This class seperates metric accumulation from the evaluation loop.
+    This class separates metric accumulation from the evaluation loop.
 
     Stability:
         Caller
@@ -137,12 +135,15 @@ class MetricAccumulator:
 
     def measure_list(self, output: ItemList, test: ItemList, **keys: Any):
         """
-        Measure a single list and accumulate the results.
+        Measure a single list and accumulate the intermediate results.
 
         Args:
-            output: The recommendation list to measure.
-            test: The ground truth test data.
-            **keys: Identifying keys for this list (e.g., user_id).
+            output:
+                The recommendation list to measure.
+            test:
+                The ground truth test data.
+            **keys:
+                Identifying keys for this list (e.g., user_id).
         """
         if not self._key_fields:
             self._key_fields = list(keys.keys())
@@ -152,15 +153,9 @@ class MetricAccumulator:
             if wrapper.is_global:
                 continue
 
-            val = wrapper.measure_list(output, test)
-            if val is None and wrapper.default is not None:
-                val = wrapper.default
+            intermediate_data = wrapper.measure_list(output, test)
 
-            if isinstance(val, dict):
-                for k, v in val.items():
-                    rec[f"{wrapper.label}.{k}"] = v
-            else:
-                rec[wrapper.label] = val
+            rec[f"_intermediate_{wrapper.label}"] = intermediate_data
 
         self._records.append(rec)
 
@@ -177,24 +172,48 @@ class MetricAccumulator:
         if not self._records:
             return pd.DataFrame()
 
-        df = pd.json_normalize(self._records, sep=".")
+        extracted_records = []
+
+        for record in self._records:
+            new_record = {k: v for k, v in record.items() if not k.startswith("_intermediate_")}
+
+            for wrapper in self.metrics:
+                if wrapper.is_global:
+                    continue
+
+                intermediate_key = f"_intermediate_{wrapper.label}"
+                if intermediate_key in record:
+                    intermediate_data = record[intermediate_key]
+
+                    extracted_val = wrapper.extract_list_metrics(intermediate_data)
+
+                    if extracted_val is None and wrapper.default is not None:
+                        extracted_val = wrapper.default
+
+                    if isinstance(extracted_val, dict):
+                        for k, v in extracted_val.items():
+                            new_record[f"{wrapper.label}.{k}"] = v
+                    else:
+                        new_record[wrapper.label] = extracted_val
+
+            extracted_records.append(new_record)
+
+        df = pd.DataFrame(extracted_records)
 
         if self._key_fields:
             df.set_index(self._key_fields, inplace=True, drop=True)
 
         if fill_missing:
-            defaults = {}
             for wrapper in self.metrics:
                 if wrapper.default is not None and not wrapper.is_global:
                     label = wrapper.label
                     nested_cols = [c for c in df.columns if c.startswith(f"{label}.")]
                     if nested_cols:
                         for col in nested_cols:
-                            defaults[col] = wrapper.default
-                    else:
-                        defaults[label] = wrapper.default
-            if defaults:
-                df = df.fillna(defaults)
+                            df[col] = df[col].fillna(wrapper.default)
+                    elif label in df.columns:
+                        df[label] = df[label].fillna(wrapper.default)
+
         return df
 
     def summary_metrics(self) -> pd.DataFrame:
@@ -211,15 +230,15 @@ class MetricAccumulator:
                 continue
 
             label = wrapper.label
+            intermediate_key = f"_intermediate_{label}"
 
-            if self._records:
-                df = self.list_metrics(fill_missing=False)
-                values = df[label].dropna().tolist() if label in df.columns else []
-            else:
-                values = []
+            intermediate_values = []
+            for record in self._records:
+                if intermediate_key in record and record[intermediate_key] is not None:
+                    intermediate_values.append(record[intermediate_key])
 
-            if values:
-                summary = wrapper.summarize(values)
+            if intermediate_values:
+                summary = wrapper.summarize(intermediate_values)
             else:
                 default_val = wrapper.default if wrapper.default is not None else 0.0
                 summary = {"mean": default_val, "median": None, "std": None}
