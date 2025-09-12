@@ -178,24 +178,24 @@ def test_global_and_callable():
     assert not wrapper_callable.is_global
 
 
-def test_accumulator_scalar_to_dict_conversion():
+def test_summarize_scalar_converts_to_dict():
     class ScalarMetric(Metric):
-        label = "scalar"
+        label = "scalar_summarize"
 
         def measure_list(self, recs, test):
-            return 42
+            return 5
 
         def summarize(self, values):
-            return sum(values) / len(values)
+            return 99.0
 
     acc = MetricAccumulator()
-    acc.add_metric(ScalarMetric(), "scalar")
-    acc.measure_list(ItemList([1, 2]), ItemList([1]), user="u1")
-    acc.measure_list(ItemList([3, 4]), ItemList([2]), user="u2")
-    summary_df = acc.summary_metrics()
-    assert summary_df.loc["scalar", "mean"] == approx(42)
-    assert pd.isna(summary_df.loc["scalar", "median"])
-    assert pd.isna(summary_df.loc["scalar", "std"])
+    acc.add_metric(ScalarMetric(), "scalar_summarize")
+    acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
+    summary = acc.summary_metrics()
+
+    assert summary.loc["scalar_summarize", "mean"] == 99.0
+    assert pd.isna(summary.loc["scalar_summarize", "median"])
+    assert pd.isna(summary.loc["scalar_summarize", "std"])
 
 
 def no_measure_metric():
