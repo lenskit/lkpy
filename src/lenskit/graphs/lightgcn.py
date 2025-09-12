@@ -215,6 +215,8 @@ class LightGCNTrainer(ModelTrainer):
         self.log = _log.bind()
         self.rng = options.random_generator()
 
+        _log.info("initializing LightGCN trainer", device=str(self.device))
+
         self.user_base = data.item_count
         node_count = data.user_count + data.item_count
         if isinstance(scorer.config.layer_blend, list):
@@ -313,7 +315,7 @@ class LightGCNTrainer(ModelTrainer):
 class LogisticLightGCNTrainer(LightGCNTrainer):
     def batch_loss(self, mb_edges: torch.Tensor, scores: torch.Tensor):
         (n,) = scores.shape
-        labels = torch.from_numpy(np.repeat([1, 0], n // 2))
+        labels = torch.from_numpy(np.repeat([1, 0], n // 2)).to(self.device)
         return self.model.link_pred_loss(scores, labels)
 
 
