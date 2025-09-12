@@ -183,6 +183,37 @@ outputs:
             - hypothesis >=6.16
             - pyyaml ~=6.0
 
+  - package:
+      name: lenskit-gnn
+    build:
+      noarch: python
+      script:
+        - "true"
+    requirements:
+      run:
+        - ${{ pin_subpackage('lenskit') }}
+        - torch-geometric >=2.6,<3
+        - pytorch >=2.8,<3
+    tests:
+      - python:
+          imports:
+            - lenskit.hpf
+      - script:
+          - pytest -m "not slow" tests/hpf
+        files:
+          source:
+            - tests/
+            - conftest.py
+            - data/
+            - pyproject.toml
+        requirements:
+          run:
+            - pytest >=8.2,<9
+            - pytest-benchmark =4
+            - pytest-doctestplus >=1.2.1,<2
+            - hypothesis >=6.16
+            - pyyaml ~=6.0
+
 about:
   license: MIT
   license_file: LICENSE.md
