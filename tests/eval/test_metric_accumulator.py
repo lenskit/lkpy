@@ -16,7 +16,7 @@ from lenskit.basic import PopScorer
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.metrics import NDCG, Recall
 from lenskit.metrics._accum import MetricAccumulator, MetricWrapper
-from lenskit.metrics._base import GlobalMetric, Metric
+from lenskit.metrics._base import DecomposedMetric, GlobalMetric, Metric
 from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
 
@@ -151,26 +151,31 @@ def test_global_and_callable():
         def measure_run(self, run, test):
             return 123.0
 
-    wrapper = MetricWrapper(DummyGlobalMetric(), "global")
-    # measure_run on global metric
-    result = wrapper.measure_run(ItemListCollection([]), ItemListCollection([]))
+    wrapper_global = MetricWrapper(DummyGlobalMetric(), "global")
+    result = wrapper_global.measure_run(ItemListCollection([]), ItemListCollection([]))
     assert result == 123.0
+    assert wrapper_global.is_global
+    assert not wrapper_global.is_listwise
 
-    # non-global metric triggers TypeError
     with raises(TypeError):
         MetricWrapper(ListLength(), "N").measure_run(ItemListCollection([]), ItemListCollection([]))
 
     # callable metric
     class CallableMetric(Metric):
+        def __call__(self, recs, test):
+            return 12
+
         def measure_list(self, output, test):
             return 12
 
         def summarize(self, values):
             return sum(values) / len(values) if values else 0
 
-    wrapper3 = MetricWrapper(CallableMetric(), "callable")
-    result_callable = wrapper3.measure_list(ItemList([1]), ItemList([1]))
+    wrapper_callable = MetricWrapper(CallableMetric(), "callable")
+    result_callable = wrapper_callable.measure_list(ItemList([1]), ItemList([1]))
     assert result_callable == 12
+    assert wrapper_callable.is_listwise
+    assert not wrapper_callable.is_global
 
 
 def test_accumulator_scalar_to_dict_conversion():
@@ -187,7 +192,6 @@ def test_accumulator_scalar_to_dict_conversion():
     acc.add_metric(ScalarMetric(), "scalar")
     acc.measure_list(ItemList([1, 2]), ItemList([1]), user="u1")
     acc.measure_list(ItemList([3, 4]), ItemList([2]), user="u2")
-
     summary_df = acc.summary_metrics()
     assert summary_df.loc["scalar", "mean"] == approx(42)
     assert pd.isna(summary_df.loc["scalar", "median"])
