@@ -219,6 +219,9 @@ class UsesTrainer(IterativeTraining, Component, ABC):
 
     The component's configuration must have an ``epochs`` attribute noting the
     number of epochs to train.
+
+    Stability:
+        Full
     """
 
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> None:
@@ -303,6 +306,9 @@ class ModelTrainer(ABC):
 
     It is also a good idea for the trainer to be pickleable, but the parameter
     container interface is the primary mechanism for checkpointing.
+
+    Stability:
+        Full
     """
 
     @abstractmethod
@@ -314,7 +320,7 @@ class ModelTrainer(ABC):
         """
 
     @abstractmethod
-    def finalize(self):
+    def finalize(self) -> None:
         """
         Finish the training process, cleaning up any unneeded data structures
         and doing any finalization steps to the model.
