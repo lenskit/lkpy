@@ -75,6 +75,23 @@ def test_accumulator_basic_flow(sample_lists):
     assert approx(summary.loc["N", "mean"]) == 2.5
 
 
+def test_wrap_metric_with_class():
+    acc = MetricAccumulator()
+
+    wrapper = acc._wrap_metric(ListLength, label="ListLength", default=None)
+    assert isinstance(wrapper.metric, ListLength)
+    assert wrapper.label == "ListLength"
+
+
+def test_wrap_metric_function_label():
+    def custom_metric(recs, test):
+        return len(recs)
+
+    acc = MetricAccumulator()
+    wrapper = acc._wrap_metric(custom_metric, None, None)
+    assert wrapper.label == "function"
+
+
 @mark.parametrize(
     "keys,expected_names",
     [
@@ -241,6 +258,17 @@ def test_default_summarize_various_inputs(values, expected):
             assert result[key] == expected[key]
 
 
+def test_wrapper_default_summarize_chunked_array():
+    wrapper = MetricWrapper(ListLength(), "test")
+
+    chunked = pa.chunked_array([[1, 2], [3, 4]])
+    result = wrapper._default_summarize(chunked)
+
+    assert result["mean"] == 2.5
+    assert result["median"] == 2.5
+    assert result["std"] == approx(1.291, abs=0.01)
+
+
 # test with movielens data
 def test_full_workflow_integration_improved(ml_ds):
     split = split_temporal_fraction(ml_ds, 0.2, filter_test_users=True)
@@ -287,3 +315,30 @@ def test_accumulator_empty_itemlists():
     metrics = acc.list_metrics()
     assert len(metrics) == 3
     assert all(metrics["N"] >= 0)
+
+
+def test_wrapper_extract_list_metrics_none_result():
+    class NoneExtractMetric(Metric):
+        def measure_list(self, output, test):
+            return 4
+
+        def extract_list_metrics(self, data):
+            return None  # This triggers the return intermediate_data path
+
+        def summarize(self, values):
+            return {"mean": sum(values) / len(values)}
+
+    wrapper = MetricWrapper(NoneExtractMetric(), "test")
+    result = wrapper.extract_list_metrics(4)
+    assert result == 4
+
+
+def test_list_metrics_no_key_fields():
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength())
+
+    acc.measure_list(ItemList([1, 2]), ItemList([1]))
+
+    metrics = acc.list_metrics()
+    assert len(metrics) == 1
+    assert metrics.index.names == [None]
