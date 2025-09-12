@@ -72,7 +72,7 @@ class Metric(ABC):
             - Intermediate data for decomposed metrics
             - A dict mapping metric names to values for multi-metric classes
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     def extract_list_metrics(self, data: Any, /) -> float | dict[str, float] | None:
         """
@@ -93,7 +93,7 @@ class Metric(ABC):
         Returns:
             A dictionary of summary statistics.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
 
 class ListMetric(Metric):
@@ -120,7 +120,7 @@ class ListMetric(Metric):
 
         Individual metric classes need to implement this method.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     def extract_list_metrics(self, data: Any, /) -> float:
         """
@@ -172,7 +172,7 @@ class GlobalMetric(Metric):
 
         Individual metric classes need to implement this method.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
         raise NotImplementedError("Global metrics don't support per-list measurement")
@@ -218,7 +218,7 @@ class DecomposedMetric(Metric):
 
         Use `measure_list` in `Metric` for new implementations.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     def extract_list_metric(self, data: Any, /) -> float | None:
         """
@@ -240,4 +240,4 @@ class DecomposedMetric(Metric):
 
         Implement :meth:`Metric.summarize` in new implementations.
         """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
