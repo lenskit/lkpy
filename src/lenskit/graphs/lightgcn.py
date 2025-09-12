@@ -88,12 +88,6 @@ class LightGCNConfig:
         Logistic link prediction loss, using :meth:`LightGCN.link_pred_loss`.
     """
 
-    negative_count: PositiveInt = 1
-    """
-    The number of negative items to sample for each positive item in the
-    training data.
-    """
-
     @model_validator(mode="after")
     def check_layer_blending(self) -> Self:
         if isinstance(self.layer_blend, list) and len(self.layer_blend) != self.layer_count:
@@ -281,12 +275,11 @@ class LightGCNTrainer(ModelTrainer):
                 pos = self.edges[:, perm_t[bs:be]]
                 neg = self.matrix.sample_negatives(
                     self.coo.row_numbers[perm[bs:be]],
-                    n=config.negative_count,
                     rng=self.rng,
                 )
                 neg = torch.from_numpy(neg)
                 neg = neg.to(self.device, non_blocking=True)
-                neg = torch.stack([pos[0], neg[:, 0]])
+                neg = torch.stack([pos[0], neg])
 
                 mb_edges = torch.cat([pos, neg], 1).to(
                     self.scorer._torch_edge_dtype(device=self.device)
