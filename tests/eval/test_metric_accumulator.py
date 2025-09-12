@@ -145,15 +145,46 @@ def test_mixed_result_types():
     assert "Mixed.b" in df.columns
 
 
-def test_global_metric():
+def test_global_and_callable():
+    # global metric
     class DummyGlobalMetric(GlobalMetric):
         def measure_run(self, run, test):
             return 123.0
 
     wrapper = MetricWrapper(DummyGlobalMetric(), "global")
+    # measure_run on global metric
     result = wrapper.measure_run(ItemListCollection([]), ItemListCollection([]))
     assert result == 123.0
-    print("Global metric wrapper result:", result)
+
+    # non-global metric triggers TypeError
+    wrapper2 = MetricWrapper(ListLength(), "N")
+    with raises(TypeError):
+        wrapper2.measure_run(ItemListCollection([]), ItemListCollection([]))
+
+    # callable metric
+    class CallableMetric(Metric):
+        def measure_list(self, output, test):
+            return 12
+
+        def summarize(self, values):
+            return sum(values) / len(values) if values else 0
+
+    wrapper3 = MetricWrapper(CallableMetric(), "callable")
+    result_callable = wrapper3.measure_list(ItemList([1]), ItemList([1]))
+    assert result_callable == 12
+
+    # scalar-to-dict conversion
+    acc = MetricAccumulator()
+    acc.add_metric(CallableMetric(), "callable")
+    il = ItemList([1, 2])
+    test_il = ItemList([1])
+    acc.measure_list(il, test_il, user="u1")
+    acc.measure_list(il, test_il, user="u2")
+    summary_df = acc.summary_metrics()
+
+    assert summary_df.loc["callable", "mean"] == approx(12)
+    assert pd.isna(summary_df.loc["callable", "median"])
+    assert pd.isna(summary_df.loc["callable", "std"])
 
 
 # default summarize test
