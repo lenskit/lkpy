@@ -1643,10 +1643,6 @@ dependencies = [
 
 [package.optional-dependencies]
 gnn = [
-    { name = "torch", version = "2.8.0", source = { registry = "https://download.pytorch.org/whl/cpu/" }, marker = "(python_full_version < '3.14' and sys_platform == 'darwin' and extra == 'group-7-lenskit-cpu') or (python_full_version >= '3.14' and extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu') or (sys_platform != 'darwin' and extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
-    { name = "torch", version = "2.8.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu') or (extra != 'group-7-lenskit-cpu' and extra != 'group-7-lenskit-gpu')" },
-    { name = "torch", version = "2.8.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu/" }, marker = "(python_full_version >= '3.14' and extra == 'group-7-lenskit-cpu') or (python_full_version < '3.14' and extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu') or (sys_platform != 'darwin' and extra == 'group-7-lenskit-cpu')" },
-    { name = "torch", version = "2.8.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128/" }, marker = "extra == 'group-7-lenskit-gpu'" },
     { name = "torch-geometric" },
 ]
 hpf = [
@@ -1789,7 +1785,6 @@ requires-dist = [
     { name = "structlog", specifier = ">=23.2" },
     { name = "threadpoolctl", specifier = ">=3.0" },
     { name = "torch", specifier = "~=2.4" },
-    { name = "torch", marker = "extra == 'gnn'", specifier = ">=2.8" },
     { name = "torch-geometric", marker = "extra == 'gnn'", specifier = "~=2.6" },
     { name = "typing-extensions", specifier = "~=4.12" },
     { name = "xopen", specifier = "~=2.0" },

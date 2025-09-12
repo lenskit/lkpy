@@ -193,7 +193,6 @@ outputs:
       run:
         - ${{ pin_subpackage('lenskit') }}
         - torch-geometric >=2.6,<3
-        - pytorch >=2.8,<3
     tests:
       - python:
           imports:
