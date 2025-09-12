@@ -199,6 +199,28 @@ def test_global_and_callable_fixed():
     assert not wrapper_callable.is_global
 
 
+def test_metricwrapper_is_decomposed_property():
+    class DummyDecomposed(DecomposedMetric):
+        label = "dummy_decomp"
+
+        def compute_list_data(self, recs, test):
+            return {"a": 1.0}
+
+        def global_aggregate(self, values):
+            return {"mean": 1.0}
+
+        def measure_list(self, recs, test):
+            return {"a": 1.0}
+
+        def summarize(self, values):
+            return {"mean": 1.0}
+
+    wrapper = MetricWrapper(DummyDecomposed(), "decomp")
+    assert wrapper.is_decomposed
+    wrapper_non = MetricWrapper(ListLength(), "len")
+    assert not wrapper_non.is_decomposed
+
+
 def test_summarize_scalar_converts_to_dict():
     class ScalarMetric(Metric):
         label = "scalar_summarize"
@@ -229,10 +251,22 @@ def test_no_measure_metric():
         def summarize(self, values):
             return None
 
+    # no default
     acc = MetricAccumulator()
     acc.add_metric(NoMeasureMetric(), "no_measure")
     summary_df = acc.summary_metrics()
     assert summary_df.loc["no_measure", "mean"] == 0.0
+
+    # with default
+    acc_default = MetricAccumulator()
+    acc_default.add_metric(NoMeasureMetric(), label="no_measure_default", default=7.0)
+    acc_default.measure_list(ItemList([1]), ItemList([1]), user="u1")
+
+    list_metrics = acc_default.list_metrics()
+    assert list_metrics.loc["u1", "no_measure_default"] == 7.0
+
+    summary_df_default = acc_default.summary_metrics()
+    assert summary_df_default.loc["no_measure_default", "mean"] == 7.0
 
 
 # default summarize test
@@ -263,10 +297,13 @@ def test_wrapper_default_summarize_chunked_array():
 
     chunked = pa.chunked_array([[1, 2], [3, 4]])
     result = wrapper._default_summarize(chunked)
-
     assert result["mean"] == 2.5
     assert result["median"] == 2.5
     assert result["std"] == approx(1.291, abs=0.01)
+
+    metric = ListLength()
+    result = metric.summarize(pa.array([1, 2, 3]))
+    assert result == 2.0
 
 
 # test with movielens data
