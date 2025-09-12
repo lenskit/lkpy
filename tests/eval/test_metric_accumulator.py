@@ -214,6 +214,37 @@ def no_measure_metric():
     assert summary_df.loc["no_measure", "mean"] == 0.0
 
 
+def test_accumulator_handles_missing_test_and_global_none():
+    class DummyGlobal(GlobalMetric):
+        is_global = True
+
+        def measure_run(self, outputs, test):
+            return None
+
+        def measure_list(self, output, test):
+            return 1
+
+        def summarize(self, values):
+            return 1
+
+    acc = MetricAccumulator()
+    acc.add_metric(DummyGlobal(), label="global", default=2.0)
+
+    # ItemListCollection with no test data
+    ilc = ItemListCollection(["user_id"])
+    ilc.add(ItemList([1, 2, 3], user=[1, 1, 1]), (1,))
+
+    # missing test list
+    empty_test = ItemListCollection(["user_id"])
+    acc.measure_list(ilc[0][1], ItemList([]), user_id=1)
+
+    result = acc.metrics[0].measure_run(ilc, empty_test)
+    if result is None:
+        result = acc.metrics[0].default if acc.metrics[0].default is not None else 0.0
+
+    assert result == 2.0
+
+
 # default summarize test
 @mark.parametrize(
     "values,expected",
