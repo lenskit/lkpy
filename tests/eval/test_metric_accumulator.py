@@ -157,9 +157,8 @@ def test_global_and_callable():
     assert result == 123.0
 
     # non-global metric triggers TypeError
-    wrapper2 = MetricWrapper(ListLength(), "N")
     with raises(TypeError):
-        wrapper2.measure_run(ItemListCollection([]), ItemListCollection([]))
+        MetricWrapper(ListLength(), "N").measure_run(ItemListCollection([]), ItemListCollection([]))
 
     # callable metric
     class CallableMetric(Metric):
@@ -173,18 +172,42 @@ def test_global_and_callable():
     result_callable = wrapper3.measure_list(ItemList([1]), ItemList([1]))
     assert result_callable == 12
 
-    # scalar-to-dict conversion
-    acc = MetricAccumulator()
-    acc.add_metric(CallableMetric(), "callable")
-    il = ItemList([1, 2])
-    test_il = ItemList([1])
-    acc.measure_list(il, test_il, user="u1")
-    acc.measure_list(il, test_il, user="u2")
-    summary_df = acc.summary_metrics()
 
-    assert summary_df.loc["callable", "mean"] == approx(12)
-    assert pd.isna(summary_df.loc["callable", "median"])
-    assert pd.isna(summary_df.loc["callable", "std"])
+def test_accumulator_scalar_to_dict_conversion():
+    class ScalarMetric(Metric):
+        label = "scalar"
+
+        def measure_list(self, recs, test):
+            return 42
+
+        def summarize(self, values):
+            return sum(values) / len(values)
+
+    acc = MetricAccumulator()
+    acc.add_metric(ScalarMetric(), "scalar")
+    acc.measure_list(ItemList([1, 2]), ItemList([1]), user="u1")
+    acc.measure_list(ItemList([3, 4]), ItemList([2]), user="u2")
+
+    summary_df = acc.summary_metrics()
+    assert summary_df.loc["scalar", "mean"] == approx(42)
+    assert pd.isna(summary_df.loc["scalar", "median"])
+    assert pd.isna(summary_df.loc["scalar", "std"])
+
+
+def no_measure_metric():
+    class NoMeasureMetric(Metric):
+        label = "no_measure"
+
+        def measure_list(self, recs, test):
+            return None
+
+        def summarize(self, values):
+            return None
+
+    acc = MetricAccumulator()
+    acc.add_metric(NoMeasureMetric(), "no_measure")
+    summary_df = acc.summary_metrics()
+    assert summary_df.loc["no_measure", "mean"] == 0.0
 
 
 # default summarize test
