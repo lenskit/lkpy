@@ -107,6 +107,9 @@ class LightGCNConfig:
 class LightGCNScorer(UsesTrainer, Component[ItemList]):
     """
     Scorer using :class:`LightGCN` :cite:p:`heLightGCNSimplifyingPowering2020`.
+
+    Stability:
+        Experimental
     """
 
     config: LightGCNConfig
