@@ -72,7 +72,7 @@ class LightGCNConfig:
     The number of training epochs.
     """
 
-    regularization: PositiveFloat | None = 0.1
+    regularization: PositiveFloat | None = 0.01
     """
     The regularization strength.
     """
