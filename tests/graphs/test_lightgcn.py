@@ -21,14 +21,19 @@ from lenskit.metrics import quick_measure_model
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 
-class TestLightGCN(BasicComponentTests, ScorerTests):
+class TestLightGCNPairwise(BasicComponentTests, ScorerTests):
     component = LightGCNScorer
-    config = LightGCNConfig()
+    config = LightGCNConfig(loss="pairwise")
+
+
+class TestLightGCNLogistic(BasicComponentTests, ScorerTests):
+    component = LightGCNScorer
+    config = LightGCNConfig(loss="logistic")
 
 
 @mark.slow
 @mark.eval
-def test_flexmf_test_accuracy(ml_100k):
+def test_lightgcn_test_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
     results = quick_measure_model(
         LightGCNScorer(embedding_size=25, epochs=10, batch_size=1024),
