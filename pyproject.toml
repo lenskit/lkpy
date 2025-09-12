@@ -116,7 +116,7 @@ sklearn = ["scikit-learn ~=1.2"]
 funksvd = []
 hpf = ["hpfrec~=0.2.12"]
 implicit = ["implicit >=0.7.2"]
-gnn = ["torch_geometric ~=2.6"]
+gnn = ["torch >=2.8", "torch_geometric ~=2.6"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
 
