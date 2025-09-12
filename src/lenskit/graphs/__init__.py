@@ -7,3 +7,13 @@
 """
 Graph-based models, especially GNNs with :mod:`torch_geometric`.
 """
+
+import lazy_loader as lazy
+
+__getattr__, __dir__, __all__ = lazy.attach(
+    __name__,
+    submodules="lightgcn",
+    submod_attrs={
+        "lightgcn": ["LightGCNScorer", "LightGCNConfig"],
+    },
+)
