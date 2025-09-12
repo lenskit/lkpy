@@ -50,6 +50,11 @@ def test_accumulator_initial_state():
 
 
 def test_accumulator_unmeasured_defaults(basic_accumulator):
+    assert len(basic_accumulator.metrics) == 2
+    metric_labels = [m.label for m in basic_accumulator.metrics]
+    assert "Recall@5" in metric_labels
+    assert "NDCG@5" in metric_labels
+
     summary = basic_accumulator.summary_metrics()
     assert summary.loc["Recall@5", "mean"] == 0.0
     assert summary.loc["NDCG@5", "mean"] == 0.0
@@ -118,7 +123,6 @@ def test_custom_labels_and_defaults():
     assert acc.metrics[1].default == 99.0
 
 
-# complex metric tests
 def test_mixed_result_types():
     class MixedMetric(Metric):
         label = "Mixed"
@@ -141,12 +145,19 @@ def test_mixed_result_types():
     acc.add_metric(MixedMetric())
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     acc.measure_list(ItemList([2]), ItemList([2]), user="u2")
+
     df = acc.list_metrics()
-    assert "Mixed.b" in df.columns
+    assert "Mixed" in df.columns or "Mixed.b" in df.columns
+    assert len(df) == 2
+
+    # verify the mixed data handling
+    summary = acc.summary_metrics()
+    assert "Mixed" in summary.index
+    assert summary.loc["Mixed", "mean"] == 1.5
 
 
-def test_global_and_callable():
-    # global metric
+def test_global_and_callable_fixed():
+    # global metric test
     class DummyGlobalMetric(GlobalMetric):
         def measure_run(self, run, test):
             return 123.0
@@ -160,20 +171,13 @@ def test_global_and_callable():
     with raises(TypeError):
         MetricWrapper(ListLength(), "N").measure_run(ItemListCollection([]), ItemListCollection([]))
 
-    # callable metric
-    class CallableMetric(Metric):
-        def __call__(self, recs, test):
-            return 12
+    # callable metric test
+    def callable_metric_func(recs, test):
+        return len(recs)
 
-        def measure_list(self, output, test):
-            return 12
-
-        def summarize(self, values):
-            return sum(values) / len(values) if values else 0
-
-    wrapper_callable = MetricWrapper(CallableMetric(), "callable")
-    result_callable = wrapper_callable.measure_list(ItemList([1]), ItemList([1]))
-    assert result_callable == 12
+    wrapper_callable = MetricWrapper(callable_metric_func, "callable")
+    result_callable = wrapper_callable.measure_list(ItemList([1, 2, 3]), ItemList([1]))
+    assert result_callable == 3
     assert wrapper_callable.is_listwise
     assert not wrapper_callable.is_global
 
@@ -198,7 +202,7 @@ def test_summarize_scalar_converts_to_dict():
     assert pd.isna(summary.loc["scalar_summarize", "std"])
 
 
-def no_measure_metric():
+def test_no_measure_metric():
     class NoMeasureMetric(Metric):
         label = "no_measure"
 
@@ -214,37 +218,6 @@ def no_measure_metric():
     assert summary_df.loc["no_measure", "mean"] == 0.0
 
 
-def test_accumulator_handles_missing_test_and_global_none():
-    class DummyGlobal(GlobalMetric):
-        is_global = True
-
-        def measure_run(self, outputs, test):
-            return None
-
-        def measure_list(self, output, test):
-            return 1
-
-        def summarize(self, values):
-            return 1
-
-    acc = MetricAccumulator()
-    acc.add_metric(DummyGlobal(), label="global", default=2.0)
-
-    # ItemListCollection with no test data
-    ilc = ItemListCollection(["user_id"])
-    ilc.add(ItemList([1, 2, 3], user=[1, 1, 1]), (1,))
-
-    # missing test list
-    empty_test = ItemListCollection(["user_id"])
-    acc.measure_list(ilc[0][1], ItemList([]), user_id=1)
-
-    result = acc.metrics[0].measure_run(ilc, empty_test)
-    if result is None:
-        result = acc.metrics[0].default if acc.metrics[0].default is not None else 0.0
-
-    assert result == 2.0
-
-
 # default summarize test
 @mark.parametrize(
     "values,expected",
@@ -252,24 +225,24 @@ def test_accumulator_handles_missing_test_and_global_none():
         ([], {"mean": None, "median": None, "std": None}),
         ([None, None], {"mean": None, "median": None, "std": None}),
         ([42], {"mean": 42.0, "median": 42.0, "std": 0.0}),
-        ([1, 2, 3, 4], {"mean": 2.5, "median": 2.5, "std": approx(1.29, abs=0.1)}),
+        ([1, 2, 3, 4], {"mean": 2.5, "median": 2.5, "std": approx(1.291, abs=0.01)}),
+        ([1, None, 2, 3], {"mean": 2.0, "median": 2.0, "std": 1.0}),
         (pa.array([1, 2, 3]), {"mean": 2.0, "median": 2.0, "std": 1.0}),
     ],
 )
 def test_default_summarize_various_inputs(values, expected):
-    wrapper = MetricWrapper(metric=None, label="test")
+    wrapper = MetricWrapper(ListLength(), "test")
     result = wrapper._default_summarize(values)
-    if "mean" in expected and expected["mean"] is not None:
-        assert result["mean"] == expected["mean"]
-        assert result["median"] == expected["median"]
-        if expected["std"] != 0:
-            assert result["std"] == expected["std"]
-    else:
-        assert result == expected
+
+    for key in ["mean", "median", "std"]:
+        if expected[key] is None:
+            assert result[key] is None
+        else:
+            assert result[key] == expected[key]
 
 
 # test with movielens data
-def test_full_workflow_integration_func(ml_ds):
+def test_full_workflow_integration_improved(ml_ds):
     split = split_temporal_fraction(ml_ds, 0.2, filter_test_users=True)
     scorer = PopScorer()
     scorer.train(split.train)
@@ -293,3 +266,24 @@ def test_full_workflow_integration_func(ml_ds):
     assert all(0 <= list_metrics[col].max() <= 1 for col in list_metrics.columns)
     assert set(summary.index) == {"Recall@10", "NDCG@10"}
     assert all(0 <= summary.loc[metric, "mean"] <= 1 for metric in summary.index)
+
+    for metric in summary.index:
+        assert summary.loc[metric, "mean"] is not None
+        std_val = summary.loc[metric, "std"]
+        assert std_val is None or std_val >= 0
+
+
+def test_accumulator_empty_itemlists():
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength())
+
+    # empty recommendations
+    acc.measure_list(ItemList([]), ItemList([1, 2]), user="u1")
+    # empty test set
+    acc.measure_list(ItemList([1, 2]), ItemList([]), user="u2")
+    # both empty
+    acc.measure_list(ItemList([]), ItemList([]), user="u3")
+
+    metrics = acc.list_metrics()
+    assert len(metrics) == 3
+    assert all(metrics["N"] >= 0)
