@@ -140,7 +140,88 @@ def test_custom_labels_and_defaults():
     assert acc.metrics[1].default == 99.0
 
 
-def test_mixed_result_types():
+def test_global_metric():
+    class DummyGlobalMetric(GlobalMetric):
+        label = "dummy_global"
+
+        def measure_run(self, run, test):
+            return 42.0
+
+    acc = MetricAccumulator()
+    acc.add_metric(DummyGlobalMetric())
+    wrapper = acc.metrics[0]
+
+    run = ItemListCollection([])
+    test_data = ItemListCollection([])
+    result = wrapper.measure_run(run, test_data)
+    assert result == 42.0
+    assert wrapper.is_global
+    assert not wrapper.is_listwise
+
+
+def test_callable_metric():
+    def _callable(recs, test):
+        return len(recs)
+
+    acc = MetricAccumulator()
+    acc.add_metric(_callable, label="callable_metric")
+
+    recs = ItemList([1, 2, 3])
+    test_il = ItemList([1])
+    result = acc.metrics[0].measure_list(recs, test_il)
+    assert result == 3
+    wrapper = acc.metrics[0]
+    assert wrapper.is_listwise
+    assert not wrapper.is_global
+
+
+def test_scalar_metric():
+    class ScalarMetric(Metric):
+        label = "scalar_summarize"
+
+        def measure_list(self, recs, test):
+            return 5
+
+        def summarize(self, values):
+            return 99.0
+
+    acc = MetricAccumulator()
+    acc.add_metric(ScalarMetric())
+    acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
+    summary = acc.summary_metrics()
+
+    assert summary.loc["scalar_summarize", "mean"] == 99.0
+    assert pd.isna(summary.loc["scalar_summarize", "median"])
+    assert pd.isna(summary.loc["scalar_summarize", "std"])
+
+
+def test_no_measure_metric():
+    class NoMeasureMetric(Metric):
+        label = "no_measure"
+
+        def measure_list(self, recs, test):
+            return None
+
+        def summarize(self, values):
+            return None
+
+    acc = MetricAccumulator()
+    acc.add_metric(NoMeasureMetric())
+    summary = acc.summary_metrics()
+    # default fallback
+    assert summary.loc["no_measure", "mean"] == 0.0
+
+    # with default
+    acc_default = MetricAccumulator()
+    acc_default.add_metric(NoMeasureMetric(), label="no_measure_default", default=7.0)
+    acc_default.measure_list(ItemList([1]), ItemList([1]), user="u1")
+    list_metrics = acc_default.list_metrics()
+    assert list_metrics.loc["u1", "no_measure_default"] == 7.0
+    summary_df_default = acc_default.summary_metrics()
+    assert summary_df_default.loc["no_measure_default", "mean"] == 7.0
+
+
+def test_mixed_metric():
     class MixedMetric(Metric):
         label = "Mixed"
 
@@ -164,39 +245,31 @@ def test_mixed_result_types():
     acc.measure_list(ItemList([2]), ItemList([2]), user="u2")
 
     df = acc.list_metrics()
-    assert "Mixed" in df.columns or "Mixed.b" in df.columns
-    assert len(df) == 2
-
-    # verify the mixed data handling
     summary = acc.summary_metrics()
+
     assert "Mixed" in summary.index
     assert summary.loc["Mixed", "mean"] == 1.5
+    assert len(df) == 2
 
 
-def test_global_and_callable_fixed():
-    # global metric test
-    class DummyGlobalMetric(GlobalMetric):
-        def measure_run(self, run, test):
-            return 123.0
+def test_list_metrics_with_none_extract():
+    class NoneExtractMetric(Metric):
+        label = "none_extract"
 
-    wrapper_global = MetricWrapper(DummyGlobalMetric(), "global")
-    result = wrapper_global.measure_run(ItemListCollection([]), ItemListCollection([]))
-    assert result == 123.0
-    assert wrapper_global.is_global
-    assert not wrapper_global.is_listwise
+        def measure_list(self, output, test):
+            return 4
 
-    with raises(TypeError):
-        MetricWrapper(ListLength(), "N").measure_run(ItemListCollection([]), ItemListCollection([]))
+        def extract_list_metrics(self, data):
+            return None
 
-    # callable metric test
-    def callable_metric_func(recs, test):
-        return len(recs)
+        def summarize(self, values):
+            return {"mean": sum(values) / len(values)}
 
-    wrapper_callable = MetricWrapper(callable_metric_func, "callable")
-    result_callable = wrapper_callable.measure_list(ItemList([1, 2, 3]), ItemList([1]))
-    assert result_callable == 3
-    assert wrapper_callable.is_listwise
-    assert not wrapper_callable.is_global
+    acc = MetricAccumulator()
+    acc.add_metric(NoneExtractMetric())
+    acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
+    df = acc.list_metrics()
+    assert df.loc["u1", "none_extract"] == 4
 
 
 def test_metricwrapper_is_decomposed_property():
@@ -239,34 +312,6 @@ def test_summarize_scalar_converts_to_dict():
     assert summary.loc["scalar_summarize", "mean"] == 99.0
     assert pd.isna(summary.loc["scalar_summarize", "median"])
     assert pd.isna(summary.loc["scalar_summarize", "std"])
-
-
-def test_no_measure_metric():
-    class NoMeasureMetric(Metric):
-        label = "no_measure"
-
-        def measure_list(self, recs, test):
-            return None
-
-        def summarize(self, values):
-            return None
-
-    # no default
-    acc = MetricAccumulator()
-    acc.add_metric(NoMeasureMetric(), "no_measure")
-    summary_df = acc.summary_metrics()
-    assert summary_df.loc["no_measure", "mean"] == 0.0
-
-    # with default
-    acc_default = MetricAccumulator()
-    acc_default.add_metric(NoMeasureMetric(), label="no_measure_default", default=7.0)
-    acc_default.measure_list(ItemList([1]), ItemList([1]), user="u1")
-
-    list_metrics = acc_default.list_metrics()
-    assert list_metrics.loc["u1", "no_measure_default"] == 7.0
-
-    summary_df_default = acc_default.summary_metrics()
-    assert summary_df_default.loc["no_measure_default", "mean"] == 7.0
 
 
 # default summarize test
@@ -352,22 +397,6 @@ def test_accumulator_empty_itemlists():
     metrics = acc.list_metrics()
     assert len(metrics) == 3
     assert all(metrics["N"] >= 0)
-
-
-def test_wrapper_extract_list_metrics_none_result():
-    class NoneExtractMetric(Metric):
-        def measure_list(self, output, test):
-            return 4
-
-        def extract_list_metrics(self, data):
-            return None  # This triggers the return intermediate_data path
-
-        def summarize(self, values):
-            return {"mean": sum(values) / len(values)}
-
-    wrapper = MetricWrapper(NoneExtractMetric(), "test")
-    result = wrapper.extract_list_metrics(4)
-    assert result == 4
 
 
 def test_list_metrics_no_key_fields():

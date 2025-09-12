@@ -175,10 +175,14 @@ class GlobalMetric(Metric):
         raise NotImplementedError()  # pragma: no cover
 
     def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
-        raise NotImplementedError("Global metrics don't support per-list measurement")
+        raise NotImplementedError(
+            "Global metrics don't support per-list measurement"
+        )  # pragma: no cover
 
     def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> float:
-        raise NotImplementedError("Global metrics should implement measure_run instead")
+        raise NotImplementedError(
+            "Global metrics should implement measure_run instead"
+        )  # pragma: no cover
 
 
 class DecomposedMetric(Metric):
