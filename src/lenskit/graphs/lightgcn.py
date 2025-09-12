@@ -40,9 +40,10 @@ class LightGCNConfig:
         Experimental
     """
 
-    embedding_size: PositiveInt = 50
+    embedding_size: PositiveInt = 64
     """
-    The dimension of the embedding space (number of latent features).
+    The dimension of the embedding space (number of latent features).  Seems
+    to work best as a power of 2.
     """
 
     layer_count: PositiveInt = 2
