@@ -243,9 +243,6 @@ class MetricAccumulator:
                 default_val = wrapper.default if wrapper.default is not None else 0.0
                 summary = {"mean": default_val, "median": None, "std": None}
 
-            if not isinstance(summary, dict):
-                summary = {"mean": summary, "median": None, "std": None}
-
             summaries[label] = summary
 
         if not summaries:

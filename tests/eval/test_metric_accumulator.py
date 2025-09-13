@@ -228,12 +228,12 @@ def test_scalar_metric():
 # metrics returning None or mixed
 
 
-def test_no_measure_metric_with_and_without_default():
+def test_measure_metric_with_and_without_default():
     class NoMeasureMetric(Metric):
         label = "no_measure"
 
         def measure_list(self, recs, test):
-            return None
+            return 7.0
 
         def summarize(self, values):
             return None
@@ -244,7 +244,7 @@ def test_no_measure_metric_with_and_without_default():
     assert summary.loc["no_measure", "mean"] == 0.0
 
     acc_default = MetricAccumulator()
-    acc_default.add_metric(NoMeasureMetric(), label="no_measure_default", default=7.0)
+    acc_default.add_metric(NoMeasureMetric(), label="no_measure_default")
     acc_default.measure_list(ItemList([1]), ItemList([1]), user="u1")
     list_metrics = acc_default.list_metrics()
     assert list_metrics.loc["u1", "no_measure_default"] == 7.0
