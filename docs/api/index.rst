@@ -46,6 +46,7 @@ them need to be installed separately.
     lenskit.funksvd
     lenskit.implicit
     lenskit.hpf
+    lenskit.graphs
 
 
 Batch Inference and Evaluation

@@ -12,6 +12,7 @@ Basic data types used in data representations.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -79,3 +80,21 @@ class UIPair(Generic[T]):
 
     user: T
     item: T
+
+
+class Extent(NamedTuple):
+    """
+    Representation of a range with a start and end.
+    """
+
+    start: int
+    "The range start (inclusive)."
+    end: int
+    "The range end (exclusive)."
+
+    @property
+    def size(self) -> int:
+        """
+        The size of the extent.
+        """
+        return self.end - self.start
