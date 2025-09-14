@@ -41,23 +41,22 @@ def sample_lists():
     }
 
 
-# initialization and defaults
-
-
-def test_accumulator_initial_state():
+def test_accumulator_empty_and_unmeasured_defaults():
     acc = MetricAccumulator()
+    # initial state
     assert acc.metrics == []
     assert acc.list_metrics().empty
     assert acc.summary_metrics().empty
 
+    # measuring with no metrics
+    acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
+    assert acc.list_metrics().empty
+    assert acc.summary_metrics().empty
 
-def test_accumulator_unmeasured_defaults():
-    acc = MetricAccumulator()
+    # add metrics but do not measure
     acc.add_metric(Recall(5))
     acc.add_metric(NDCG(5))
-
-    summary = acc.summary_metrics()
-    assert summary.empty
+    assert acc.summary_metrics().empty
 
 
 # measuring lists
@@ -137,14 +136,6 @@ def test_accumulator_key_fields(keys, expected_names):
     assert acc._key_fields == expected_names
     metrics = acc.list_metrics()
     assert set(metrics.index.names) == set(expected_names)
-
-
-def test_accumulator_duplicate_labels():
-    acc = MetricAccumulator()
-    acc.add_metric(ListLength, label="dup")
-    acc.add_metric(ListLength, label="dup")
-    with raises(RuntimeError, match="duplicate metric"):
-        acc._validate_setup()
 
 
 # custom metrics and types
@@ -434,3 +425,21 @@ def test_accumulator_duplicate_labels():
 
     with raises(RuntimeError, match="duplicate metric"):
         acc._validate_setup()
+
+
+def test_accumulator_with_default_value_on_none_result():
+    class NoneMetric(Metric):
+        label = "none_metric"
+
+        def measure_list(self, recs, test):
+            return None
+
+        def summarize(self, values):
+            return {"mean": 123}
+
+    acc = MetricAccumulator()
+    acc.add_metric(NoneMetric(), default=99.0)
+    acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
+    metrics = acc.list_metrics()
+    # none should fall back to default value
+    assert metrics.loc["u1", "none_metric"] == 99.0
