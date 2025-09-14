@@ -51,6 +51,15 @@ def test_accumulator_initial_state():
     assert acc.summary_metrics().empty
 
 
+def test_accumulator_unmeasured_defaults():
+    acc = MetricAccumulator()
+    acc.add_metric(Recall(5))
+    acc.add_metric(NDCG(5))
+
+    summary = acc.summary_metrics()
+    assert summary.empty
+
+
 # measuring lists
 
 
@@ -292,6 +301,26 @@ def test_metricwrapper_is_decomposed_property():
     assert not wrapper_non.is_decomposed
 
 
+def test_measure_metric_with_none_summarize():
+    """Test metric that returns None from summarize."""
+
+    class NoSummarizeMetric(Metric):
+        label = "no_summarize"
+
+        def measure_list(self, recs, test):
+            return 7.0
+
+        def summarize(self, values):
+            return None
+
+    acc = MetricAccumulator()
+    acc.add_metric(NoSummarizeMetric())
+    acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
+
+    summary = acc.summary_metrics()
+    assert "no_summarize" not in summary.index
+
+
 # test with movielens data
 
 
@@ -379,3 +408,29 @@ def test_decomposed_metric_numeric_return():
     metric = TestDecomposedMetric()
     result = metric.summarize([1, 2, 3])
     assert result == {"value": 5.0}
+
+
+def test_empty_intermediate_values():
+    class TestMetric(Metric):
+        label = "test"
+
+        def measure_list(self, recs, test):
+            return None  # no intermediate data
+
+        def summarize(self, values):
+            return {"mean": 0.0}
+
+    acc = MetricAccumulator()
+    acc.add_metric(TestMetric())
+
+    summary = acc.summary_metrics()
+    assert summary.empty or "test" not in summary.index
+
+
+def test_accumulator_duplicate_labels():
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength(), label="dup")
+    acc.add_metric(ListLength(), label="dup")
+
+    with raises(RuntimeError, match="duplicate metric"):
+        acc._validate_setup()
