@@ -42,12 +42,9 @@ class Metric(ABC):
         metric with all available behavior such as labeling and defaults;
         you must actually extend this class. This requirement may be relaxed
         in the future.
-    """
 
-    default: ClassVar[float | None] = 0.0
-    """
-    The default value to infer when computing statistics over missing values.
-    If ``None``, no inference is done (necessary for metrics like RMSE, where
+    The default value to impute when computing statistics over missing values.
+    If ``None``, no imputation is done (necessary for metrics like RMSE, where
     the missing value is theoretically infinite).
     """
 
@@ -112,6 +109,8 @@ class ListMetric(Metric):
     Stability:
         Full
     """
+
+    default: ClassVar[float | None] = 0.0
 
     @abstractmethod
     def measure_list(self, output: ItemList, test: ItemList, /) -> float:

@@ -51,16 +51,6 @@ def test_accumulator_initial_state():
     assert acc.summary_metrics().empty
 
 
-def test_accumulator_unmeasured_defaults(basic_accumulator):
-    metric_labels = [m.label for m in basic_accumulator.metrics]
-    assert "Recall@5" in metric_labels
-    assert "NDCG@5" in metric_labels
-
-    summary = basic_accumulator.summary_metrics()
-    assert summary.loc["Recall@5", "mean"] == 0.0
-    assert summary.loc["NDCG@5", "mean"] == 0.0
-
-
 # measuring lists
 
 
@@ -76,7 +66,7 @@ def test_accumulator_measures_list_and_summary(sample_lists):
 
     assert len(list_metrics) == 2
     assert set(list_metrics["N"]) == {2.0, 3.0}
-    assert approx(summary.loc["N", "mean"]) == 2.5
+    assert approx(summary.loc["N", "N"]) == 2.5
 
 
 def test_accumulator_empty_itemlists():
@@ -208,7 +198,7 @@ def test_callable_metric():
 
 def test_scalar_metric():
     class ScalarMetric(Metric):
-        label = "scalar_summarize"
+        label = "scalar"
 
         def measure_list(self, recs, test):
             return 5
@@ -220,36 +210,10 @@ def test_scalar_metric():
     acc.add_metric(ScalarMetric())
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     summary = acc.summary_metrics()
-    assert summary.loc["scalar_summarize", "mean"] == 99.0
-    assert pd.isna(summary.loc["scalar_summarize", "median"])
-    assert pd.isna(summary.loc["scalar_summarize", "std"])
+    assert summary.loc["scalar", "scalar"] == 99.0
 
 
-# metrics returning None or mixed
-
-
-def test_measure_metric_with_and_without_default():
-    class NoMeasureMetric(Metric):
-        label = "no_measure"
-
-        def measure_list(self, recs, test):
-            return 7.0
-
-        def summarize(self, values):
-            return None
-
-    acc = MetricAccumulator()
-    acc.add_metric(NoMeasureMetric())
-    summary = acc.summary_metrics()
-    assert summary.loc["no_measure", "mean"] == 0.0
-
-    acc_default = MetricAccumulator()
-    acc_default.add_metric(NoMeasureMetric(), label="no_measure_default")
-    acc_default.measure_list(ItemList([1]), ItemList([1]), user="u1")
-    list_metrics = acc_default.list_metrics()
-    assert list_metrics.loc["u1", "no_measure_default"] == 7.0
-    summary_df_default = acc_default.summary_metrics()
-    assert summary_df_default.loc["no_measure_default", "mean"] == 7.0
+# metrics returning mixed
 
 
 def test_mixed_metric_behavior():
@@ -300,7 +264,7 @@ def test_none_extract_metric():
     acc.add_metric(NoneExtractMetric())
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     df = acc.list_metrics()
-    assert df.loc["u1", "none_extract"] == 4
+    assert pd.isna(df.loc["u1", "none_extract"])
 
 
 # metricWrapper properties and summarization
@@ -326,34 +290,6 @@ def test_metricwrapper_is_decomposed_property():
     assert wrapper.is_decomposed
     wrapper_non = MetricWrapper(ListLength(), "len")
     assert not wrapper_non.is_decomposed
-
-
-def test_wrapper_default_summarize_various_inputs():
-    test_cases = [
-        ([], {"mean": None, "median": None, "std": None}),
-        ([None, None], {"mean": None, "median": None, "std": None}),
-        ([42], {"mean": 42.0, "median": 42.0, "std": 0.0}),
-        ([1, 2, 3, 4], {"mean": 2.5, "median": 2.5, "std": approx(1.291, abs=0.01)}),
-        ([1, None, 2, 3], {"mean": 2.0, "median": 2.0, "std": 1.0}),
-        (pa.array([1, 2, 3]), {"mean": 2.0, "median": 2.0, "std": 1.0}),
-    ]
-    wrapper = MetricWrapper(ListLength(), "test")
-    for values, expected in test_cases:
-        result = wrapper._default_summarize(values)
-        for key in ["mean", "median", "std"]:
-            if expected[key] is None:
-                assert result[key] is None
-            else:
-                assert result[key] == expected[key]
-
-
-def test_wrapper_default_summarize_chunked_array():
-    wrapper = MetricWrapper(ListLength(), "test")
-    chunked = pa.chunked_array([[1, 2], [3, 4]])
-    result = wrapper._default_summarize(chunked)
-    assert result["mean"] == 2.5
-    assert result["median"] == 2.5
-    assert result["std"] == approx(1.291, abs=0.01)
 
 
 # test with movielens data

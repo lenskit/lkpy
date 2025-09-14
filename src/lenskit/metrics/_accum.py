@@ -59,33 +59,13 @@ class MetricWrapper:
 
     def extract_list_metrics(self, intermediate_data: Any) -> float | dict[str, float] | None:
         """Extract per-list metrics from intermediate data."""
-        result = self.metric.extract_list_metrics(intermediate_data)
-        return intermediate_data if result is None else result
+        return self.metric.extract_list_metrics(intermediate_data)
 
-    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray) -> dict[str, float | None]:
+    def summarize(
+        self, values: list[Any] | pa.Array | pa.ChunkedArray
+    ) -> dict[str, float | None] | float | None:
         """Aggregate intermediate values into summary statistics."""
-        result = self.metric.summarize(values)
-        if result is None:
-            return self._default_summarize(values)
-        if isinstance(result, dict):
-            return result
-        return {"mean": float(result), "median": None, "std": None}
-
-    def _default_summarize(self, values) -> dict[str, float | None]:
-        """A fallback for metrics that do not implement their own summarize method."""
-        if isinstance(values, (pa.Array, pa.ChunkedArray)):
-            values = values.to_pylist()
-        numeric_values = [v for v in values if v is not None]
-
-        if not numeric_values:
-            return {"mean": None, "median": None, "std": None}
-
-        arr = np.array(numeric_values, dtype=np.float64)
-        return {
-            "mean": float(np.mean(arr)),
-            "median": float(np.median(arr)),
-            "std": float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0,
-        }
+        return self.metric.summarize(values)
 
     def measure_run(self, run: ItemListCollection, test: ItemListCollection) -> float:
         """Only global metrics support run-level measurement."""
@@ -128,7 +108,7 @@ class MetricAccumulator:
             default:
                 The default value to use when a user does not have
                 recommendations. If unset, obtains from the metric's ``default``
-                attribute (if specified), or 0.0.
+                attribute (if specified).
         """
         wrapper = self._wrap_metric(metric, label, default)
         self.metrics.append(wrapper)
@@ -239,14 +219,14 @@ class MetricAccumulator:
 
             if intermediate_values:
                 summary = wrapper.summarize(intermediate_values)
-            else:
-                default_val = wrapper.default if wrapper.default is not None else 0.0
-                summary = {"mean": default_val, "median": None, "std": None}
-
-            summaries[label] = summary
+                if summary is not None:
+                    if isinstance(summary, dict):
+                        summaries[label] = summary
+                    else:
+                        summaries[label] = {label: summary}
 
         if not summaries:
-            return pd.DataFrame(columns=["mean", "median", "std"]).rename_axis("metric")
+            return pd.DataFrame()
 
         df = pd.DataFrame.from_dict(summaries, orient="index")
         df.index.name = "metric"
@@ -275,8 +255,6 @@ class MetricAccumulator:
         if default is None:
             if isinstance(m, ListMetric):
                 default = m.default
-            else:
-                default = 0.0
 
             if default is not None and not isinstance(
                 default, (float, int, np.floating, np.integer)

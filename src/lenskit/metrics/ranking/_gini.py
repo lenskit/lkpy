@@ -50,6 +50,18 @@ class ListGini(GiniBase):
 
     This computes the Gini coefficient of the *number of lists* that each item
     appears in.
+
+    Args:
+        k:
+            The maximum recommendation list length.
+        items:
+            The total number of items, a data frame or series of item data, or a
+            dataset. If a frame or series is provided, its length will be used
+            as the number of items.  If a dataset is provided, its item count
+            will be used.
+
+    Stability:
+        Caller
     """
 
     @override
@@ -75,6 +87,21 @@ class ExposureGini(GiniBase):
 
     This uses a weighting model to compute the exposure of each item in each list,
     and computes the Gini coefficient of the total exposure.
+
+    Args:
+        k:
+            The maximum recommendation list length.
+        items:
+            The total number of items, a data frame or series of item data, or a
+            dataset. If a frame or series is provided, its length will be used
+            as the number of items.  If a dataset is provided, its item count
+            will be used.
+        weight:
+            The rank weighting model to use.  Defaults to
+            :class:`GeometricRankWeight` with the specified patience parameter.
+
+    Stability:
+        Caller
     """
 
     weight: RankWeight

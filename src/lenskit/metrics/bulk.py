@@ -151,7 +151,7 @@ class RunAnalysis:
             default:
                 The default value to use in aggregates when a user does not have
                 recommendations. If unset, obtains from the metric's ``default``
-                attribute (if specified), or 0.0.
+                attribute (if specified).
         """
         self._accumulator.add_metric(metric, label, default)
 
@@ -220,19 +220,21 @@ class RunAnalysis:
         for metric_wrapper in global_metrics:
             result = metric_wrapper.measure_run(outputs, test)
 
-            if result is None:
-                result = metric_wrapper.default if metric_wrapper.default is not None else 0.0
+            if result is None and metric_wrapper.default is not None:
+                result = metric_wrapper.default
 
-            global_results[metric_wrapper.label] = result
+            if result is not None:
+                global_results[metric_wrapper.label] = result
 
         summary_df = self._accumulator.summary_metrics()
         if not summary_df.empty:
             for metric_name in summary_df.index:
                 if "." not in metric_name and metric_name not in global_results:
-                    if "value" in summary_df.columns:
-                        global_results[metric_name] = summary_df.loc[metric_name, "value"]
-                    elif "mean" in summary_df.columns:
-                        global_results[metric_name] = summary_df.loc[metric_name, "mean"]
+                    for col in summary_df.columns:
+                        value = summary_df.loc[metric_name, col]
+                        if not pd.isna(value):
+                            global_results[metric_name] = value
+                            break
 
         global_results = pd.Series(global_results, dtype=np.float64)
 
