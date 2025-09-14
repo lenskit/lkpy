@@ -67,7 +67,6 @@ class ListGini(GiniBase):
     @override
     def compute_list_data(self, output: ItemList, test):
         recs = self.truncate(output)
-
         return recs.ids(format="arrow")
 
     @override
@@ -115,14 +114,12 @@ class ExposureGini(GiniBase):
         weight: RankWeight = GeometricRankWeight(),
     ):
         super().__init__(k=k, items=items)
-
         self.weight = weight
 
     @override
     def compute_list_data(self, output: ItemList, test):
         recs = self.truncate(output)
         weights = self.weight.weight(np.arange(1, len(recs) + 1))
-
         return (recs.ids(format="arrow"), pa.array(weights, type=pa.float32()))
 
     @override
