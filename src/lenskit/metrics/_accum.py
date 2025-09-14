@@ -196,14 +196,14 @@ class MetricAccumulator:
 
         return df
 
-    def summary_metrics(self) -> pd.DataFrame:
+    def summary_metrics(self) -> dict[str, float]:
         """
         Compute summary statistics by calling each metric's summarize() method.
 
         Returns:
-            A DataFrame indexed by metric label.
+            A dictionary with flattened metric results.
         """
-        summaries = {}
+        results = {}
 
         for wrapper in self.metrics:
             if wrapper.is_global:
@@ -221,16 +221,12 @@ class MetricAccumulator:
                 summary = wrapper.summarize(intermediate_values)
                 if summary is not None:
                     if isinstance(summary, dict):
-                        summaries[label] = summary
+                        for key, value in summary.items():
+                            results[f"{label}.{key}"] = value
                     else:
-                        summaries[label] = {label: summary}
+                        results[label] = summary
 
-        if not summaries:
-            return pd.DataFrame()
-
-        df = pd.DataFrame.from_dict(summaries, orient="index")
-        df.index.name = "metric"
-        return df
+        return results
 
     def _wrap_metric(
         self,

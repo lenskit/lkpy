@@ -226,15 +226,15 @@ class RunAnalysis:
             if result is not None:
                 global_results[metric_wrapper.label] = result
 
-        summary_df = self._accumulator.summary_metrics()
-        if not summary_df.empty:
-            for metric_name in summary_df.index:
-                if "." not in metric_name and metric_name not in global_results:
-                    for col in summary_df.columns:
-                        value = summary_df.loc[metric_name, col]
-                        if not pd.isna(value):
-                            global_results[metric_name] = value
-                            break
+        summary_results = self._accumulator.summary_metrics()
+        for key, value in summary_results.items():
+            if "." in key:
+                base_metric = key.split(".", 1)[0]
+                if base_metric not in global_results:
+                    global_results[base_metric] = value
+            else:
+                if key not in global_results:
+                    global_results[key] = value
 
         global_results = pd.Series(global_results, dtype=np.float64)
 

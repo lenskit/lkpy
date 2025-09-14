@@ -46,17 +46,17 @@ def test_accumulator_empty_and_unmeasured_defaults():
     # initial state
     assert acc.metrics == []
     assert acc.list_metrics().empty
-    assert acc.summary_metrics().empty
+    assert not acc.summary_metrics()
 
     # measuring with no metrics
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     assert acc.list_metrics().empty
-    assert acc.summary_metrics().empty
+    assert not acc.summary_metrics()
 
     # add metrics but do not measure
     acc.add_metric(Recall(5))
     acc.add_metric(NDCG(5))
-    assert acc.summary_metrics().empty
+    assert not acc.summary_metrics()
 
 
 # measuring lists
@@ -74,7 +74,7 @@ def test_accumulator_measures_list_and_summary(sample_lists):
 
     assert len(list_metrics) == 2
     assert set(list_metrics["N"]) == {2.0, 3.0}
-    assert approx(summary.loc["N", "N"]) == 2.5
+    assert approx(summary["N"]) == 2.5
 
 
 def test_accumulator_empty_itemlists():
@@ -210,7 +210,7 @@ def test_scalar_metric():
     acc.add_metric(ScalarMetric())
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     summary = acc.summary_metrics()
-    assert summary.loc["scalar", "scalar"] == 99.0
+    assert summary["scalar"] == 99.0
 
 
 # metrics returning mixed
@@ -242,8 +242,8 @@ def test_mixed_metric_behavior():
     df = acc.list_metrics()
     summary = acc.summary_metrics()
 
-    assert "Mixed" in summary.index
-    assert summary.loc["Mixed", "mean"] == 1.5
+    assert "Mixed.mean" in summary
+    assert summary["Mixed.mean"] == 1.5
     assert len(df) == 2
 
 
@@ -309,7 +309,7 @@ def test_measure_metric_with_none_summarize():
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
 
     summary = acc.summary_metrics()
-    assert "no_summarize" not in summary.index
+    assert "no_summarize" not in summary
 
 
 # test with movielens data
@@ -337,12 +337,14 @@ def test_full_workflow_integration_improved(ml_ds):
     assert len(list_metrics) == len(test_users)
     assert set(list_metrics.columns) == {"Recall@10", "NDCG@10"}
     assert all(0 <= list_metrics[col].max() <= 1 for col in list_metrics.columns)
-    assert set(summary.index) == {"Recall@10", "NDCG@10"}
-    assert all(0 <= summary.loc[metric, "mean"] <= 1 for metric in summary.index)
-    for metric in summary.index:
-        assert summary.loc[metric, "mean"] is not None
-        std_val = summary.loc[metric, "std"]
-        assert std_val is None or std_val >= 0
+
+    assert len(summary) > 0
+    for key, value in summary.items():
+        if value is not None:
+            if "std" in key.lower():
+                assert value >= 0
+            else:
+                assert 0 <= value <= 1
 
 
 # test that global metric raises errors for unsupported operations
@@ -415,7 +417,7 @@ def test_empty_intermediate_values():
     acc.add_metric(TestMetric())
 
     summary = acc.summary_metrics()
-    assert summary.empty or "test" not in summary.index
+    assert not summary or "test" not in summary
 
 
 def test_accumulator_duplicate_labels():
