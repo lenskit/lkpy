@@ -70,7 +70,7 @@ Connecting with LensKit
 
 .. |bluesky| raw:: html
 
-    <a href="https://bsky.app/profile/lenskit.org" rel="me" target="_blank">🦋 BlueSky</a>
+    <a href="https://bsky.app/profile/lenskit.org" rel="me" target="_blank"><i class="fa-brands fa-bluesky"></i> BlueSky</a>
 
 .. |subscribe| raw:: html
 
