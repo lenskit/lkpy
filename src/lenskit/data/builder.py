@@ -445,6 +445,7 @@ class DatasetBuilder:
             if col not in link_id_cols:
                 new_table = new_table.append_column(col, table.column(col))
                 if col not in rc_def.attributes:
+                    self._validate_attribute_name(col)
                     rc_def.attributes[col] = ColumnSpec()
 
         if link_mask is not None:
@@ -950,6 +951,10 @@ class DatasetBuilder:
 
         field = pa.field(name, vec_col.type, nullable=True, metadata=metadata)
         self._tables[cls] = e_tbl.append_column(field, vec_col)
+
+    def _validate_attribute_name(self, attribute_name: str):
+        if attribute_name.endswith(("_id", "_num")) or attribute_name.startswith("_"):
+            raise ValueError(f"invalid attribute name {attribute_name}")
 
     def _add_sparse_vector_attribute(
         self,
