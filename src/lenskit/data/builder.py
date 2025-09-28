@@ -759,6 +759,7 @@ class DatasetBuilder:
         """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
+        self._validate_attribute_name(name)
 
         id_col = id_col_name(cls)
 
@@ -846,6 +847,7 @@ class DatasetBuilder:
         """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
+        self._validate_attribute_name(name)
 
         id_col = id_col_name(cls)
 
@@ -924,6 +926,7 @@ class DatasetBuilder:
         """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
+        self._validate_attribute_name(name)
 
         e_tbl = self._tables[cls]
         if e_tbl is None:  # pragma: nocover
