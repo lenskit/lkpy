@@ -270,6 +270,8 @@ class DatasetBuilder:
         if isinstance(source, pa.Table):  # pragma: nocover
             raise NotImplementedError()
 
+        self._validate_entity_name(cls)
+
         if cls not in self.schema.entities:
             self.add_entity_class(cls)
 
@@ -1107,6 +1109,10 @@ class DatasetBuilder:
         t_modified = t_modified.sort_by([("_row_number_max", "ascending")])
         t = t.take(t_modified.column("_row_number_max"))
         return t
+
+    def _validate_entity_name(self, entity_name: str):
+        if entity_name.startswith("_"):
+            raise ValueError(f"invalid entity name {entity_name}")
 
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
