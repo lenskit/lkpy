@@ -11,10 +11,11 @@ from typing import Literal, Mapping, TypeAlias, cast
 
 import numpy as np
 import structlog
-from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, model_validator
+from pydantic import BaseModel, PositiveFloat, PositiveInt
 from scipy.sparse import coo_array
 from typing_extensions import Generic, NamedTuple, TypeVar, override
 
+from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import NPMatrix, NPVector, UIPair
@@ -31,18 +32,11 @@ Scorer = TypeVar("Scorer", bound="ALSBase")
 Config = TypeVar("Config", bound="ALSConfig")
 
 
-class ALSConfig(BaseModel):
+class ALSConfig(EmbeddingSizeMixin, BaseModel):
     """
     Configuration for ALS scorers.
     """
 
-    embedding_size: PositiveInt = Field(
-        default=50, validation_alias=AliasChoices("embedding_size", "features")
-    )
-    """
-    The dimension of user and item embeddings (number of latent features to
-    learn).
-    """
     epochs: PositiveInt = 10
     """
     The number of epochs to train.
@@ -74,19 +68,6 @@ class ALSConfig(BaseModel):
             return self.regularization.item
         else:
             return self.regularization
-
-    @model_validator(mode="before")
-    @classmethod
-    def lkmv_embedding_size(cls, data):
-        match data:
-            case {"embedding_size_exp": e}:
-                _log.debug("expanding exponential embedding size")
-                # convert embedding size and remove from data
-                return {"embedding_size": 2**e} | {
-                    k: v for k, v in data.items() if k != "embedding_size_exp"
-                }
-            case _:
-                return data
 
 
 class TrainContext(NamedTuple):
