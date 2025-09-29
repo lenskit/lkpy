@@ -11,7 +11,7 @@ from typing import Literal, Mapping, TypeAlias, cast
 
 import numpy as np
 import structlog
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, model_validator
 from scipy.sparse import coo_array
 from typing_extensions import Generic, NamedTuple, TypeVar, override
 
@@ -36,18 +36,18 @@ class ALSConfig(BaseModel):
     Configuration for ALS scorers.
     """
 
-    embedding_size: int = Field(
+    embedding_size: PositiveInt = Field(
         default=50, validation_alias=AliasChoices("embedding_size", "features")
     )
     """
     The dimension of user and item embeddings (number of latent features to
     learn).
     """
-    epochs: int = 10
+    epochs: PositiveInt = 10
     """
     The number of epochs to train.
     """
-    regularization: float | UIPair[float] = 0.1
+    regularization: PositiveFloat | UIPair[PositiveFloat] = 0.1
     """
     L2 regularization strength.
     """
@@ -74,6 +74,19 @@ class ALSConfig(BaseModel):
             return self.regularization.item
         else:
             return self.regularization
+
+    @model_validator(mode="before")
+    @classmethod
+    def lkmv_embedding_size(cls, data):
+        match data:
+            case {"embedding_size_exp": e}:
+                _log.debug("expanding exponential embedding size")
+                # convert embedding size and remove from data
+                return {"embedding_size": 2**e} | {
+                    k: v for k, v in data.items() if k != "embedding_size_exp"
+                }
+            case _:
+                return data
 
 
 class TrainContext(NamedTuple):

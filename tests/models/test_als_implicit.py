@@ -13,6 +13,7 @@ import pandas as pd
 from pytest import approx, mark
 
 from lenskit.als import ImplicitMFScorer
+from lenskit.als._implicit import ImplicitMFConfig
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import topn_pipeline
@@ -30,6 +31,21 @@ simple_dsr = from_interactions_df(simple_dfr)
 class TestImplicitALS(BasicComponentTests, ScorerTests):
     component = ImplicitMFScorer
     expected_ndcg = 0.22
+
+
+def test_config_exp_ctor():
+    cfg = ImplicitMFConfig(embedding_size_exp=5)  # type: ignore
+    assert cfg.embedding_size == 32
+
+
+def test_config_exp_dict():
+    cfg = ImplicitMFConfig.model_validate({"embedding_size_exp": 10})
+    assert cfg.embedding_size == 1024
+
+
+def test_config_exp_json():
+    cfg = ImplicitMFConfig.model_validate_json('{"embedding_size_exp": 2}')
+    assert cfg.embedding_size == 4
 
 
 def test_als_basic_build():
