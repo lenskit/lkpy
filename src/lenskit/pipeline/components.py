@@ -217,6 +217,8 @@ class Placeholder(Component[Any]):
     Simple no-op component to use as a placeholder in partial pipelines.
     """
 
+    config: PlaceholderConfig
+
     def __call__(self, **kwargs: Any) -> Any:
         raise NotImplementedError("attempted to invoke placeholder component")
 
