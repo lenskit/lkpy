@@ -10,7 +10,7 @@ Mixins with commonly-used component configuration capabilities.
 
 from __future__ import annotations
 
-from pydantic import AliasChoices, Field, PositiveInt, model_validator
+from pydantic import PositiveInt, model_validator
 
 
 class EmbeddingSizeMixin:
@@ -32,9 +32,7 @@ class EmbeddingSizeMixin:
         cfg = SVDConfig(embedding_size=32)
     """
 
-    embedding_size: PositiveInt = Field(
-        default=50, validation_alias=AliasChoices("embedding_size", "features")
-    )
+    embedding_size: PositiveInt = 64
     """
     The dimension of user and item embeddings (number of latent features to
     learn).

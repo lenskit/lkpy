@@ -11,7 +11,7 @@ from typing import Literal, Mapping, TypeAlias, cast
 
 import numpy as np
 import structlog
-from pydantic import BaseModel, PositiveFloat, PositiveInt
+from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt
 from scipy.sparse import coo_array
 from typing_extensions import Generic, NamedTuple, TypeVar, override
 
@@ -37,6 +37,13 @@ class ALSConfig(EmbeddingSizeMixin, BaseModel):
     Configuration for ALS scorers.
     """
 
+    embedding_size: PositiveInt = Field(
+        default=50, validation_alias=AliasChoices("embedding_size", "features")
+    )
+    """
+    The dimension of user and item embeddings (number of latent features to
+    learn).
+    """
     epochs: PositiveInt = 10
     """
     The number of epochs to train.
