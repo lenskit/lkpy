@@ -33,6 +33,16 @@ class TestImplicitALS(BasicComponentTests, ScorerTests):
     expected_ndcg = 0.22
 
 
+def test_config_defaults():
+    cfg = ImplicitMFConfig()
+    assert cfg.embedding_size == 50
+
+
+def test_config_es_alias():
+    cfg = ImplicitMFConfig(features=72)  # type: ignore
+    assert cfg.embedding_size == 72
+
+
 def test_config_exp_ctor():
     cfg = ImplicitMFConfig(embedding_size_exp=5)  # type: ignore
     assert cfg.embedding_size == 32

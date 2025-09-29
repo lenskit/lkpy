@@ -19,8 +19,7 @@ class EmbeddingSizeMixin:
 
     Component configuration classes can extend this class to inherit a
     standardized definition of an embedding size, along with useful behavior
-    like configuring with base-2 logs.  A derived class can override the
-    definition of :attr:`embedding_size` to change the default.
+    like configuring with base-2 logs.
 
     Example usage:
 
@@ -32,7 +31,7 @@ class EmbeddingSizeMixin:
         cfg = SVDConfig(embedding_size=32)
     """
 
-    embedding_size: PositiveInt = 64
+    embedding_size: PositiveInt
     """
     The dimension of user and item embeddings (number of latent features to
     learn).
