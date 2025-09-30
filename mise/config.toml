@@ -2,6 +2,7 @@
 rust = "stable"
 shfmt = "latest"
 uv = "latest"
+pre-commit = "4"
 
 [settings]
 experimental = true
