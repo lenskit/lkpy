@@ -1,5 +1,5 @@
 [tools]
-rust = "stable"
+rust = { version = "stable", components = "rustfmt" }
 shfmt = "latest"
 uv = "latest"
 pre-commit = "4"
