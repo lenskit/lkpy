@@ -20,8 +20,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🦀 Set up Rust
-        run: rustup install
+      - name: 🧑🏻‍💻 Set up mise
+        uses: jdx/mise-action@v3
 
       - name: 🪝 Install pre-commit hooks
         run: pre-commit install-hooks
