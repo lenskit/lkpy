@@ -23,6 +23,9 @@ jobs:
       - name: 🧑🏻‍💻 Set up mise
         uses: jdx/mise-action@v3
 
+      - name: Update mise
+        run: mise upgrade -y
+
       - name: 🪝 Install pre-commit hooks
         run: pre-commit install-hooks
 
