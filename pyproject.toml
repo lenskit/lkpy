@@ -136,6 +136,7 @@ lenskit-data = "lenskit.cli.data:data"
 lenskit-doctor = "lenskit.cli.doctor:doctor"
 lenskit-task = "lenskit.cli.task:task"
 lenskit-train = "lenskit.cli.train:train"
+lenskit-tune = "lenskit.cli.tune:tune"
 lenskit-recommend = "lenskit.cli.recommend:recommend"
 
 # configure build tools

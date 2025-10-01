@@ -15,7 +15,7 @@ import os
 from abc import abstractmethod
 from hashlib import md5
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 from uuid import UUID
 
 import numpy as np
@@ -166,6 +166,24 @@ def random_generator(seed: RNGInput = None) -> Generator:
         return _global_rng
     else:
         return default_rng(seed)
+
+
+def spawn_seed(seed: RNGInput = None) -> np.random.SeedSequence:
+    """
+    Spawn a derived seed from a seed or input.
+    """
+    if isinstance(seed, np.random.SeedSequence):
+        return seed.spawn(1)[0]
+    else:
+        rng = random_generator(seed)
+        return np.random.SeedSequence(rng.bit_generator.random_raw())
+
+
+def int_seed(seed: SeedSequence) -> int:
+    """
+    Convert a seed sequence into an integer seed.
+    """
+    return seed.generate_state(1)[0]
 
 
 def make_seed(
