@@ -22,6 +22,8 @@ jobs:
 
       - name: 🧑🏻‍💻 Set up mise
         uses: jdx/mise-action@v3
+        with:
+          cache: false
 
       - name: 🪝 Install pre-commit hooks
         run: pre-commit install-hooks
