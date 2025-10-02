@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import warnings
 from importlib import import_module
-from types import GenericAlias, NoneType, UnionType
+from types import FunctionType, GenericAlias, NoneType, UnionType
 from typing import (
     Generic,
     Protocol,
@@ -227,7 +227,7 @@ def type_string(typ: type | None) -> str:
         return f"{typ.__module__}:{typ.__qualname__}"
 
 
-def resolve_type_string(tstr: str) -> type:
+def resolve_type_string(tstr: str) -> type | FunctionType:
     """
     Resolve a type string into an actual type or function.  This parses a string
     referenceing a class or function (as returned by :fun:`type_string`),

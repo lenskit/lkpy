@@ -32,7 +32,6 @@ from .components import (
     ComponentConstructor,
     PipelineFunction,
     fallback_on_none,
-    instantiate_component,
 )
 from .config import PipelineConfig, PipelineHook
 from .nodes import (
@@ -692,13 +691,18 @@ class PipelineBuilder:
                 # ignore special nodes in first pass
                 continue
 
-            obj = instantiate_component(comp.code, comp.config)
+            ctor = resolve_type_string(comp.code)
+            if isinstance(ctor, type) and issubclass(ctor, Component):
+                cfg = ctor.validate_config(comp.config)
+            else:
+                cfg = None
+
             if extend and name in self._aliases:
                 del self._aliases[name]
             if extend and name in self._nodes:
-                self.replace_component(name, obj)
+                self.replace_component(name, ctor, cfg)
             else:
-                self.add_component(name, obj)
+                self.add_component(name, ctor, cfg)
             to_wire.append(comp)
 
         # pass 3: wiring
@@ -796,7 +800,10 @@ class PipelineBuilder:
             case ComponentConstructorNode(name, constructor, config):
                 if cache is None:
                     _log.debug("instantiating component", component=constructor)
-                    instance = constructor(config)
+                    if isinstance(constructor, type) and issubclass(constructor, Component):
+                        instance = constructor(config)
+                    else:
+                        instance = constructor()
                 else:
                     instance = cache.get_instance(constructor, config)
                 return ComponentInstanceNode(name, instance)
