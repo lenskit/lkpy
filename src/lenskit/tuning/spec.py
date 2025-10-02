@@ -7,13 +7,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, TypeAlias
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing_extensions import Annotated, Literal, TypeAliasType
 
+from lenskit.config import load_config_data
 from lenskit.pipeline.config import PipelineConfig
 
-SearchSpace: TypeAlias = dict[str, "SearchParam | SearchSpace"]
+SearchSpace = TypeAliasType("SearchSpace", "dict[str, SearchParam | SearchSpace]")
 
 
 class SearchConfig(BaseModel):
@@ -64,6 +65,17 @@ class TuningSpec(BaseModel, extra="forbid"):
     Data model for hyperparameter tuning specifications.
     """
 
+    @classmethod
+    def load(cls, path: Path) -> TuningSpec:
+        cfg = load_config_data(path, cls)
+        cfg.file_path = path
+        return cfg
+
+    file_path: Annotated[Path | None, Field(exclude=True)] = None
+    """
+    The path to the spec file.
+    """
+
     search: SearchConfig = SearchConfig()
     """
     Options for the hyperparameter search.
@@ -89,6 +101,15 @@ class TuningSpec(BaseModel, extra="forbid"):
                 return name
         else:
             return None
+
+    def resolve_path(self, path: Path | str) -> Path:
+        """
+        Resolve a path relative to this specification's file.
+        """
+        if self.file_path is None:
+            return Path(path)
+        else:
+            return self.file_path.parent / path
 
 
 class PipelineFile(BaseModel, extra="forbid"):

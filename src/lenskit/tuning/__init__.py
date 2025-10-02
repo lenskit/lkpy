@@ -9,7 +9,9 @@ Tune parameters using Ray Tune.
 """
 
 from ._search import PipelineTuner
+from .spec import TuningSpec
 
 __all__ = [
     "PipelineTuner",
+    "TuningSpec",
 ]

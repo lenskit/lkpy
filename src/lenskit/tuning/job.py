@@ -22,12 +22,16 @@ class TuningJobData:
     """
 
     spec: TuningSpec
-    pipeline: PipelineConfig
     random_seed: np.random.SeedSequence
     data_name: str | None
 
     factory_ref: ray.ObjectRef | None = None
     data_ref: ray.ObjectRef | None = None
+
+    @property
+    def pipeline(self) -> PipelineConfig:
+        assert isinstance(self.spec.pipeline, PipelineConfig)
+        return self.spec.pipeline
 
     @property
     def data(self) -> TTSplit:

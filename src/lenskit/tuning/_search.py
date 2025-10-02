@@ -25,7 +25,7 @@ from lenskit.data.collection._keys import GenericKey
 from lenskit.logging import get_logger
 from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.nodes import ComponentConstructorNode
 from lenskit.random import RNGInput, int_seed, spawn_seed
 from lenskit.splitting import TTSplit
@@ -48,8 +48,8 @@ class PipelineTuner:
 
     spec: TuningSpec
     out_dir: Path
+    pipe_name: str | None
     random_seed: np.random.SeedSequence
-    pipeline: Pipeline
     iterative: bool
     job_limit: int | None = None
 
@@ -68,7 +68,6 @@ class PipelineTuner:
     def __init__(
         self,
         spec: TuningSpec,
-        spec_path: Path | None = None,
         out_dir: Path | None = None,
         rng: RNGInput = None,
     ):
@@ -78,30 +77,31 @@ class PipelineTuner:
 
         if isinstance(spec.pipeline, PipelineFile):
             pipe_file = spec.pipeline.file
-            if spec_path is not None:
-                pipe_file = spec_path.parent / pipe_file
-            self.pipeline = Pipeline.load_config(pipe_file)
+            pipe_file = spec.resolve_path(pipe_file)
+            pb = PipelineBuilder.load_config(pipe_file)
         else:
-            self.pipeline = Pipeline.from_config(spec.pipeline, spec_path)
+            pb = PipelineBuilder.from_config(spec.pipeline, file_path=spec.file_path)
 
         self.spec = spec.model_copy(deep=True)
-        self.spec.pipeline = self.pipeline.config
+        self.spec.pipeline = pb.build_config()
         self.random_seed = spawn_seed(rng)
 
-        self.log = _log.bind(model=self.pipeline.name)
+        self.log = _log.bind(model=pb.name)
 
         comp_name = self.spec.component_name
         if comp_name is None:
             self.log.error("multi-component search is not yet supported")
             raise NotImplementedError()
 
-        comp = self.pipeline.node(comp_name)
+        comp = pb.node(comp_name)
         match comp:
             case ComponentConstructorNode(constructor=c):
                 self.iterative = isinstance(c, type) and issubclass(c, UsesTrainer)
             case _:
                 self.log.error("non-class component cannot be searched", component=comp_name)
-                raise RuntimeError()
+                self.log.info("invalid component node: %s", comp)
+                raise RuntimeError("attempted to search non-class component")
+        self.pipe_name = pb.name
 
     @property
     def mode(self):
@@ -110,7 +110,9 @@ class PipelineTuner:
         else:
             return "max"
 
-    def set_data(self, train: Dataset | Path, test: ItemListCollection | Path, *, name: str | None):
+    def set_data(
+        self, train: Dataset | Path, test: ItemListCollection | Path, *, name: str | None = None
+    ):
         """
         Set the data to be used for tuning.
         """
@@ -129,6 +131,7 @@ class PipelineTuner:
         ensure_cluster()
         self.setup_harness()
         self.tuner = self.create_tuner()
+        self.out_dir.mkdir(exist_ok=True, parents=True)
 
     def run(self) -> ray.tune.ResultGrid:
         """
@@ -179,7 +182,6 @@ class PipelineTuner:
 
         self.job = TuningJobData(
             spec=self.spec,
-            pipeline=self.pipeline.config,
             random_seed=self.random_seed.spawn(1)[0],
             data_name=self.data.train.name,
             data_ref=ray.put(self.data),
@@ -294,9 +296,9 @@ class PipelineTuner:
             run_config=ray.tune.RunConfig(
                 storage_path=ray_store.absolute().as_uri(),
                 verbose=None,
-                progress_reporter=ProgressReport(self.pipeline.name),
+                progress_reporter=ProgressReport(self.pipe_name),
                 failure_config=ray.tune.FailureConfig(fail_fast=True),
-                callbacks=[StatusCallback(self.pipeline.name, self.data.train.name)],
+                callbacks=[StatusCallback(self.pipe_name, self.data.train.name)],
                 stop=stopper,
                 checkpoint_config=cp_config,
             ),
