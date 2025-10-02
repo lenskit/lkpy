@@ -34,6 +34,7 @@ from .ranking import (
     Recall,
     RecipRank,
 )
+from .reranking import LIP, RBO
 
 __all__ = [
     "Metric",
@@ -62,6 +63,8 @@ __all__ = [
     "ListGini",
     "ExposureGini",
     "quick_measure_model",
+    "LIP",
+    "RBO",
 ]
 
 P = ParamSpec("P")
