@@ -17,17 +17,17 @@ import ray
 import ray.tune
 import ray.tune.result
 import torch
-from codex.models import load_model
-from codex.random import extend_seed
-from codex.recpipe import base_pipeline, replace_scorer
-from codex.runlog import CodexTask, ScorerModel
 from pydantic_core import to_json
 from structlog.stdlib import BoundLogger
 
 from lenskit.batch import BatchPipelineRunner
 from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import send_task
-from lenskit.pipeline import Component
+from lenskit.pipeline import Component, Pipeline, PipelineBuilder
+from lenskit.pipeline.components import Placeholder
+from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
+from lenskit.random import make_seed
+from lenskit.splitting.split import TTSplit
 from lenskit.state import ParameterContainer
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
@@ -44,51 +44,71 @@ class IterativeEval(ray.tune.Trainable):
 
     job: TuningJobData
     log: BoundLogger
-    task: CodexTask
+    data: TTSplit
+    task: Task
+
+    pipeline: Pipeline
     trainer: ModelTrainer
 
     def setup(self, config, job):
         self.job = job
-        self.mod_def = load_model(self.job.model_name)
-        factory = self.job.factory
         self.data = self.job.data
-        self.log = _log.bind(model=self.job.model_name, dataset=self.job.data_name)
+        name = self.job.pipeline.meta.name
 
-        self.task = CodexTask(
-            label=f"tune {self.mod_def.name}",
-            tags=["tuning"],
+        self.log = _log.bind(pipeline=name, dataset=self.job.data_name)
+
+        self.task = Task(
+            label=f"tune {name}",
+            tags=["tune"],
             reset_hwm=True,
             subprocess=True,
-            scorer=ScorerModel(name=self.mod_def.name, config=config),
-            data=self.job.data_info,
         )
 
-        self.log.info("configuring scorer", config=config)
-        self.scorer = self.mod_def.instantiate(config, factory)
-        assert isinstance(self.scorer, Component)
-        assert isinstance(self.scorer, UsesTrainer)
-        pipe = base_pipeline(self.job.model_name, predicts_ratings=self.mod_def.is_predictor)
+        comp_name = self.job.spec.component_name
+        assert comp_name is not None
+        self.log.info("setting up base pipeline")
+        pb = PipelineBuilder.from_config(self.job.pipeline)
+        comp_node = pb.node(comp_name)
+        assert isinstance(comp_node, ComponentConstructorNode)
+        assert isinstance(comp_node.constructor, type)
+
+        pb.replace_component(comp_name, Placeholder)
+        self.pipeline = pb.build()
 
         self.log.info("pre-training pipeline")
-        pipe.train(self.data.train)
-        self.pipe = replace_scorer(pipe, self.scorer)
+        self.pipeline.train(self.data.train)
+
+        self.log.info("adding scorer", config=config)
+        pb = PipelineBuilder.from_pipeline(self.pipeline)
+        comp_cfg = self.job.pipeline.components[comp_name].config or {}
+        pb.replace_component(comp_name, comp_node.constructor, comp_cfg | config)
+        self.pipeline = pb.build()
+        comp_node = self.pipeline.node(comp_name)
+
+        assert isinstance(comp_node, ComponentInstanceNode)
+        self.scorer = comp_node.component
+
+        assert isinstance(self.scorer, Component)
+        assert isinstance(self.scorer, UsesTrainer)
+
         send_task(self.task)
 
         self.log.info("creating model trainer", config=self.scorer.config)
         options = TrainingOptions(
-            rng=extend_seed(self.job.random_seed, to_json(self.scorer.dump_config()))
+            rng=make_seed(self.job.random_seed, to_json(self.scorer.dump_config()))
         )
         self.trainer = self.scorer.create_trainer(self.data.train, options)
         send_task(self.task)
 
         self.runner = BatchPipelineRunner(n_jobs=1)  # single-threaded inside tuning
         self.runner.recommend()
-        if self.mod_def.is_predictor:
+        if self.pipeline.node("rating-predictor", missing=None) is not None:
             self.runner.predict()
 
     def step(self):
         epoch = self.iteration
-        if epoch > self.job.epoch_limit:
+        epoch_limit = self.job.spec.search.max_epochs
+        if epoch > epoch_limit:
             return {ray.tune.result.DONE: True}
 
         elog = self.log.bind(epoch=epoch)
@@ -104,9 +124,9 @@ class IterativeEval(ray.tune.Trainable):
             with Task(
                 f"measuring epoch {self.iteration}", tags=["tuning", "epoch", "measure"]
             ) as m_task:
-                metrics = measure_pipeline(self.mod_def, self.pipe, self.data.test)
-                metrics["max_epochs"] = self.job.epoch_limit
-                if epoch == self.job.epoch_limit:
+                metrics = measure_pipeline(self.job.spec, self.pipeline, self.data.test)
+                metrics["max_epochs"] = epoch_limit
+                if epoch == epoch_limit:
                     metrics[ray.tune.result.DONE] = True
 
             metrics["epoch_train_s"] = t_task.duration

@@ -78,6 +78,18 @@ class TuningSpec(BaseModel, extra="forbid"):
     The pipeline to tune.
     """
 
+    @property
+    def component_name(self) -> str | None:
+        """
+        Get the name of the tuned component, if the search specifies
+        parameters for a single component.
+        """
+        if len(self.space) == 1:
+            for name in self.space.keys():
+                return name
+        else:
+            return None
+
 
 class PipelineFile(BaseModel, extra="forbid"):
     """

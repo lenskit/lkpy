@@ -10,16 +10,15 @@ Simple (non-iterative) evaluation of points.
 
 from __future__ import annotations
 
-from codex.models import load_model
-from codex.random import extend_seed
-from codex.runlog import CodexTask, ScorerModel
-from codex.training import train_task
-from codex.tuning.job import TuningJobData
 from pydantic_core import to_json
 
-from lenskit.logging import get_logger
+from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import send_task
+from lenskit.pipeline import Pipeline
+from lenskit.random import make_seed
+from lenskit.training import TrainingOptions
 
+from .job import TuningJobData
 from .metrics import measure_pipeline
 
 _log = get_logger(__name__)
@@ -36,30 +35,36 @@ class SimplePointEval:
         self.job = job
 
     def __call__(self, config) -> dict[str, float]:
-        mod_def = load_model(self.job.model_name)
-        factory = self.job.factory
+        cfg = self.job.pipeline.model_copy(deep=True)
+        comp_name = self.job.spec.component_name
+        assert comp_name is not None
+
+        comp_cfg = cfg.components[comp_name].config
+        if comp_cfg is None:
+            comp_cfg = {}
+        cfg.components[comp_name].config = comp_cfg | config
+
+        pipe = Pipeline.from_config(cfg)
+
         data = self.job.data
 
-        rng = extend_seed(self.job.random_seed, to_json(config))
-        pipe, task = train_task(
-            mod_def, config, data.train, self.job.data_info, factory=factory, rng=rng
-        )
-        send_task(task)
-
-        # runner = BatchPipelineRunner(n_jobs=1)  # single-threaded inside tuning
-        # runner.recommend()
-        # if mod_def.is_predictor:
-        #     runner.predict()
-
-        with CodexTask(
-            label=f"measure {mod_def.name}",
-            tags=["recommend"],
+        rng = make_seed(self.job.random_seed, to_json(config))
+        with Task(
+            label=f"train {pipe.name}",
+            tags=["tune", "train"],
             reset_hwm=True,
             subprocess=True,
-            scorer=ScorerModel(name=mod_def.name, config=config),
-            data=self.job.data_info,
-        ) as test_task:
-            results = measure_pipeline(mod_def, pipe, data.test)
+        ) as train_task:
+            pipe.train(data.train, TrainingOptions(rng=rng))
+        send_task(train_task)
 
+        with Task(
+            label=f"measure {pipe.name}",
+            tags=["tune", "recommend"],
+            reset_hwm=True,
+            subprocess=True,
+        ) as test_task:
+            results = measure_pipeline(self.job.spec, pipe, data.test, train_task, test_task)
         send_task(test_task)
+
         return results

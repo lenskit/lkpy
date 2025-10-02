@@ -9,12 +9,14 @@ Hyperparameter searching wrapper.
 """
 
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import ray.tune
 import ray.tune.schedulers
 import ray.tune.search
 from matplotlib.pylab import default_rng
+from pydantic import JsonValue
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
 
@@ -22,6 +24,7 @@ from lenskit.data import Dataset, ItemListCollection
 from lenskit.data.collection._keys import GenericKey
 from lenskit.logging import get_logger
 from lenskit.parallel import get_parallel_config
+from lenskit.parallel.ray import ensure_cluster
 from lenskit.pipeline import Pipeline
 from lenskit.pipeline.nodes import ComponentConstructorNode
 from lenskit.random import RNGInput, int_seed, spawn_seed
@@ -51,6 +54,16 @@ class PipelineTuner:
     job_limit: int | None = None
 
     data: TTSplit[GenericKey]
+    harness: Any
+    tuner: ray.tune.Tuner
+    """
+    The Ray tuner that is used for tuning.  Not available until :meth:`setup`
+    has been called.
+    """
+    results: ray.tune.ResultGrid
+    """
+    Ray tuning results. Only available after :meth:`run` has been called.
+    """
 
     def __init__(
         self,
@@ -70,15 +83,18 @@ class PipelineTuner:
             self.pipeline = Pipeline.load_config(pipe_file)
         else:
             self.pipeline = Pipeline.from_config(spec.pipeline, spec_path)
+
+        self.spec = spec.model_copy(deep=True)
+        self.spec.pipeline = self.pipeline.config
         self.random_seed = spawn_seed(rng)
 
         self.log = _log.bind(model=self.pipeline.name)
 
-        if len(self.spec.space) != 1:
+        comp_name = self.spec.component_name
+        if comp_name is None:
             self.log.error("multi-component search is not yet supported")
             raise NotImplementedError()
 
-        comp_name = next(iter(self.spec.space.keys()))
         comp = self.pipeline.node(comp_name)
         match comp:
             case ComponentConstructorNode(constructor=c):
@@ -94,12 +110,66 @@ class PipelineTuner:
         else:
             return "max"
 
-    def load_data(self, train: Path, test: Path):
-        train_ds = Dataset.load(train)
-        test_ilc = ItemListCollection.load_parquet(test)
-        self.data = TTSplit(train_ds, test_ilc, name=train_ds.name)
+    def set_data(self, train: Dataset | Path, test: ItemListCollection | Path, *, name: str | None):
+        """
+        Set the data to be used for tuning.
+        """
+        if isinstance(train, Path):
+            train = Dataset.load(train)
+        if isinstance(test, Path):
+            test = ItemListCollection.load_parquet(test)
+
+        self.data = TTSplit(train, test, name=name or train.name)
+
+    def setup(self):
+        """
+        Set up to run the trainer.  After this method completes, the
+        :attr:`tuner` is ready.
+        """
+        ensure_cluster()
+        self.setup_harness()
+        self.tuner = self.create_tuner()
+
+    def run(self) -> ray.tune.ResultGrid:
+        """
+        Run the tuning job.
+
+        Saves the results in :attr:`results`, and also returns them.
+        """
+        if not hasattr(self, "tuner"):
+            self.setup()
+
+        self.log.info("starting hyperparameter search")
+        self.results = self.tuner.fit()
+        self.log.info("finished hyperparameter search")
+
+        return self.results
+
+    def best_result(self, *, scope: str = "all") -> dict[str, JsonValue]:
+        """
+        Get the best configuration and its validation metrics.
+
+        Args:
+            scope:
+                The metric search scope for iterative training.  Set to
+                ``"last"`` to use the last iteration instead of the best
+                iteration.  See :meth:`ray.tune.ResultGrid.get_best_result` for
+                details.
+        """
+        best = self.results.get_best_result(scope=scope)
+        res = best.metrics
+        if res is None:
+            raise ValueError("best result has no metrics")
+
+        if "training_iteration" in res:
+            res["config"] = res["config"] | {"epochs": res["training_iteration"]}
+
+        return res
 
     def search_space(self):
+        """
+        Get the Ray search space.
+        """
         # we have exactly one
         for space in self.spec.space.values():
             return _make_space(space)
