@@ -122,7 +122,9 @@ def test_batch_rmse(ml_100k):
 
     # we should have all users
     assert len(umdf) == len(split.test)
-    missing = set(umdf.index.tolist()) - set(split.test.keys())
+
+    # we should only have users who are in the test data
+    missing = set(umdf.index.tolist()) - set(k.user_id for k in split.test.keys())
     assert len(missing) == 0
 
     # we should not have any missing values

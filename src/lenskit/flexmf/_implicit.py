@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
 import numpy as np
@@ -27,7 +26,6 @@ ImplicitLoss: TypeAlias = Literal["logistic", "pairwise", "warp"]
 NegativeStrategy: TypeAlias = Literal["uniform", "popular", "misranked"]
 
 
-@dataclass
 class FlexMFImplicitConfig(FlexMFConfigBase):
     """
     Configuration for :class:`FlexMFImplicitScorer`.  It inherits base model

@@ -144,6 +144,7 @@ intersphinx_mapping = {
     "implicit": ("https://benfred.github.io/implicit/", None),
     "pydantic": ("https://docs.pydantic.dev/latest/", None),
     "ray": ("https://docs.ray.io/en/latest/", None),
+    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest/", None),
 }
 
 bibtex_bibfiles = ["lenskit.bib"]

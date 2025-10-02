@@ -57,6 +57,9 @@ class RelationshipSet:
         Client code does not need to construct this class; obtain instances from
         a dataset's :meth:`~lenskit.data.Dataset.relationships` or
         :meth:`~lenskit.data.Dataset.interactions` method.
+
+    Stability:
+        Caller
     """
 
     name: str
@@ -111,6 +114,10 @@ class RelationshipSet:
         Query whether these relationships represent interactions.
         """
         return self.schema.interaction
+
+    @property
+    def entities(self) -> list[str]:
+        return [(c if e is None else e) for c, e in self.schema.entities.items()]
 
     @property
     def attribute_names(self) -> list[str]:

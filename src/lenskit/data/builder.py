@@ -787,11 +787,11 @@ class DatasetBuilder:
             raise DataError(f"{n_bad} unknown entity IDs")
 
         val_array: pa.Array = pa.array(values)  # type: ignore
-        tbl_mask = np.zeros(e_tbl.num_rows, dtype=np.bool_)
-        tbl_mask[nums.to_numpy()] = True
-        tbl_mask = pa.array(tbl_mask)
-        val_col = pa.nulls(e_tbl.num_rows, val_array.type)
-        val_col = pc.replace_with_mask(val_col, tbl_mask, val_array)
+        nums_np = nums.to_numpy()
+        vals_np = np.full(e_tbl.num_rows, None, dtype=object)
+        vals_np[nums_np] = val_array.to_numpy(zero_copy_only=False)
+        val_col = pa.array(vals_np, type=val_array.type)
+
         if dictionary:
             val_col = pc.dictionary_encode(val_col)
 
