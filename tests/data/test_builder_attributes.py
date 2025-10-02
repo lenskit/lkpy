@@ -446,6 +446,20 @@ def test_item_vector_attr_subset(rng: np.random.Generator, ml_ratings: pd.DataFr
     assert df.shape == (np.sum(q_known), 5)
 
 
+def test_add_invalid_attribute_name():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
+
+    dsb.add_entities("item", items.index.values)
+
+    invalid_attributes = ["_title", "title_id"]
+    for attribute_name in invalid_attributes:
+        with raises(ValueError, match="invalid"):
+            dsb.add_scalar_attribute("item", attribute_name, items["title"])
+
+
 def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     dsb = DatasetBuilder()
 
