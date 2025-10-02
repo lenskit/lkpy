@@ -13,9 +13,7 @@ from lenskit.data import ItemList
 from lenskit.metrics import GeometricRankWeight
 
 
-def rank_biased_overlap(
-    reference: ItemList, reranked: ItemList, p: float = 0.85, k: int = 10
-) -> float:
+def RBO(reference: ItemList, reranked: ItemList, p: float = 0.85, k: int = 10) -> float:
     """
     Computes the RBO metric defined in:
     Webber, William, Alistair Moffat, and Justin Zobel. "A similarity measure for indefinite rankings."

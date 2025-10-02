@@ -11,7 +11,7 @@ import numpy as np
 from lenskit.data import ItemList
 
 
-def least_item_promoted(reference: ItemList, reranked: ItemList, k: int = 10) -> float:
+def LIP(reference: ItemList, reranked: ItemList, k: int = 10) -> float:
     """
     Compute the Least Item Promoted (LIP) metric.
 
