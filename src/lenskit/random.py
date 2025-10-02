@@ -15,7 +15,7 @@ import os
 from abc import abstractmethod
 from hashlib import md5
 from pathlib import Path
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import numpy as np
