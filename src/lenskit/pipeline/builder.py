@@ -15,11 +15,14 @@ import typing
 import warnings
 from copy import deepcopy
 from graphlib import CycleError, TopologicalSorter
+from os import PathLike
+from pathlib import Path
 from types import UnionType
 from uuid import NAMESPACE_URL, uuid5
 
 from typing_extensions import Any, Literal, TypeVar, cast, overload
 
+from lenskit.config import load_config_data
 from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
 
@@ -32,7 +35,6 @@ from .components import (
     ComponentConstructor,
     PipelineFunction,
     fallback_on_none,
-    instantiate_component,
 )
 from .config import PipelineConfig, PipelineHook
 from .nodes import (
@@ -617,7 +619,27 @@ class PipelineBuilder:
         return config.hash_config(cfg)
 
     @classmethod
-    def from_config(cls, config: object) -> PipelineBuilder:
+    def load_config(cls, cfg_file: Path | PathLike[str]) -> PipelineBuilder:
+        """
+        Load a pipeline from a saved configuration file.
+
+        Args:
+            cfg_file:
+                The path to a TOML, YAML, or JSON file containing the pipeline
+                configuration.
+
+        Returns:
+            The consructed pipeline.
+
+        See Also:
+            :meth:`from_config` for the actual pipeline instantiation logic.
+        """
+        cfg_file = Path(cfg_file)
+        data = load_config_data(cfg_file, PipelineConfig)
+        return cls.from_config(data, file_path=cfg_file)
+
+    @classmethod
+    def from_config(cls, config: object, *, file_path: Path | None = None) -> PipelineBuilder:
         """
         Reconstruct a pipeline builder from a serialized configuration.
 
@@ -671,6 +693,9 @@ class PipelineBuilder:
                 Whether the configuration should extend the current pipeline, or
                 fail when there are conflicting definitions.
         """
+        self.name = config.meta.name
+        self.version = config.meta.version
+
         for inpt in config.inputs:
             types: list[type[Any] | None] = []
             if inpt.types is not None:
@@ -692,13 +717,18 @@ class PipelineBuilder:
                 # ignore special nodes in first pass
                 continue
 
-            obj = instantiate_component(comp.code, comp.config)
+            ctor = resolve_type_string(comp.code)
+            if isinstance(ctor, type) and issubclass(ctor, Component):
+                cfg = ctor.validate_config(comp.config)
+            else:
+                cfg = None
+
             if extend and name in self._aliases:
                 del self._aliases[name]
             if extend and name in self._nodes:
-                self.replace_component(name, obj)
+                self.replace_component(name, ctor, cfg)
             else:
-                self.add_component(name, obj)
+                self.add_component(name, ctor, cfg)
             to_wire.append(comp)
 
         # pass 3: wiring
@@ -796,7 +826,10 @@ class PipelineBuilder:
             case ComponentConstructorNode(name, constructor, config):
                 if cache is None:
                     _log.debug("instantiating component", component=constructor)
-                    instance = constructor(config)
+                    if isinstance(constructor, type) and issubclass(constructor, Component):
+                        instance = constructor(config)
+                    else:
+                        instance = constructor()
                 else:
                     instance = cache.get_instance(constructor, config)
                 return ComponentInstanceNode(name, instance)

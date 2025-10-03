@@ -131,11 +131,8 @@ def _make_compat_table(tbl: pa.Table):
     ftypes = {}
 
     for name in schema.names:
-        print("field", name)
         field = schema.field(name)
-        print("field", field)
         if isinstance(field.type, pa.BaseExtensionType):
-            print("tweaking field", field)
             ftypes[name] = field.type.storage_type
         else:
             ftypes[name] = field.type

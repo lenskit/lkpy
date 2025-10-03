@@ -180,7 +180,10 @@ class PipelineComponent(BaseModel):
                     if isinstance(comp, Component):
                         config = comp.dump_config()
             case ComponentConstructorNode(_name, ctype, config):
-                config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
+                if isinstance(ctype, type) and issubclass(ctype, Component):
+                    config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
+                else:
+                    config = None
             case _:
                 raise TypeError("unexpected node type")
 
