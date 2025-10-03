@@ -54,7 +54,7 @@ def split(
             split_time = dt.datetime.fromtimestamp(float(date))
         elif re.match(r"^\d+-\d+-\d+([T ]\d+:\d+:\d+(\.\d+)?)?", date):
             split_time = dt.datetime.fromisoformat(date)
-        else:
+        else:  # pragma: nocover
             _log.error("invalid date %s", date)
             raise click.UsageError("invalid date")
 
@@ -67,7 +67,7 @@ def split(
         else:
             split = split_temporal_fraction(ds, fraction, filter_test_users=min_train_interactions)
 
-    else:
+    else:  # pragma: nocover
         _log.error("no split method specified")
         raise click.UsageError("must specify a split")
 
