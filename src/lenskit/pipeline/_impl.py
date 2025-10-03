@@ -257,7 +257,7 @@ class Pipeline:
         from .builder import PipelineBuilder
 
         config = PipelineConfig.model_validate(config)
-        builder = PipelineBuilder.from_config(config)
+        builder = PipelineBuilder.from_config(config, file_path=file_path)
         return builder.build()
 
     @classmethod

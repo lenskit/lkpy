@@ -15,11 +15,14 @@ import typing
 import warnings
 from copy import deepcopy
 from graphlib import CycleError, TopologicalSorter
+from os import PathLike
+from pathlib import Path
 from types import UnionType
 from uuid import NAMESPACE_URL, uuid5
 
 from typing_extensions import Any, Literal, TypeVar, cast, overload
 
+from lenskit.config import load_config_data
 from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
 
@@ -616,7 +619,27 @@ class PipelineBuilder:
         return config.hash_config(cfg)
 
     @classmethod
-    def from_config(cls, config: object) -> PipelineBuilder:
+    def load_config(cls, cfg_file: Path | PathLike[str]) -> PipelineBuilder:
+        """
+        Load a pipeline from a saved configuration file.
+
+        Args:
+            cfg_file:
+                The path to a TOML, YAML, or JSON file containing the pipeline
+                configuration.
+
+        Returns:
+            The consructed pipeline.
+
+        See Also:
+            :meth:`from_config` for the actual pipeline instantiation logic.
+        """
+        cfg_file = Path(cfg_file)
+        data = load_config_data(cfg_file, PipelineConfig)
+        return cls.from_config(data, file_path=cfg_file)
+
+    @classmethod
+    def from_config(cls, config: object, *, file_path: Path | None = None) -> PipelineBuilder:
         """
         Reconstruct a pipeline builder from a serialized configuration.
 
@@ -670,6 +693,9 @@ class PipelineBuilder:
                 Whether the configuration should extend the current pipeline, or
                 fail when there are conflicting definitions.
         """
+        self.name = config.meta.name
+        self.version = config.meta.version
+
         for inpt in config.inputs:
             types: list[type[Any] | None] = []
             if inpt.types is not None:
