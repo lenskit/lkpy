@@ -39,3 +39,28 @@ def test_data_split(tmpdir: Path, ml_ds: Dataset):
     assert tgt_n - 1 <= test_n <= tgt_n + 1
 
     assert trds.interaction_count + test_n == ml_ds.interaction_count
+
+
+def test_data_split_time(tmpdir: Path, ml_ds: Dataset):
+    ds_path = tmpdir / "ml-data"
+    ml_ds.save(ds_path)
+
+    train_path = tmpdir / "ml-data.train"
+    test_path = tmpdir / "ml-data.test.parquet"
+
+    runner = CliRunner()
+    result = runner.invoke(
+        lenskit,
+        ["data", "split", "--date", "2015-01-01", fspath(ds_path)],
+    )
+
+    assert result.exit_code == 0
+    assert train_path.exists()
+    assert test_path.exists()
+
+    trds = Dataset.load(train_path)
+    print(trds)
+    items = ItemListCollection.load_parquet(test_path)
+    test_n = sum(len(il) for il in items.lists())
+
+    assert trds.interaction_count + test_n == ml_ds.interaction_count
