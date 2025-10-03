@@ -275,6 +275,8 @@ class Pipeline:
         See Also:
             :meth:`from_config` for the actual pipeline instantiation logic.
         """
+        from .builder import PipelineBuilder
+
         bld = PipelineBuilder.load_config(cfg_file)
         return bld.build()
 
