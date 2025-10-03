@@ -11,6 +11,7 @@ Hyperparameter search.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -71,6 +72,7 @@ def tune(
     Tune pipeline hyperparameters with Ray Tune.
     """
     console = stdout_console()
+    os.environ["RAY_AIR_NEW_OUTPUT"] = "0"
     ray.tune.utils.log.set_verbosity(0)
 
     spec = TuningSpec.load(search_spec)
