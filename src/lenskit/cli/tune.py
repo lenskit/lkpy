@@ -20,6 +20,7 @@ from humanize import metric as human_metric
 from humanize import precisedelta
 
 from lenskit.logging import Task, get_logger, stdout_console
+from lenskit.parallel.ray import init_cluster
 from lenskit.tuning import PipelineTuner, TuningSpec
 
 _log = get_logger(__name__)
@@ -33,6 +34,7 @@ _log = get_logger(__name__)
     "-V",
     "--valid-data",
     "--tuning-data",
+    "tuning_data",
     type=Path,
     required=True,
     help="path to the tuning/validation data",
@@ -40,6 +42,9 @@ _log = get_logger(__name__)
 @click.option("--random", "method", flag_value="random", help="use random search")
 @click.option("--hyperopt", "method", flag_value="hyperopt", help="use HyperOpt search")
 @click.option("--optuna", "method", flag_value="optuna", help="use Optuna search")
+@click.option(
+    "-j", "--job-limit", type=int, envvar="LK_TUNE_JOBS", help="limit for concurrent tuning jobs"
+)
 @click.option(
     "--max-points", type=int, metavar="N", help="maximum number of configurations to test"
 )
@@ -57,6 +62,7 @@ def tune(
     out: Path,
     method: Literal["random", "hyperopt", "optuna"] | None,
     max_points: int | None,
+    job_limit: int | None,
     metric: str,
     training_data: Path,
     tuning_data: Path,
@@ -76,14 +82,20 @@ def tune(
     if method is not None:
         spec.search.method = method
 
+    out.mkdir(exist_ok=True, parents=True)
+
+    try:
+        ray.init(address="auto")
+        _log.info("connected to existing Ray cluster")
+    except ConnectionError:
+        init_cluster(global_logging=True)
+
     # set up the tuning controller
     controller = PipelineTuner(spec, out)
-
+    controller.job_limit = job_limit
     controller.set_data(training_data, tuning_data)
 
-    with Task(
-        label=f"${spec.search.method} tune {controller.pipeline.name}", tags=["tune"]
-    ) as task:
+    with Task(label=f"${spec.search.method} tune {controller.pipe_name}", tags=["tune"]) as task:
         task.save_to_file(out / "tuning-task.json")
         controller.setup()
 

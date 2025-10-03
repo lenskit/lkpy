@@ -180,11 +180,14 @@ class PipelineTuner:
     def setup_harness(self):
         self.log.info("setting up test harness")
 
+        self.log.info("pushing data to cluster")
+        data_ref = ray.put(self.data)
+
         self.job = TuningJobData(
             spec=self.spec,
             random_seed=self.random_seed.spawn(1)[0],
             data_name=self.data.train.name,
-            data_ref=ray.put(self.data),
+            data_ref=data_ref,
         )
 
         if self.iterative:
@@ -281,10 +284,11 @@ class PipelineTuner:
             )
 
         nsamp = self.spec.search.max_points
-        self.log.info("creating tuner for %d samples", nsamp)
+        space = self.search_space()
+        self.log.info("creating tuner for %d samples", nsamp, space=space)
         self.tuner = ray.tune.Tuner(
             self.harness,
-            param_space=self.search_space(),
+            param_space=space,
             tune_config=ray.tune.TuneConfig(
                 metric=self.metric,
                 mode=self.mode,
@@ -323,3 +327,5 @@ def _make_space(space: SearchSpace):
             out[name] = ray.tune.uniform(spec.min, spec.max)
         elif spec.type == "float" and spec.scale == "log":
             out[name] = ray.tune.loguniform(spec.min, spec.max, base=spec.base)
+
+    return out
