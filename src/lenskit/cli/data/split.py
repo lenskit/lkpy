@@ -52,9 +52,7 @@ def split(
     if date:
         if re.match(r"^\d+(\.\d+)?$", date):
             split_time = dt.datetime.fromtimestamp(float(date))
-        elif re.match(r"^\d+-\d+-\d+$", date):
-            split_time = dt.datetime.fromisoformat(date)
-        elif re.match(r"^\d+-\d+-\d+[T ]\d+:\d+:\d+(\.\d+)?", date):
+        elif re.match(r"^\d+-\d+-\d+([T ]\d+:\d+:\d+(\.\d+)?)?", date):
             split_time = dt.datetime.fromisoformat(date)
         else:
             _log.error("invalid date %s", date)
