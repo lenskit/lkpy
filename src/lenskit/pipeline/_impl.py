@@ -24,7 +24,6 @@ from typing_extensions import (
     overload,
 )
 
-from lenskit.config import load_config_data
 from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger
@@ -276,9 +275,8 @@ class Pipeline:
         See Also:
             :meth:`from_config` for the actual pipeline instantiation logic.
         """
-        cfg_file = Path(cfg_file)
-        data = load_config_data(cfg_file, PipelineConfig)
-        return cls.from_config(data, file_path=cfg_file)
+        bld = PipelineBuilder.load_config(cfg_file)
+        return bld.build()
 
     def modify(self) -> PipelineBuilder:
         """
