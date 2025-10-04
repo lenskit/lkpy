@@ -253,7 +253,7 @@ class PipelineTuner:
         return self._create_tuner_for_searcher(searcher)
 
     def _create_tuner_for_searcher(self, searcher) -> ray.tune.Tuner:
-        ray_store = self.out_dir / "tuning-state"
+        ray_store = self.out_dir / "trial-data"
         scheduler = None
         stopper = None
         cp_config = None
