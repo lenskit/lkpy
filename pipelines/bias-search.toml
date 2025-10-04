@@ -1,0 +1,18 @@
+[search]
+method = "random"
+max_points = 20
+list_length = 100
+metric = "RMSE"
+
+[space.scorer]
+damping.user = { type = "float", min = 0.1, max = 100, scale = "log" }
+damping.item = { type = "float", min = 0.1, max = 100, scale = "log" }
+
+[pipeline.meta]
+name = "bias"
+
+[pipeline.options]
+base = "std:topn-predict"
+
+[pipeline.components.scorer]
+class = "lenskit.basic.BiasScorer"
