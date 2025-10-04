@@ -14,8 +14,12 @@ from lenskit.tuning import PipelineTuner, TuningSpec
 
 
 @mark.slow
-def test_tune_bias(ml_100k, tmpdir):
-    spec = TuningSpec.load(Path("pipelines/bias-search.toml"))
+def test_tune_als(ml_100k, tmpdir):
+    spec = TuningSpec.load(Path("pipelines/als-implicit-search.toml"))
+    spec.search.method = "random"
+    spec.search.max_points = 10
+    spec.search.max_epochs = 5
+
     tuner = PipelineTuner(spec, Path(tmpdir))
     split = sample_records(from_interactions_df(ml_100k), 20000)
 
