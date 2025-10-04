@@ -10,7 +10,6 @@ Hyperparameter search.
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Literal
@@ -19,6 +18,7 @@ import click
 import ray.tune.utils.log
 from humanize import metric as human_metric
 from humanize import precisedelta
+from pydantic_core import to_json
 
 from lenskit.logging import Task, get_logger, stdout_console
 from lenskit.parallel.ray import init_cluster
@@ -108,8 +108,9 @@ def tune(
         controller.run()
 
     best = controller.best_result()
-    with open(out / "result.json", "wt") as outf:
-        print(json.dumps(best, indent=2), file=outf)
+    result_file = out / "result.json"
+    result_json = to_json(best, indent=2)
+    result_file.write_bytes(result_json + b"\n")
 
     _log.info("finished hyperparameter search")
     console.print("[bold yellow]Hyperparameter search completed![/bold yellow]")
