@@ -26,3 +26,4 @@ def test_tune_als(ml_100k, tmpdir):
     tuner.set_data(split.train, split.test)
 
     tuner.run()
+    print(tuner.best_result())
