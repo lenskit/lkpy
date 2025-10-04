@@ -73,13 +73,13 @@ class IterativeEval(ray.tune.Trainable):
         assert isinstance(comp_node.constructor, type)
 
         pb.replace_component(comp_name, Placeholder)
-        self.pipeline = pb.build()
+        wrapper_pipe = pb.build()
 
         self.log.info("pre-training pipeline")
-        self.pipeline.train(self.data.train)
+        wrapper_pipe.train(self.data.train)
 
-        self.log.info("adding scorer", config=config)
-        pb = PipelineBuilder.from_pipeline(self.pipeline)
+        self.log.info("adding untrained scorer", config=config)
+        pb = PipelineBuilder.from_pipeline(wrapper_pipe)
         comp_cfg = self.job.pipeline.components[comp_name].config or {}
         pb.replace_component(comp_name, comp_node.constructor, comp_cfg | config)
         self.pipeline = pb.build()
@@ -113,7 +113,7 @@ class IterativeEval(ray.tune.Trainable):
 
         elog = self.log.bind(epoch=epoch)
         with Task(f"epoch {self.iteration}", tags=["tuning", "epoch"]) as e_task:
-            elog.debug("beginning training iteration")
+            elog.debug("beginning training epoch")
             with Task(
                 f"training epoch {self.iteration}", tags=["tuning", "epoch", "train"]
             ) as t_task:
