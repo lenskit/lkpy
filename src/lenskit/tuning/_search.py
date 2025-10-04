@@ -15,7 +15,6 @@ import numpy as np
 import ray.tune
 import ray.tune.schedulers
 import ray.tune.search
-from matplotlib.pylab import default_rng
 from pydantic import JsonValue
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
@@ -27,7 +26,7 @@ from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
 from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.nodes import ComponentConstructorNode
-from lenskit.random import RNGInput, int_seed, spawn_seed
+from lenskit.random import RNGInput, default_rng, int_seed, spawn_seed
 from lenskit.splitting import TTSplit
 from lenskit.training import UsesTrainer
 
