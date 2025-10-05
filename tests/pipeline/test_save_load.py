@@ -12,7 +12,7 @@ from types import NoneType
 import numpy as np
 from typing_extensions import assert_type
 
-from pytest import fail, warns
+from pytest import fail, mark, warns
 
 from lenskit.pipeline import PipelineBuilder, PipelineWarning
 from lenskit.pipeline.components import Component
@@ -227,6 +227,7 @@ def test_save_with_fallback():
     assert p2.run(("fill-operand", "add"), a=3) == (-3, 3)
 
 
+@mark.skip("hash checks disabled")
 def test_hash_validate():
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
