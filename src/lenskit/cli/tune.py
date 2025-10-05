@@ -21,6 +21,7 @@ from humanize import precisedelta
 from pydantic_core import to_json
 
 from lenskit.logging import Task, get_logger, stdout_console
+from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import init_cluster
 from lenskit.tuning import PipelineTuner, TuningSpec
 
@@ -90,7 +91,8 @@ def tune(
         ray.init(address="auto")
         _log.info("connected to existing Ray cluster")
     except ConnectionError:
-        init_cluster(global_logging=True)
+        # use global parallel setup for tuning
+        init_cluster(global_logging=True, worker_parallel=get_parallel_config())
 
     # set up the tuning controller
     controller = PipelineTuner(spec, out)
