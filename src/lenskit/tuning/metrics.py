@@ -59,7 +59,7 @@ def measure_pipeline(
 
 
 def measure_request(spec: TuningSpec, pipe: Pipeline, key: GenericKey, test: ItemList):
-    recs = recommend(pipe, query=key.user_id)  # type: ignore
+    recs = recommend(pipe, query=key.user_id, n=spec.search.list_length)  # type: ignore
     if pipe.node("rating-predictor", missing=None) is not None:
         preds = predict(pipe, query=key.user_id, items=test)  # type: ignore
     else:
