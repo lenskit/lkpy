@@ -157,10 +157,17 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
 
         item_nums = items.numbers(vocabulary=self.items, missing="negative")
         item_mask = item_nums >= 0
-        i_feats = self.item_embeddings[item_nums[item_mask], :]
 
         scores = np.full((len(items),), np.nan, dtype=np.float32)
-        scores[item_mask] = i_feats @ u_feat
+        if len(item_nums) <= self.item_embeddings.shape[0] * 0.8:
+            # small set — subset inputs
+            i_feats = self.item_embeddings[item_nums[item_mask], :]
+            scores[item_mask] = i_feats @ u_feat
+        else:
+            # larger set — subset outputs
+            allmult = self.item_embeddings @ u_feat
+            scores[item_mask] = allmult[item_nums[item_mask]]
+
         log.debug("scored %d items", np.sum(item_mask))
 
         results = ItemList(items, scores=scores)

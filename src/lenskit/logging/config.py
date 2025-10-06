@@ -175,11 +175,15 @@ class LoggingConfig:  # pragma: nocover
                 colors=self.stream == "full" and not console.no_color,
             )
         else:
+            import click
+
             term = ConsoleHandler()
             term.setLevel(self.level)
             proc_fmt = structlog.dev.ConsoleRenderer(
                 colors=self.stream == "full" and term.supports_color,
-                exception_formatter=RichTracebackFormatter(show_locals=self.level < logging.INFO),
+                exception_formatter=RichTracebackFormatter(
+                    show_locals=self.level < logging.INFO, suppress=[click]
+                ),
             )
 
         eff_lvl = self.effective_level

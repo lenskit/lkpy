@@ -6,3 +6,4 @@ base = "std:topn"
 
 [components.scorer]
 class = "lenskit.als.ImplicitMFScorer"
+config = { user_embeddings = true }

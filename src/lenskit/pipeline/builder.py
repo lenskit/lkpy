@@ -682,7 +682,9 @@ class PipelineBuilder:
 
         return builder
 
-    def apply_config(self, config: PipelineConfig, *, extend: bool = False):
+    def apply_config(
+        self, config: PipelineConfig, *, extend: bool = False, check_hash: bool = False
+    ):
         """
         Apply a configuration to this builder.
 
@@ -746,7 +748,7 @@ class PipelineBuilder:
             for name, hooks in config.hooks.run.items()
         }
 
-        if config.meta.hash is not None:
+        if check_hash and config.meta.hash is not None:
             h2 = self.config_hash()
             if h2 != config.meta.hash:
                 _log.warning("loaded pipeline does not match hash")
