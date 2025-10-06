@@ -57,6 +57,9 @@ _log = get_logger(__name__)
     default="RBP",
     help="the metric to optimize",
 )
+@click.option(
+    "--save-pipeline", type=Path, metavar="FILE", help="Save best pipeline configuration to FILE"
+)
 @click.argument("SEARCH_SPEC", type=Path)
 @click.argument("OUT", type=Path)
 def tune(
@@ -68,6 +71,7 @@ def tune(
     metric: str,
     training_data: Path,
     tuning_data: Path,
+    save_pipeline: Path | None,
 ):
     """
     Tune pipeline hyperparameters with Ray Tune.
@@ -113,6 +117,10 @@ def tune(
     result_file = out / "result.json"
     result_json = to_json(best, indent=2)
     result_file.write_bytes(result_json + b"\n")
+
+    if save_pipeline is not None:
+        pipe_json = controller.best_pipeline().model_dump_json(indent=2)
+        save_pipeline.write_text(pipe_json + "\n")
 
     _log.info("finished hyperparameter search")
     console.print("[bold yellow]Hyperparameter search completed![/bold yellow]")

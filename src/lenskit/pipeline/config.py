@@ -20,8 +20,11 @@ from types import FunctionType
 from typing import Annotated, Literal, Mapping
 
 from annotated_types import Predicate
+from deepmerge import always_merger
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
+
+from lenskit.diagnostics import PipelineError
 
 from ._hooks import HookEntry
 from .components import Component
@@ -101,6 +104,26 @@ class PipelineConfig(BaseModel):
     "Literals"
     hooks: PipelineHooks = PipelineHooks()
     "The hooks configured for the pipeline."
+
+    def merge_component_configs(
+        self, configs: Mapping[str, Mapping[str, JsonValue]]
+    ) -> PipelineConfig:
+        """
+        Merge component configuration options into the pipeline configuration.
+
+        This returns a modified copy of the pipeline with the applied
+        configurations, and does not modify the configuration in-place.
+        """
+        pipe = self.model_copy(deep=True)
+        for name, cfg in configs.items():
+            try:
+                comp = pipe.components[name]
+            except KeyError:
+                raise PipelineError(f"unknown component {name}")
+
+            comp.config = always_merger.merge(comp.config or {}, cfg)
+
+        return pipe
 
 
 class PipelineMeta(BaseModel):
