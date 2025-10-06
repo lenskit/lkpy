@@ -25,6 +25,7 @@ from lenskit.pipeline.nodes import ComponentInstanceNode
 @mark.slow
 @mark.realdata
 def test_tune_cli(tmpdir: Path, ml_100k):
+    tmpdir = Path(tmpdir)
     ml_ds = from_interactions_df(ml_100k)
     ds_path = tmpdir / "ml-data"
     ml_ds.save(ds_path)
