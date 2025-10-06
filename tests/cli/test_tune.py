@@ -5,21 +5,16 @@
 # SPDX-License-Identifier: MIT
 
 import json
-import pickle
 from os import fspath
 from pathlib import Path
 
 from click.testing import CliRunner
-from xopen import xopen
 
 from pytest import mark
 
-from lenskit.als import BiasedMFScorer
 from lenskit.cli import lenskit
-from lenskit.data import Dataset
 from lenskit.data.adapt import from_interactions_df
 from lenskit.pipeline.config import PipelineConfig
-from lenskit.pipeline.nodes import ComponentInstanceNode
 
 
 @mark.slow
