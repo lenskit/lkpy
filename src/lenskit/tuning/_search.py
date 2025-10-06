@@ -24,7 +24,7 @@ from lenskit.data.collection._keys import GenericKey
 from lenskit.logging import get_logger
 from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
-from lenskit.pipeline import PipelineBuilder
+from lenskit.pipeline import PipelineBuilder, PipelineConfig
 from lenskit.pipeline.nodes import ComponentConstructorNode
 from lenskit.random import RNGInput, default_rng, int_seed, spawn_seed
 from lenskit.splitting import TTSplit
@@ -167,6 +167,17 @@ class PipelineTuner:
             res["config"] = res["config"] | {"epochs": res["training_iteration"]}
 
         return res
+
+    def best_pipeline(self) -> PipelineConfig:
+        """
+        Get the (full) configuration for the best pipeline.
+        """
+        best = self.best_result()
+        cfg = self.spec.pipeline
+        assert isinstance(cfg, PipelineConfig)
+        name = self.spec.component_name
+        assert name is not None
+        return cfg.merge_component_configs({name: best["config"]})  # type: ignore
 
     def search_space(self):
         """
