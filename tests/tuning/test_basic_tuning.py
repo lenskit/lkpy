@@ -14,6 +14,7 @@ from lenskit.tuning import PipelineTuner, TuningSpec
 
 
 @mark.slow
+@mark.realdata
 def test_tune_bias(ml_100k, tmpdir):
     spec = TuningSpec.load(Path("pipelines/bias-search.toml"))
     tuner = PipelineTuner(spec, Path(tmpdir))

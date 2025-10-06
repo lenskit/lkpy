@@ -14,6 +14,7 @@ from lenskit.tuning import PipelineTuner, TuningSpec
 
 
 @mark.slow
+@mark.realdata
 def test_tune_als(ml_100k, tmpdir):
     spec = TuningSpec.load(Path("pipelines/als-implicit-search.toml"))
     spec.search.method = "random"
