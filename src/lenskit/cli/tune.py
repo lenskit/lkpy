@@ -58,9 +58,6 @@ _log = get_logger(__name__)
     help="the metric to optimize",
 )
 @click.option(
-    "--save-result", type=Path, metavar="FILE", help="Save best result with metrics to FILE"
-)
-@click.option(
     "--save-pipeline", type=Path, metavar="FILE", help="Save best pipeline configuration to FILE"
 )
 @click.argument("SEARCH_SPEC", type=Path)
@@ -74,7 +71,6 @@ def tune(
     metric: str,
     training_data: Path,
     tuning_data: Path,
-    save_result: Path | None,
     save_pipeline: Path | None,
 ):
     """
@@ -121,8 +117,6 @@ def tune(
     result_file = out / "result.json"
     result_json = to_json(best, indent=2)
     result_file.write_bytes(result_json + b"\n")
-    if save_result is not None:
-        save_result.write_bytes(result_json + b"\n")
 
     if save_pipeline is not None:
         pipe_json = controller.best_pipeline().model_dump_json(indent=2)
