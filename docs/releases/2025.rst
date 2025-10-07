@@ -40,6 +40,7 @@ Highlights
     command line.
 -   Datasets can now have repeated or duplicate interactions (although such
     data sets are typically slow, see :issue:`869`).
+-   **Experimental** and mostly undocumented hyperparameter tuning support.
 
 Compatibility Changes
 ---------------------
