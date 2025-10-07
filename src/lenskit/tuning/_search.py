@@ -6,6 +6,9 @@
 
 """
 Hyperparameter searching wrapper.
+
+.. stability:: experimental
+
 """
 
 from pathlib import Path
@@ -44,6 +47,9 @@ _log = get_logger(__name__)
 class PipelineTuner:
     """
     Set up and run a hyperparameter tuning job for a pipeline.
+
+    Stability:
+        Experimental
     """
 
     settings: TuneSettings
