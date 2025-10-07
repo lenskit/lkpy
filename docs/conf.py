@@ -140,7 +140,7 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
     "structlog": ("https://www.structlog.org/en/stable/", None),
-    "torch": ("https://pytorch.org/docs/stable/", None),
+    "torch": ("https://docs.pytorch.org/docs/stable/", None),
     "implicit": ("https://benfred.github.io/implicit/", None),
     "pydantic": ("https://docs.pydantic.dev/latest/", None),
     "ray": ("https://docs.ray.io/en/latest/", None),
