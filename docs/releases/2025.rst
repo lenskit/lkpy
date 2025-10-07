@@ -41,6 +41,11 @@ Highlights
 -   Datasets can now have repeated or duplicate interactions (although such
     data sets are typically slow, see :issue:`869`).
 -   **Experimental** and mostly undocumented hyperparameter tuning support.
+-   Added a configuration facility in :mod:`lenskit.config` to configure random
+    numbers, power measurement, etc.  Scripts using LensKit should call
+    :func:`lenskit.configure`.
+-   Added support for querying power consumption from Prometheus.  Documentation
+    on how to set this up to be useful is TBD.
 
 Compatibility Changes
 ---------------------

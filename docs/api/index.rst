@@ -14,6 +14,7 @@ Core Abstractions
     lenskit.operations
     lenskit.training
     lenskit.state
+    lenskit.config
 
 .. toctree::
     :caption: Core
@@ -25,6 +26,7 @@ Core Abstractions
     diagnostics
     training
     state
+    config
 
 Components and Models
 ~~~~~~~~~~~~~~~~~~~~~

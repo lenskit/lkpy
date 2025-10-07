@@ -210,7 +210,7 @@ def configure(
     defaults and environment varibles.
 
     This function will automatically configure the global RNG, if a seed is
-    specified.
+    specified.  It does **not** configure logging.
 
     Args:
         cfg_dir:
