@@ -18,8 +18,8 @@ from lenskit.pipeline import Pipeline
 from lenskit.random import make_seed
 from lenskit.training import TrainingOptions
 
-from .job import TuningJobData
-from .metrics import measure_pipeline
+from ._job import TuningJobData
+from ._measure import measure_pipeline
 
 _log = get_logger(__name__)
 

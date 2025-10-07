@@ -31,12 +31,12 @@ from lenskit.random import RNGInput, default_rng, int_seed, spawn_seed
 from lenskit.splitting import TTSplit
 from lenskit.training import UsesTrainer
 
-from .iterative import IterativeEval
-from .job import TuningJobData
-from .reporting import ProgressReport, StatusCallback
-from .simple import SimplePointEval
+from ._iterative import IterativeEval
+from ._job import TuningJobData
+from ._reporting import ProgressReport, StatusCallback
+from ._simple import SimplePointEval
+from ._stopper import RelativePlateauStopper
 from .spec import PipelineFile, SearchSpace, TuningSpec
-from .stopper import RelativePlateauStopper
 
 _log = get_logger(__name__)
 
