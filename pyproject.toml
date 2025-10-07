@@ -122,6 +122,9 @@ implicit = ["implicit >=0.7.2"]
 gnn = ["torch_geometric ~=2.6"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
+tune = [
+  "ray[tune] ~=2.42",
+]
 
 [project.urls]
 homepage = "https://lenskit.org"

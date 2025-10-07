@@ -220,6 +220,20 @@ outputs:
             - hypothesis >=6.16
             - pyyaml ~=6.0
 
+  - package:
+      name: lenskit-tune
+    build:
+      noarch: python
+      script:
+        - "true"
+    requirements:
+      run:
+        - ${{ pin_subpackage('lenskit') }}
+        - ray-tune >=2.42,<3
+    tests:
+      - script:
+          - lenskit tune --help
+
 about:
   license: MIT
   license_file: LICENSE.md

@@ -61,6 +61,7 @@ can be used to evaluate the output of any recommender system implementation.
     lenskit.batch
     lenskit.metrics
     lenskit.splitting
+    lenskit.tuning
 
 .. toctree::
     :caption: Evaluation
@@ -69,6 +70,7 @@ can be used to evaluate the output of any recommender system implementation.
     batch
     metrics
     splitting
+    lenskit.tuning
 
 Implementation Helpers
 ~~~~~~~~~~~~~~~~~~~~~~
