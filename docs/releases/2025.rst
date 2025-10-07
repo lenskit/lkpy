@@ -9,12 +9,12 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
-.. _2025.3.0:
+.. _2025.3.1:
 
-2025.3.0
+2025.3.1
 ~~~~~~~~
 
-LensKit 2025.3.0 is a significant feature and bugfix upgrade to the LensKit 2025
+LensKit 2025.3.1 is a significant feature and bugfix upgrade to the LensKit 2025
 series.  It maintains backwards compatibility with 2025.2 for stable interfaces
 (see :ref:`stability-levels`), except as noted below.  See the `GitHub
 milestone <https://github.com/lenskit/lkpy/milestone/18>`_ for a full list of
