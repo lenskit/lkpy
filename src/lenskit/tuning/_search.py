@@ -19,6 +19,7 @@ from pydantic import JsonValue
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
 
+from lenskit.config import TuneSettings, lenskit_config
 from lenskit.data import Dataset, ItemListCollection
 from lenskit.data.collection._keys import GenericKey
 from lenskit.logging import get_logger
@@ -45,12 +46,12 @@ class PipelineTuner:
     Set up and run a hyperparameter tuning job for a pipeline.
     """
 
+    settings: TuneSettings
     spec: TuningSpec
     out_dir: Path
     pipe_name: str | None
     random_seed: np.random.SeedSequence
     iterative: bool
-    job_limit: int | None = None
 
     data: TTSplit[GenericKey]
     harness: Any
@@ -70,6 +71,8 @@ class PipelineTuner:
         out_dir: Path | None = None,
         rng: RNGInput = None,
     ):
+        cfg = lenskit_config()
+        self.settings = cfg.tune
         if out_dir is None:
             out_dir = Path("lenskit-tune")
         self.out_dir = out_dir
@@ -223,7 +226,7 @@ class PipelineTuner:
                 raise ValueError(f"invalid CPU count {self.spec.search.num_cpus}")
 
         self.harness = ray.tune.with_resources(
-            harness, {"CPU": tune_cpus, "GPU": self.spec.search.num_gpus}
+            harness, {"CPU": tune_cpus, "GPU": self.spec.search.num_gpus * self.settings.gpu_mult}
         )
 
     @property
@@ -303,7 +306,7 @@ class PipelineTuner:
                 metric=self.metric,
                 mode=self.mode,
                 num_samples=nsamp,
-                max_concurrent_trials=self.job_limit,
+                max_concurrent_trials=self.settings.jobs,
                 search_alg=searcher,
                 scheduler=scheduler,
             ),

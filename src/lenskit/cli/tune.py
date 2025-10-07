@@ -100,7 +100,8 @@ def tune(
 
     # set up the tuning controller
     controller = PipelineTuner(spec, out)
-    controller.job_limit = job_limit
+    if job_limit is not None:
+        controller.settings.jobs = job_limit
     controller.set_data(training_data, tuning_data)
 
     with Task(label=f"${spec.search.method} tune {controller.pipe_name}", tags=["tune"]) as task:
