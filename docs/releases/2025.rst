@@ -12,7 +12,7 @@ information on how to upgrade your code.
 .. _2025.3.0:
 
 2025.3.0 (in progress)
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 -   Replace broken “softmax” sampler with a proper stochastic sampler (:pr:`667`).
 -   :meth:`~lenskit.data.MatrixRelationshipSet.sample_negatives` now accepts
@@ -43,7 +43,7 @@ information on how to upgrade your code.
     command line.
 
 Compatibility Changes
-.....................
+---------------------
 
 .. important::
     These changes should not break most programs, but do introduce and document
@@ -54,7 +54,7 @@ Compatibility Changes
     enforced, but will be enforced beginning in LensKit 2026.
 
 Component Changes
-.................
+-----------------
 
 -   :class:`~lenskit.knn.ItemKNNScorer` and :class:`~lenskit.knn.UserkNNScorer`
     are rewritten to use Rust acceleration, along with changes to its internal
@@ -74,7 +74,7 @@ Component Changes
 .. _2025.2.0:
 
 2025.2.0
---------
+~~~~~~~~
 
 LensKit 2025.2.0 was released March 12, 2025.
 
@@ -98,7 +98,7 @@ Some small quality-of-life improvements (and removing invalid API compat).
 .. _2025.1:
 
 2025.1.1
---------
+~~~~~~~~
 
 LensKit 2025.1.1 was released March 7, 2025.
 
@@ -113,7 +113,7 @@ in traditional release notes.  See the following for release update documentatio
   milestone <https://github.com/lenskit/lkpy/milestone/14>`_.
 
 Breaking Changes
-~~~~~~~~~~~~~~~~
+----------------
 
 LensKit 2025 has many breaking changes, with the migration guide
 (:ref:`migrating`) documenting the major ones.  Below are some smaller ones not
@@ -130,7 +130,7 @@ covered by that document:
     useful as a part of the NDCG implementation.
 
 New Features (incremental)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 *   Many LensKit components (batch running, model training, etc.) now report
     progress the progress API in :mod:`lenskit.logging.progress`, and can be
@@ -139,7 +139,7 @@ New Features (incremental)
 *   Added command-line tool to fetch datasets (:pr:`347`).
 
 Metric Behavior Changes
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 .. important::
 
@@ -151,7 +151,7 @@ Metric Behavior Changes
     values.
 
 Model Behavior Changes
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 Most models will exhibit some changes, hopefully mostly in performance, due to
 moving to PyTorch.  There are some deliberate behavior changes in this new version,
@@ -175,13 +175,13 @@ however, documented here.
   default.
 
 Bug Fixes
-~~~~~~~~~
+---------
 
 * Fixed bug in NDCG list truncation (:issue:`309`, :pr:`312`).
 * Corrected documentation errors for :py:func:`~lenskit.metrics.recall` and :py:func:`~lenskit.metrics.hit` (:pr:`369` by :user:`lukas-wegmeth`).
 
 Dependencies and Maintenance
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 * Bumped minimum supported dependencies as per SPEC0_ (Python 3.11, NumPy 1.24, Pandas 2.0, SciPy 1.10).
 * Added support for Pandas 2 (:pr:`364`) and Python 3.12.
