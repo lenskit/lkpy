@@ -9,13 +9,6 @@ algorithms in a flexible fashion suitable for research and education.
 
     To start using LensKit, see :ref:`installation` and then :ref:`getting-started`.
 
-Why use LensKit?
-----------------
-
-- Modular
-- Flexible
-- Tested
-
 News
 ----
 
@@ -57,6 +50,12 @@ News
     </script>
 
 
+Why use LensKit?
+----------------
+
+- Modular
+- Flexible
+- Tested
 
 Connecting with LensKit
 -----------------------
