@@ -8,7 +8,7 @@
 LensKit reranking metrics.
 """
 
-from ._lip import LIP
-from ._rbo import RBO
+from ._lip import least_item_promoted
+from ._rbo import rank_biased_overlap
 
-__all__ = ["LIP", "RBO"]
+__all__ = ["least_item_promoted", "rank_biased_overlap"]

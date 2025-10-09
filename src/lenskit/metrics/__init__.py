@@ -34,7 +34,7 @@ from .ranking import (
     Recall,
     RecipRank,
 )
-from .reranking import LIP, RBO
+from .reranking import least_item_promoted, rank_biased_overlap
 
 __all__ = [
     "Metric",
@@ -63,8 +63,8 @@ __all__ = [
     "ListGini",
     "ExposureGini",
     "quick_measure_model",
-    "LIP",
-    "RBO",
+    "least_item_promoted",
+    "rank_biased_overlap",
 ]
 
 P = ParamSpec("P")
