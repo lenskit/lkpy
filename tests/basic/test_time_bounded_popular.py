@@ -23,7 +23,7 @@ simple_df = pd.DataFrame(
         "item_id": [1, 2, 2, 3],
         "user_id": [10, 12, 10, 13],
         "rating": [4.0, 3.0, 5.0, 2.0],
-        "timestamp": [i.timestamp() for i in [ts, one_day_ago, one_day_ago, one_day_ago]],
+        "timestamp": [ts, one_day_ago, one_day_ago, one_day_ago],
     }
 )
 simple_ds = from_interactions_df(simple_df)
@@ -31,7 +31,7 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestTimeBoundedPop(ScorerTests):
     component = popularity.TimeBoundedPopScore
-    config = popularity.TimeBoundedPopConfig(cutoff=one_day_ago)
+    config = popularity.TimeBoundedPopConfig(cutoff="2015-01-01")
 
     def verify_models_equivalent(self, orig, copy):
         assert all(orig.item_scores_ == copy.item_scores_)
