@@ -30,7 +30,6 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestBias(BasicComponentTests, ScorerTests):
     component = BiasScorer
-    needs_jit = False
     configs = [{"damping": 10}, {"damping": {"user": 5, "item": 25}}]
     can_score = "all"
 
