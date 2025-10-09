@@ -15,9 +15,8 @@ from pytest import approx, importorskip, mark
 
 from lenskit import batch
 from lenskit.data import Dataset, ItemList, ItemListCollection, UserIDKey, from_interactions_df
-from lenskit.metrics import quick_measure_model
 from lenskit.pipeline.common import predict_pipeline
-from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 funk = importorskip("lenskit.funksvd")
 
@@ -143,7 +142,6 @@ def test_fsvd_predict_bad_user():
     assert np.isnan(preds.loc[3])
 
 
-@wantjit
 @mark.slow
 def test_fsvd_save_load(ml_ds: Dataset):
     original = funk.FunkSVDScorer(features=20, epochs=20)
@@ -169,7 +167,6 @@ def test_fsvd_save_load(ml_ds: Dataset):
     assert np.all(algo.users.index == original.users.index)
 
 
-@wantjit
 @mark.slow
 def test_fsvd_known_preds(ml_ds: Dataset):
     algo = funk.FunkSVDScorer(features=15, epochs=125, lrate=0.001)

@@ -17,7 +17,7 @@ from lenskit.als._implicit import ImplicitMFConfig
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import topn_pipeline
-from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
 
@@ -289,7 +289,6 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
     assert all(diffs <= 0.1)
 
 
-@wantjit
 def test_als_train_large(ml_ds: Dataset):
     algo = ImplicitMFScorer(features=20, epochs=20, use_ratings=False)
     algo.train(ml_ds)
@@ -323,7 +322,6 @@ def test_als_save_load(tmp_path, ml_ds: Dataset):
     assert np.all(restored.users.index == algo.users.index)
 
 
-@wantjit
 def test_als_train_large_noratings(ml_ds: Dataset):
     algo = ImplicitMFScorer(features=20, epochs=20)
     algo.train(ml_ds)
@@ -336,7 +334,6 @@ def test_als_train_large_noratings(ml_ds: Dataset):
     assert algo.item_embeddings.shape == (ml_ds.item_count, 20)
 
 
-@wantjit
 def test_als_train_large_ratings(ml_ds):
     algo = ImplicitMFScorer(features=20, epochs=20, use_ratings=True)
     algo.train(ml_ds)

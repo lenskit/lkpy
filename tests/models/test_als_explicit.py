@@ -15,7 +15,7 @@ from pytest import approx, mark, skip
 from lenskit.als import BiasedMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
-from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
 
@@ -202,7 +202,6 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
     assert new_preds.scores() == approx(preds.scores(), rel=9e-1)
 
 
-@wantjit
 @mark.slow
 def test_als_train_large(ml_ratings, ml_ds: Dataset):
     algo = BiasedMFScorer(features=20, epochs=10)
@@ -230,7 +229,6 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     assert ibias.values == approx(imeans.values, rel=1.0e-3)
 
 
-# don't use wantjit, use this to do a non-JIT test
 def test_als_save_load(ml_ds: Dataset):
     original = BiasedMFScorer(features=5, epochs=5)
     original.train(ml_ds)
