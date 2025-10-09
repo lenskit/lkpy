@@ -6,17 +6,14 @@
 
 import numpy as np
 
-from pytest import approx
-
 from lenskit.data import ItemList
-from lenskit.metrics import call_metric
-from lenskit.metrics.reranking import LIP
+from lenskit.metrics.reranking import least_item_promoted
 
 
 def test_lip_empty_reference():
     ref = ItemList()
     rerank = ItemList([1, 2, 3], ordered=True)
-    assert np.isnan(call_metric(LIP, ref, rerank))
+    assert np.isnan(least_item_promoted(ref, rerank))
 
 
 def test_lip_no_overlap():
@@ -24,14 +21,14 @@ def test_lip_no_overlap():
     rerank = ItemList([1, 2, 3], ordered=True)
     # none of the reranked items exist in reference
     # lip_rank stays at k, so result = 0
-    assert call_metric(LIP, ref, rerank, k=3) == 0
+    assert least_item_promoted(ref, rerank, k=3) == 0
 
 
 def test_lip_perfect_alignment():
     ref = ItemList([1, 2, 3, 4, 5], ordered=True)
     rerank = ItemList([1, 2, 3, 4, 5], ordered=True)
     # top-k reranked items are already top-k in reference
-    assert call_metric(LIP, ref, rerank, k=3) == 0
+    assert least_item_promoted(ref, rerank, k=3) == 0
 
 
 def test_lip_promoted_from_below_k():
@@ -39,7 +36,7 @@ def test_lip_promoted_from_below_k():
     rerank = ItemList([6, 2, 3, 1], ordered=True)
     # item 6 is at position 5 in reference but appears in reranked top-3
     # lip_rank = 5, so return = 5 - 3 = 2
-    assert call_metric(LIP, ref, rerank, k=3) == 2
+    assert least_item_promoted(ref, rerank, k=3) == 2
 
 
 def test_lip_multiple_promotions():
@@ -47,4 +44,4 @@ def test_lip_multiple_promotions():
     rerank = ItemList([7, 6, 2, 3], ordered=True)
     # item 7 is at rank 6, promoted into top-3
     # lip_rank = 6, so result = 6 - 3 = 3
-    assert call_metric(LIP, ref, rerank, k=3) == 3
+    assert least_item_promoted(ref, rerank, k=3) == 3
