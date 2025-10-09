@@ -1098,7 +1098,7 @@ class ItemList:
             print("  numbers:", np.array2string(self._numbers.numpy(), threshold=10), file=out)
         elif self._vocab is not None:
             print("  numbers: <lazy>", file=out)
-        for name, f in fields.items():
+        for name, f in sorted(fields.items(), key=lambda t: t[0]):
             if f is None:
                 print(f"  {name}: <lazy>", file=out)
             else:
