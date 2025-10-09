@@ -16,7 +16,6 @@ source:
 
 build:
   number: 0
-
 outputs:
   - package:
       name: lenskit
@@ -32,11 +31,11 @@ outputs:
         - ${{ stdlib("c") }}
         - ${{ compiler("rust") }}
       host:
-        - python =3.11
+        - python ${{ python_min }}.*
         - pip
         - maturin >=1,<2
       run:
-        - python >=3.11,<4
+        - python >=${{ python_min }}
         - typing-extensions >=4.12,<5
         - pyarrow >=20,<21
         - pandas >=2.0,<3
@@ -94,7 +93,10 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
 
   - package:
@@ -104,7 +106,10 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - scikit-learn >=1.2,<2
     tests:
@@ -135,7 +140,10 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - implicit >=0.7.2
     tests:
@@ -166,7 +174,10 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - hpfrec =0.2
     tests:
@@ -197,7 +208,10 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - torch-geometric >=2.6,<3
     tests:
@@ -228,7 +242,10 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - ray-tune >=2.42,<3
     tests:
