@@ -97,7 +97,7 @@ outputs:
         - python ${{ python_min }}.*
       run:
         - python >=${{ python_min }}
-        - ${{ pin_subpackage('lenskit') }}
+        - lenskit >=2025.3
 
   - package:
       name: lenskit-sklearn
