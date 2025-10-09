@@ -543,7 +543,7 @@ class Dataset:
         out.write("<Dataset")
         if self.name is not None:
             out.write(" " + self.name)
-        out.write(" {")
+        out.write(" {\n")
         for entity in self.schema.entities:
             eset = self._entities.get(entity, None)
             if eset is not None:
