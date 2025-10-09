@@ -4,23 +4,16 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import logging
-import pickle
 from itertools import product
 
-import numpy as np
-import pandas as pd
-import torch
+from pytest import mark
 
-from pytest import approx, mark
-
-from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.flexmf import FlexMFImplicitConfig, FlexMFImplicitScorer
-from lenskit.metrics import quick_measure_model
-from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 
 class TestFlexMFImplicit(BasicComponentTests, ScorerTests):
+    expected_ndcg = (0.01, 0.25)
     component = FlexMFImplicitScorer
     config = FlexMFImplicitConfig()
 
@@ -59,18 +52,3 @@ def test_flexmf_train_config(ml_ds, loss, reg):
     model.train(ml_ds)
 
     assert model.model is not None
-
-
-@mark.slow
-@mark.eval
-def test_flexmf_test_accuracy(ml_100k):
-    ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(
-        FlexMFImplicitScorer(embedding_size=25, epochs=10, batch_size=1024),
-        ds,
-    )
-
-    print(results.list_summary())
-
-    assert results.list_summary().loc["RBP", "mean"] >= 0.01
-    assert results.list_summary().loc["RBP", "mean"] < 0.25
