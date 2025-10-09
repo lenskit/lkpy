@@ -28,7 +28,6 @@ outputs:
 
     requirements:
       build:
-        - ${{ stdlib("c") }}
         - ${{ compiler("rust") }}
       host:
         - python ${{ python_min }}.*
