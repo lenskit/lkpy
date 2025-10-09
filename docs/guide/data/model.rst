@@ -134,6 +134,7 @@ Attribute Name Restrictions
 Attribute names can be freely chosen, subject to a few lightweight restrictions:
 
 -   Within an entity or relationship class, names must be unique.
+-   The names must not start with an underscore such as ``_$FOO``.
 -   For each entity class ``$FOO``, the names ``$FOO_id`` and ``$FOO_num`` are
     reserved by LensKit and cannot be used by user-defined attributes (on any
     entity or relationship).  We recommend avoiding all attribute names of the

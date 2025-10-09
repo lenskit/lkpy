@@ -61,6 +61,37 @@ def test_add_interactions_insert_ids_df():
     assert np.all(mat.rowptrs == [0, 2, 3, 6])
 
 
+def test_add_interactions_forbidden_attribute_name():
+    dsb = DatasetBuilder()
+    with raises(ValueError, match="invalid"):
+        dsb.add_interactions(
+            "click",
+            pd.DataFrame(
+                {
+                    "user_id": ["a", "a", "b", "c", "c", "c"],
+                    "item_id": ["x", "y", "z", "x", "y", "z"],
+                    "_count": np.arange(1, 7),
+                }
+            ),
+            entities=["user", "item"],
+            missing="insert",
+        )
+
+    with raises(ValueError, match="invalid"):
+        dsb.add_interactions(
+            "click",
+            pd.DataFrame(
+                {
+                    "user_id": ["a", "a", "b", "c", "c", "c"],
+                    "item_id": ["x", "y", "z", "x", "y", "z"],
+                    "count_id": np.arange(1, 7),
+                }
+            ),
+            entities=["user", "item"],
+            missing="insert",
+        )
+
+
 def test_add_interactions_table():
     dsb = DatasetBuilder()
 

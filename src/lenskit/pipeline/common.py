@@ -38,6 +38,7 @@ class RecPipelineBuilder:
     is_predictor: bool = False
     _predict_transform: Component | None = None
     _fallback: Component | None = None
+    _reranker: CompRec | None = None
 
     def __init__(self):
         from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
@@ -144,10 +145,36 @@ class RecPipelineBuilder:
         rank = pipe.add_component(
             "ranker", self._ranker.component, self._ranker.config, items=n_score, n=n_n
         )
-        pipe.alias("recommender", rank)
-        pipe.default_component("recommender")
+
+        # If a reranker is configured, attach it
+        if self._reranker is not None:
+            rerank = pipe.add_component(
+                "reranker",
+                self._reranker.component,
+                self._reranker.config,
+                items=rank,
+            )
+            pipe.alias("recommender", rerank)
+            pipe.default_component("recommender")
+        else:
+            pipe.alias("recommender", rank)
+            pipe.default_component("recommender")
 
         return pipe.build()
+
+    def reranker(self, kind: str, **params):
+        """
+        Specify a reranker to apply after ranking.
+        Example:
+            builder.reranker("fair", k=10, p=0.5, alpha=0.1)
+        """
+        from lenskit.reranking.fair import FairReranker
+
+        if kind == "fair":
+            cfg = FairReranker.validate_config(params)
+            self._reranker = CompRec(FairReranker, cfg)
+        else:
+            raise ValueError(f"unknown reranker type {kind}")
 
 
 def topn_builder(

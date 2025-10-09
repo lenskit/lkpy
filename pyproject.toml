@@ -43,6 +43,7 @@ dependencies = [
   "lazy-loader >=0.4",
   # torch inductor needs setuptools
   "setuptools >=80",
+  "deepmerge>=2.0",
 ]
 
 [dependency-groups]
@@ -121,6 +122,9 @@ implicit = ["implicit >=0.7.2"]
 gnn = ["torch_geometric ~=2.6"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
+tune = [
+  "ray[tune] ~=2.42",
+]
 
 [project.urls]
 homepage = "https://lenskit.org"
@@ -136,6 +140,7 @@ lenskit-data = "lenskit.cli.data:data"
 lenskit-doctor = "lenskit.cli.doctor:doctor"
 lenskit-task = "lenskit.cli.task:task"
 lenskit-train = "lenskit.cli.train:train"
+lenskit-tune = "lenskit.cli.tune:tune"
 lenskit-recommend = "lenskit.cli.recommend:recommend"
 
 # configure build tools

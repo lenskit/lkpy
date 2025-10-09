@@ -270,6 +270,8 @@ class DatasetBuilder:
         if isinstance(source, pa.Table):  # pragma: nocover
             raise NotImplementedError()
 
+        self._validate_entity_name(cls)
+
         if cls not in self.schema.entities:
             self.add_entity_class(cls)
 
@@ -445,6 +447,7 @@ class DatasetBuilder:
             if col not in link_id_cols:
                 new_table = new_table.append_column(col, table.column(col))
                 if col not in rc_def.attributes:
+                    self._validate_attribute_name(col)
                     rc_def.attributes[col] = ColumnSpec()
 
         if link_mask is not None:
@@ -758,6 +761,7 @@ class DatasetBuilder:
         """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
+        self._validate_attribute_name(name)
 
         id_col = id_col_name(cls)
 
@@ -783,11 +787,11 @@ class DatasetBuilder:
             raise DataError(f"{n_bad} unknown entity IDs")
 
         val_array: pa.Array = pa.array(values)  # type: ignore
-        tbl_mask = np.zeros(e_tbl.num_rows, dtype=np.bool_)
-        tbl_mask[nums.to_numpy()] = True
-        tbl_mask = pa.array(tbl_mask)
-        val_col = pa.nulls(e_tbl.num_rows, val_array.type)
-        val_col = pc.replace_with_mask(val_col, tbl_mask, val_array)
+        nums_np = nums.to_numpy()
+        vals_np = np.full(e_tbl.num_rows, None, dtype=object)
+        vals_np[nums_np] = val_array.to_numpy(zero_copy_only=False)
+        val_col = pa.array(vals_np, type=val_array.type)
+
         if dictionary:
             val_col = pc.dictionary_encode(val_col)
 
@@ -845,6 +849,7 @@ class DatasetBuilder:
         """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
+        self._validate_attribute_name(name)
 
         id_col = id_col_name(cls)
 
@@ -923,6 +928,7 @@ class DatasetBuilder:
         """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
+        self._validate_attribute_name(name)
 
         e_tbl = self._tables[cls]
         if e_tbl is None:  # pragma: nocover
@@ -950,6 +956,10 @@ class DatasetBuilder:
 
         field = pa.field(name, vec_col.type, nullable=True, metadata=metadata)
         self._tables[cls] = e_tbl.append_column(field, vec_col)
+
+    def _validate_attribute_name(self, attribute_name: str):
+        if attribute_name.endswith(("_id", "_num")) or attribute_name.startswith("_"):
+            raise ValueError(f"invalid attribute name {attribute_name}")
 
     def _add_sparse_vector_attribute(
         self,
@@ -1099,6 +1109,10 @@ class DatasetBuilder:
         t_modified = t_modified.sort_by([("_row_number_max", "ascending")])
         t = t.take(t_modified.column("_row_number_max"))
         return t
+
+    def _validate_entity_name(self, entity_name: str):
+        if entity_name.startswith("_"):
+            raise ValueError(f"invalid entity name {entity_name}")
 
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None

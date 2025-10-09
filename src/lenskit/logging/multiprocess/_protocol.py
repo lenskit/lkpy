@@ -44,7 +44,7 @@ class LogChannel(Enum):
 
 
 class ProgressField(NamedTuple):
-    value: int | float | str
+    value: int | float | str | None
     format: str | None = None
 
 

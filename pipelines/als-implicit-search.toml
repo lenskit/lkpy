@@ -1,0 +1,14 @@
+[search]
+method = "optuna"
+max_points = 30
+list_length = 1000
+metric = "RBP"
+
+[space.scorer]
+embedding_size_exp = { type = "int", min = 3, max = 10 }
+regularization.user = { type = "float", min = 1e-5, max = 1, scale = "log" }
+regularization.item = { type = "float", min = 1e-5, max = 1, scale = "log" }
+weight = { type = "float", min = 5, max = 100 }
+
+[pipeline]
+file = "als-implicit.toml"

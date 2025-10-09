@@ -13,7 +13,7 @@ from scipy.sparse import csr_array
 
 from pytest import approx, mark, raises, skip, warns
 
-from lenskit.data import DatasetBuilder
+from lenskit.data import DatasetBuilder, from_interactions_df
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.schema import AttrLayout
 from lenskit.diagnostics import DataError, DataWarning
@@ -119,6 +119,41 @@ def test_item_scalar_series_arrays():
     assert isinstance(df, pd.Series)
     ds_ts, orig_ts = df.align(items.set_index("item_id")["title"])
     assert np.all(ds_ts == orig_ts)
+
+
+def test_scalar_attribute_alignment():
+    interactions = pd.DataFrame(
+        {
+            "user_id": [10, 10, 11, 12],
+            "item_id": [1, 3, 2, 6],
+        }
+    )
+
+    # attributes come in order [1, 6, 3], not matching entity order
+    protected_df = pd.DataFrame(
+        {
+            "item_id": [1, 6, 3],
+            "protected": [1, 0, 1],
+        }
+    )
+
+    ds = from_interactions_df(interactions)
+    builder = DatasetBuilder(ds)
+    builder.add_scalar_attribute("item", "protected", protected_df)
+    ds = builder.build()
+
+    attributes_df = ds.entities("item").attribute("protected").pandas()
+
+    # check alignment: values match original protected_df
+    expected = protected_df.set_index("item_id")["protected"]
+    assert attributes_df.equals(expected.reindex(attributes_df.index))
+
+    # test alignment in numpy
+    attributes_np = ds.entities("item").attribute("protected").numpy()
+    entity_ids = ds.entities("item").vocabulary.ids(np.arange(len(attributes_np)))
+    attributes_df = expected.reindex(entity_ids, fill_value=None)
+
+    assert np.all(np.isclose(attributes_df.values, attributes_np, equal_nan=True))
 
 
 @mark.xfail(reason="attributes at insert time not yet implemented")
@@ -409,6 +444,20 @@ def test_item_vector_attr_subset(rng: np.random.Generator, ml_ratings: pd.DataFr
     assert isinstance(df, pd.DataFrame)
     assert np.all(df.columns == FRUITS)
     assert df.shape == (np.sum(q_known), 5)
+
+
+def test_add_invalid_attribute_name():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
+
+    dsb.add_entities("item", items.index.values)
+
+    invalid_attributes = ["_title", "title_id"]
+    for attribute_name in invalid_attributes:
+        with raises(ValueError, match="invalid"):
+            dsb.add_scalar_attribute("item", attribute_name, items["title"])
 
 
 def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFrame):

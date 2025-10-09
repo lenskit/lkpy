@@ -9,28 +9,25 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
-.. _2025.3.0:
+.. _2025.3.1:
 
-2025.3.0 (in progress)
-----------------------
+2025.3.1
+~~~~~~~~
 
--   Replace broken “softmax” sampler with a proper stochastic sampler (:pr:`667`).
--   :meth:`~lenskit.data.MatrixRelationshipSet.sample_negatives` now accepts
-    ``"popular"`` as an alias for ``"popularity"``.
+LensKit 2025.3.1 is a significant feature and bugfix upgrade to the LensKit 2025
+series.  It maintains backwards compatibility with 2025.2 for stable interfaces
+(see :ref:`stability-levels`), except as noted below.  See the `GitHub
+milestone <https://github.com/lenskit/lkpy/milestone/18>`_ for a full list of
+changes in this release; key changes are noted below.
+
+Highlights
+----------
+
+-   Added Rust acceleration for several data processing operations and kNN
+    models.
+-   Added a new, experimental PyTorch matrix factorization model (see
+    :ref:`flexmf`).
 -   :mod:`lenskit.basic` now exports the configuration classes for basic algorithms (:pr:`672`).
--   Several bug fixes for logging in niche setups (including ray clusters) (:pr:`673`).
--   Added Rust acceleration for some data processing operations and kNN models.
--   Added versioning to the native data format, documented data format
-    compatibility, and added compatibility tests.
--   Added compressed sparse row extension types for Arrow, and use them in the
-    LensKit native format (as well as Python/Rust data interchange) to more
-    reliably handle CSR matrix data in Arrow (previously, we had to carry the
-    matrix width or row dimension in side information; it is now embedded into
-    the Arrow metadata).
--   Fix MovieLens import to detect movies without genres (:issue:`727`, :pr:`738`).
--   :ref:`parallelism` now supports comma-separated lists for configuring
-    parallelism within worker processes, and :envvar:`LK_NUM_CHILD_THREADS` is
-    now deprecated.
 -   The pipeline runner now supports :ref:`pipeline-hooks` to inspect or modify
     pipeline operations.
 -   The pipeline runner type checking logic has been refactored and simplified.
@@ -41,22 +38,32 @@ information on how to upgrade your code.
     main exception message.
 -   Pipelines can now be specified in configuration files, and used from the
     command line.
+-   Datasets can now have repeated or duplicate interactions (although such
+    data sets are typically slow, see :issue:`869`).
+-   **Experimental** and mostly undocumented hyperparameter tuning support.
+-   Added a configuration facility in :mod:`lenskit.config` to configure random
+    numbers, power measurement, etc.  Scripts using LensKit should call
+    :func:`lenskit.configure`.
+-   Added support for querying power consumption from Prometheus.  Documentation
+    on how to set this up to be useful is TBD.
 
 Compatibility Changes
-.....................
+---------------------
 
 .. important::
     These changes should not break most programs, but do introduce and document
-    stricter requirements on pipeline input names.
+    stricter requirements on certain names.
 
--   Pipeline component input names are not allowed to be prefixed with `_`, as
+-   Pipeline component input names are not allowed to be prefixed with ``_``, as
     such names are reserved for LensKit internal operation.  This is not yet
     enforced, but will be enforced beginning in LensKit 2026.
+-   Entity and attribute names are not allowed to be prefixed with ``_``, and
+    attribute names cannot end with ``_id`` or ``_num``.
 
 Component Changes
-.................
+-----------------
 
--   :class:`~lenskit.knn.ItemKNNScorer` and :class:`~lenskit.knn.UserkNNScorer`
+-   :class:`~lenskit.knn.ItemKNNScorer` and :class:`~lenskit.knn.UserKNNScorer`
     are rewritten to use Rust acceleration, along with changes to its internal
     data representation to use Arrow instead of SciPy.  This also fixes a
     segfault with very large similarity matrices.
@@ -71,10 +78,60 @@ Component Changes
 -   The :mod:`lenskit.als` scorers have been similarly refactored, and had their
     learned parameters renamed for better consistency.
 
+-   Replaced the broken :class:`~lenskit.basic.SoftmaxRanker` with a proper
+    stochastic sampler (:pr:`667`,
+    :class:`~lenskit.stochastic.StochasticTopNRanker`).  The old ranker will be
+    removed in LensKit 2026.
+
+-   Added :class:`lenskit.training.UsesTrainer` for more sophisticated iterative
+    training support.
+
+-   Added :meth:`lenskit.data.ItemList.top_n` to get the top-*N* values of an
+    item list efficiently.
+
+-   :class:`lenskit.data.Vocabulary` is now backed by a Rust hashtable instead of a
+    Pandas ``Index``.  An index view is still available.
+
+Data Handling
+-------------
+
+-   Added versioning to the native data format, documented data format
+    compatibility, and added compatibility tests.
+-   Added compressed sparse row extension types for Arrow, and use them in the
+    LensKit native format (as well as Python/Rust data interchange) to more
+    reliably handle CSR matrix data in Arrow (previously, we had to carry the
+    matrix width or row dimension in side information; it is now embedded into
+    the Arrow metadata).
+-   Fix MovieLens import to detect movies without genres (:issue:`727`, :pr:`738`).
+-   :ref:`parallelism` now supports comma-separated lists for configuring
+    parallelism within worker processes, and :envvar:`LK_NUM_CHILD_THREADS` is
+    now deprecated.
+-   Added importers for UCSD Amazon data sets.
+
+Evaluation
+----------
+
+-   Reworked the design of the :class:`~lenskit.metrics.Metric` interface, along
+    with metric accumulation for run measurement, to facilitate more types of
+    metrics and more flexible use of the evaluation facilities.  More breaking
+    changes will come in LensKit 2026.
+
+CLI
+---
+
+-   Added several new capabilities to the :ref:`LensKit CLI <cli>`.
+
+Other Changes
+-------------
+
+-   :meth:`~lenskit.data.MatrixRelationshipSet.sample_negatives` now accepts
+    ``"popular"`` as an alias for ``"popularity"``.
+-   Several bug fixes for logging in niche setups (including ray clusters) (:pr:`673`).
+
 .. _2025.2.0:
 
 2025.2.0
---------
+~~~~~~~~
 
 LensKit 2025.2.0 was released March 12, 2025.
 
@@ -98,7 +155,7 @@ Some small quality-of-life improvements (and removing invalid API compat).
 .. _2025.1:
 
 2025.1.1
---------
+~~~~~~~~
 
 LensKit 2025.1.1 was released March 7, 2025.
 
@@ -113,7 +170,7 @@ in traditional release notes.  See the following for release update documentatio
   milestone <https://github.com/lenskit/lkpy/milestone/14>`_.
 
 Breaking Changes
-~~~~~~~~~~~~~~~~
+----------------
 
 LensKit 2025 has many breaking changes, with the migration guide
 (:ref:`migrating`) documenting the major ones.  Below are some smaller ones not
@@ -130,7 +187,7 @@ covered by that document:
     useful as a part of the NDCG implementation.
 
 New Features (incremental)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 *   Many LensKit components (batch running, model training, etc.) now report
     progress the progress API in :mod:`lenskit.logging.progress`, and can be
@@ -139,7 +196,7 @@ New Features (incremental)
 *   Added command-line tool to fetch datasets (:pr:`347`).
 
 Metric Behavior Changes
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 .. important::
 
@@ -151,7 +208,7 @@ Metric Behavior Changes
     values.
 
 Model Behavior Changes
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 Most models will exhibit some changes, hopefully mostly in performance, due to
 moving to PyTorch.  There are some deliberate behavior changes in this new version,
@@ -175,13 +232,13 @@ however, documented here.
   default.
 
 Bug Fixes
-~~~~~~~~~
+---------
 
 * Fixed bug in NDCG list truncation (:issue:`309`, :pr:`312`).
 * Corrected documentation errors for :py:func:`~lenskit.metrics.recall` and :py:func:`~lenskit.metrics.hit` (:pr:`369` by :user:`lukas-wegmeth`).
 
 Dependencies and Maintenance
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 * Bumped minimum supported dependencies as per SPEC0_ (Python 3.11, NumPy 1.24, Pandas 2.0, SciPy 1.10).
 * Added support for Pandas 2 (:pr:`364`) and Python 3.12.

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Literal, Protocol, overload, runtime_checkable
 
 from ._base import Progress
@@ -25,7 +26,7 @@ class ProgressBackend(Protocol):
     """
 
     def __call__(
-        self, label: str, total: int | float | None, fields: dict[str, str | None] | None
+        self, label: str, total: int | float | None, fields: Mapping[str, str | None] | None
     ) -> Progress: ...
 
     @classmethod
@@ -68,7 +69,7 @@ def set_progress_impl(name: str | ProgressBackend | None, *options: Any) -> None
 
 
 def item_progress(
-    label: str, total: int | None = None, fields: dict[str, str | None] | None = None
+    label: str, total: int | None = None, fields: Mapping[str, str | None] | None = None
 ) -> Progress:
     """
     Create a progress bar for distinct, counted items.

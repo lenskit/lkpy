@@ -50,7 +50,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pypi-dist-src
-          path: dist
+          path: |
+            dist
+            !dist/CACHEDIR.TAG
 
       - name: List dist dir
         run: ls -R dist

@@ -11,10 +11,11 @@ from typing import Literal, Mapping, TypeAlias, cast
 
 import numpy as np
 import structlog
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt
 from scipy.sparse import coo_array
 from typing_extensions import Generic, NamedTuple, TypeVar, override
 
+from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import NPMatrix, NPVector, UIPair
@@ -31,23 +32,23 @@ Scorer = TypeVar("Scorer", bound="ALSBase")
 Config = TypeVar("Config", bound="ALSConfig")
 
 
-class ALSConfig(BaseModel):
+class ALSConfig(BaseModel, EmbeddingSizeMixin):
     """
     Configuration for ALS scorers.
     """
 
-    embedding_size: int = Field(
+    embedding_size: PositiveInt = Field(
         default=50, validation_alias=AliasChoices("embedding_size", "features")
     )
     """
     The dimension of user and item embeddings (number of latent features to
     learn).
     """
-    epochs: int = 10
+    epochs: PositiveInt = 10
     """
     The number of epochs to train.
     """
-    regularization: float | UIPair[float] = 0.1
+    regularization: PositiveFloat | UIPair[PositiveFloat] = 0.1
     """
     L2 regularization strength.
     """
@@ -156,10 +157,17 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
 
         item_nums = items.numbers(vocabulary=self.items, missing="negative")
         item_mask = item_nums >= 0
-        i_feats = self.item_embeddings[item_nums[item_mask], :]
 
         scores = np.full((len(items),), np.nan, dtype=np.float32)
-        scores[item_mask] = i_feats @ u_feat
+        if len(item_nums) <= self.item_embeddings.shape[0] * 0.8:
+            # small set — subset inputs
+            i_feats = self.item_embeddings[item_nums[item_mask], :]
+            scores[item_mask] = i_feats @ u_feat
+        else:
+            # larger set — subset outputs
+            allmult = self.item_embeddings @ u_feat
+            scores[item_mask] = allmult[item_nums[item_mask]]
+
         log.debug("scored %d items", np.sum(item_mask))
 
         results = ItemList(items, scores=scores)

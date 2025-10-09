@@ -6,12 +6,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
 import torch
+from pydantic import BaseModel, PositiveInt
 
+from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.logging import get_logger
 from lenskit.pipeline import Component
@@ -24,8 +25,7 @@ from ._model import FlexMFModel
 _log = get_logger(__name__)
 
 
-@dataclass
-class FlexMFConfigBase:
+class FlexMFConfigBase(EmbeddingSizeMixin, BaseModel):
     """
     Common configuration for all FlexMF scoring components.
 
@@ -33,10 +33,7 @@ class FlexMFConfigBase:
         Experimental
     """
 
-    embedding_size: int = 50
-    """
-    The dimension of the embedding space (number of latent features).
-    """
+    embedding_size: PositiveInt = 64
 
     batch_size: int = 8 * 1024
     """

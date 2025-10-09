@@ -1,3 +1,5 @@
+.. _cli:
+
 LensKit CLI
 ===========
 
@@ -37,8 +39,23 @@ options and usage.
 ``lenskit data fetch``
     Fetch a public dataset.
 
+``lenskit data split``
+    Perform a global train-test split of a dataset.
+
 ``lenskit doctor``
     Print information about the installed Python and LensKit environment.
 
+``lenskit config``
+    Print the LensKit configuration.
+
 ``lenskit version``
     Display the LensKit version.
+
+``lenskit train``
+    Train a recommendation pipeline (**experimental**).
+
+``lenskit recommend``
+    Generate recommendations from a trained pipeline (**experimental**).
+
+``lenskit tune``
+    Tune hyperparameters (**experimental**).
