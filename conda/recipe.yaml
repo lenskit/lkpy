@@ -94,7 +94,7 @@ outputs:
         - "true"
     requirements:
       host:
-        - ${{ python_min }}.*
+        - python ${{ python_min }}.*
       run:
         - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
