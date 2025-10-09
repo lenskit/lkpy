@@ -7,15 +7,15 @@ recipe:
   name: lenskit
   version: ${{ version }}
 
-build:
-  number: 0
-
 source:
   - if: version == "2100.0a0+dev0"
     then:
       path: ..
     else:
       path: ../dist/lenskit-${{version}}.tar.gz
+
+build:
+  number: 0
 
 outputs:
   - package:
@@ -29,7 +29,8 @@ outputs:
 
     requirements:
       build:
-        - ${{ compiler('rust') }}
+        - ${{ stdlib("c") }}
+        - ${{ compiler("rust") }}
       host:
         - python =3.11
         - pip
