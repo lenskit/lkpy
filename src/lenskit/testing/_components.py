@@ -125,6 +125,10 @@ class ScorerTests(TrainingTests):
         args = {n: v for (n, v) in kwargs.items() if n in sig.parameters}
         return inst(**args)
 
+    def verify_models_equivalent(self, orig, copy):
+        "Verify that two models are equivalent."
+        pass
+
     def test_score_known(self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component):
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
@@ -143,6 +147,7 @@ class ScorerTests(TrainingTests):
     ):
         data = pickle.dumps(trained_model, pickle.HIGHEST_PROTOCOL)
         tm2 = pickle.loads(data)
+        self.verify_models_equivalent(trained_model, tm2)
 
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100, replace=False)

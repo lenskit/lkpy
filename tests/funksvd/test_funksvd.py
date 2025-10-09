@@ -32,6 +32,15 @@ class TestFunkSVD(BasicComponentTests, ScorerTests):
     component = funk.FunkSVDScorer
     expected_rmse = (0.87, 0.97)
 
+    def verify_models_equivalent(self, orig, copy):
+        assert copy.bias.global_bias == orig.bias.global_bias
+        assert np.all(copy.bias.user_biases == orig.bias.user_biases)
+        assert np.all(copy.bias.item_biases == orig.bias.item_biases)
+        assert np.all(copy.user_embeddings == orig.user_embeddings)
+        assert np.all(copy.item_embeddings == orig.item_embeddings)
+        assert np.all(copy.items.index == orig.items.index)
+        assert np.all(copy.users.index == orig.users.index)
+
 
 def test_fsvd_basic_build():
     algo = funk.FunkSVDScorer(features=20, epochs=20)
@@ -140,31 +149,6 @@ def test_fsvd_predict_bad_user():
     assert preds is not None
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
-
-
-@mark.slow
-def test_fsvd_save_load(ml_ds: Dataset):
-    original = funk.FunkSVDScorer(features=20, epochs=20)
-    original.train(ml_ds)
-
-    assert original.bias is not None
-    assert original.bias.global_bias == approx(
-        ml_ds.interaction_matrix(format="scipy", field="rating").data.mean()
-    )
-    assert original.item_embeddings.shape == (ml_ds.item_count, 20)
-    assert original.user_embeddings.shape == (ml_ds.user_count, 20)
-
-    mod = pickle.dumps(original)
-    _log.info("serialized to %d bytes", len(mod))
-    algo = pickle.loads(mod)
-
-    assert algo.bias.global_bias == original.bias.global_bias
-    assert np.all(algo.bias.user_biases == original.bias.user_biases)
-    assert np.all(algo.bias.item_biases == original.bias.item_biases)
-    assert np.all(algo.user_embeddings == original.user_embeddings)
-    assert np.all(algo.item_embeddings == original.item_embeddings)
-    assert np.all(algo.items.index == original.items.index)
-    assert np.all(algo.users.index == original.users.index)
 
 
 @mark.slow

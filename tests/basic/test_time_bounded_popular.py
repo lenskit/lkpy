@@ -13,6 +13,7 @@ import pandas as pd
 from lenskit.basic import popularity
 from lenskit.data import from_interactions_df
 from lenskit.data.items import ItemList
+from lenskit.testing import ScorerTests
 
 ts = datetime(year=2024, month=1, day=1)
 one_day_ago = ts - timedelta(days=1)
@@ -26,6 +27,13 @@ simple_df = pd.DataFrame(
     }
 )
 simple_ds = from_interactions_df(simple_df)
+
+
+class TestTimeBoundedPop(ScorerTests):
+    component = popularity.TimeBoundedPopScore
+
+    def verify_models_equivalent(self, orig, copy):
+        assert all(orig.item_scores_ == copy.item_scores_)
 
 
 def test_time_bounded_pop_score_quantile_one_day_window():
@@ -67,13 +75,3 @@ def test_time_bounded_pop_score_counts():
     algo = popularity.TimeBoundedPopScore(cutoff=two_days_ago, score="count")
     algo.train(simple_ds)
     assert np.all(algo.item_scores_ == pd.Series([1, 2, 1], index=[1, 2, 3], dtype=np.int32))
-
-
-def test_time_bounded_pop_score_save_load():
-    original = popularity.TimeBoundedPopScore(cutoff=one_day_ago)
-    original.train(simple_ds)
-
-    mod = pickle.dumps(original)
-    algo = pickle.loads(mod)
-
-    assert all(algo.item_scores_ == original.item_scores_)

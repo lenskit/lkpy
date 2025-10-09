@@ -32,6 +32,12 @@ class TestImplicitALS(BasicComponentTests, ScorerTests):
     component = ImplicitMFScorer
     expected_ndcg = 0.22
 
+    def verify_models_equivalent(self, orig, copy):
+        assert np.all(copy.user_embeddings == orig.user_embeddings)
+        assert np.all(copy.item_embeddings == orig.item_embeddings)
+        assert np.all(copy.items.index == orig.items.index)
+        assert np.all(copy.users.index == orig.users.index)
+
 
 def test_config_defaults():
     cfg = ImplicitMFConfig()
@@ -299,27 +305,6 @@ def test_als_train_large(ml_ds: Dataset):
     assert len(algo.items.index) == ml_ds.item_count
     assert algo.user_embeddings.shape == (ml_ds.user_count, 20)
     assert algo.item_embeddings.shape == (ml_ds.item_count, 20)
-
-
-def test_als_save_load(tmp_path, ml_ds: Dataset):
-    "Test saving and loading ALS models, and regularized training."
-    algo = ImplicitMFScorer(
-        features=5, epochs=5, regularization={"user": 2, "item": 1}, use_ratings=False
-    )
-    algo.train(ml_ds)
-    assert algo.users is not None
-
-    fn = tmp_path / "model.bpk"
-    with fn.open("wb") as pf:
-        pickle.dump(algo, pf, protocol=pickle.HIGHEST_PROTOCOL)
-
-    with fn.open("rb") as pf:
-        restored = pickle.load(pf)
-
-    assert np.all(restored.user_embeddings == algo.user_embeddings)
-    assert np.all(restored.item_embeddings == algo.item_embeddings)
-    assert np.all(restored.items.index == algo.items.index)
-    assert np.all(restored.users.index == algo.users.index)
 
 
 def test_als_train_large_noratings(ml_ds: Dataset):
