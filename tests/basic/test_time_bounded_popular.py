@@ -31,6 +31,7 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestTimeBoundedPop(ScorerTests):
     component = popularity.TimeBoundedPopScore
+    config = popularity.TimeBoundedPopConfig(cutoff=one_day_ago)
 
     def verify_models_equivalent(self, orig, copy):
         assert all(orig.item_scores_ == copy.item_scores_)
