@@ -17,19 +17,12 @@ from scipy import linalg as la
 import pytest
 from pytest import approx, fixture, mark
 
-from lenskit import batch
-from lenskit.basic import BiasScorer
 from lenskit.basic.history import UserTrainingHistoryLookup
-from lenskit.batch import BatchPipelineRunner
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
-from lenskit.data.matrix import SparseRowArray
-from lenskit.diagnostics import ConfigWarning, DataWarning
+from lenskit.diagnostics import DataWarning
 from lenskit.knn.item import ItemKNNScorer
-from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
-from lenskit.operations import score
-from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
+from lenskit.pipeline import topn_pipeline
 from lenskit.pipeline.common import predict_pipeline
-from lenskit.splitting import SampleFrac, crossfold_users
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
