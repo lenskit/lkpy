@@ -1084,19 +1084,25 @@ class ItemList:
 
     def __repr__(self) -> str:  # pragma: nocover
         out = io.StringIO()
-        nf = len(self._fields)
+        fields = self._fields
+        if self.ordered and "rank" not in fields:
+            fields = fields | {"rank": None}
+        nf = len(fields)
         print(f"<ItemList of {self._len} items with {nf} fields", "{", file=out)
 
-        if self._numbers is not None:
-            print("  numbers:", np.array2string(self._numbers.numpy(), threshold=10), file=out)
-        elif self._vocab is not None:
-            print("  numbers: <lazy>", file=out)
         if self._ids is not None:
             print("  ids:", np.array2string(self.ids(), threshold=10), file=out)
         elif self._vocab is not None:
             print("  ids: <lazy>", file=out)
-        for name, f in self._fields.items():
-            print(f"  {name}:", np.array2string(f.numpy(), threshold=10), file=out)
+        if self._numbers is not None:
+            print("  numbers:", np.array2string(self._numbers.numpy(), threshold=10), file=out)
+        elif self._vocab is not None:
+            print("  numbers: <lazy>", file=out)
+        for name, f in fields.items():
+            if f is None:
+                print(f"  {name}: <lazy>", file=out)
+            else:
+                print(f"  {name}:", np.array2string(f.numpy(), threshold=10), file=out)
         print("}>", end="", file=out)
 
         return out.getvalue()
