@@ -39,7 +39,7 @@ scorer with logistic matrix factorization, you can do:
 >>> pipe.train(data)
 >>> # recommend for user 500
 >>> recommend(pipe, 500)
-<ItemList of 10 items with 1 fields {
+<ItemList of 10 items with 2 fields {
   ids: ...
   numbers: [...]
   rank: ...
