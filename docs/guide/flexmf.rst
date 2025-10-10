@@ -40,7 +40,9 @@ scorer with logistic matrix factorization, you can do:
 >>> # recommend for user 500
 >>> recommend(pipe, 500)
 <ItemList of 10 items with 1 fields {
+  ids: ...
   numbers: [...]
+  rank: ...
   score: [...]
 }>
 
