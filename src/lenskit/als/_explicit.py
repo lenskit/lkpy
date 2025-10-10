@@ -58,6 +58,7 @@ class BiasedMFScorer(ALSBase):
         mask = inums >= 0
         ratings = items.field("rating")
         assert ratings is not None
+        mask &= np.isfinite(ratings)
 
         biases, u_bias = self.bias.compute_for_items(items, None, items)
         ratings = ratings - biases

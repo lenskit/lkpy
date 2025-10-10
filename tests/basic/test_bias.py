@@ -48,6 +48,17 @@ def test_bias_check_arguments():
         BiasScorer(damping=(5, -1))
 
 
+def test_bias_partial(ml_ratings, rng):
+    ml_ratings = ml_ratings.copy()
+    ml_ratings.loc[rng.choice(len(ml_ratings), 1000, replace=False), "rating"] = np.nan
+    ds = from_interactions_df(ml_ratings)
+
+    bias = BiasScorer(damping=5)
+    bias.train(ds)
+    assert np.isfinite(bias.model_.global_bias)
+    assert np.all(np.isfinite(bias.model_.item_biases))
+
+
 def test_bias_full():
     bias = BiasModel.learn(simple_ds)
     assert bias.global_bias == approx(3.5)

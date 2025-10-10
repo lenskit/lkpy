@@ -18,6 +18,10 @@ This is a small bug fix and minor improvement release.
 
 - Improve ``__repr__`` for :class:`~lenskit.data.Dataset` and :class:`~lenskit.data.ItemList`.
 - Fix rate limit in Jupyter progress bar.
+- Modify the :meth:`~lenskit.data.MatrixRelationshipSet.scipy` and
+  :meth:`~lenskit.data.MatrixRelationshipSet.torch` methods of
+  :class:`lenskit.data.MatrixRelationshipSet` to filter out missing values of
+  the selected attribute.
 
 .. _2025.3.1:
 
