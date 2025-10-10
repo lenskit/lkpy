@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import pickle
+import re
 
 import numpy as np
 import pandas as pd
@@ -843,3 +844,37 @@ def test_remove_ids_no_vocab(ids, remove):
     assert len(il2) == len(il) - len(intersect)
     assert not any(i in il2.ids() for i in remove)
     assert all(i in il2.ids() for i in ids if i not in remove)
+
+
+def test_repr_ids():
+    il = ItemList(ITEMS, vocabulary=VOCAB)
+    ilr = repr(il)
+    print(ilr)
+    assert re.search(r"ids: \['a'.*\]", ilr)
+    assert re.search(r"numbers: <lazy>", ilr)
+
+
+def test_repr_numbers():
+    il = ItemList(item_nums=np.arange(len(ITEMS)), vocabulary=VOCAB)
+    ilr = repr(il)
+    print(ilr)
+    assert re.search(r"numbers: \[0.*\]", ilr)
+    assert re.search(r"ids: <lazy>", ilr)
+
+
+@mark.skip("ranks are not stable")
+def test_repr_lazy_rank():
+    il = ItemList(item_nums=np.arange(len(ITEMS)), vocabulary=VOCAB, ordered=True)
+    ilr = repr(il)
+    print(ilr)
+    assert re.search(r"numbers: \[0 .*\]", ilr)
+    assert re.search(r"ids: <lazy>", ilr)
+    assert re.search(r"rank: <lazy>", ilr)
+
+    _rank = il.ranks()
+
+    ilr = repr(il)
+    print(ilr)
+    assert re.search(r"numbers: \[0 .*\]", ilr)
+    assert re.search(r"ids: <lazy>", ilr)
+    assert re.search(r"rank: \[0 .*\]", ilr)
