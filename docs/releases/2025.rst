@@ -9,6 +9,16 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.3.2:
+
+2025.3.2
+~~~~~~~~
+
+This is a small bug fix and minor improvement release.
+
+- Improve ``__repr__`` for :class:`~lenskit.data.Dataset` and :class:`~lenskit.data.ItemList`.
+- Fix rate limit in Jupyter progress bar.
+
 .. _2025.3.1:
 
 2025.3.1
