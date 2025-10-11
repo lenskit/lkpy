@@ -5,9 +5,9 @@
 # SPDX-License-Identifier: MIT
 
 """
-top-k re-rankers.
+top-N re-rankers.
 """
 
-from .fair import FairReranker, FairRerankerConfig
+from .fair import FAIRReranker, FAIRRerankerConfig
 
-__all__ = ["FairReranker", "FairRerankerConfig"]
+__all__ = ["FAIRReranker", "FAIRRerankerConfig"]

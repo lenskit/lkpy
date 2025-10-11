@@ -149,10 +149,7 @@ class RecPipelineBuilder:
         # If a reranker is configured, attach it
         if self._reranker is not None:
             rerank = pipe.add_component(
-                "reranker",
-                self._reranker.component,
-                self._reranker.config,
-                items=rank,
+                "reranker", self._reranker.component, self._reranker.config, items=rank, n=n_n
             )
             pipe.alias("recommender", rerank)
             pipe.default_component("recommender")
@@ -162,19 +159,18 @@ class RecPipelineBuilder:
 
         return pipe.build()
 
-    def reranker(self, kind: str, **params):
+    def reranker(self, reranker: Component | ComponentConstructor, config: object | None = None):
         """
-        Specify a reranker to apply after ranking.
-        Example:
-            builder.reranker("fair", k=10, p=0.5, alpha=0.1)
-        """
-        from lenskit.reranking.fair import FairReranker
+        Specify a reranker to add to the pipeline.
 
-        if kind == "fair":
-            cfg = FairReranker.validate_config(params)
-            self._reranker = CompRec(FairReranker, cfg)
-        else:
-            raise ValueError(f"unknown reranker type {kind}")
+        Args:
+            reranker:
+                The reranker to use in the pipeline.
+            config:
+                Configuration parameters to initialize the reranker if a reranker is specified.
+        """
+        self._reranker = CompRec(reranker, config)
+        return self
 
 
 def topn_builder(

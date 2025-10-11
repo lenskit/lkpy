@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-FA*IR top-k re-ranking.
+FA*IR top-N re-ranking.
 """
 
 # pyright: basic
@@ -26,31 +26,41 @@ from lenskit.training import Trainable, TrainingOptions
 _log = get_logger(__name__)
 
 
-class FairRerankerConfig(BaseModel, extra="forbid"):
+class FAIRRerankerConfig(BaseModel, extra="forbid"):
     """
-    Configuration for :class:`FairTopNReranker`.
+    Configuration for :class:`FAIRReranker`.
     """
 
-    k: PositiveInt | None = None
+    n: PositiveInt
     """
-    Size of the top-k segment to rerank. If ``None``, the entire
-    candidate list is reranked (unbounded top-k).
+    Size of the top-N subset to rerank. If ``None``, the entire
+    candidate list is reranked.
     """
 
     p: PositiveFloat = Field(0.5, gt=0.0, lt=1.0)
     """
     The target proportion of protected items in the list (0.0 ≤ p ≤ 1.0).
+    The default value is 0.5.
     """
 
     alpha: PositiveFloat = Field(0.1, gt=0.0, lt=1.0)
     """
-    Family-wise Type I error across prefixes.
+    The probability threshold for Type I error across prefixes.
+    The default value is 0.1.
+    """
+
+    protected_attribute: str = Field(
+        "protected", description="Item attribute name for the protected flag"
+    )
+    """
+    The item attribute name that marks whether an item is protected.
+    The default name is 'protected'.
     """
 
 
-class FairReranker(Component[ItemList], Trainable):
+class FAIRReranker(Component[ItemList], Trainable):
     """
-    FA*IR top-k re-ranking algorithm.
+    FA*IR top-N re-ranking algorithm.
 
     Re-ranks a sorted candidate list to satisfy binomial lower-bound constraints
     for a binary protected/unprotected attribute at every prefix (1..N). It expects
@@ -64,28 +74,17 @@ class FairReranker(Component[ItemList], Trainable):
     Stability:
         Caller
 
-    Args:
-        k:
-            Size of the top-k subset to rerank. If ``None``, the entire
-            candidate list is reranked.
-        p:
-            The target proportion of protected items in the list (0.0 ≤ p ≤ 1.0).
-            The default value is 0.5.
-        alpha:
-            The statistical significance level for the fairness test.
-            The default value is 0.1.
-
     """
 
-    config: FairRerankerConfig
+    config: FAIRRerankerConfig
     "FA*IR reranker configuration."
 
-    def _compute_m_list(self, k, p, alpha):
-        k_vals = np.arange(1, k + 1)
+    def _compute_m_list(self, n, p, alpha):
+        n_vals = np.arange(1, n + 1)
         # if we see m or fewer protected, it’s rare enough (probability ≤ α) that we call it unfair.
-        m_list_ = binom.ppf(alpha, k_vals, p)
+        m_list_ = binom.ppf(alpha, n_vals, p)
         # set bounds for edge cases (<0 or >N)
-        m_list_ = np.clip(m_list_, 0, k_vals).astype(int)
+        m_list_ = np.clip(m_list_, 0, n_vals).astype(int)
         return m_list_
 
     def _compute_blocks(self, m_list_):
@@ -99,17 +98,17 @@ class FairReranker(Component[ItemList], Trainable):
         block_sizes = np.diff(change_points, prepend=0)
         return block_sizes
 
-    def _compute_rejection_prob(self, k, p, alpha_c):
+    def _compute_rejection_prob(self, n, p, alpha_c):
         """
         Algorithm 1 (AdjustSignificance), exactly:
         - compute m(pos) from Binomial PPF at alpha_c
         - compute blocks b(j)
-        - for j=1..m(k):
+        - for j=1..m(n):
             S = conv(S, Bin(b(j), p))
             S[j-1] = 0     # prune bucket j-1
         Returns rejection probability = 1- sum(S).
         """
-        m_list_ = self._compute_m_list(k, p, alpha_c)
+        m_list_ = self._compute_m_list(n, p, alpha_c)
         m_blocks = self._compute_blocks(m_list_)
         S = np.array([1.0], dtype=np.float64)
 
@@ -125,12 +124,12 @@ class FairReranker(Component[ItemList], Trainable):
 
         return float(1 - S.sum())
 
-    def binary_search_significance(self, k, p, alpha, tolerance=1e-10, max_iter=100):
+    def _binary_search_significance(self, n, p, alpha, tolerance=1e-10, max_iter=100):
         low, high = 0, 1
 
         for _ in range(max_iter):
             alpha_c = (low + high) / 2
-            rejection_prob = self._compute_rejection_prob(k, p, alpha_c)
+            rejection_prob = self._compute_rejection_prob(n, p, alpha_c)
 
             if rejection_prob > alpha:
                 high = alpha_c
@@ -145,7 +144,7 @@ class FairReranker(Component[ItemList], Trainable):
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
-        Precompute adjusted alpha and m-table for the configured (k,p,alpha)
+        Precompute adjusted alpha and m-table for the configured (n,p,alpha)
 
         Training computes the (multiple-tests–corrected) prefix requirements m[i]
         so that every prefix of size i has at least m[i] protected items with
@@ -158,40 +157,37 @@ class FairReranker(Component[ItemList], Trainable):
         """
         self.pmf_cache = {}
 
-        log = _log.bind(alpha=self.config.alpha, k_max=self.config.k)
+        log = _log.bind(alpha=self.config.alpha, n_max=self.config.n)
         timer = Stopwatch()
-        log.info("begining FA*IR Tuning")
+        log.info("computing FA*IR thresholds")
 
         # 1. find α_c
-        self.alpha_c_ = self.binary_search_significance(
-            k=self.config.k, p=self.config.p, alpha=self.config.alpha
+        self.alpha_c_ = self._binary_search_significance(
+            n=self.config.n, p=self.config.p, alpha=self.config.alpha
         )
         # 2. compute m_table
-        self.m_list_ = self._compute_m_list(k=self.config.k, p=self.config.p, alpha=self.alpha_c_)
+        self.m_list_ = self._compute_m_list(n=self.config.n, p=self.config.p, alpha=self.alpha_c_)
 
         items = data.entities("item")
+        protected = self.config.protected_attribute
 
-        if "protected" not in items.attributes:
-            raise ValueError("Dataset is missing required 'protected' attribute for item entities")
+        if protected not in items.attributes:
+            raise ValueError(
+                f"Dataset is missing required '{protected}' attribute for item entities"
+            )
 
-        self.protected_attributes = items.attribute("protected").pandas()
+        self.protected_attributes = items.attribute(protected).pandas()
 
         log.info(
-            "[%s] tuned with p=%f, alpha=%f → alpha_c=%.8f",
+            "[%s] computed thresholds with p=%.2f, alpha=%.2f → alpha_c=%.8f",
             timer,
             self.config.p,
             self.config.alpha,
             self.alpha_c_,
         )
 
-    def __call__(
-        self,
-        items: ItemList,
-    ) -> ItemList:
+    def __call__(self, items: ItemList, n: int | None = None) -> ItemList:
         item_ids = items.ids()
-
-        p_items = deque()
-        up_items = deque()
 
         is_protected = self.protected_attributes.reindex(item_ids).fillna(False).values
 
@@ -199,11 +195,18 @@ class FairReranker(Component[ItemList], Trainable):
         up_items = deque(np.nonzero(~is_protected)[0])
 
         count_prot = 0
-        reranked_indices = deque()
+        reranked_indices = []
         list_size = len(item_ids)
-        k = self.config.k or list_size
+        n_config = self.config.n
+
+        # check that runtime n <= configured n
+        if n is not None and n > n_config:
+            raise ValueError(f"The requested rerank length n={n}, exceeds configured n={n_config}.")
+        # use provided n or fallback to config.n (never larger than list size)
+        n = min(n or n_config, list_size)
+
         # rerank the list
-        for i in range(min(k, list_size)):  # if k>list_size we will consider the k=list_size
+        for i in range(n):
             if count_prot < self.m_list_[i]:
                 if p_items:
                     reranked_indices.append(p_items.popleft())
