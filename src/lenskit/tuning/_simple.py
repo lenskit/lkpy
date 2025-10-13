@@ -35,14 +35,9 @@ class SimplePointEval:
         self.job = job
 
     def __call__(self, config) -> dict[str, float]:
-        cfg = self.job.pipeline.model_copy(deep=True)
         comp_name = self.job.spec.component_name
         assert comp_name is not None
-
-        comp_cfg = cfg.components[comp_name].config
-        if comp_cfg is None:
-            comp_cfg = {}
-        cfg.components[comp_name].config = comp_cfg | config
+        cfg = self.job.pipeline.merge_component_configs({comp_name: config})
 
         pipe = Pipeline.from_config(cfg)
 

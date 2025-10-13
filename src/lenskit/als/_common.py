@@ -32,7 +32,7 @@ Scorer = TypeVar("Scorer", bound="ALSBase")
 Config = TypeVar("Config", bound="ALSConfig")
 
 
-class ALSConfig(BaseModel, EmbeddingSizeMixin):
+class ALSConfig(EmbeddingSizeMixin, BaseModel):
     """
     Configuration for ALS scorers.
     """

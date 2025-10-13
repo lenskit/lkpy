@@ -79,9 +79,11 @@ class IterativeEval(ray.tune.Trainable):
         wrapper_pipe.train(self.data.train)
 
         self.log.info("adding untrained scorer", config=config)
+        cfg_pipe = self.job.pipeline.merge_component_configs({comp_name: config})
         pb = PipelineBuilder.from_pipeline(wrapper_pipe)
-        comp_cfg = self.job.pipeline.components[comp_name].config or {}
-        pb.replace_component(comp_name, comp_node.constructor, comp_cfg | config)
+        pb.replace_component(
+            comp_name, comp_node.constructor, cfg_pipe.components[comp_name].config
+        )
         self.pipeline = pb.build()
         comp_node = self.pipeline.node(comp_name)
 
