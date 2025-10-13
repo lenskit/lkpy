@@ -15,8 +15,7 @@ from pytest import approx, mark
 from lenskit.als import ImplicitMFScorer
 from lenskit.als._implicit import ImplicitMFConfig
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
-from lenskit.metrics import quick_measure_model
-from lenskit.pipeline import topn_pipeline
+from lenskit.pipeline import Pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
@@ -59,9 +58,29 @@ def test_config_exp_dict():
     assert cfg.embedding_size == 1024
 
 
+def test_config_exp_dict_double():
+    cfg = ImplicitMFConfig.model_validate({"embedding_size": 20, "embedding_size_exp": 10})
+    assert cfg.embedding_size == 1024
+
+
 def test_config_exp_json():
     cfg = ImplicitMFConfig.model_validate_json('{"embedding_size_exp": 2}')
     assert cfg.embedding_size == 4
+
+
+def test_reconfigure_pipeline():
+    algo = ImplicitMFScorer()
+    pipe = topn_pipeline(algo)
+
+    pipe_cfg = pipe.config
+
+    cfg2 = pipe_cfg.merge_component_configs({"scorer": {"embedding_size_exp": 4}})
+    assert cfg2.components["scorer"].config["embedding_size_exp"] == 4
+    print(cfg2.components["scorer"].model_dump_json(indent=2))
+    p2 = Pipeline.from_config(cfg2)
+    scorer = p2.node("scorer")
+    print(scorer.component.config.model_dump_json(indent=2))
+    assert scorer.component.config.embedding_size == 16
 
 
 def test_als_basic_build():

@@ -44,7 +44,9 @@ class EmbeddingSizeMixin:
             case {"embedding_size_exp": e}:
                 # convert embedding size and remove from data
                 return {"embedding_size": 2**e} | {
-                    k: v for k, v in data.items() if k != "embedding_size_exp"
+                    k: v
+                    for k, v in data.items()
+                    if k not in ("embedding_size_exp", "embedding_size")
                 }
             case _:
                 return data
