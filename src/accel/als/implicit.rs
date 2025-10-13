@@ -95,13 +95,10 @@ fn train_row_solve(
 
     let a = a.into_nalgebra();
     let y = y.into_nalgebra();
-    info!("matrix: {}", a);
     let cholesky = match a.cholesky() {
         Some(c) => c,
         None => {
             error!("matrix is not positive definite");
-            info!("row length: {}", cols.len());
-            info!("values: {}", vals);
             panic!("matrix is not positive definite");
         }
     };
