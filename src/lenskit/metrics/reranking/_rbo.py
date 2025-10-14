@@ -34,6 +34,9 @@ def rank_biased_overlap(
 
     Returns:
         The RBO score between 0 and 1.
+
+    Stability:
+        Experimental
     """
     if weight is None:
         weight = GeometricRankWeight(0.85)

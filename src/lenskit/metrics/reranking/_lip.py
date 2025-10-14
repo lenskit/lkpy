@@ -30,6 +30,9 @@ def least_item_promoted(reference: ItemList, reranked: ItemList, k: int = 10) ->
     Returns:
         The rank distance of the least-promoted item, or NaN if the base
         ranking is empty.
+
+    Stability:
+        Experimental
     """
     if len(reference) == 0:
         return np.nan
