@@ -251,6 +251,7 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
         log.debug("finished item epoch")
 
         log.debug("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
+        self.epochs_trained += 1
         return {"deltaP": du, "deltaQ": di}
 
     @property
