@@ -163,5 +163,3 @@ extlinks = {
     "pr": ("https://github.com/lenskit/lkpy/pull/%s", "⛙ %s"),
     "user": ("https://github.com/%s", "@%s"),
 }
-
-bibtex_bibfiles = ["lenskit.bib"]
