@@ -17,6 +17,7 @@ mod knn;
 mod logging;
 mod parallel;
 mod progress;
+mod slim;
 mod sparse;
 
 /// Entry point for LensKit accelerator module.
@@ -28,6 +29,7 @@ fn _accel<'py>(py: Python<'py>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     knn::register_knn(m)?;
     als::register_als(m)?;
     data::register_data(m)?;
+    slim::register_slim(m)?;
 
     m.add_class::<logging::AccelLogListener>()?;
     m.add_class::<funksvd::FunkSVDTrainer>()?;
