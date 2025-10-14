@@ -17,11 +17,22 @@ information on how to upgrade your code.
 This is a small bug fix and minor improvement release.
 
 - Improve ``__repr__`` for :class:`~lenskit.data.Dataset` and :class:`~lenskit.data.ItemList`.
-- Fix rate limit in Jupyter progress bar.
+- Fix rate limit in Jupyter progress bar (:pr:`876`).
 - Modify the :meth:`~lenskit.data.MatrixRelationshipSet.scipy` and
   :meth:`~lenskit.data.MatrixRelationshipSet.torch` methods of
   :class:`lenskit.data.MatrixRelationshipSet` to filter out missing values of
   the selected attribute.
+- Fixed :class:`~lenskit.config.common.EmbeddingSizeMixin`'s support for
+  ``embedding_size_exp`` to correctly override ``embedding_size``.
+- Added LIP and RBO functions.
+- Bug fixes and refactors for FA*IR reranker.
+- :ref:`FlexMF <flexmf>`: Fall back to uncompiled models when Dynamo fails (:pr:`883`).
+- Internal refactors of some testing code.
+- Update ``repr`` for :class:`~lenskit.dataset.Dataset` and
+  :class:`~lenskit.dataset.ItemList` (:pr:`877`).
+- Exclude missing attribute values from SciPy and PyTorch sparse matrix
+  representations of matrix relationship attributes (:pr:`884`).  This fixes
+  breakage in Biased MF and Bias in the face of incomplete attribute data.
 
 .. _2025.3.1:
 
