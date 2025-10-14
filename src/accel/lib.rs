@@ -17,6 +17,7 @@ mod funksvd;
 mod indirect_hashing;
 mod knn;
 mod progress;
+mod slim;
 mod sparse;
 
 /// Entry point for LensKit accelerator module.
@@ -26,6 +27,7 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     knn::register_knn(m)?;
     als::register_als(m)?;
     data::register_data(m)?;
+    slim::register_slim(m)?;
 
     m.add_class::<funksvd::FunkSVDTrainer>()?;
     m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
