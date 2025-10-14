@@ -19,11 +19,8 @@ def rank_biased_overlap(
     k: int = 10,
 ) -> float:
     """
-    Computes the RBO metric defined in:
-    Webber, William, Alistair Moffat, and Justin Zobel.
-    "A similarity measure for indefinite rankings."
-    ACM Transactions on Information Systems (TOIS) 28.4 (2010): 20.
-    https://dl.acm.org/doi/10.1145/1852102.1852106
+    Computes the Rank Biased Overlap (RBO) between two item rankings.
+    RBO is defined by :cite:t:`webberSimilarityMeasureIndefinite2010`.
 
     Args:
         reference:
