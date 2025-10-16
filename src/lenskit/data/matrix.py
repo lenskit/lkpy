@@ -435,6 +435,19 @@ class SparseRowArray(pa.ExtensionArray):
             size=self.shape,
         )
 
+    def to_coo(self) -> pa.Table:
+        """
+        Convert this array to table representing the array in COO format.
+        """
+        nr, nc = self.shape
+        lengths = self.storage.value_lengths()
+        assert len(lengths) == nr
+        rowinds = np.repeat(np.arange(nr, dtype=np.int32), lengths)
+        fields = {"row": rowinds, "col": self.indices}
+        if self.has_values:
+            fields["value"] = self.values
+        return pa.table(fields)
+
     @property
     def dimension(self) -> int:
         """

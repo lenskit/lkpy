@@ -103,6 +103,28 @@ def test_sparse_structure(csr: csr_array[Any, tuple[int, int]]):
 
 
 @given(sparse_arrays())
+def test_sparse_to_coo(csr: csr_array[Any, tuple[int, int]]):
+    arr = SparseRowArray.from_scipy(csr)
+
+    tbl = arr.to_coo()
+    coo = csr.tocoo()
+    assert np.all(tbl.column("row").to_numpy() == coo.row)
+    assert np.all(tbl.column("col").to_numpy() == coo.col)
+    assert np.all(tbl.column("value").to_numpy() == coo.data)
+
+
+@given(sparse_arrays())
+def test_sparse_to_coo_struct(csr: csr_array[Any, tuple[int, int]]):
+    arr = SparseRowArray.from_scipy(csr).structure()
+
+    tbl = arr.to_coo()
+    coo = csr.tocoo()
+    assert np.all(tbl.column("row").to_numpy() == coo.row)
+    assert np.all(tbl.column("col").to_numpy() == coo.col)
+    assert "value" not in tbl.column_names
+
+
+@given(sparse_arrays())
 def test_sparse_structure_rust(csr: csr_array[Any, tuple[int, int]]):
     nr, nc = csr.shape
 
