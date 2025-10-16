@@ -33,6 +33,8 @@ from .ranking import (
     RankWeight,
     Recall,
     RecipRank,
+    entropy,
+    rank_biased_entropy,
 )
 from .reranking import least_item_promoted, rank_biased_overlap
 
@@ -65,6 +67,8 @@ __all__ = [
     "quick_measure_model",
     "least_item_promoted",
     "rank_biased_overlap",
+    "entropy",
+    "rank_biased_entropy",
 ]
 
 P = ParamSpec("P")
