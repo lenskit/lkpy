@@ -33,6 +33,8 @@ from .ranking import (
     RankWeight,
     Recall,
     RecipRank,
+    entropy,
+    rank_biased_entropy,
 )
 
 __all__ = [
@@ -62,6 +64,8 @@ __all__ = [
     "ListGini",
     "ExposureGini",
     "quick_measure_model",
+    "entropy",
+    "rank_biased_entropy",
 ]
 
 P = ParamSpec("P")
