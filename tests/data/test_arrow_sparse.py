@@ -241,3 +241,33 @@ def test_sparse_type_not_list():
 
     with raises(TypeError):
         SparseRowType.from_type(orig_t)
+
+
+@given(sparse_arrays())
+def test_sparse_transpose(csr: csr_array[Any, tuple[int, int]]):
+    arr = SparseRowArray.from_scipy(csr)
+    anr, anc = arr.shape
+    assert (anr, anc) == csr.shape
+
+    arrT = arr.transpose()
+    assert isinstance(arrT, SparseRowArray)
+    atnr, atnc = arrT.shape
+    assert atnr == anc
+    assert atnc == anr
+
+    mt = arrT.to_scipy()
+    assert np.all(mt == csr.T)
+
+
+@given(sparse_arrays())
+def test_sparse_transpose_struct(csr: csr_array[Any, tuple[int, int]]):
+    arr = SparseRowArray.from_scipy(csr).structure()
+    anr, anc = arr.shape
+    assert (anr, anc) == csr.shape
+
+    arrT = arr.transpose()
+    assert isinstance(arrT, SparseRowArray)
+    atnr, atnc = arrT.shape
+    assert atnr == anc
+    assert atnc == anr
+    assert not arrT.has_values

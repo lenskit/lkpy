@@ -22,6 +22,8 @@ import scipy.sparse as sps
 import torch
 from numpy.typing import ArrayLike
 
+from lenskit._accel import data as _data_accel
+
 t = torch
 M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, sps.spmatrix, t.Tensor)
 
@@ -489,6 +491,12 @@ class SparseRowArray(pa.ExtensionArray):
             return self.from_arrays(self.offsets, self.indices, shape=self.shape)
         else:
             return self
+
+    def transpose(self) -> SparseRowArray:
+        """
+        Get the transpose of this sparse matrix.
+        """
+        return _data_accel.transpose_csr(self)
 
     def row_extent(self, row: int) -> tuple[int, int]:
         """

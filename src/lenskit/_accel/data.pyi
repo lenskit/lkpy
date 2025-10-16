@@ -3,8 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pyarrow as pa
 
+from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import ID
 
+def transpose_csr(matrix: SparseRowArray) -> SparseRowArray: ...
 def is_sorted_coo(data: list[pa.RecordBatch], c1: str, c2: str) -> bool: ...
 def argsort_descending(data: pa.Array) -> pa.Int32Array: ...
 def negative_mask(n: int, indices: pa.Int32Array) -> pa.BooleanArray:
