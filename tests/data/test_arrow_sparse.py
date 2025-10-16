@@ -228,13 +228,6 @@ def test_sparse_type_not_struct():
         SparseRowType.from_type(orig_t)
 
 
-def test_sparse_type_not_struct():
-    orig_t = pa.list_(pa.float32())
-
-    with raises(TypeError):
-        SparseRowType.from_type(orig_t)
-
-
 def test_sparse_type_not_list():
     orig_t = pa.struct(
         [
