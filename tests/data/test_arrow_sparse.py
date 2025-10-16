@@ -36,8 +36,11 @@ def test_sparse_from_csr(csr: csr_array[Any, tuple[int, int]]):
     assert pa.types.is_list(arr.storage.type)
     assert len(arr) == csr.shape[0]
     assert arr.dimension == csr.shape[1]
+    assert len(arr.offsets) == csr.shape[0] + 1
     assert len(arr.indices) == csr.nnz
     assert len(arr.values) == csr.nnz
+    assert arr.offsets.to_numpy()[0] == 0
+    assert arr.offsets.to_numpy()[-1] == csr.nnz
     assert np.all(arr.offsets.to_numpy() == csr.indptr)
     assert isinstance(arr.indices.type, SparseIndexType)
 
