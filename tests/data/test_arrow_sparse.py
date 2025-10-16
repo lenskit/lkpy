@@ -68,6 +68,18 @@ def test_csr_to_rust(csr: csr_array[Any, tuple[int, int]]):
 
 
 @given(sparse_arrays())
+def test_csr_structure(csr: csr_array[Any, tuple[int, int]]):
+    "Test that we can extract the structure from a CSR array."
+    arr = SparseRowArray.from_scipy(csr)
+    assert arr.has_values
+
+    struct = arr.structure()
+    assert not struct.has_values
+    assert struct.shape == arr.shape
+    assert np.all(struct.indices.to_numpy() == arr.indices.to_numpy())
+
+
+@given(sparse_arrays())
 def test_sparse_to_csr(csr: csr_array[Any, tuple[int, int]]):
     arr = SparseRowArray.from_scipy(csr)
 

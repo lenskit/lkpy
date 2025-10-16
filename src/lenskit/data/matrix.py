@@ -468,6 +468,15 @@ class SparseRowArray(pa.ExtensionArray):
         else:
             return None
 
+    def structure(self) -> SparseRowArray:
+        """
+        Get the structure of this matrix (without values).
+        """
+        if self.has_values:
+            return self.from_arrays(self.offsets, self.indices, shape=self.shape)
+        else:
+            return self
+
     def row_extent(self, row: int) -> tuple[int, int]:
         """
         Get the start and end of a row.
