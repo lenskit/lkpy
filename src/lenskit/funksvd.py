@@ -18,6 +18,7 @@ from typing_extensions import override
 
 from lenskit._accel import FunkSVDTrainer
 from lenskit.basic import BiasModel, Damping
+from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import NPMatrix
 from lenskit.logging import Stopwatch, get_logger
@@ -30,7 +31,7 @@ _logger = get_logger(__name__)
 INITIAL_VALUE = 0.1
 
 
-class FunkSVDConfig(BaseModel):
+class FunkSVDConfig(EmbeddingSizeMixin, BaseModel):
     "Configuration for :class:`FunkSVDScorer`."
 
     embedding_size: PositiveInt = Field(

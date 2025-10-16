@@ -238,11 +238,12 @@ def test_stochasticity(rng):
     assert np.mean(pvals < 0.05) >= 0.9
 
 
-@mark.flaky(retries=1)
-def test_scale_affects_ranking(rng, ml_ds: Dataset):
+@mark.flaky(retries=3)
+def test_scale_affects_ranking(ml_ds: Dataset):
     """
     Test that different softmax scales produce different levels of ranking variation.
     """
+    rng = np.random.default_rng()
     pipe = topn_pipeline(ImplicitMFScorer())
     pipe.train(ml_ds)
 

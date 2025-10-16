@@ -9,6 +9,7 @@ import click
 from .convert import convert
 from .describe import describe
 from .fetch import fetch
+from .split import split
 from .subset import subset
 
 
@@ -24,3 +25,4 @@ data.add_command(convert)
 data.add_command(describe)
 data.add_command(fetch)
 data.add_command(subset)
+data.add_command(split)

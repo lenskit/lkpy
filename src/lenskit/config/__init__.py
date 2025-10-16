@@ -15,7 +15,9 @@ import tomllib
 import warnings
 from os import PathLike
 from pathlib import Path
+from typing import Annotated
 
+from annotated_types import Gt, Le
 from pydantic import BaseModel, JsonValue
 from pydantic_settings import BaseSettings, SettingsConfigDict, TomlConfigSettingsSource
 from typing_extensions import Any, TypedDict, TypeVar, overload
@@ -111,6 +113,25 @@ class PrometheusSettings(BaseModel):
     url: str | None = None
 
 
+class TuneSettings(BaseModel):
+    """
+    LensKit hyperparameter tuning settings.
+    """
+
+    jobs: int | None = None
+    """
+    Number of allowed hyperparameter tuning jobs.
+    """
+    gpu_mult: Annotated[float, Gt(0), Le(1.0)] = 1.0
+    """
+    Multiplier for tuning job GPU requirements.  This is to coarsely adapt GPU
+    requirements from configuration files to the local machine.  If a tuning
+    specificataion requires 1 GPU, but your machine has enough capacity to run
+    two jobs in parallel on a single GPU, you can set this to 0.5 to modify the
+    tuning jobs to require 0.5 GPUs each.
+    """
+
+
 class LenskitSettings(BaseSettings, extra="allow"):
     """
     Definition of LensKit settings.
@@ -149,6 +170,11 @@ class LenskitSettings(BaseSettings, extra="allow"):
     things like collecting power metrics.
     """
 
+    tune: TuneSettings = TuneSettings()
+    """
+    LensKit tuning settings.
+    """
+
     @property
     def current_machine(self) -> MachineSettings | None:
         if self.machine:
@@ -184,7 +210,7 @@ def configure(
     defaults and environment varibles.
 
     This function will automatically configure the global RNG, if a seed is
-    specified.
+    specified.  It does **not** configure logging.
 
     Args:
         cfg_dir:

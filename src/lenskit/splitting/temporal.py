@@ -20,20 +20,20 @@ def split_global_time(
     data: Dataset,
     time: int | float | str | dt.datetime,
     end: int | float | str | dt.datetime | None = None,
-    filter_test_users: bool = False,
+    filter_test_users: bool | int | None = False,
 ) -> TTSplit: ...
 @overload
 def split_global_time(
     data: Dataset,
     time: Sequence[int | float | str | dt.datetime],
     end: int | float | str | dt.datetime | None = None,
-    filter_test_users: bool = False,
+    filter_test_users: bool | int | None = False,
 ) -> list[TTSplit]: ...
 def split_global_time(
     data: Dataset,
     time: int | float | str | dt.datetime | Sequence[int | float | str | dt.datetime],
     end: int | float | str | dt.datetime | None = None,
-    filter_test_users: bool = False,
+    filter_test_users: bool | int | None = False,
 ) -> TTSplit | list[TTSplit]:
     """
     Global temporal train-test split.  This splits a data set into train/test
@@ -103,7 +103,9 @@ def split_global_time(
 
         if filter_test_users:
             user_data = train_ds.user_stats()
-            train_users = user_data.index[user_data["count"] > 0]
+            if filter_test_users is True:
+                filter_test_users = 1
+            train_users = user_data.index[user_data["count"] >= filter_test_users]
             test = test[test["user_id"].isin(train_users)]
 
         tlog.debug("building testing item lists")
@@ -119,7 +121,7 @@ def split_global_time(
 
 
 def split_temporal_fraction(
-    data: Dataset, test_fraction: float, filter_test_users: bool = False
+    data: Dataset, test_fraction: float, filter_test_users: bool | int | None = False
 ) -> TTSplit:
     """
     Do a global temporal split of a data set based on a test set size.

@@ -13,10 +13,10 @@ import pandas as pd
 from pytest import approx, mark
 
 from lenskit.als import ImplicitMFScorer
+from lenskit.als._implicit import ImplicitMFConfig
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
-from lenskit.metrics import quick_measure_model
-from lenskit.pipeline import topn_pipeline
-from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
+from lenskit.pipeline import Pipeline, topn_pipeline
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
 
@@ -30,6 +30,57 @@ simple_dsr = from_interactions_df(simple_dfr)
 class TestImplicitALS(BasicComponentTests, ScorerTests):
     component = ImplicitMFScorer
     expected_ndcg = 0.22
+
+    def verify_models_equivalent(self, orig, copy):
+        assert np.all(copy.user_embeddings == orig.user_embeddings)
+        assert np.all(copy.item_embeddings == orig.item_embeddings)
+        assert np.all(copy.items.index == orig.items.index)
+        assert np.all(copy.users.index == orig.users.index)
+
+
+def test_config_defaults():
+    cfg = ImplicitMFConfig()
+    assert cfg.embedding_size == 50
+
+
+def test_config_es_alias():
+    cfg = ImplicitMFConfig(features=72)  # type: ignore
+    assert cfg.embedding_size == 72
+
+
+def test_config_exp_ctor():
+    cfg = ImplicitMFConfig(embedding_size_exp=5)  # type: ignore
+    assert cfg.embedding_size == 32
+
+
+def test_config_exp_dict():
+    cfg = ImplicitMFConfig.model_validate({"embedding_size_exp": 10})
+    assert cfg.embedding_size == 1024
+
+
+def test_config_exp_dict_double():
+    cfg = ImplicitMFConfig.model_validate({"embedding_size": 20, "embedding_size_exp": 10})
+    assert cfg.embedding_size == 1024
+
+
+def test_config_exp_json():
+    cfg = ImplicitMFConfig.model_validate_json('{"embedding_size_exp": 2}')
+    assert cfg.embedding_size == 4
+
+
+def test_reconfigure_pipeline():
+    algo = ImplicitMFScorer()
+    pipe = topn_pipeline(algo)
+
+    pipe_cfg = pipe.config
+
+    cfg2 = pipe_cfg.merge_component_configs({"scorer": {"embedding_size_exp": 4}})
+    assert cfg2.components["scorer"].config["embedding_size_exp"] == 4
+    print(cfg2.components["scorer"].model_dump_json(indent=2))
+    p2 = Pipeline.from_config(cfg2)
+    scorer = p2.node("scorer")
+    print(scorer.component.config.model_dump_json(indent=2))
+    assert scorer.component.config.embedding_size == 16
 
 
 def test_als_basic_build():
@@ -263,7 +314,6 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
     assert all(diffs <= 0.1)
 
 
-@wantjit
 def test_als_train_large(ml_ds: Dataset):
     algo = ImplicitMFScorer(features=20, epochs=20, use_ratings=False)
     algo.train(ml_ds)
@@ -276,28 +326,6 @@ def test_als_train_large(ml_ds: Dataset):
     assert algo.item_embeddings.shape == (ml_ds.item_count, 20)
 
 
-def test_als_save_load(tmp_path, ml_ds: Dataset):
-    "Test saving and loading ALS models, and regularized training."
-    algo = ImplicitMFScorer(
-        features=5, epochs=5, regularization={"user": 2, "item": 1}, use_ratings=False
-    )
-    algo.train(ml_ds)
-    assert algo.users is not None
-
-    fn = tmp_path / "model.bpk"
-    with fn.open("wb") as pf:
-        pickle.dump(algo, pf, protocol=pickle.HIGHEST_PROTOCOL)
-
-    with fn.open("rb") as pf:
-        restored = pickle.load(pf)
-
-    assert np.all(restored.user_embeddings == algo.user_embeddings)
-    assert np.all(restored.item_embeddings == algo.item_embeddings)
-    assert np.all(restored.items.index == algo.items.index)
-    assert np.all(restored.users.index == algo.users.index)
-
-
-@wantjit
 def test_als_train_large_noratings(ml_ds: Dataset):
     algo = ImplicitMFScorer(features=20, epochs=20)
     algo.train(ml_ds)
@@ -310,7 +338,6 @@ def test_als_train_large_noratings(ml_ds: Dataset):
     assert algo.item_embeddings.shape == (ml_ds.item_count, 20)
 
 
-@wantjit
 def test_als_train_large_ratings(ml_ds):
     algo = ImplicitMFScorer(features=20, epochs=20, use_ratings=True)
     algo.train(ml_ds)

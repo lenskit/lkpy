@@ -123,8 +123,7 @@ class TimeBoundedPopScore(PopScorer):
             super().train(data, options)
             return
         else:
-            start_timestamp = self.config.cutoff.timestamp()
-            item_ids = log["item_id"][log["timestamp"] > start_timestamp]
+            item_ids = log["item_id"][log["timestamp"] > self.config.cutoff]
             counts = item_ids.value_counts().reindex(data.items.index, fill_value=0)
 
             item_scores = super()._train_internal(counts)

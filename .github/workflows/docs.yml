@@ -100,7 +100,7 @@ jobs:
         if: github.event_name == 'release'
         run: |
           cd doc-site
-          ver=$(echo ${{github.event.release.tag_name}} | sed -e 's/^v//'
+          ver=$(echo ${{github.event.release.tag_name}} | sed -e 's/^v//')
           git checkout -b version/$ver
           git push origin version/$ver
 

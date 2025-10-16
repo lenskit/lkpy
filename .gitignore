@@ -76,5 +76,6 @@ conda*.lock
 
 # CPP configurations are per-environment
 .vscode/c_cpp_properties.json
+.vscode/mise-tools
 # pixi environments
 .pixi

@@ -13,15 +13,14 @@ This module contains a truncated SVD explicit-feedback scorer built on
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, BaseModel, Field
 from sklearn.decomposition import TruncatedSVD
 from typing_extensions import Literal, override
 
 from lenskit.basic import BiasModel, Damping
+from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.logging import Stopwatch, get_logger
@@ -31,8 +30,7 @@ from lenskit.training import Trainable, TrainingOptions
 _log = get_logger(__name__)
 
 
-@dataclass
-class BiasedSVDConfig:
+class BiasedSVDConfig(EmbeddingSizeMixin, BaseModel):
     embedding_size: int = Field(
         default=50, validation_alias=AliasChoices("embedding_size", "features")
     )

@@ -20,7 +20,6 @@ import hypothesis.strategies as st
 
 from ._arrays import coo_arrays, scored_lists, sparse_arrays, sparse_tensors
 from ._components import BasicComponentTests, ScorerTests
-from ._markers import jit_enabled, wantjit
 from ._movielens import (
     DemoRecs,
     demo_recs,
@@ -48,8 +47,6 @@ __all__ = [
     "ml_test_dir",
     "demo_recs",
     "pop_recs",
-    "wantjit",
-    "jit_enabled",
     "set_env_var",
     "DemoRecs",
     "BasicComponentTests",

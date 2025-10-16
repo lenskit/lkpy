@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import torch
 from torch.nn import functional as F
 from typing_extensions import Literal, override
@@ -23,7 +21,6 @@ from ._training import (
 )
 
 
-@dataclass
 class FlexMFExplicitConfig(FlexMFConfigBase):
     """
     Configuration for :class:`FlexMFExplicitScorer`.  This class overrides

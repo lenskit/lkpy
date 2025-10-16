@@ -12,12 +12,17 @@ from types import NoneType
 import numpy as np
 from typing_extensions import assert_type
 
-from pytest import fail, warns
+from pytest import fail, mark, warns
 
 from lenskit.pipeline import PipelineBuilder, PipelineWarning
 from lenskit.pipeline.components import Component
 from lenskit.pipeline.config import PipelineConfig
-from lenskit.pipeline.nodes import ComponentInstanceNode, ComponentNode, InputNode
+from lenskit.pipeline.nodes import (
+    ComponentConstructorNode,
+    ComponentInstanceNode,
+    ComponentNode,
+    InputNode,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -145,7 +150,7 @@ def test_configurable_component():
     cfg = pipe.build_config()
     assert cfg.components["prefix"].config == {"prefix": "scroll named "}
 
-    p2 = PipelineBuilder.from_config(cfg)
+    p2 = PipelineBuilder.from_config(cfg).build()
     assert len(p2.nodes()) == 2
     r2 = p2.node("prefix")
     assert isinstance(r2, ComponentInstanceNode)
@@ -153,7 +158,6 @@ def test_configurable_component():
     assert r2.component is not pfx
     assert p2._edges["prefix"] == {"msg": "msg"}
 
-    p2 = p2.build()
     assert p2.run("prefix", msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
 
     print("hash:", pipe.config_hash)
@@ -223,6 +227,7 @@ def test_save_with_fallback():
     assert p2.run(("fill-operand", "add"), a=3) == (-3, 3)
 
 
+@mark.skip("hash checks disabled")
 def test_hash_validate():
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)

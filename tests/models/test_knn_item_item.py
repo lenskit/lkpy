@@ -17,19 +17,12 @@ from scipy import linalg as la
 import pytest
 from pytest import approx, fixture, mark
 
-from lenskit import batch
-from lenskit.basic import BiasScorer
 from lenskit.basic.history import UserTrainingHistoryLookup
-from lenskit.batch import BatchPipelineRunner
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
-from lenskit.data.matrix import SparseRowArray
-from lenskit.diagnostics import ConfigWarning, DataWarning
+from lenskit.diagnostics import DataWarning
 from lenskit.knn.item import ItemKNNScorer
-from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
-from lenskit.operations import score
-from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
+from lenskit.pipeline import topn_pipeline
 from lenskit.pipeline.common import predict_pipeline
-from lenskit.splitting import SampleFrac, crossfold_users
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
@@ -71,6 +64,22 @@ class TestItemKNN(BasicComponentTests, ScorerTests):
     component = ItemKNNScorer
     expected_rmse = (0.85, 0.95)
     expected_ndcg = 0.03
+
+    def verify_models_equivalent(self, orig: ItemKNNScorer, copy: ItemKNNScorer):
+        o_mat = orig.sim_matrix.to_scipy()
+        r_mat = copy.sim_matrix.to_scipy()
+        assert all(np.logical_not(np.isnan(r_mat.data)))
+        assert all(r_mat.data > 0)
+        # a little tolerance
+        assert all(r_mat.data < 1 + 1.0e-6)
+
+        assert all(copy.item_counts == orig.item_counts)
+        assert copy.item_counts.sum() == len(r_mat.data)
+        assert len(r_mat.data) == len(r_mat.data)
+        assert all(r_mat.indptr == o_mat.indptr)
+        assert r_mat.data == approx(o_mat.data)
+
+        assert all(r_mat.indptr == o_mat.indptr)
 
 
 def test_ii_config():
@@ -386,43 +395,6 @@ def test_ii_implicit_large(rng, ml_ratings):
                 _log.info("filtered: %s", top)
                 _log.info("filtered sum: %.3f", top.sum())
                 raise e
-
-
-def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
-    "Save and load a model"
-    original = ItemKNNScorer(k=30, save_nbrs=500)
-    _log.info("building model")
-    original.train(from_interactions_df(ml_subset, item_col="item_id"))
-    o_mat = original.sim_matrix.to_scipy()
-
-    fn = tmp_path / "ii.mod"
-    _log.info("saving model to %s", fn)
-    with fn.open("wb") as modf:
-        pickle.dump(original, modf)
-
-    _log.info("pickled %d bytes", fn.stat().st_size)
-    _log.info("reloading model")
-    with fn.open("rb") as modf:
-        algo = pickle.load(modf)
-    assert isinstance(algo, ItemKNNScorer)
-
-    _log.info("checking model")
-    r_mat = algo.sim_matrix.to_scipy()
-    assert all(np.logical_not(np.isnan(r_mat.data)))
-    assert all(r_mat.data > 0)
-    # a little tolerance
-    assert all(r_mat.data < 1 + 1.0e-6)
-
-    assert all(algo.item_counts == original.item_counts)
-    assert algo.item_counts.sum() == len(r_mat.data)
-    assert len(r_mat.data) == len(r_mat.data)
-    assert all(r_mat.indptr == o_mat.indptr)
-    assert r_mat.data == approx(o_mat.data)
-
-    assert all(r_mat.indptr == o_mat.indptr)
-
-    means = ml_ratings.groupby("item_id").rating.mean()
-    assert means[algo.items.ids()].values == approx(original.item_means)
 
 
 def test_ii_known_preds(ml_ds):

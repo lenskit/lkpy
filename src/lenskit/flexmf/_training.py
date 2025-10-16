@@ -26,6 +26,11 @@ from lenskit.training import ModelTrainer, TrainingOptions
 
 from ._model import FlexMFModel
 
+try:
+    from torch._dynamo.exc import TorchDynamoException
+except ImportError:
+    TorchDynamoException = None
+
 # hide base import to avoid circular imports
 if TYPE_CHECKING:
     from ._base import FlexMFConfigBase, FlexMFScorerBase
@@ -139,7 +144,13 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         Invoke the model, using the compiled version if available.
         """
         if self._compiled_model is not None:
-            return self._compiled_model(*args, **kwargs)
+            assert TorchDynamoException is not None
+            try:
+                return self._compiled_model(*args, **kwargs)
+            except TorchDynamoException as e:
+                self.log.warning("calling compiled model failed, falling back: %s", e)
+                self._compiled_model = None
+                return self.call_model(*args, **kwargs)
         else:
             return self.model(*args, **kwargs)
 

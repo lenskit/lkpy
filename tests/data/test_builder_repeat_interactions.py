@@ -110,7 +110,7 @@ def test_remove_duplicate_in_repeated_interactions():
             {
                 "user_id": ["a", "a", "b", "c", "c", "c", "b"],
                 "item_id": ["x", "y", "z", "x", "y", "y", "z"],
-                "tag_id": ["j", "i", "k", "j", "k", "i", "k"],
+                "tag": ["j", "i", "k", "j", "k", "i", "k"],
             }
         ),
         missing="insert",
@@ -120,7 +120,7 @@ def test_remove_duplicate_in_repeated_interactions():
     ds = dsb.build()
     log = ds.interactions().pandas()
     assert isinstance(log, pd.DataFrame)
-    assert all(log.columns == ["user_num", "item_num", "tag_id"])
+    assert all(log.columns == ["user_num", "item_num", "tag"])
     assert len(log) == 6
     assert len(log[log.user_num == 1]) == 1
     assert len(log[log.user_num == 2]) == 3
@@ -225,7 +225,7 @@ def test_remove_duplicate_in_multiple_added_interactions():
             {
                 "user_id": ["a", "a", "b", "c"],
                 "item_id": ["x", "y", "z", "x"],
-                "tag_id": ["j", "i", "k", "j"],
+                "tag": ["j", "i", "k", "j"],
             }
         ),
         missing="insert",
@@ -237,7 +237,7 @@ def test_remove_duplicate_in_multiple_added_interactions():
             {
                 "user_id": ["c", "c", "b"],
                 "item_id": ["y", "y", "z"],
-                "tag_id": ["k", "i", "k"],
+                "tag": ["k", "i", "k"],
             }
         ),
         missing="insert",
@@ -247,7 +247,7 @@ def test_remove_duplicate_in_multiple_added_interactions():
     ds = dsb.build()
     log = ds.interactions().pandas()
     assert isinstance(log, pd.DataFrame)
-    assert all(log.columns == ["user_num", "item_num", "tag_id"])
+    assert all(log.columns == ["user_num", "item_num", "tag"])
     assert len(log) == 6
     assert len(log[log.user_num == 1]) == 1
     assert len(log[log.user_num == 2]) == 3

@@ -11,16 +11,16 @@ LightGCN recommendation.
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass
 
 import numpy as np
 import torch
-from pydantic import PositiveFloat, PositiveInt, model_validator
+from pydantic import BaseModel, PositiveFloat, PositiveInt, model_validator
 from structlog.stdlib import BoundLogger
 from torch_geometric.nn import LightGCN
 from typing_extensions import Literal, Self
 
 from lenskit import logging
+from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import BatchIter, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.matrix import COOStructure
 from lenskit.data.relationships import MatrixRelationshipSet
@@ -32,8 +32,7 @@ from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 _log = logging.get_logger(__name__)
 
 
-@dataclass
-class LightGCNConfig:
+class LightGCNConfig(EmbeddingSizeMixin, BaseModel):
     """
     Configuration for :class:`LightGCNScorer`.
 

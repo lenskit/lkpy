@@ -30,7 +30,6 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestBias(BasicComponentTests, ScorerTests):
     component = BiasScorer
-    needs_jit = False
     configs = [{"damping": 10}, {"damping": {"user": 5, "item": 25}}]
     can_score = "all"
 
@@ -47,6 +46,17 @@ def test_bias_check_arguments():
     # negative user damping not allowed
     with raises(ValueError):
         BiasScorer(damping=(5, -1))
+
+
+def test_bias_partial(ml_ratings, rng):
+    ml_ratings = ml_ratings.copy()
+    ml_ratings.loc[rng.choice(len(ml_ratings), 1000, replace=False), "rating"] = np.nan
+    ds = from_interactions_df(ml_ratings)
+
+    bias = BiasScorer(damping=5)
+    bias.train(ds)
+    assert np.isfinite(bias.model_.global_bias)
+    assert np.all(np.isfinite(bias.model_.item_biases))
 
 
 def test_bias_full():
