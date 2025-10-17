@@ -11,10 +11,10 @@ use pyo3::prelude::*;
 
 use arrow::{
     array::{
-        downcast_array, Array, Float32Array, GenericListArray, Int32Array, OffsetSizeTrait,
-        StructArray,
+        downcast_array, Array, ArrowPrimitiveType, GenericListArray, Int32Array, OffsetSizeTrait,
+        PrimitiveArray, StructArray,
     },
-    datatypes::DataType,
+    datatypes::{DataType, Float32Type},
 };
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::PyResult;
@@ -32,12 +32,12 @@ pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
 }
 
 /// A compressed sparse row matrix.
-pub struct CSRMatrix<Ix: OffsetSizeTrait = i32> {
+pub struct CSRMatrix<Ix: OffsetSizeTrait = i32, V: ArrowPrimitiveType = Float32Type> {
     pub n_rows: usize,
     pub n_cols: usize,
     array: GenericListArray<Ix>,
     pub col_inds: Int32Array,
-    pub values: Float32Array,
+    pub values: PrimitiveArray<V>,
 }
 
 /// Common methods for compressed sparse row matrices.
@@ -124,9 +124,13 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSR<Ix> for CSRStructur
     }
 }
 
-impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
+impl<Ix, V> CSRMatrix<Ix, V>
+where
+    Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>,
+    V: ArrowPrimitiveType,
+{
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
-    pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRMatrix<Ix>> {
+    pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRMatrix<Ix, V>> {
         let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
                 "invalid array type {}, expected List",
@@ -167,7 +171,7 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
             .try_extension_type()
             .map_err(|e| PyTypeError::new_err(format!("invalid index type: {}", e)))?;
 
-        if val_f.data_type() != &DataType::Float32 {
+        if val_f.data_type() != &V::DATA_TYPE {
             return Err(PyErr::new::<PyTypeError, _>(format!(
                 "invalid value column type {}, expected Float32",
                 val_f.data_type()
@@ -184,13 +188,17 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
     }
 
     /// Get the values for a row in the matrix.
-    pub fn row_vals(&self, row: usize) -> &[f32] {
+    pub fn row_vals(&self, row: usize) -> &[V::Native] {
         let (start, end) = self.extent(row);
         &self.values.values()[start..end]
     }
 }
 
-impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSR<Ix> for CSRMatrix<Ix> {
+impl<Ix, V> CSR<Ix> for CSRMatrix<Ix, V>
+where
+    Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>,
+    V: ArrowPrimitiveType,
+{
     fn array(&self) -> &GenericListArray<Ix> {
         &self.array
     }
