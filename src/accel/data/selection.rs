@@ -10,7 +10,7 @@ use arrow::{
 };
 use pyo3::prelude::*;
 
-use crate::types::checked_array;
+use crate::arrow::checked_array;
 
 /// Efficiently create a negative mask array from an array of indices.
 #[pyfunction]

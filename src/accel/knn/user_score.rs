@@ -12,8 +12,8 @@ use arrow::{
 };
 
 use crate::{
+    arrow::checked_array_ref,
     sparse::{CSRMatrix, CSRStructure, CSR},
-    types::checked_array_ref,
 };
 
 use super::accum::{collect_items_averaged, collect_items_summed, ScoreAccumulator};

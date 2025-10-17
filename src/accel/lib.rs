@@ -10,6 +10,7 @@ use pyo3::prelude::*;
 use rayon::{current_num_threads, ThreadPoolBuilder};
 
 mod als;
+mod arrow;
 mod atomic;
 mod data;
 mod funksvd;
@@ -17,7 +18,6 @@ mod indirect_hashing;
 mod knn;
 mod progress;
 mod sparse;
-mod types;
 
 /// Entry point for LensKit accelerator module.
 #[pymodule]

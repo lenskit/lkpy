@@ -11,7 +11,7 @@ use arrow::{
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 
-use crate::types::checked_array;
+use crate::arrow::checked_array;
 
 #[derive(FromPyObject, Clone, Debug)]
 struct FunkSVDConfig {

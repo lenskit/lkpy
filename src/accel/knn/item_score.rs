@@ -12,10 +12,10 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 
 use crate::{
+    arrow::checked_array_ref,
     atomic::AtomicCell,
     knn::accum::{collect_items_averaged, collect_items_summed},
     sparse::{CSRMatrix, CSR},
-    types::checked_array_ref,
 };
 
 use super::accum::ScoreAccumulator;

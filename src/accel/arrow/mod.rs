@@ -4,13 +4,21 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-//! Support for type-checking.
+//! Utilities and types for working with Arrow data.
+pub mod types;
+
+use arrow::array::downcast_array;
+use arrow::array::ArrowPrimitiveType;
+use arrow::array::PrimitiveArray;
+use pyo3::exceptions::PyTypeError;
+pub use types::SparseIndexListType;
+pub use types::SparseIndexType;
+pub use types::SparseRowType;
+
+use arrow::array::Array;
 use pyo3::prelude::*;
 
-use arrow::array::{downcast_array, Array, ArrowPrimitiveType, PrimitiveArray};
-use pyo3::exceptions::PyTypeError;
-
-pub(crate) fn checked_array_ref<'array, T: Array + 'static>(
+pub fn checked_array_ref<'array, T: Array + 'static>(
     name: &str,
     tstr: &str,
     array: &'array dyn Array,
@@ -25,7 +33,7 @@ pub(crate) fn checked_array_ref<'array, T: Array + 'static>(
     })
 }
 
-pub(crate) fn checked_array<'array, E: ArrowPrimitiveType + 'static>(
+pub fn checked_array<'array, E: ArrowPrimitiveType + 'static>(
     name: &str,
     array: &'array dyn Array,
 ) -> PyResult<PrimitiveArray<E>> {
