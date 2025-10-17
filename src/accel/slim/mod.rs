@@ -14,7 +14,6 @@ use arrow::{
     array::{make_array, Array, ArrayData},
     pyarrow::PyArrowType,
 };
-use ndarray::Array1;
 
 use crate::{
     parallel::maybe_fuse,
@@ -38,8 +37,6 @@ struct SLIMWorkspace<'a> {
     iu_matrix: &'a CSRStructure<i64>,
     n_users: usize,
     n_items: usize,
-    weights: Array1<f64>,
-    estimates: Array1<f64>,
 }
 
 /// Register the lenskit._accel.slim module
@@ -126,8 +123,6 @@ impl<'a> SLIMWorkspace<'a> {
             iu_matrix,
             n_users,
             n_items,
-            weights: Array1::zeros(n_items),
-            estimates: Array1::zeros(n_users),
         }
     }
 
@@ -142,15 +137,18 @@ impl<'a> SLIMWorkspace<'a> {
         // since it's all 1s, the length of active entries is the squared norm
         let sq_cnorm = i_users.len() as f64;
 
+        let mut weights = vec![0.0; self.n_items];
+        let mut estimates = vec![0.0; self.n_users];
+
         for iter in 0..self.options.max_iters {
             let mut sqdelta = 0.0;
             // coordinate descent - loop over items, learn that row in the weight vector
             for i in 0..self.n_items {
-                let old_w = self.weights[i];
+                let old_w = weights[i];
                 // subtract this item's contribution to the estimate
                 if old_w > 0.0 {
                     for c in i_users {
-                        self.estimates[*c as usize] -= old_w
+                        estimates[*c as usize] -= old_w
                     }
                 }
 
@@ -158,10 +156,11 @@ impl<'a> SLIMWorkspace<'a> {
                 let mut update = 0.0;
                 for u in i_users {
                     let u = *u as usize;
-                    update += 1.0 - self.estimates[u];
+                    update += 1.0 - estimates[u];
                 }
                 // convert to mean
                 update /= self.n_users as f64;
+
                 // soft-threshold and adjust
                 let new = if update >= self.options.l1_reg {
                     let num = update - self.options.l1_reg;
@@ -171,10 +170,12 @@ impl<'a> SLIMWorkspace<'a> {
                 };
                 let delta = new - old_w;
                 sqdelta += delta * delta;
-                self.weights[i] = new;
+                weights[i] = new;
+
+                // update estimates
                 if new > 0.0 {
                     for c in i_users {
-                        self.estimates[*c as usize] += new
+                        estimates[*c as usize] += new
                     }
                 }
             }
@@ -185,23 +186,17 @@ impl<'a> SLIMWorkspace<'a> {
         }
 
         // sparsify weights for final result
-        let res: Vec<_> = self
-            .weights
-            .iter()
+        let res: Vec<_> = weights
+            .into_iter()
             .enumerate()
             .filter_map(|(i, v)| {
-                if *v >= EPSILON {
-                    Some((i as i32, *v as f32))
+                if v >= EPSILON {
+                    Some((i as i32, v as f32))
                 } else {
                     None
                 }
             })
             .collect();
-        // reset workspace
-        for u in i_users {
-            self.estimates[*u as usize] = 0.0;
-        }
-        self.weights.fill(0.0);
 
         // and we're done!
         res
