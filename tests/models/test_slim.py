@@ -11,6 +11,7 @@ from lenskit.data import Dataset
 from lenskit.data.matrix import SparseRowArray
 from lenskit.knn.slim import SLIMConfig, SLIMScorer
 from lenskit.logging import get_logger
+from lenskit.parallel.config import ensure_parallel_init
 from lenskit.testing import ScorerTests
 
 _log = get_logger(__name__)
@@ -18,6 +19,7 @@ _log = get_logger(__name__)
 
 def test_slim_trainer(ml_ds: Dataset):
     "Test internal SLIM training function."
+    ensure_parallel_init()
     ui_matrix = ml_ds.interactions().matrix().csr_structure(format="arrow")
     iu_matrix = ui_matrix.transpose()
 
