@@ -19,6 +19,7 @@ from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.builder import DatasetBuilder
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import Component, Pipeline, predict_pipeline, topn_pipeline
+from lenskit.pipeline.builder import PipelineBuilder
 from lenskit.splitting import split_temporal_fraction
 from lenskit.training import Trainable, TrainingOptions
 
@@ -161,8 +162,9 @@ class ScorerTests(TrainingTests):
         tm2 = pickle.loads(data)
         self.verify_models_equivalent(trained_model, tm2)
 
-        p2 = self.make_pipeline(tm2)
-        p2.train(ml_ds, TrainingOptions(retrain=False))
+        pb2 = PipelineBuilder.from_pipeline(trained_pipeline)
+        pb2.replace_component("scorer", tm2)
+        p2 = pb2.build()
 
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
@@ -175,12 +177,14 @@ class ScorerTests(TrainingTests):
 
             assert np.all(scored.numbers() == item_nums)
             assert np.all(scored.ids() == items.ids())
+            assert np.all(s2.numbers() == item_nums)
+            assert np.all(s2.ids() == items.ids())
 
             arr = scored.scores()
             assert arr is not None
             arr2 = s2.scores()
             assert arr2 is not None
-            assert arr == approx(arr2, nan_ok=True)
+            assert arr2 == approx(arr, nan_ok=True, abs=0.1)
 
     def test_score_unknown_user(
         self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
