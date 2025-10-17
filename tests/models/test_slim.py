@@ -10,4 +10,7 @@ from lenskit.data import Dataset
 
 def test_slim_trainer(ml_ds: Dataset):
     "Test internal SLIM training function."
-    _matrix = ml_ds.interactions().matrix().csr_structure(format="arrow")
+    ui_matrix = ml_ds.interactions().matrix().csr_structure(format="arrow")
+    iu_matrix = ui_matrix.transpose()
+
+    _result = _slim_accel.train_slim(ui_matrix, iu_matrix, 0.1, 0.1, 50, None)
