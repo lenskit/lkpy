@@ -73,6 +73,12 @@ class TestItemKNN(BasicComponentTests, ScorerTests):
         # a little tolerance
         assert all(r_mat.data < 1 + 1.0e-6)
 
+        assert copy.items == orig.items
+
+        if orig.item_means is not None:
+            assert copy.item_means is not None
+            assert all(copy.item_means == orig.item_means)
+
         assert all(copy.item_counts == orig.item_counts)
         assert copy.item_counts.sum() == len(r_mat.data)
         assert len(r_mat.data) == len(r_mat.data)
