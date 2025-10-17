@@ -17,5 +17,6 @@ __getattr__, __dir__, __all__ = lazy.attach(
         "item": ["ItemKNNScorer", "ItemKNNConfig"],
         "user": ["UserKNNScorer", "UserKNNConfig"],
         "ease": ["EASEScorer", "EASEConfig"],
+        "slim": ["SLIMScorer", "SLIMConfig"],
     },
 )
