@@ -15,9 +15,10 @@ from scipy.sparse import coo_array, csr_array
 from hypothesis import given
 from pytest import mark, raises
 
-from lenskit._accel import sparse_row_debug_type
+from lenskit._accel import sparse_row_debug_type, sparse_structure_debug_large
 from lenskit.data import Dataset
 from lenskit.data.matrix import (
+    SparseIndexListType,
     SparseIndexType,
     SparseRowArray,
     SparseRowType,
@@ -81,6 +82,30 @@ def test_csr_structure(csr: csr_array[Any, tuple[int, int]]):
     assert not struct.has_values
     assert struct.shape == arr.shape
     assert np.all(struct.indices.to_numpy() == arr.indices.to_numpy())
+
+
+@given(sparse_arrays())
+def test_csr_structure_rust_large(csr: csr_array[Any, tuple[int, int]]):
+    "Test that Rust can decode and convert large CSR structures."
+    arr = SparseRowArray.from_scipy(csr).structure()
+    assert isinstance(arr, SparseRowArray)
+    assert isinstance(arr.type, SparseIndexListType)
+
+    nr, nc, nnz = sparse_structure_debug_large(arr)
+    assert (nr, nc) == csr.shape
+    assert nnz == csr.nnz
+
+
+def test_csr_structure_rust_ml(ml_ds: Dataset):
+    "Test that Rust can decode and convert MovieLens CSR"
+    arr = ml_ds.interactions().matrix().csr_structure(format="arrow")
+    assert isinstance(arr, SparseRowArray)
+    assert isinstance(arr.type, SparseIndexListType)
+
+    nr, nc, nnz = sparse_structure_debug_large(arr)
+    assert nr == ml_ds.user_count
+    assert nc == ml_ds.item_count
+    assert nnz == ml_ds.interaction_count
 
 
 @given(sparse_arrays())

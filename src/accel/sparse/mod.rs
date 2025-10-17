@@ -61,3 +61,16 @@ pub(crate) fn sparse_row_debug_type(
         })
         .map_err(|e| PyTypeError::new_err(format!("arrow error: {}", e)))
 }
+
+/// Test function to make sure we can convert sparse rows to large.
+#[pyfunction]
+pub(crate) fn sparse_structure_debug_large(
+    array: PyArrowType<ArrayData>,
+) -> PyResult<(usize, usize, usize)> {
+    let array = make_array(array.0);
+    debug!("extracting matrix with {} rows", array.len());
+    debug!("array data type: {}", array.data_type());
+    let csr = CSRStructure::<i64>::from_arrow(array)?;
+    assert_eq!(csr.len(), csr.n_rows);
+    Ok((csr.len(), csr.n_cols, csr.nnz()))
+}
