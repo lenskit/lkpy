@@ -496,7 +496,15 @@ class SparseRowArray(pa.ExtensionArray):
         """
         Get the transpose of this sparse matrix.
         """
-        return _data_accel.transpose_csr(self)
+        nr, nc = self.shape
+        row_ptr, col_ind, perm = _data_accel.transpose_csr(self.structure(), self.has_values)
+        if perm is None:
+            return self.from_arrays(row_ptr, col_ind, shape=(nc, nr))
+        else:
+            values = self.values
+            assert values is not None
+            values = values.take(perm)
+            return self.from_arrays(row_ptr, col_ind, values, shape=(nc, nr))
 
     def row_extent(self, row: int) -> tuple[int, int]:
         """

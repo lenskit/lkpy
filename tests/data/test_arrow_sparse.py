@@ -16,6 +16,7 @@ from hypothesis import given
 from pytest import mark, raises
 
 from lenskit._accel import sparse_row_debug
+from lenskit.data import Dataset
 from lenskit.data.matrix import (
     SparseIndexType,
     SparseRowArray,
@@ -256,7 +257,7 @@ def test_sparse_transpose(csr: csr_array[Any, tuple[int, int]]):
     assert atnc == anr
 
     mt = arrT.to_scipy()
-    assert np.all(mt == csr.T)
+    assert np.all(mt.todense() == csr.T.todense())
 
 
 @given(sparse_arrays())
@@ -271,3 +272,24 @@ def test_sparse_transpose_struct(csr: csr_array[Any, tuple[int, int]]):
     assert atnr == anc
     assert atnc == anr
     assert not arrT.has_values
+
+    assert np.all(arrT.indices.to_numpy() < atnc)
+
+    coo_trans = csr.T.tocsr()
+    # check that row sizes are correct
+    assert np.all(arrT.offsets.to_numpy() == coo_trans.indptr)
+    # check that columns appear correct # of times
+    sp_cc = np.zeros(coo_trans.shape[1], dtype=np.int32)
+    np.add.at(sp_cc, coo_trans.indices, 1)
+    ar_cc = np.zeros(coo_trans.shape[1], dtype=np.int32)
+    np.add.at(ar_cc, arrT.indices, 1)
+    assert np.all(ar_cc == sp_cc)
+
+
+def test_transpose_ratings(ml_ds: Dataset):
+    rates = ml_ds.interactions().matrix().csr_structure(format="arrow")
+
+    tr = rates.transpose()
+    assert not tr.has_values
+    assert tr.shape == (ml_ds.item_count, ml_ds.user_count)
+    assert np.all(np.diff(tr.offsets) == ml_ds.item_stats()["rating_count"].values)

@@ -23,7 +23,7 @@ pub use crate::arrow::SparseIndexListType;
 pub use crate::arrow::SparseIndexType;
 pub use crate::arrow::SparseRowType;
 pub use consumer::ArrowCSRConsumer;
-pub use csr::{CSRMatrix, CSRStructure, CSR};
+pub use csr::{csr_structure, CSRMatrix, CSRStructure, IxVar, CSR};
 
 /// Test function to make sure we can convert sparse rows.
 #[pyfunction]
