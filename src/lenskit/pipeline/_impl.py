@@ -197,6 +197,16 @@ class Pipeline:
         edges = self._edges.get(node.name, {})
         return {name: self.node(src) for (name, src) in edges.items()}
 
+    def component(self, node: str | Node[Any]) -> object | None:
+        """
+        Get the component at a particular node, if any.
+        """
+        node = self.node(node)
+        if isinstance(node, ComponentInstanceNode):
+            return node.component
+        else:
+            return None
+
     def clone(self) -> Pipeline:
         """
         Clone the pipeline, **without** its trained parameters.

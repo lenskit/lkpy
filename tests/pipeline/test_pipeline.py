@@ -43,6 +43,14 @@ def test_lookup_optional():
     assert pipe.node("item", missing="none") is None
 
 
+def test_input_no_component():
+    pipe = PipelineBuilder()
+    pipe.create_input("user", int, str)
+    pipe = pipe.build()
+
+    assert pipe.component("user") is None
+
+
 def test_lookup_missing():
     "lookup a node without failing"
     pipe = PipelineBuilder()
@@ -190,6 +198,19 @@ def test_component_unwired_input():
     node = pipe.add_component("return", ident, msg=msg)
     pipe = pipe.build()
     assert pipe.run(node, msg="hello") == "hello"
+
+
+def test_extract_component():
+    pipe = PipelineBuilder()
+    msg = pipe.create_input("msg", str)
+
+    def incr(msg: str) -> str:
+        return msg
+
+    pipe.add_component("return", incr, msg=msg)
+    pipe = pipe.build()
+
+    assert pipe.component("return") is incr
 
 
 def test_chain():
