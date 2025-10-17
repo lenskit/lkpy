@@ -15,6 +15,8 @@ use super::SparseIndexType;
 pub struct SparseIndexListType {
     #[allow(dead_code)]
     pub offset_type: DataType,
+    #[allow(dead_code)]
+    pub index_name: String,
     pub index_type: SparseIndexType,
 }
 
@@ -24,6 +26,7 @@ impl SparseIndexListType {
     pub fn create(dim: usize) -> SparseIndexListType {
         SparseIndexListType {
             offset_type: DataType::Int32,
+            index_name: "index".into(),
             index_type: SparseIndexType::create(dim),
         }
     }
@@ -33,6 +36,7 @@ impl SparseIndexListType {
     pub fn create_large(dim: usize) -> SparseIndexListType {
         SparseIndexListType {
             offset_type: DataType::Int64,
+            index_name: "index".into(),
             index_type: SparseIndexType::create(dim),
         }
     }
@@ -102,6 +106,7 @@ impl ExtensionType for SparseIndexListType {
 
         Ok(SparseIndexListType {
             offset_type: off_t,
+            index_name: elt_f.name().clone(),
             index_type: idx_t,
         })
     }

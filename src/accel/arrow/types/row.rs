@@ -15,6 +15,8 @@ use super::SparseIndexType;
 pub struct SparseRowType {
     #[allow(dead_code)]
     pub offset_type: DataType,
+    #[allow(dead_code)]
+    pub index_name: String,
     pub index_type: SparseIndexType,
     pub value_type: DataType,
 }
@@ -25,6 +27,7 @@ impl SparseRowType {
     pub fn create(dim: usize) -> SparseRowType {
         SparseRowType {
             offset_type: DataType::Int32,
+            index_name: "index".into(),
             index_type: SparseIndexType::create(dim),
             value_type: DataType::Float32,
         }
@@ -35,6 +38,7 @@ impl SparseRowType {
     pub fn create_large(dim: usize) -> SparseRowType {
         SparseRowType {
             offset_type: DataType::Int64,
+            index_name: "index".into(),
             index_type: SparseIndexType::create(dim),
             value_type: DataType::Float32,
         }
@@ -124,12 +128,7 @@ impl ExtensionType for SparseRowType {
         }
 
         let idx_f = fields.get(0).unwrap();
-        if idx_f.name() != "index" {
-            return Err(ArrowError::InvalidArgumentError(format!(
-                "first field must be 'index', found, found {}",
-                idx_f.name()
-            )));
-        }
+        let idx_name = idx_f.name();
         let idx_t: SparseIndexType = idx_f.try_extension_type()?;
 
         let val_f = fields.get(1).unwrap();
@@ -142,6 +141,7 @@ impl ExtensionType for SparseRowType {
 
         Ok(SparseRowType {
             offset_type: off_t,
+            index_name: idx_name.clone(),
             index_type: idx_t,
             value_type: val_f.data_type().clone(),
         })
