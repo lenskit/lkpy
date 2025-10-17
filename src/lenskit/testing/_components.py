@@ -161,7 +161,7 @@ class ScorerTests(TrainingTests):
         tm2 = pickle.loads(data)
         self.verify_models_equivalent(trained_model, tm2)
 
-        p2 = predict_pipeline(tm2, fallback=False)
+        p2 = self.make_pipeline(tm2)
         p2.train(ml_ds, TrainingOptions(retrain=False))
 
         for u in rng.choice(ml_ds.users.ids(), 100):
