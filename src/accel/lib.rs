@@ -4,10 +4,7 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use log::*;
-use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
-use rayon::{current_num_threads, ThreadPoolBuilder};
 
 mod als;
 mod arrow;
@@ -16,6 +13,7 @@ mod data;
 mod funksvd;
 mod indirect_hashing;
 mod knn;
+mod parallel;
 mod progress;
 mod slim;
 mod sparse;
@@ -30,27 +28,10 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     slim::register_slim(m)?;
 
     m.add_class::<funksvd::FunkSVDTrainer>()?;
-    m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
-    m.add_function(wrap_pyfunction!(thread_count, m)?)?;
+    m.add_function(wrap_pyfunction!(parallel::init_accel_pool, m)?)?;
+    m.add_function(wrap_pyfunction!(parallel::thread_count, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_row_debug_type, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_structure_debug_large, m)?)?;
 
     Ok(())
-}
-
-#[pyfunction]
-fn init_accel_pool(n_threads: usize) -> PyResult<()> {
-    debug!(
-        "initializing accelerator thread pool with {} threads",
-        n_threads
-    );
-    ThreadPoolBuilder::new()
-        .num_threads(n_threads)
-        .build_global()
-        .map_err(|_| PyErr::new::<PyRuntimeError, _>("Rayon initialization error"))
-}
-
-#[pyfunction]
-fn thread_count() -> PyResult<usize> {
-    Ok(current_num_threads())
 }

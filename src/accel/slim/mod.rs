@@ -16,7 +16,10 @@ use arrow::{
 };
 use ndarray::Array1;
 
-use crate::sparse::{ArrowCSRConsumer, CSRStructure, CSR};
+use crate::{
+    parallel::maybe_fuse,
+    sparse::{ArrowCSRConsumer, CSRStructure, CSR},
+};
 
 const EPSILON: f64 = 1.0e-12;
 // default value from Karypis code
@@ -87,9 +90,7 @@ fn train_slim<'py>(
 
     let result = py.allow_threads(move || {
         let range = 0..ui_matrix.n_cols;
-        let chunks = range
-            .into_par_iter()
-            .panic_fuse()
+        let chunks = maybe_fuse(range.into_par_iter())
             .map(|item| compute_column(item, &ui_matrix, &iu_matrix, &options))
             .drive(collector);
         chunks.into_iter().map(|a| a.into_data().into()).collect()
