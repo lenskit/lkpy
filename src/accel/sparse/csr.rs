@@ -85,7 +85,7 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRStructure<Ix>> {
         let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
-                "invalid array type {}, expected List",
+                "invalid array type {}, expected List or LargeList",
                 array.data_type()
             ))
         })?;
@@ -133,7 +133,7 @@ where
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRMatrix<Ix, V>> {
         let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
-                "invalid array type {}, expected List",
+                "invalid array type {}, expected List or LargeList",
                 array.data_type()
             ))
         })?;
