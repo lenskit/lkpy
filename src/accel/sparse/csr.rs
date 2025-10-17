@@ -16,8 +16,10 @@ use arrow::{
     },
     datatypes::{DataType, Float32Type},
 };
-use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
+
+use crate::arrow::{SparseIndexListType, SparseRowType};
 
 use super::SparseIndexType;
 
@@ -110,12 +112,9 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
                 array.data_type()
             ))
         })?;
+        let arr_type = SparseIndexListType::try_from(array.data_type())
+            .map_err(|e| PyTypeError::new_err(format!("invalid array type: {:?}", e)))?;
 
-        let field = match sa.data_type() {
-            DataType::List(f) => f,
-            DataType::LargeList(f) => f,
-            _ => unreachable!("downcast and type are inconsistent"),
-        };
         let rows: &Int32Array = sa.values().as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
                 "invalid element type {}, expected Struct",
@@ -123,13 +122,9 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
             ))
         })?;
 
-        let idx_t: SparseIndexType = field
-            .try_extension_type()
-            .map_err(|e| PyTypeError::new_err(format!("invalid index type: {}", e)))?;
-
         Ok(CSRStructure {
             n_rows: array.len(),
-            n_cols: idx_t.dimension(),
+            n_cols: arr_type.index_type.dimension(),
             array: downcast_array(array.as_ref()),
             col_inds: downcast_array(&rows),
         })
@@ -158,6 +153,9 @@ where
                 array.data_type()
             ))
         })?;
+        // type-check the columns
+        let _arr_type = SparseRowType::try_from(array.data_type())
+            .map_err(|e| PyTypeError::new_err(format!("invalid array type: {:?}", e)))?;
 
         let rows: &StructArray = sa.values().as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
@@ -167,26 +165,10 @@ where
         })?;
 
         let fields = rows.fields();
-
-        if fields.len() != 2 {
-            return Err(PyErr::new::<PyValueError, _>(
-                "row entries must have 2 fields",
-            ));
-        }
+        assert_eq!(fields.len(), 2);
 
         let idx_f = &fields[0];
         let val_f = &fields[1];
-
-        if idx_f.name() != "index" {
-            return Err(PyErr::new::<PyValueError, _>(
-                "first row field must be 'index'",
-            ));
-        }
-        if val_f.name() != "value" {
-            return Err(PyErr::new::<PyValueError, _>(
-                "first row field must be 'value'",
-            ));
-        }
 
         let idx_t: SparseIndexType = idx_f
             .try_extension_type()
@@ -194,8 +176,9 @@ where
 
         if val_f.data_type() != &V::DATA_TYPE {
             return Err(PyErr::new::<PyTypeError, _>(format!(
-                "invalid value column type {}, expected Float32",
-                val_f.data_type()
+                "invalid value column type {}, expected {}",
+                val_f.data_type(),
+                V::DATA_TYPE
             )));
         }
 
