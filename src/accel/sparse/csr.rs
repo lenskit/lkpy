@@ -21,6 +21,13 @@ use pyo3::PyResult;
 
 use super::SparseIndexType;
 
+/// Variant type to wrap data with different index types.
+#[derive(Clone)]
+pub enum IxVar<T32, T64> {
+    Ix32(T32),
+    Ix64(T64),
+}
+
 /// A compressed sparse row matrix with only structure, not values.
 pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
     #[allow(dead_code)]
@@ -77,6 +84,20 @@ pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
     fn row_cols(&self, row: usize) -> &[i32] {
         let (start, end) = self.extent(row);
         &self.col_inds().values()[start..end]
+    }
+}
+
+/// Extract a CSR structure with either 32 or 64-bit indices.
+pub fn csr_structure(
+    array: Arc<dyn Array>,
+) -> PyResult<IxVar<CSRStructure<i32>, CSRStructure<i64>>> {
+    match array.data_type() {
+        DataType::List(_) => Ok(IxVar::Ix32(CSRStructure::from_arrow(array)?)),
+        DataType::LargeList(_) => Ok(IxVar::Ix64(CSRStructure::from_arrow(array)?)),
+        _ => Err(PyTypeError::new_err(format!(
+            "unsupported CSR data type {}",
+            array.data_type()
+        ))),
     }
 }
 
