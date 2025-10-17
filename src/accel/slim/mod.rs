@@ -89,6 +89,7 @@ fn train_slim<'py>(
         let range = 0..ui_matrix.n_cols;
         let chunks = range
             .into_par_iter()
+            .panic_fuse()
             .map(|item| compute_column(item, &ui_matrix, &iu_matrix, &options))
             .drive(collector);
         chunks.into_iter().map(|a| a.into_data().into()).collect()
@@ -108,8 +109,8 @@ fn compute_column(
     iu_matrix: &CSRStructure<i64>,
     options: &SlimOptions,
 ) -> Vec<(i32, f32)> {
-    let n_items = ui_matrix.n_rows;
-    let n_users = ui_matrix.n_cols;
+    let n_items = ui_matrix.n_cols;
+    let n_users = ui_matrix.n_rows;
 
     // get the active users for this item
     let i_users = iu_matrix.row_cols(item);
