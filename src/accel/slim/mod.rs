@@ -26,10 +26,20 @@ const EPSILON: f64 = 1.0e-12;
 const OPT_TOLERANCE: f64 = 1e-7;
 
 #[derive(Debug, Clone, Copy)]
-struct SlimOptions {
+struct SLIMOptions {
     l1_reg: f64,
     l2_reg: f64,
     max_iters: u32,
+}
+
+struct SLIMWorkspace<'a> {
+    options: SLIMOptions,
+    ui_matrix: &'a CSRStructure<i64>,
+    iu_matrix: &'a CSRStructure<i64>,
+    n_users: usize,
+    n_items: usize,
+    weights: Array1<f64>,
+    estimates: Array1<f64>,
 }
 
 /// Register the lenskit._accel.slim module
@@ -75,7 +85,7 @@ fn train_slim<'py>(
     } else {
         Some(progress.unbind())
     };
-    let options = SlimOptions {
+    let options = SLIMOptions {
         l1_reg,
         l2_reg,
         max_iters,
@@ -91,7 +101,10 @@ fn train_slim<'py>(
     let result = py.allow_threads(move || {
         let range = 0..ui_matrix.n_cols;
         let chunks = maybe_fuse(range.into_par_iter())
-            .map(|item| compute_column(item, &ui_matrix, &iu_matrix, &options))
+            .map_init(
+                || SLIMWorkspace::create(&ui_matrix, &iu_matrix, &options),
+                SLIMWorkspace::compute_column,
+            )
             .drive(collector);
         chunks.into_iter().map(|a| a.into_data().into()).collect()
     });
@@ -99,84 +112,98 @@ fn train_slim<'py>(
     Ok(result)
 }
 
-/// Train a single column of the SLIM weight matrix.
-///
-/// This code was written from the papers, referencing Karypis's LIBSLIM for
-/// ideas on implementation details.  The relevant LIBSLIM source code
-/// is at https://github.com/KarypisLab/SLIM/tree/master/src/libslim.
-fn compute_column(
-    item: usize,
-    ui_matrix: &CSRStructure<i64>,
-    iu_matrix: &CSRStructure<i64>,
-    options: &SlimOptions,
-) -> Vec<(i32, f32)> {
-    let n_items = ui_matrix.n_cols;
-    let n_users = ui_matrix.n_rows;
-
-    // get the active users for this item
-    let i_users = iu_matrix.row_cols(item);
-    // since it's all 1s, the length of active entries is the squared norm
-    let sq_cnorm = i_users.len() as f64;
-
-    // initialize column weights to zero
-    let mut weights = Array1::<f64>::zeros(n_items);
-    // initialize estimates to zero (since column weights are zero)
-    let mut estimates = Array1::<f64>::zeros(n_users);
-    // create an array for the target value (1 iff user has rated the column's item)
-    let mut ones = Array1::<f64>::zeros(n_users);
-    for c in i_users {
-        ones[*c as usize] = 1.0;
+impl<'a> SLIMWorkspace<'a> {
+    fn create(
+        ui_matrix: &'a CSRStructure<i64>,
+        iu_matrix: &'a CSRStructure<i64>,
+        options: &SLIMOptions,
+    ) -> Self {
+        let n_items = ui_matrix.n_cols;
+        let n_users = ui_matrix.n_rows;
+        SLIMWorkspace {
+            options: *options,
+            ui_matrix,
+            iu_matrix,
+            n_users,
+            n_items,
+            weights: Array1::zeros(n_items),
+            estimates: Array1::zeros(n_users),
+        }
     }
 
-    for iter in 0..options.max_iters {
-        let mut sqdelta = 0.0;
-        // coordinate descent - loop over items, learn that row in the weight vector
-        for i in 0..n_items {
-            let old_w = weights[i];
-            // subtract this item's contribution to the estimate
-            if old_w > 0.0 {
-                for c in i_users {
-                    estimates[*c as usize] -= old_w
+    /// Train a single column of the SLIM weight matrix.
+    ///
+    /// This code was written from the papers, referencing Karypis's LIBSLIM for
+    /// ideas on implementation details.  The relevant LIBSLIM source code
+    /// is at https://github.com/KarypisLab/SLIM/tree/master/src/libslim.
+    fn compute_column(&mut self, item: usize) -> Vec<(i32, f32)> {
+        // get the active users for this item
+        let i_users = self.iu_matrix.row_cols(item);
+        // since it's all 1s, the length of active entries is the squared norm
+        let sq_cnorm = i_users.len() as f64;
+
+        for iter in 0..self.options.max_iters {
+            let mut sqdelta = 0.0;
+            // coordinate descent - loop over items, learn that row in the weight vector
+            for i in 0..self.n_items {
+                let old_w = self.weights[i];
+                // subtract this item's contribution to the estimate
+                if old_w > 0.0 {
+                    for c in i_users {
+                        self.estimates[*c as usize] -= old_w
+                    }
+                }
+
+                // compute the update value - sum errors where user is active (so rating is 1)
+                let mut update = 0.0;
+                for u in i_users {
+                    let u = *u as usize;
+                    update += 1.0 - self.estimates[u];
+                }
+                // convert to mean
+                update /= self.n_users as f64;
+                // soft-threshold and adjust
+                let new = if update >= self.options.l1_reg {
+                    let num = update - self.options.l1_reg;
+                    num / (sq_cnorm - self.options.l2_reg)
+                } else {
+                    0.0
+                };
+                let delta = new - old_w;
+                sqdelta += delta * delta;
+                self.weights[i] = new;
+                if new > 0.0 {
+                    for c in i_users {
+                        self.estimates[*c as usize] += new
+                    }
                 }
             }
-
-            // compute the errors
-            let errs = &ones - &estimates;
-            // compute the update value - sum errors where user is active (so rating is 1)
-            let mut update = 0.0;
-            for u in i_users {
-                let u = *u as usize;
-                update += errs[u];
+            if sqdelta <= OPT_TOLERANCE {
+                debug!("finished column {} after {} iters", item, iter + 1);
+                break;
             }
-            // convert to mean
-            update /= n_users as f64;
-            // soft-threshold and adjust
-            let new = if update >= options.l1_reg {
-                let num = update - options.l1_reg;
-                num / (sq_cnorm - options.l2_reg)
-            } else {
-                0.0
-            };
-            let delta = new - old_w;
-            sqdelta += delta * delta;
-            weights[i] = new;
         }
-        if sqdelta <= OPT_TOLERANCE {
-            debug!("finished column {} after {} iters", item, iter + 1);
-            break;
+
+        // sparsify weights for final result
+        let res: Vec<_> = self
+            .weights
+            .iter()
+            .enumerate()
+            .filter_map(|(i, v)| {
+                if *v >= EPSILON {
+                    Some((i as i32, *v as f32))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        // reset workspace
+        for u in i_users {
+            self.estimates[*u as usize] = 0.0;
         }
+        self.weights.fill(0.0);
+
+        // and we're done!
+        res
     }
-
-    // sparsify weights for final result
-    weights
-        .into_iter()
-        .enumerate()
-        .filter_map(|(i, v)| {
-            if v >= EPSILON {
-                Some((i as i32, v as f32))
-            } else {
-                None
-            }
-        })
-        .collect()
 }
