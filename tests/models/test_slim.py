@@ -4,8 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import pyarrow as pa
+
 from lenskit._accel import slim as _slim_accel
 from lenskit.data import Dataset
+from lenskit.data.matrix import SparseRowArray
+from lenskit.logging import get_logger
+
+_log = get_logger(__name__)
 
 
 def test_slim_trainer(ml_ds: Dataset):
@@ -13,4 +19,9 @@ def test_slim_trainer(ml_ds: Dataset):
     ui_matrix = ml_ds.interactions().matrix().csr_structure(format="arrow")
     iu_matrix = ui_matrix.transpose()
 
-    _result = _slim_accel.train_slim(ui_matrix, iu_matrix, 0.1, 0.1, 50, None)
+    result = _slim_accel.train_slim(ui_matrix, iu_matrix, 0.005, 0.01, 25, None)
+    result = pa.chunked_array(result).combine_chunks()
+    result = SparseRowArray.from_array(result)
+    assert isinstance(result, SparseRowArray)
+    assert result.shape == (ml_ds.item_count, ml_ds.item_count)
+    _log.info("received result", nnz=result.nnz)
