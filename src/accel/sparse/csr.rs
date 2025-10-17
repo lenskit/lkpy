@@ -117,7 +117,7 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
 
         let rows: &Int32Array = sa.values().as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
-                "invalid element type {}, expected Struct",
+                "invalid element type {}, expected Int32",
                 sa.values().data_type()
             ))
         })?;
