@@ -53,9 +53,9 @@ fn train_slim<'py>(
     progress: Bound<'py, PyAny>,
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
     let ui_matrix = make_array(ui_matrix.0);
-    let ui_matrix = CSRStructure::from_arrow(ui_matrix)?;
+    let ui_matrix = CSRStructure::<i64>::from_arrow(ui_matrix)?;
     let iu_matrix = make_array(iu_matrix.0);
-    let iu_matrix = CSRStructure::from_arrow(iu_matrix)?;
+    let iu_matrix = CSRStructure::<i64>::from_arrow(iu_matrix)?;
 
     if ui_matrix.n_rows != iu_matrix.n_cols {
         return Err(PyValueError::new_err("user count mismatch"));
@@ -104,8 +104,8 @@ fn train_slim<'py>(
 /// is at https://github.com/KarypisLab/SLIM/tree/master/src/libslim.
 fn compute_column(
     item: usize,
-    ui_matrix: &CSRStructure,
-    iu_matrix: &CSRStructure,
+    ui_matrix: &CSRStructure<i64>,
+    iu_matrix: &CSRStructure<i64>,
     options: &SlimOptions,
 ) -> Vec<(i32, f32)> {
     let n_items = ui_matrix.n_rows;
