@@ -4,7 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import inspect
 import os
 import pickle
 from time import perf_counter
@@ -15,11 +14,11 @@ import pandas as pd
 
 from pytest import approx, fixture, mark, skip
 
-from lenskit import batch
+from lenskit import batch, operations
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.builder import DatasetBuilder
 from lenskit.metrics import quick_measure_model
-from lenskit.pipeline import Component, topn_pipeline
+from lenskit.pipeline import Component, Pipeline, predict_pipeline, topn_pipeline
 from lenskit.splitting import split_temporal_fraction
 from lenskit.training import Trainable, TrainingOptions
 
@@ -79,11 +78,20 @@ class TrainingTests:
     component: type[Component]
     config: Any = None
 
+    def make_pipeline(self, model: Component):
+        return predict_pipeline(model, fallback=False)
+
     @fixture(scope="function" if retrain else "class")
-    def trained_model(self, ml_ds: Dataset):
+    def trained_pipeline(self, ml_ds: Dataset):
         model = self.component(self.config)
-        if isinstance(model, Trainable):
-            model.train(ml_ds, TrainingOptions())
+        pipe = self.make_pipeline(model)
+        pipe.train(ml_ds)
+        yield pipe
+
+    @fixture(scope="function" if retrain else "class")
+    def trained_model(self, trained_pipeline: Pipeline):
+        model = trained_pipeline.component("scorer")
+        assert isinstance(model, self.component)
         yield model
 
     def test_skip_retrain(self, ml_ds: Dataset):
@@ -120,20 +128,20 @@ class ScorerTests(TrainingTests):
     expected_ndcg: ClassVar[float | tuple[float, float] | object | None] = None
     "Asserts nDCG either greater than the provided expected value or between two values as tuple."
 
-    def invoke_scorer(self, inst: Component, **kwargs):
-        sig = inspect.signature(inst)
-        args = {n: v for (n, v) in kwargs.items() if n in sig.parameters}
-        return inst(**args)
+    def invoke_scorer(self, pipe: Pipeline, **kwargs) -> ItemList:
+        return operations.score(pipe, **kwargs)
 
     def verify_models_equivalent(self, orig, copy):
         "Verify that two models are equivalent."
         pass
 
-    def test_score_known(self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component):
+    def test_score_known(
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
+    ):
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
             items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
-            scored = self.invoke_scorer(trained_model, query=u, items=items)
+            scored = self.invoke_scorer(trained_pipeline, query=u, items=items)
             assert isinstance(scored, ItemList)
             assert np.all(scored.numbers() == item_nums)
             assert np.all(scored.ids() == items.ids())
@@ -143,19 +151,26 @@ class ScorerTests(TrainingTests):
                 assert np.all(np.isfinite(scores))
 
     def test_pickle_roundrip(
-        self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
+        self,
+        rng: np.random.Generator,
+        ml_ds: Dataset,
+        trained_pipeline: Pipeline,
+        trained_model: Component,
     ):
         data = pickle.dumps(trained_model, pickle.HIGHEST_PROTOCOL)
         tm2 = pickle.loads(data)
         self.verify_models_equivalent(trained_model, tm2)
 
+        p2 = predict_pipeline(tm2, fallback=False)
+        p2.train(ml_ds, TrainingOptions(retrain=False))
+
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
             items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
-            scored = self.invoke_scorer(trained_model, query=u, items=items)
+            scored = self.invoke_scorer(trained_pipeline, query=u, items=items)
             assert isinstance(scored, ItemList)
 
-            s2 = self.invoke_scorer(tm2, query=u, items=items)
+            s2 = self.invoke_scorer(p2, query=u, items=items)
             assert isinstance(s2, ItemList)
 
             assert np.all(scored.numbers() == item_nums)
@@ -168,20 +183,20 @@ class ScorerTests(TrainingTests):
             assert arr == approx(arr2, nan_ok=True)
 
     def test_score_unknown_user(
-        self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
     ):
         "score with an unknown user ID"
         item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
 
-        scored = self.invoke_scorer(trained_model, query=-1348, items=items)
+        scored = self.invoke_scorer(trained_pipeline, query=-1348, items=items)
         scores = scored.scores("pandas", index="ids")
         assert scores is not None
         if self.can_score == "all":
             assert np.all(np.isfinite(scores))
 
     def test_score_unknown_item(
-        self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
     ):
         "score with one target item unknown"
         item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
@@ -189,7 +204,7 @@ class ScorerTests(TrainingTests):
         item_ids.append(-318)
         items = ItemList(item_ids)
 
-        scored = self.invoke_scorer(trained_model, query=ml_ds.users.id(0), items=items)
+        scored = self.invoke_scorer(trained_pipeline, query=ml_ds.users.id(0), items=items)
         scores = scored.scores("pandas", index="ids")
         assert scores is not None
         if self.can_score == "all":
@@ -198,20 +213,20 @@ class ScorerTests(TrainingTests):
             assert np.all(np.isfinite(scores[:-1]))
 
     def test_score_empty_query(
-        self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
     ):
         "score with an empty query"
         item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery()
-        scored = self.invoke_scorer(trained_model, query=q, items=items)
+        scored = self.invoke_scorer(trained_pipeline, query=q, items=items)
         assert np.all(scored.numbers() == item_nums)
         assert np.all(scored.ids() == items.ids())
         scores = scored.scores()
         assert scores is not None
 
     def test_score_query_history(
-        self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
     ):
         "score when query has user ID and history"
         u = rng.choice(ml_ds.users.ids())
@@ -220,14 +235,14 @@ class ScorerTests(TrainingTests):
         item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery(user_id=u, user_items=u_row)
-        scored = self.invoke_scorer(trained_model, query=q, items=items)
+        scored = self.invoke_scorer(trained_pipeline, query=q, items=items)
         assert np.all(scored.numbers() == item_nums)
         assert np.all(scored.ids() == items.ids())
         scores = scored.scores()
         assert scores is not None
 
     def test_score_query_history_only(
-        self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
     ):
         "score when query only has history"
         u = rng.choice(ml_ds.users.ids())
@@ -236,20 +251,20 @@ class ScorerTests(TrainingTests):
         item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery(user_items=u_row)
-        scored = self.invoke_scorer(trained_model, query=q, items=items)
+        scored = self.invoke_scorer(trained_pipeline, query=q, items=items)
         assert np.all(scored.numbers() == item_nums)
         assert np.all(scored.ids() == items.ids())
         scores = scored.scores()
         assert scores is not None
 
     def test_score_empty_items(
-        self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
     ):
         "score an empty list of items"
         u = rng.choice(ml_ds.users.ids())
 
         items = ItemList()
-        scored = self.invoke_scorer(trained_model, query=u, items=items)
+        scored = self.invoke_scorer(trained_pipeline, query=u, items=items)
         assert len(scored) == 0
         scores = scored.scores()
         assert scores is not None
@@ -270,8 +285,8 @@ class ScorerTests(TrainingTests):
         ds = dsb.build()
 
         model = self.component(self.config)
-        assert isinstance(model, Trainable)
-        model.train(ds, TrainingOptions())
+        pipe = self.make_pipeline(model)
+        pipe.train(ds, TrainingOptions())
 
         good_u = rng.choice(ml_ds.users.ids(), 10, replace=False)
         for u in set(good_u) | set(drop_u):
@@ -279,7 +294,7 @@ class ScorerTests(TrainingTests):
             items = np.unique(np.concatenate([items, rng.choice(drop_i, 5)]))
             items = ItemList(items, vocabulary=ds.items)
 
-            scored = self.invoke_scorer(model, query=u, items=items)
+            scored = self.invoke_scorer(pipe, query=u, items=items)
             assert len(scored) == len(items)
             assert np.all(scored.numbers() == items.numbers())
             assert np.all(scored.ids() == items.ids())
