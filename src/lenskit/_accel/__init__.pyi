@@ -4,6 +4,8 @@ Rust acceleration code.
 
 from __future__ import annotations
 
+import pyarrow as pa
+
 from lenskit.data.types import NPMatrix, NPVector
 from lenskit.funksvd import FunkSVDTrainingData, FunkSVDTrainingParams
 
@@ -19,6 +21,7 @@ __all__ = [
 
 def init_accel_pool(n_threads: int): ...
 def thread_count() -> int: ...
+def sparse_row_debug_type(arr: pa.Array) -> tuple[str, int, int]: ...
 
 class FunkSVDTrainer:
     def __init__(

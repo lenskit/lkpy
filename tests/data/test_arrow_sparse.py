@@ -15,7 +15,7 @@ from scipy.sparse import coo_array, csr_array
 from hypothesis import given
 from pytest import mark, raises
 
-from lenskit._accel import sparse_row_debug
+from lenskit._accel import sparse_row_debug_type
 from lenskit.data import Dataset
 from lenskit.data.matrix import (
     SparseIndexType,
@@ -66,7 +66,7 @@ def test_csr_to_rust(csr: csr_array[Any, tuple[int, int]]):
     assert isinstance(arr, SparseRowArray)
     assert isinstance(arr.type, SparseRowType)
 
-    dt, nr, nc = sparse_row_debug(arr)
+    dt, nr, nc = sparse_row_debug_type(arr)
     _log.info("returned data type: %s", dt, nr=nr, nc=nc)
     assert (nr, nc) == csr.shape
 
@@ -134,7 +134,7 @@ def test_sparse_structure_rust(csr: csr_array[Any, tuple[int, int]]):
 
     arr = SparseRowArray.from_arrays(csr.indptr, csr.indices, shape=(nr, nc))
 
-    dt, nr, nc = sparse_row_debug(arr)
+    dt, nr, nc = sparse_row_debug_type(arr)
     _log.info("returned data type: %s", dt, nr=nr, nc=nc)
     assert (nr, nc) == csr.shape
 

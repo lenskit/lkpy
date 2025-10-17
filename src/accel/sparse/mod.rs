@@ -27,7 +27,9 @@ pub use csr::{csr_structure, CSRMatrix, CSRStructure, IxVar, CSR};
 
 /// Test function to make sure we can convert sparse rows.
 #[pyfunction]
-pub(crate) fn sparse_row_debug(array: PyArrowType<ArrayData>) -> PyResult<(String, usize, usize)> {
+pub(crate) fn sparse_row_debug_type(
+    array: PyArrowType<ArrayData>,
+) -> PyResult<(String, usize, usize)> {
     let array = make_array(array.0);
     debug!("building matrix with {} rows", array.len());
     debug!("array data type: {}", array.data_type());
@@ -37,9 +39,10 @@ pub(crate) fn sparse_row_debug(array: PyArrowType<ArrayData>) -> PyResult<(Strin
         .try_into()
         .map(|rt: SparseRowType| {
             debug!(
-                "got {} x {} matrix with {} values",
+                "got {} x {} matrix with {} indices and {} values",
                 array.len(),
                 rt.dimension(),
+                rt.offset_type,
                 rt.value_type
             );
             (format!("{:?}", rt), array.len(), rt.dimension())
@@ -48,9 +51,10 @@ pub(crate) fn sparse_row_debug(array: PyArrowType<ArrayData>) -> PyResult<(Strin
             debug!("row matrix failed: {}", e);
             array.data_type().try_into().map(|rt: SparseIndexListType| {
                 debug!(
-                    "got {} x {} matrix without values",
+                    "got {} x {} matrix with {} indices and no values",
                     array.len(),
                     rt.dimension(),
+                    rt.offset_type,
                 );
                 (format!("{:?}", rt), array.len(), rt.dimension())
             })
