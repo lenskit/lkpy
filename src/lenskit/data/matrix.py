@@ -483,6 +483,10 @@ class SparseRowArray(pa.ExtensionArray):
         else:
             return None
 
+    @property
+    def nnz(self) -> int:
+        return self.offsets[len(self)].as_py()
+
     def structure(self) -> SparseRowArray:
         """
         Get the structure of this matrix (without values).
