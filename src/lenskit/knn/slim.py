@@ -109,7 +109,7 @@ class SLIMScorer(Component, Trainable):
 
         # finalize result
         scores = np.full(len(items), np.nan, np.float32)
-        inos = items.numbers(vocabulary=self.items)
+        inos = items.numbers(vocabulary=self.items, missing="negative")
         mask = inos >= 0
         scores[mask] = all_scores[inos[mask]]
 
