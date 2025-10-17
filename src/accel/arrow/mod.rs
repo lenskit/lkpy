@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 //! Utilities and types for working with Arrow data.
+pub mod lists;
 pub mod types;
 
 use arrow::array::downcast_array;

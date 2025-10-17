@@ -7,6 +7,7 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use log::*;
 use pyo3::prelude::*;
 
 use arrow::{
@@ -19,7 +20,7 @@ use arrow::{
 use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
 
-use crate::arrow::{SparseIndexListType, SparseRowType};
+use crate::arrow::{lists::ExtractListArray, SparseIndexListType, SparseRowType};
 
 use super::SparseIndexType;
 
@@ -103,30 +104,37 @@ pub fn csr_structure(
     }
 }
 
-impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
+impl<Ix> CSRStructure<Ix>
+where
+    Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>,
+    GenericListArray<Ix>: ExtractListArray,
+{
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRStructure<Ix>> {
-        let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
-            PyErr::new::<PyTypeError, _>(format!(
-                "invalid array type {}, expected List or LargeList",
-                array.data_type()
-            ))
-        })?;
+        let array: GenericListArray<Ix> =
+            GenericListArray::extract_list_array(&array).ok_or_else(|| {
+                PyErr::new::<PyTypeError, _>(format!(
+                    "invalid array type {}, expected List or LargeList",
+                    array.data_type()
+                ))
+            })?;
+        debug!("extracted array of type {}", array.data_type());
         let arr_type = SparseIndexListType::try_from(array.data_type())
             .map_err(|e| PyTypeError::new_err(format!("invalid array type: {:?}", e)))?;
 
-        let rows: &Int32Array = sa.values().as_any().downcast_ref().ok_or_else(|| {
+        let col_inds: &Int32Array = array.values().as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
                 "invalid element type {}, expected Int32",
-                sa.values().data_type()
+                array.values().data_type()
             ))
         })?;
+        let col_inds = downcast_array(&col_inds);
 
         Ok(CSRStructure {
             n_rows: array.len(),
             n_cols: arr_type.index_type.dimension(),
-            array: downcast_array(array.as_ref()),
-            col_inds: downcast_array(&rows),
+            array,
+            col_inds,
         })
     }
 }
