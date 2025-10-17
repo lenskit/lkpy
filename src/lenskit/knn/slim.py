@@ -59,6 +59,9 @@ class SLIMScorer(Component, Trainable):
     items: Vocabulary
 
     def train(self, data: Dataset, options: TrainingOptions):
+        if hasattr(self, "weights") and not options.retrain:
+            return
+
         ensure_parallel_init()
         ui_matrix = data.interactions().matrix().csr_structure(format="arrow")
         _log.info(
