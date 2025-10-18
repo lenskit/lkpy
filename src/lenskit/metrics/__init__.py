@@ -33,6 +33,8 @@ from .ranking import (
     RankWeight,
     Recall,
     RecipRank,
+    entropy,
+    rank_biased_entropy,
 )
 from .reranking import least_item_promoted, rank_biased_overlap
 
@@ -63,6 +65,8 @@ __all__ = [
     "ListGini",
     "ExposureGini",
     "quick_measure_model",
+    "entropy",
+    "rank_biased_entropy",
     "least_item_promoted",
     "rank_biased_overlap",
 ]
