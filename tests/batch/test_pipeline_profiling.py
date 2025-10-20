@@ -30,7 +30,6 @@ def test_bias_batch(tmpdir: Path, ml_split: TTSplit, ncpus: int | None):
     with PipelineProfiler(pipeline, file) as profiler:
         runner = BatchPipelineRunner(n_jobs=ncpus, profiler=profiler)
         runner.recommend()
-        runner.predict()
 
         _results = runner.run(pipeline, ml_split.test)
 
@@ -38,6 +37,6 @@ def test_bias_batch(tmpdir: Path, ml_split: TTSplit, ncpus: int | None):
     print(prof)
     assert list(prof.columns) == pipeline.component_names()
     assert len(prof) == len(ml_split.test)
-    # is the scorer the right time?
-    assert prof["scorer"].mean() > 1.0e-5
-    assert prof["scorer"].mean() < 0.2
+    # is the scorer the right time? >1µs, <25ms
+    assert prof["scorer"].mean() > 1000
+    assert prof["scorer"].mean() < 25_000_000
