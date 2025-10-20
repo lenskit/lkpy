@@ -59,6 +59,10 @@ class PipelineProfiler:
         return WorkerProfileSink(self.sink_id)
 
     def close(self):
+        if self._monitor is not None:
+            _log.debug("waiting for monitor to quiesce")
+            self._monitor.await_quiesce()
+
         self.output.close()
         if self._monitor is not None:
             self._monitor.remove_record_sink(self.sink_id)

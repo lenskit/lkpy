@@ -171,6 +171,25 @@ class Monitor:
         except KeyError:
             _log.warn("record sink %s already removed", sink)
 
+    def await_quiesce(self, *, ms: int = 100):
+        """
+        Wait for the monitor to quiesce.
+
+        Args:
+            ms:
+                The number of milliseconds of quiet to expect for quiescence.
+        """
+        timeout = ms / 1000
+        wait_ns = ms * 1_000_000
+        with self._backend.msg_condition:
+            while True:
+                now = time.perf_counter_ns()
+                diff = now - self._backend.last_msg
+                if diff >= wait_ns - 1000:
+                    return
+                _log.debug("last interval %dns, waiting", diff)
+                self._backend.msg_condition.wait(timeout)
+
     def shutdown(self):
         log = _log.bind()
         try:
@@ -215,6 +234,8 @@ class MonitorThread(threading.Thread):
     poller: zmq.Poller
     _auth: MsgAuthenticator
     last_refresh: float
+    last_msg: int
+    msg_condition: threading.Condition
 
     def __init__(self, monitor: Monitor, log_sock: zmq.Socket[bytes] | None):
         super().__init__(name="LensKitMonitor", daemon=True)
@@ -222,6 +243,8 @@ class MonitorThread(threading.Thread):
         self.log_sock = log_sock
         self._auth = MsgAuthenticator(mp.current_process().authkey)
         self.last_refresh = time.perf_counter()
+        self.last_msg = time.perf_counter_ns()
+        self.msg_condition = threading.Condition()
 
     def run(self) -> None:
         self.state = MonitorState.ACTIVE
@@ -249,6 +272,8 @@ class MonitorThread(threading.Thread):
                 timeout = 0
 
             ready = dict(self.poller.poll(timeout))
+            now_ns = time.perf_counter_ns()
+            now = now_ns / 1_000_000_000
 
             if self.signal in ready:
                 self._handle_signal()
@@ -256,6 +281,10 @@ class MonitorThread(threading.Thread):
             if self.log_sock is not None and self.log_sock in ready:
                 try:
                     self._handle_log_message()
+                    # can we do this with ZeroMQ instead of a thread lock?
+                    with self.msg_condition:
+                        self.last_msg = now_ns
+                        self.msg_condition.notify_all()
                 except Exception as e:
                     _log.error("error handling message", exc_info=e)
 
@@ -265,7 +294,6 @@ class MonitorThread(threading.Thread):
 
                 elif self.state == MonitorState.ACTIVE:
                     # nothing to do — check if we need a refresh
-                    now = time.perf_counter()
                     left = max(int((REFRESH_INTERVAL - now + last_refresh) * 1000), 0)
                     if left < 20:
                         self._do_refresh()

@@ -35,6 +35,7 @@ def test_bias_batch(tmpdir: Path, ml_split: TTSplit, ncpus: int | None):
         _results = runner.run(pipeline, ml_split.test)
 
     prof = pd.read_csv(file)
+    print(prof)
     assert list(prof.columns) == pipeline.component_names()
     assert len(prof) == len(ml_split.test)
     # is the scorer the right time?
