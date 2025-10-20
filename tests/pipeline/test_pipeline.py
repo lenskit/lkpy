@@ -254,7 +254,7 @@ def test_chain_component_names():
     pipe.default_component(nt)
 
     pipe = pipe.build()
-    assert list(pipe.component_names()) == ["incr", "triple"]
+    assert pipe.component_names() == ["incr", "triple"]
 
 
 def test_simple_graph():

@@ -190,7 +190,7 @@ class Pipeline:
         else:
             raise KeyError(node)
 
-    def component_names(self) -> Iterable[str]:
+    def component_names(self) -> list[str]:
         """
         Get the component names (in topological order).
         """
@@ -201,7 +201,7 @@ class Pipeline:
             prev = [v for v in edges.values() if isinstance(self.node(v), ComponentInstanceNode)]
             sort.add(node.name, *prev)
 
-        return sort.static_order()
+        return list(sort.static_order())
 
     def node_input_connections(self, node: str | Node[Any]) -> Mapping[str, Node[Any]]:
         """
