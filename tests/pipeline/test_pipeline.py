@@ -239,6 +239,24 @@ def test_chain():
     assert pipe.run(ni, x=10) == 11
 
 
+def test_chain_component_names():
+    pipe = PipelineBuilder()
+    x = pipe.create_input("x", int)
+
+    def incr(x: int) -> int:
+        return x + 1
+
+    def triple(x: int) -> int:
+        return x * 3
+
+    ni = pipe.add_component("incr", incr, x=x)
+    nt = pipe.add_component("triple", triple, x=ni)
+    pipe.default_component(nt)
+
+    pipe = pipe.build()
+    assert list(pipe.component_names()) == ["incr", "triple"]
+
+
 def test_simple_graph():
     pipe = PipelineBuilder()
     a = pipe.create_input("a", int)

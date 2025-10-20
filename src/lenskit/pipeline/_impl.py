@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
+from graphlib import TopologicalSorter
 from os import PathLike
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
@@ -188,6 +189,19 @@ class Pipeline:
             return None
         else:
             raise KeyError(node)
+
+    def component_names(self) -> Iterable[str]:
+        """
+        Get the component names (in topological order).
+        """
+        sort = TopologicalSorter[str]()
+        comp_nodes = [n for n in self.nodes() if isinstance(n, ComponentInstanceNode)]
+        for node in comp_nodes:
+            edges = self._edges.get(node.name, {})
+            prev = [v for v in edges.values() if isinstance(self.node(v), ComponentInstanceNode)]
+            sort.add(node.name, *prev)
+
+        return sort.static_order()
 
     def node_input_connections(self, node: str | Node[Any]) -> Mapping[str, Node[Any]]:
         """
