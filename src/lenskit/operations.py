@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from lenskit.data import ItemList, QueryInput
 from lenskit.data.types import IDSequence
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import Pipeline, PipelineProfiler
 
 
 def recommend(
@@ -22,6 +22,7 @@ def recommend(
     items: ItemList | IDSequence | None = None,
     *,
     component: str = "recommender",
+    profiler: PipelineProfiler | None = None,
 ) -> ItemList:
     """
     Generate recommendations for a user or query.  This calls the specified
@@ -42,6 +43,8 @@ def recommend(
             candidate selector.
         component:
             The name of the component implementing the recommender.
+        profiler:
+            A profiler for profiling this pipeline run.
 
     Returns:
         The recommended items as an ordered item list.
@@ -50,7 +53,7 @@ def recommend(
     node = pipeline.node(component)
     if items is not None and not isinstance(items, ItemList):
         items = ItemList(items)
-    res = pipeline.run(node, query=query, n=n, items=items)
+    res = pipeline.run(node, query=query, n=n, items=items, _profile=profiler)
     if not isinstance(res, ItemList):
         raise TypeError("recommender pipeline did not return an item list")
 
@@ -63,6 +66,7 @@ def score(
     items: ItemList | IDSequence,
     *,
     component: str = "scorer",
+    profiler: PipelineProfiler | None = None,
 ) -> ItemList:
     """
     Score items with respect to a user or query.  This calls the specified
@@ -88,7 +92,7 @@ def score(
     node = pipeline.node(component)
     if items is not None and not isinstance(items, ItemList):
         items = ItemList(items)
-    res = pipeline.run(node, query=query, items=items)
+    res = pipeline.run(node, query=query, items=items, _profile=profiler)
     if not isinstance(res, ItemList):
         raise TypeError("scorer pipeline did not return an item list")
 
@@ -101,6 +105,7 @@ def predict(
     items: ItemList | IDSequence,
     *,
     component: str = "rating-predictor",
+    profiler: PipelineProfiler | None = None,
 ) -> ItemList:
     """
     Predict ratings for items.  This is exactly like :func:`score`, except it
@@ -113,4 +118,4 @@ def predict(
         Full
     """
 
-    return score(pipeline, query, items, component=component)
+    return score(pipeline, query, items, component=component, profiler=profiler)

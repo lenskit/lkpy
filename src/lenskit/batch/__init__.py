@@ -16,7 +16,7 @@ from typing import Literal, Mapping
 import pandas as pd
 
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import Pipeline, PipelineProfiler
 
 from ._results import BatchResults
 from ._runner import BatchPipelineRunner, InvocationSpec
@@ -83,6 +83,7 @@ def recommend(
     n: int | None = None,
     *,
     n_jobs: int | Literal["ray"] | None = None,
+    profiler: PipelineProfiler | None = None,
 ) -> ItemListCollection[UserIDKey]:
     """
     Convenience function to batch-generate recommendations from a pipeline. This
@@ -96,7 +97,7 @@ def recommend(
         Caller
     """
 
-    runner = BatchPipelineRunner(n_jobs=n_jobs)
+    runner = BatchPipelineRunner(n_jobs=n_jobs, profiler=profiler)
     runner.recommend(n=n)
     outs = runner.run(pipeline, users)
     return outs.output("recommendations")  # type: ignore
