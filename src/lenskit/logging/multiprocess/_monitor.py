@@ -70,7 +70,7 @@ def get_monitor() -> Monitor:
     """
     Get the monitor, starting it if it is not yet running.
     """
-    from ._worker import WorkerLogConfig
+    from ._worker import WorkerContext, WorkerLogConfig
 
     global _monitor_instance
 
@@ -81,6 +81,8 @@ def get_monitor() -> Monitor:
         if _monitor_instance is None:
             ctx = WorkerLogConfig.current(from_monitor=False)
             _monitor_instance = Monitor(handle_logging=ctx is None)
+            gw = WorkerContext(WorkerLogConfig.current(), driver=True, zmq=_monitor_instance.zmq)
+            gw.start()
 
         return _monitor_instance
 
@@ -88,9 +90,16 @@ def get_monitor() -> Monitor:
 @atexit.register
 def _shutdown_monitor():  # type: ignore
     "Shut down the monitor, if one is running."
+    from ._worker import WorkerContext
+
     global _monitor_instance
+    gw = WorkerContext.active()
+    if gw:
+        gw.shutdown()
+
     if _monitor_instance is not None:
         _monitor_instance.shutdown()
+        _monitor_instance = None
 
 
 class MonitorState(Enum):

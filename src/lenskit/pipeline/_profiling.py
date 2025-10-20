@@ -54,6 +54,7 @@ class PipelineProfiler:
             self.writer.writeheader()
 
     def multiprocess(self) -> ProfileSink:
+        _log.debug("registering profiler %s with monitor", self.sink_id)
         self._monitor = get_monitor()
         self._monitor.add_record_sink(self)
         return WorkerProfileSink(self.sink_id)
