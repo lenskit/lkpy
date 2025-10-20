@@ -22,7 +22,8 @@ from dataclasses import dataclass
 from logging import Handler, LogRecord, getLogger
 from threading import Lock
 from time import perf_counter
-from typing import Self, overload
+from typing import Any, Self, overload
+from uuid import UUID
 
 import structlog
 import zmq
@@ -157,9 +158,15 @@ class WorkerContext:
 
     def send_progress(self, update: ProgressMessage):
         """
-        Send a progrss update event.
+        Send a progress update event.
         """
         self._log_handler.send_progress(update)
+
+    def send_record(self, sink_id: UUID, record: Any):
+        """
+        Send a record to a record sink.
+        """
+        self._log_handler.send_record(sink_id, record)
 
     def __enter__(self):
         if self._ref_count == 0:
@@ -304,6 +311,9 @@ class ZMQLogHandler(Handler):
             str(update.progress_id).encode(),
             update.model_dump_json().encode(),
         )
+
+    def send_record(self, sink_id: UUID, record: Any):
+        self._send_message(LogChannel.RECORD, sink_id.hex.encode(), pickle.dumps(record))
 
     def _send_message(self, channel: LogChannel, name: bytes, data: bytes):
         mac = self._auth.hash_message(channel, name, data)

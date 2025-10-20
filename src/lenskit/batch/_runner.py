@@ -15,7 +15,7 @@ import pandas as pd
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import invoker
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import Pipeline, PipelineProfiler
 
 from ._results import BatchResults
 
@@ -60,10 +60,17 @@ class BatchPipelineRunner:
     """
 
     n_jobs: int | Literal["ray"] | None
+    profiler: PipelineProfiler | None
     invocations: list[InvocationSpec]
 
-    def __init__(self, *, n_jobs: int | Literal["ray"] | None = None):
+    def __init__(
+        self,
+        *,
+        n_jobs: int | Literal["ray"] | None = None,
+        profiler: PipelineProfiler | None = None,
+    ):
         self.n_jobs = n_jobs
+        self.profiler = profiler
         self.invocations = []
 
     def add_invocation(self, inv: InvocationSpec):

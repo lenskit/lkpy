@@ -41,6 +41,7 @@ class LogChannel(Enum):
     STRUCTLOG = b"structlog"
     TASKS = b"lenskit.logging.tasks"
     PROGRESS = b"lenskit.logging.progress"
+    RECORD = b"lenskit.logging.record"
 
 
 class ProgressField(NamedTuple):

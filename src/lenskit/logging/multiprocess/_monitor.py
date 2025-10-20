@@ -36,6 +36,7 @@ from ._protocol import (
     MsgAuthenticator,
     ProgressMessage,
 )
+from ._records import RecordSink
 
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
 REFRESH_INTERVAL = 5
@@ -121,6 +122,7 @@ class Monitor:
     log_address: str | None
     _tmpdir: TemporaryDirectory | None = None
     refreshables: dict[UUID, MonitorRefreshable]
+    record_sinks: dict[UUID, RecordSink[Any]]
     lock: threading.Lock
 
     def __init__(self, handle_logging: bool = True):
@@ -142,6 +144,7 @@ class Monitor:
 
         self.lock = threading.Lock()
         self.refreshables = {}
+        self.record_sinks = {}
 
         _log.bind(address=addr).info("monitor ready")
 
@@ -155,6 +158,18 @@ class Monitor:
         with self.lock:
             if uuid in self.refreshables:
                 del self.refreshables[uuid]
+
+    def add_record_sink(self, sink: RecordSink[Any]):
+        self.record_sinks[sink.sink_id] = sink
+
+    def remove_record_sink(self, sink: RecordSink[Any] | UUID):
+        if not isinstance(sink, UUID):
+            sink = sink.sink_id
+
+        try:
+            del self.record_sinks[sink]
+        except KeyError:
+            _log.warn("record sink %s already removed", sink)
 
     def shutdown(self):
         log = _log.bind()
@@ -309,6 +324,13 @@ class MonitorThread(threading.Thread):
                 update = ProgressMessage.model_validate_json(data)
                 backend = progress_backend()
                 backend.handle_message(update)
+            case LogChannel.RECORD:
+                sink_id = UUID(name)
+                record = pickle.loads(data)
+                if sink := self.monitor.record_sinks.get(sink_id):
+                    sink.record(record)
+                else:
+                    _log.warn("received record for nonexistent sink", sink=sink_id.hex)
 
             case _:
                 _log.error("unsupported log channel %s", channel)

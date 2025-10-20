@@ -42,6 +42,7 @@ from .state import PipelineState
 if TYPE_CHECKING:
     from lenskit.training import TrainingOptions
 
+    from ._profiling import ProfileSink
     from .builder import PipelineBuilder
 
 _log = get_logger(__name__)
@@ -411,6 +412,8 @@ class Pipeline:
                 The component(s) to run.
             kwargs:
                 The pipeline's inputs, as defined with :meth:`create_input`.
+                These are passed as-is to :meth:`run_all`, so they can also
+                contain auxillary options like `_profile`.
 
         Returns:
             The pipeline result.  If no nodes are supplied, this is the result
@@ -438,7 +441,7 @@ class Pipeline:
         else:
             node_list = nodes
 
-        state = self.run_all(*node_list, **kwargs)
+        state = self.run_all(*node_list, **kwargs)  # type: ignore
         results = [state[self.node(n).name] for n in node_list]
 
         if node_list is nodes:
@@ -446,7 +449,9 @@ class Pipeline:
         else:
             return results[0]
 
-    def run_all(self, *nodes: str | Node[Any], **kwargs: object) -> PipelineState:
+    def run_all(
+        self, *nodes: str | Node[Any], _profile: ProfileSink | None = None, **kwargs: object
+    ) -> PipelineState:
         """
         Run all nodes in the pipeline, or all nodes required to fulfill the
         requested node, and return a mapping with the full pipeline state (the
@@ -465,8 +470,10 @@ class Pipeline:
             nodes:
                 The nodes to run, as positional arguments (if no nodes are
                 specified, this method runs all nodes).
+            _profile:
+                A profiler to profile this pipeline run.
             kwargs:
-                The inputs.
+                The pipeline inputs.
 
         Returns:
             The full pipeline state, with :attr:`~PipelineState.default` set to
@@ -474,7 +481,8 @@ class Pipeline:
         """
         from .runner import PipelineRunner
 
-        runner = PipelineRunner(self, kwargs)
+        prof = _profile.run_profiler() if _profile is not None else None
+        runner = PipelineRunner(self, kwargs, profiler=prof)
         node_list = [self.node(n) for n in nodes]
         _log.debug("running pipeline", name=self.name, nodes=[n.name for n in node_list])
         if not node_list:
@@ -484,6 +492,9 @@ class Pipeline:
         for node in node_list:
             runner.run(node)
             last = node.name
+
+        if prof is not None:
+            prof.finish_run()
 
         return PipelineState(
             runner.state,

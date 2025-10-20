@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from ._monitor import Monitor, get_monitor
+from ._records import RecordSink
 from ._worker import WorkerContext, WorkerLogConfig, send_task
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "WorkerContext",
     "WorkerLogConfig",
     "send_task",
+    "RecordSink",
 ]
