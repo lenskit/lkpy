@@ -15,7 +15,8 @@ import pandas as pd
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import invoker
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import Pipeline, PipelineProfiler
+from lenskit.pipeline._profiling import ProfileSink
 
 from ._results import BatchResults
 
@@ -60,10 +61,17 @@ class BatchPipelineRunner:
     """
 
     n_jobs: int | Literal["ray"] | None
+    profiler: PipelineProfiler | None
     invocations: list[InvocationSpec]
 
-    def __init__(self, *, n_jobs: int | Literal["ray"] | None = None):
+    def __init__(
+        self,
+        *,
+        n_jobs: int | Literal["ray"] | None = None,
+        profiler: PipelineProfiler | None = None,
+    ):
         self.n_jobs = n_jobs
+        self.profiler = profiler
         self.invocations = []
 
     def add_invocation(self, inv: InvocationSpec):
@@ -151,11 +159,17 @@ class BatchPipelineRunner:
             test_iter = ((_ensure_key(k), None) for k in test_data)
             n_users = len(test_data)
 
+        prof = self.profiler
+        if prof is not None:
+            prof = prof.multiprocess()
+
         log = _log.bind(name=pipeline.name, n_queries=n_users, n_jobs=self.n_jobs)
         log.info("beginning batch run")
 
         with (
-            invoker((pipeline, self.invocations), _run_pipeline, n_jobs=self.n_jobs) as worker,
+            invoker(
+                (pipeline, self.invocations, prof), _run_pipeline, n_jobs=self.n_jobs
+            ) as worker,
             item_progress("Recommending", n_users) as progress,
         ):
             # release our reference, will sometimes free the pipeline memory in this process
@@ -182,10 +196,10 @@ def _ensure_key(key: ID | tuple[ID, ...]):
 
 
 def _run_pipeline(
-    ctx: tuple[Pipeline, list[InvocationSpec]],
+    ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None],
     req: tuple[GenericKey, ItemList],
 ) -> tuple[GenericKey, dict[str, object]]:
-    pipeline, invocations = ctx
+    pipeline, invocations, profiler = ctx
     key, test_items = req
 
     result = {}
@@ -202,7 +216,7 @@ def _run_pipeline(
         inputs.update(inv.extra_inputs)
 
         nodes = inv.components.keys()
-        outs = pipeline.run_all(*nodes, **inputs)
+        outs = pipeline.run_all(*nodes, _profile=profiler, **inputs)
         for cname, oname in inv.components.items():
             result[oname] = outs[cname]
 

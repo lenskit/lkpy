@@ -19,6 +19,7 @@ from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger, trace
 
 from ._impl import Pipeline
+from ._profiling import RunProfiler
 from .components import component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
 from .types import Lazy, SkipComponent, TypeExpr, is_compatible_data
@@ -44,13 +45,17 @@ class PipelineRunner:
     inputs: dict[str, Any]
     status: dict[str, State]
     state: dict[str, Any]
+    _profiler: RunProfiler | None = None
 
-    def __init__(self, pipe: Pipeline, inputs: dict[str, Any]):
+    def __init__(
+        self, pipe: Pipeline, inputs: dict[str, Any], *, profiler: RunProfiler | None = None
+    ):
         self.log = _log.bind(pipeline=pipe.name)
         self.pipe = pipe
         self.inputs = inputs
         self.status = {n.name: "pending" for n in pipe.nodes()}
         self.state = {}
+        self._profiler = profiler
 
     def run(self, node: Node[Any], *, required: bool = True) -> Any:
         """
@@ -154,10 +159,15 @@ class PipelineRunner:
 
         trace(log, "running component", component=node.component)
         try:
+            if self._profiler is not None:
+                self._profiler.start_stage(node.name)
             self.state[node.name] = node.component(**in_data)
         except SkipComponent as e:
             trace(log, "component execution skipped", exc_info=e)
             self.state[node.name] = None
+        finally:
+            if self._profiler is not None:
+                self._profiler.finish_stage(node.name)
 
     def _run_input_hooks(
         self,

@@ -14,6 +14,7 @@ from lenskit.diagnostics import PipelineError, PipelineWarning
 
 from ._hooks import ComponentInputHook
 from ._impl import CloneMethod, Pipeline
+from ._profiling import PipelineProfiler, ProfileSink
 from .builder import PipelineBuilder
 from .cache import PipelineCache
 from .common import RecPipelineBuilder, predict_pipeline, topn_pipeline
@@ -30,6 +31,8 @@ from .types import Lazy
 __all__ = [
     "Pipeline",
     "PipelineBuilder",
+    "PipelineProfiler",
+    "ProfileSink",
     "CloneMethod",
     "PipelineError",
     "PipelineWarning",

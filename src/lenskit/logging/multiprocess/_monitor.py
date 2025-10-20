@@ -36,6 +36,7 @@ from ._protocol import (
     MsgAuthenticator,
     ProgressMessage,
 )
+from ._records import RecordSink
 
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
 REFRESH_INTERVAL = 5
@@ -69,7 +70,7 @@ def get_monitor() -> Monitor:
     """
     Get the monitor, starting it if it is not yet running.
     """
-    from ._worker import WorkerLogConfig
+    from ._worker import WorkerContext, WorkerLogConfig
 
     global _monitor_instance
 
@@ -80,6 +81,8 @@ def get_monitor() -> Monitor:
         if _monitor_instance is None:
             ctx = WorkerLogConfig.current(from_monitor=False)
             _monitor_instance = Monitor(handle_logging=ctx is None)
+            gw = WorkerContext(WorkerLogConfig.current(), driver=True, zmq=_monitor_instance.zmq)
+            gw.start()
 
         return _monitor_instance
 
@@ -87,9 +90,16 @@ def get_monitor() -> Monitor:
 @atexit.register
 def _shutdown_monitor():  # type: ignore
     "Shut down the monitor, if one is running."
+    from ._worker import WorkerContext
+
     global _monitor_instance
+    gw = WorkerContext.active()
+    if gw:
+        gw.shutdown()
+
     if _monitor_instance is not None:
         _monitor_instance.shutdown()
+        _monitor_instance = None
 
 
 class MonitorState(Enum):
@@ -121,6 +131,7 @@ class Monitor:
     log_address: str | None
     _tmpdir: TemporaryDirectory | None = None
     refreshables: dict[UUID, MonitorRefreshable]
+    record_sinks: dict[UUID, RecordSink[Any]]
     lock: threading.Lock
 
     def __init__(self, handle_logging: bool = True):
@@ -142,6 +153,7 @@ class Monitor:
 
         self.lock = threading.Lock()
         self.refreshables = {}
+        self.record_sinks = {}
 
         _log.bind(address=addr).info("monitor ready")
 
@@ -155,6 +167,37 @@ class Monitor:
         with self.lock:
             if uuid in self.refreshables:
                 del self.refreshables[uuid]
+
+    def add_record_sink(self, sink: RecordSink[Any]):
+        self.record_sinks[sink.sink_id] = sink
+
+    def remove_record_sink(self, sink: RecordSink[Any] | UUID):
+        if not isinstance(sink, UUID):
+            sink = sink.sink_id
+
+        try:
+            del self.record_sinks[sink]
+        except KeyError:
+            _log.warn("record sink %s already removed", sink)
+
+    def await_quiesce(self, *, ms: int = 100):
+        """
+        Wait for the monitor to quiesce.
+
+        Args:
+            ms:
+                The number of milliseconds of quiet to expect for quiescence.
+        """
+        timeout = ms / 1000
+        wait_ns = ms * 1_000_000
+        with self._backend.msg_condition:
+            while True:
+                now = time.perf_counter_ns()
+                diff = now - self._backend.last_msg
+                if diff >= wait_ns - 1000:
+                    return
+                _log.debug("last interval %dns, waiting", diff)
+                self._backend.msg_condition.wait(timeout)
 
     def shutdown(self):
         log = _log.bind()
@@ -200,6 +243,8 @@ class MonitorThread(threading.Thread):
     poller: zmq.Poller
     _auth: MsgAuthenticator
     last_refresh: float
+    last_msg: int
+    msg_condition: threading.Condition
 
     def __init__(self, monitor: Monitor, log_sock: zmq.Socket[bytes] | None):
         super().__init__(name="LensKitMonitor", daemon=True)
@@ -207,6 +252,8 @@ class MonitorThread(threading.Thread):
         self.log_sock = log_sock
         self._auth = MsgAuthenticator(mp.current_process().authkey)
         self.last_refresh = time.perf_counter()
+        self.last_msg = time.perf_counter_ns()
+        self.msg_condition = threading.Condition()
 
     def run(self) -> None:
         self.state = MonitorState.ACTIVE
@@ -234,6 +281,8 @@ class MonitorThread(threading.Thread):
                 timeout = 0
 
             ready = dict(self.poller.poll(timeout))
+            now_ns = time.perf_counter_ns()
+            now = now_ns / 1_000_000_000
 
             if self.signal in ready:
                 self._handle_signal()
@@ -241,6 +290,10 @@ class MonitorThread(threading.Thread):
             if self.log_sock is not None and self.log_sock in ready:
                 try:
                     self._handle_log_message()
+                    # can we do this with ZeroMQ instead of a thread lock?
+                    with self.msg_condition:
+                        self.last_msg = now_ns
+                        self.msg_condition.notify_all()
                 except Exception as e:
                     _log.error("error handling message", exc_info=e)
 
@@ -250,7 +303,6 @@ class MonitorThread(threading.Thread):
 
                 elif self.state == MonitorState.ACTIVE:
                     # nothing to do — check if we need a refresh
-                    now = time.perf_counter()
                     left = max(int((REFRESH_INTERVAL - now + last_refresh) * 1000), 0)
                     if left < 20:
                         self._do_refresh()
@@ -309,6 +361,13 @@ class MonitorThread(threading.Thread):
                 update = ProgressMessage.model_validate_json(data)
                 backend = progress_backend()
                 backend.handle_message(update)
+            case LogChannel.RECORD:
+                sink_id = UUID(name)
+                record = pickle.loads(data)
+                if sink := self.monitor.record_sinks.get(sink_id):
+                    sink.record(record)
+                else:
+                    _log.warn("received record for nonexistent sink", sink=sink_id.hex)
 
             case _:
                 _log.error("unsupported log channel %s", channel)
