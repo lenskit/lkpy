@@ -15,10 +15,13 @@ from uuid import UUID, uuid4
 
 from xopen import xopen
 
+from lenskit.logging import get_logger
 from lenskit.logging.multiprocess import Monitor, RecordSink, WorkerContext, get_monitor
 
 if TYPE_CHECKING:
     from ._impl import Pipeline
+
+_log = get_logger(__name__)
 
 
 class ProfileSink(RecordSink[dict[str, float]], Protocol):
@@ -40,6 +43,7 @@ class PipelineProfiler:
         self.sink_id = uuid4()
         self.output = xopen(file, "wt")
         stages = pipeline.component_names()
+        _log.debug("starting pipeline profiler %s", self.sink_id)
         self.writer = DictWriter(self.output, stages)
         self.writer.writeheader()
 
