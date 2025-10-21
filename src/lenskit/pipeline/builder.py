@@ -283,7 +283,7 @@ class PipelineBuilder:
             else:
                 raise e
 
-    def alias(self, alias: str, node: Node[Any] | str, *, _replace: bool = False) -> None:
+    def alias(self, alias: str, node: Node[Any] | str, *, replace: bool = False) -> None:
         """
         Create an alias for a node.  After aliasing, the node can be retrieved
         from :meth:`node` using either its original name or its alias.
@@ -293,13 +293,15 @@ class PipelineBuilder:
                 The alias to add to the node.
             node:
                 The node (or node name) to alias.
+            replace:
+                If ``True``, replace the alias if one already exists.
 
         Raises:
             ValueError:
                 if the alias is already used as an alias or node name.
         """
         node = self.node(node)
-        if _replace:
+        if replace:
             if alias in self._nodes:
                 del self._nodes[alias]
         else:
@@ -740,7 +742,7 @@ class PipelineBuilder:
 
         # pass 4: aliases
         for n, t in config.aliases.items():
-            self.alias(n, t, _replace=extend)
+            self.alias(n, t, replace=extend)
 
         self._default = config.default
         self._run_hooks = {
