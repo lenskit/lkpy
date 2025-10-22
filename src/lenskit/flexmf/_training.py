@@ -100,7 +100,8 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.log = _log.bind(scorer=self.__class__.__name__, size=self.config.embedding_size)
 
         self.device = options.configured_device(gpu_default=True)
-        self._init_rng(options)
+        self.rng = options.random_generator()
+        self.torch_rng = options.random_generator(type="torch")
 
         self.data = self.prepare_data(data)
         self.component.model = self.create_model()
@@ -248,14 +249,6 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
             self.log.debug("creating SparseAdam optimizer")
             opt = torch.optim.SparseAdam(self.model.parameters(), lr=self.config.learning_rate)
         self.opt = opt
-
-    def _init_rng(self, options: TrainingOptions):
-        self.rng = options.random_generator()
-
-        # use the NumPy generator to seed Torch
-        self.torch_rng = torch.Generator()
-        i32 = np.iinfo(np.int32)
-        self.torch_rng.manual_seed(int(self.rng.integers(i32.min, i32.max)))
 
     def get_parameters(self) -> Mapping[str, object]:
         return self.model.state_dict()
