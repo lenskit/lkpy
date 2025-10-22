@@ -30,6 +30,7 @@ from lenskit.pipeline import topn_pipeline
 from lenskit.splitting import simple_test_pair
 from lenskit.stochastic import StochasticTopNRanker
 from lenskit.testing import BasicComponentTests, ScorerTests, scored_lists
+from lenskit.training import TrainingOptions
 
 _log = get_logger(__name__)
 
@@ -245,7 +246,7 @@ def test_scale_affects_ranking(ml_ds: Dataset):
     """
     rng = np.random.default_rng()
     pipe = topn_pipeline(ImplicitMFScorer(embedding_size=32, weight=5))
-    pipe.train(ml_ds)
+    pipe.train(ml_ds, TrainingOptions(rng=rng))
 
     topn = TopNRanker()
     samp_frac = StochasticTopNRanker(scale=0.01)
