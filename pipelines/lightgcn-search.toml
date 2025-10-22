@@ -7,7 +7,7 @@ metric = "RBP"
 num_gpus = 1
 
 [space.scorer]
-embedding_size_exp = { type = "int", min = 3, max = 7 }
+embedding_size_exp = { type = "int", min = 3, max = 6 }
 layer_count = { type = "int", min = 1, max = 3 }
 regularization = { type = "float", min = 1e-5, max = 1, scale = "log" }
 learning_rate = { type = "float", min = 1.0e-3, max = 0.1, scale = "log" }
