@@ -198,7 +198,7 @@ def _torch_rng(seed: RNGInput = None) -> torch.Generator:
         seed = SeedSequence(seed)
         return gen.manual_seed(int(seed.generate_state(1)[0]))
     elif isinstance(seed, np.random.Generator):
-        i32 = np.iinfo("i32")
+        i32 = np.iinfo(np.int32)
         gen.manual_seed(int(seed.integers(i32.min, i32.max)))
     elif isinstance(seed, np.random.BitGenerator):
         gen.manual_seed(seed.random_raw())
