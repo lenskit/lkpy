@@ -300,12 +300,14 @@ class ModelTrainer(ABC):
     implement :class:`UsesTrainer` will return an object implementing this
     protocol from their :meth:`~UsesTrainer.create_trainer` method.
 
-    This protocol only defines the core aspects of training a model. Trainers
-    should also implement :class:`~lenskit.state.ParameterContainer` to allow
-    training to be checkpointed and resumed.
+    ..
 
-    It is also a good idea for the trainer to be pickleable, but the parameter
-    container interface is the primary mechanism for checkpointing.
+        This protocol only defines the core aspects of training a model. Trainers
+        should also implement :class:`~lenskit.state.ParameterContainer` to allow
+        training to be checkpointed and resumed.
+
+        It is also a good idea for the trainer to be pickleable, but the parameter
+        container interface is the primary mechanism for checkpointing.
 
     Stability:
         Full
