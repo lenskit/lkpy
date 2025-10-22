@@ -57,7 +57,7 @@ class LightGCNConfig(EmbeddingSizeMixin, BaseModel):
     ``alpha`` in :class:`LightGCN`.
     """
 
-    batch_size: PositiveInt = 8 * 1024
+    batch_size: PositiveInt = 4 * 1024
     """
     The training batch size.
     """
