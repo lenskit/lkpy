@@ -114,9 +114,11 @@ class Trainable(Protocol):  # pragma: nocover
     -   They are usually components (:class:`~lenskit.pipeline.Component`), with
         an appropriate ``__call__`` method.
     -   They should be pickleable.
-    -   They should also usually implement
-        :class:`~lenskit.state.ParameterContainer`, to allow the learned
-        parameters to be serialized and deserialized without pickling.
+
+    ..
+        -   They should also usually implement
+            :class:`~lenskit.state.ParameterContainer`, to allow the learned
+            parameters to be serialized and deserialized without pickling.
 
     Stability:
         Full
@@ -226,7 +228,7 @@ class UsesTrainer(IterativeTraining, Component, ABC):
     :class:`ModelTrainer`.  This class implements :class:`IterativeTraining` for
     compatibility, but the :class:`IterativeTraining` interface is deprecated.
 
-    The component's configuration must have an ``epochs`` attribute noting the
+    The component's configuration must have an ``epochs`` attribute defining the
     number of epochs to train.
 
     Stability:
@@ -309,12 +311,14 @@ class ModelTrainer(ABC):
     implement :class:`UsesTrainer` will return an object implementing this
     protocol from their :meth:`~UsesTrainer.create_trainer` method.
 
-    This protocol only defines the core aspects of training a model. Trainers
-    should also implement :class:`~lenskit.state.ParameterContainer` to allow
-    training to be checkpointed and resumed.
+    ..
 
-    It is also a good idea for the trainer to be pickleable, but the parameter
-    container interface is the primary mechanism for checkpointing.
+        This protocol only defines the core aspects of training a model. Trainers
+        should also implement :class:`~lenskit.state.ParameterContainer` to allow
+        training to be checkpointed and resumed.
+
+        It is also a good idea for the trainer to be pickleable, but the parameter
+        container interface is the primary mechanism for checkpointing.
 
     Stability:
         Full
@@ -328,9 +332,11 @@ class ModelTrainer(ABC):
         must be usable.
         """
 
-    @abstractmethod
     def finalize(self) -> None:
         """
         Finish the training process, cleaning up any unneeded data structures
         and doing any finalization steps to the model.
+
+        The default implementation does nothing.
         """
+        pass
