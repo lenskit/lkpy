@@ -203,7 +203,7 @@ def _torch_rng(seed: RNGInput = None) -> torch.Generator:
     elif isinstance(seed, np.random.BitGenerator):
         gen.manual_seed(seed.random_raw())
     elif _global_rng is not None:
-        return _torch_rng(_global_seed)
+        return _torch_rng(_global_rng)
 
     return gen
 
