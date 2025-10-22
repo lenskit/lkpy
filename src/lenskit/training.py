@@ -105,9 +105,11 @@ class Trainable(Protocol):  # pragma: nocover
     -   They are usually components (:class:`~lenskit.pipeline.Component`), with
         an appropriate ``__call__`` method.
     -   They should be pickleable.
-    -   They should also usually implement
-        :class:`~lenskit.state.ParameterContainer`, to allow the learned
-        parameters to be serialized and deserialized without pickling.
+
+    ..
+        -   They should also usually implement
+            :class:`~lenskit.state.ParameterContainer`, to allow the learned
+            parameters to be serialized and deserialized without pickling.
 
     Stability:
         Full
@@ -217,7 +219,7 @@ class UsesTrainer(IterativeTraining, Component, ABC):
     :class:`ModelTrainer`.  This class implements :class:`IterativeTraining` for
     compatibility, but the :class:`IterativeTraining` interface is deprecated.
 
-    The component's configuration must have an ``epochs`` attribute noting the
+    The component's configuration must have an ``epochs`` attribute defining the
     number of epochs to train.
 
     Stability:
