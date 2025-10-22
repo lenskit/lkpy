@@ -128,7 +128,7 @@ Component Training
 
 Components that need to train models on training data must implement the
 :class:`~lenskit.training.Trainable` protocol, either directly or through a
-helper implementation like :class:`~lenskit.training.IterativeTraining`.  The
+helper implementation like :class:`~lenskit.training.UsesTrainer`.  The
 core of the ``Trainable`` protocol is the
 :meth:`~lenskit.training.Trainable.train` method, which takes a
 :class:`~lenskit.data.Dataset` and :class:`~lenskit.training.TrainingOptions`
@@ -140,7 +140,7 @@ though, it follows the following steps:
 1.  Extract, prepare, and preprocess training data as needed for the model.
 2.  Compute the model's parameters, either directly (i.e.
     :class:`~lenskit.basic.BiasScorer`) or through an optimization method (i.e.
-    :class:`~lenskit.basic.ImplicitMFScorer`).
+    :class:`~lenskit.als.ImplicitMFScorer`).
 3.  Finalize the model parameters and clean up any temporary data.
 
 Learned model parameters are then stored as attributes on the component class,
@@ -152,7 +152,7 @@ either directly or in a container object (such as a PyTorch
     If the model is already trained and the
     :attr:`~lenskit.training.TrainingOptions.retrain` is ``False``, then the
     ``train`` method should return without any training.
-    :class:`~lenskit.training.IterativeTraining` handles this automatically.
+    :class:`~lenskit.training.UsesTrainer` handles this automatically.
 
 
 .. _iterative-training:
@@ -160,57 +160,44 @@ either directly or in a container object (such as a PyTorch
 Iterative Training
 ------------------
 
-The :class:`lenskit.training.IterativeTraining` class provides a standardized
-interface and training loop support for training models with iterative methods
-that pass through the training data in multiple *epochs*.  Models that use this
-support extend :class:`~lenskit.training.IterativeTraining` in addition to
+The :class:`lenskit.training.UsesTrainer` class and its companion
+:class:`~lenskit.training.ModelTrainer` provide a standardized interface and
+outer training loop for training models with iterative methods that pass through
+the training data in multiple *epochs*.  Modeling components that use this
+support extend :class:`~lenskit.training.UsesTrainer` in addition to
 :class:`~lenskit.pipeline.Component`, and implement the
-:meth:`~lenskit.training.IterativeTraining.training_loop` method instead of
+:meth:`~lenskit.training.UsesTrainer.create_trainer` method instead of
 :meth:`~lenskit.training.Trainable.train`.  Iteratively-trainable components
 should also have an ``epochs`` setting on their configuration class that
 specifies the number of training epochs to run.
 
-The :meth:`~lenskit.training.IterativeTraining.training_loop` method does 3 things:
+Training itself is handled by a separate *trainer class* that extends
+:class:`~lenskit.training.ModelTrainer`, an instance of which is created by
+:meth:`~lenskit.training.UsesTrainer.create_trainer`.
 
-1.  Set up initial data structures, preparation, etc. needed for model training.
-2.  Train the model, yielding after each training epoch.  It can optionally
-    yield a set of metrics, such as training loss or update magnitudes.
-3.  Perform any final steps and training data cleanup.
+Model training with an iterative trainer happens in three steps:
 
-The model should be usable after each epoch, to support things like measuring
-performance on validation data.
+1.  Set up initial data structures, preparation, etc. needed for model training.  This can
+    be implemented either directly in :meth:`~lenskit.training.UsesTrainer.create_trainer`, or
+    in the model trainer's constructor (``__init__`` method).
+2.  Train the model for a single epoch through the training data, in the
+    :meth:`~lenskit.training.ModelTrainer.train_epoch` method implemented on the
+    model trainer subclass.
+3.  Perform any final steps and training data cleanup in
+    :meth:`~lenskit.training.ModelTrainer.finalize`, if necessary.  Placing a
+    PyTorch module back in evaluation mode is an example of something that would
+    go here.
 
-The training loop itself is represented as a Python iterator, so that a ``for``
-loop will loop through the training epochs.  While the interface definition
-specifies the ``Iterator`` type in order to minimize restrictions on component
-implementers, we recommend that it actually be a ``Generator``, which allows the
-caller to request early termination (through the
-:meth:`~collections.abc.Generator.close` method).  We also recommend that the
-``training_loop()`` method only return the generator after initial data preparation
-is complete, so that setup time is not included in the time taken for the first
-loop iteration.  The easiest way to do implement this is by delegating to an
-inner loop function, written as a Python generator:
+The model should be usable, even if not optimally efficient, after each training
+epoch.  This requirement is to support things like measuring performance on
+validation data (used by the hyperparameter tuner).
 
-.. code:: python
+.. note::
 
-    def training_loop(self, data: Dataset, options: TrainingOptions):
-        # do initial data setup/prep for training
-        context = ...
-        # pass off to inner generator
-        return self._training_loop_impl(context)
-
-    def _training_loop_impl(self, context):
-        for i in range(self.config.epochs):
-            # do the model training
-            # compute the metrics
-            try:
-                yield {'loss': loss}
-            except GeneratorExit:
-                # client code has requested early termination
-                break
-
-        # any final cleanup steps
-
+    If a component implements iterative training through
+    :class:`~lenskit.training.UsesTrainer`, the LensKit hyperparameter tuner
+    will use the trainer directly to implement early stopping for tuning trials
+    and dynamically find a good epoch count.
 
 Further Reading
 ~~~~~~~~~~~~~~~
