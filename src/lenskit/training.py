@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, overload, runtime_checkable
 
 import numpy as np
 
@@ -25,6 +25,9 @@ from lenskit.data.dataset import Dataset
 from lenskit.logging import get_logger, item_progress
 from lenskit.pipeline.components import Component
 from lenskit.random import RNGInput, random_generator
+
+if TYPE_CHECKING:
+    import torch
 
 _log = get_logger(__name__)
 
@@ -55,7 +58,13 @@ class TrainingOptions:
     that into a NumPy :class:`~numpy.random.Generator`.
     """
 
-    def random_generator(self) -> np.random.Generator:
+    @overload
+    def random_generator(self, *, type: Literal["numpy"] = "numpy") -> np.random.Generator: ...
+    @overload
+    def random_generator(self, *, type: Literal["torch"]) -> torch.Generator: ...
+    def random_generator(
+        self, *, type: Literal["numpy", "torch"] = "numpy"
+    ) -> np.random.Generator | torch.Generator:
         """
         Obtain a random generator from the configured RNG or seed.
 
@@ -65,7 +74,7 @@ class TrainingOptions:
             seed.  Components should call it once at the beginning of their
             training procesess.
         """
-        return random_generator(self.rng)
+        return random_generator(self.rng, type=type)
 
     def configured_device(self, *, gpu_default: bool = False) -> str:
         """
