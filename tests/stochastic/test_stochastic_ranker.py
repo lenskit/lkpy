@@ -244,7 +244,7 @@ def test_scale_affects_ranking(ml_ds: Dataset):
     Test that different softmax scales produce different levels of ranking variation.
     """
     rng = np.random.default_rng()
-    pipe = topn_pipeline(ImplicitMFScorer(embedding_size=32))
+    pipe = topn_pipeline(ImplicitMFScorer(embedding_size=32, weight=5))
     pipe.train(ml_ds)
 
     topn = TopNRanker()
