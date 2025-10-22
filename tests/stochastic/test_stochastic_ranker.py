@@ -251,9 +251,9 @@ def test_scale_affects_ranking(ml_ds: Dataset):
     seed1, seed2, seed3 = rng.bit_generator.random_raw(3)
 
     topn = TopNRanker()
-    samp_frac = StochasticTopNRanker(scale=0.01, rng=seed1)
-    samp_one = StochasticTopNRanker(scale=1, rng=seed2)
-    samp_hundred = StochasticTopNRanker(scale=50, rng=seed3)
+    samp_frac = StochasticTopNRanker(scale=0.01, rng=int(seed1))
+    samp_one = StochasticTopNRanker(scale=1, rng=int(seed2))
+    samp_hundred = StochasticTopNRanker(scale=50, rng=int(seed3))
 
     jc_frac = []
     jc_one = []
