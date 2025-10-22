@@ -261,10 +261,13 @@ def test_scale_affects_ranking(ml_ds: Dataset):
 
     for uid in rng.choice(ml_ds.users.ids(), size=500):
         ilist = recommend(pipe, uid)
-        rl_topn = topn(items=ilist, n=10)
-        rl_frac = samp_frac(items=ilist, n=10)
-        rl_one = samp_one(items=ilist, n=10)
-        rl_hundred = samp_hundred(items=ilist, n=10)
+        rl_topn = topn(items=ilist, n=20)
+        rl_frac = samp_frac(items=ilist, n=20)
+        assert len(rl_frac) == 20
+        rl_one = samp_one(items=ilist, n=20)
+        assert len(rl_one) == 20
+        rl_hundred = samp_hundred(items=ilist, n=20)
+        assert len(rl_hundred) == 20
 
         jc_frac.append(_jaccard(rl_topn, rl_frac))
         jc_one.append(_jaccard(rl_topn, rl_one))
