@@ -50,7 +50,9 @@ class ItemListCollection(Generic[KL], ABC):
     An item list collection consists of a sequence of item lists with associated
     *keys* following a fixed schema.  Item list collections support iteration
     (in order) and lookup by key. They are used to represent a variety of
-    things, including test data and the results of a batch run.
+    things, including test data and the results of a batch run. The length of an
+    item list collection (accessed with :func:`len`) is the number of item lists
+    in the collection, not the total number of items in the lists.
 
     The key schema can be specified either by a list of field names, or by
     providing a named tuple class (created by either :func:`namedtuple` or
@@ -465,6 +467,12 @@ class ItemListCollection(Generic[KL], ABC):
         """
         kp = project_key(key, self._key_class)
         return self.lookup(kp)
+
+    def total_items(self) -> int:
+        """
+        Count the total number of items across all lists in this collection.
+        """
+        return sum(len(il) for il in self.lists())
 
     @abstractmethod
     def items(self) -> Iterator[tuple[KL, ItemList]]:
