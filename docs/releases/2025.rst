@@ -9,6 +9,15 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.4.0:
+
+2025.4.0
+~~~~~~~~
+
+Some small improvements.  See `milestone 2025.4`_ for details.
+
+.. _milestone 2025.4: https://github.com/lenskit/lkpy/issues?q=state%3Aclosed%20milestone%3A%222025.4%22
+
 .. _2025.3.2:
 
 2025.3.2

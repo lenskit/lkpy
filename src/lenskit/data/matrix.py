@@ -22,6 +22,8 @@ import scipy.sparse as sps
 import torch
 from numpy.typing import ArrayLike
 
+from lenskit._accel import data as _data_accel
+
 t = torch
 M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, sps.spmatrix, t.Tensor)
 
@@ -435,6 +437,19 @@ class SparseRowArray(pa.ExtensionArray):
             size=self.shape,
         )
 
+    def to_coo(self) -> pa.Table:
+        """
+        Convert this array to table representing the array in COO format.
+        """
+        nr, nc = self.shape
+        lengths = self.storage.value_lengths()
+        assert len(lengths) == nr
+        rowinds = np.repeat(np.arange(nr, dtype=np.int32), lengths)
+        fields = {"row": rowinds, "col": self.indices}
+        if self.has_values:
+            fields["value"] = self.values
+        return pa.table(fields)
+
     @property
     def dimension(self) -> int:
         """
@@ -467,6 +482,29 @@ class SparseRowArray(pa.ExtensionArray):
             return self.storage.values.field(1)
         else:
             return None
+
+    def structure(self) -> SparseRowArray:
+        """
+        Get the structure of this matrix (without values).
+        """
+        if self.has_values:
+            return self.from_arrays(self.offsets, self.indices, shape=self.shape)
+        else:
+            return self
+
+    def transpose(self) -> SparseRowArray:
+        """
+        Get the transpose of this sparse matrix.
+        """
+        nr, nc = self.shape
+        row_ptr, col_ind, perm = _data_accel.transpose_csr(self.structure(), self.has_values)
+        if perm is None:
+            return self.from_arrays(row_ptr, col_ind, shape=(nc, nr))
+        else:
+            values = self.values
+            assert values is not None
+            values = values.take(perm)
+            return self.from_arrays(row_ptr, col_ind, values, shape=(nc, nr))
 
     def row_extent(self, row: int) -> tuple[int, int]:
         """

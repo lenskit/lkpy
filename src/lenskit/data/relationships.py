@@ -394,15 +394,24 @@ class MatrixRelationshipSet(RelationshipSet):
         # already a matrix relationship set
         return self
 
-    def csr_structure(self) -> CSRStructure:
+    @overload
+    def csr_structure(self, *, format: Literal["numpy"] = "numpy") -> CSRStructure: ...
+    @overload
+    def csr_structure(self, *, format: Literal["arrow"]) -> SparseRowArray: ...
+    def csr_structure(
+        self, *, format: Literal["numpy", "arrow"] = "numpy"
+    ) -> CSRStructure | SparseRowArray:
         """
         Get the compressed sparse row structure of this relationship matrix.
         """
-        n_rows = len(self.row_vocabulary)
-        n_cols = len(self.col_vocabulary)
+        if format == "arrow":
+            return self._structure
+        else:
+            n_rows = len(self.row_vocabulary)
+            n_cols = len(self.col_vocabulary)
 
-        colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
-        return CSRStructure(self._row_ptrs, colinds, (n_rows, n_cols))
+            colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
+            return CSRStructure(self._row_ptrs, colinds, (n_rows, n_cols))
 
     def coo_structure(self) -> COOStructure:
         """

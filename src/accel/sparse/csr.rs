@@ -7,19 +7,29 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use log::*;
 use pyo3::prelude::*;
 
 use arrow::{
     array::{
-        downcast_array, Array, Float32Array, GenericListArray, Int32Array, OffsetSizeTrait,
-        StructArray,
+        downcast_array, Array, ArrowPrimitiveType, GenericListArray, Int32Array, OffsetSizeTrait,
+        PrimitiveArray, StructArray,
     },
-    datatypes::DataType,
+    datatypes::{DataType, Float32Type},
 };
-use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
 
+use crate::arrow::{lists::ExtractListArray, SparseIndexListType, SparseRowType};
+
 use super::SparseIndexType;
+
+/// Variant type to wrap data with different index types.
+#[derive(Clone)]
+pub enum IxVar<T32, T64> {
+    Ix32(T32),
+    Ix64(T64),
+}
 
 /// A compressed sparse row matrix with only structure, not values.
 pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
@@ -32,12 +42,12 @@ pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
 }
 
 /// A compressed sparse row matrix.
-pub struct CSRMatrix<Ix: OffsetSizeTrait = i32> {
+pub struct CSRMatrix<Ix: OffsetSizeTrait = i32, V: ArrowPrimitiveType = Float32Type> {
     pub n_rows: usize,
     pub n_cols: usize,
     array: GenericListArray<Ix>,
     pub col_inds: Int32Array,
-    pub values: Float32Array,
+    pub values: PrimitiveArray<V>,
 }
 
 /// Common methods for compressed sparse row matrices.
@@ -80,37 +90,51 @@ pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
     }
 }
 
-impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
+/// Extract a CSR structure with either 32 or 64-bit indices.
+pub fn csr_structure(
+    array: Arc<dyn Array>,
+) -> PyResult<IxVar<CSRStructure<i32>, CSRStructure<i64>>> {
+    match array.data_type() {
+        DataType::List(_) => Ok(IxVar::Ix32(CSRStructure::from_arrow(array)?)),
+        DataType::LargeList(_) => Ok(IxVar::Ix64(CSRStructure::from_arrow(array)?)),
+        _ => Err(PyTypeError::new_err(format!(
+            "unsupported CSR data type {}",
+            array.data_type()
+        ))),
+    }
+}
+
+impl<Ix> CSRStructure<Ix>
+where
+    Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>,
+    GenericListArray<Ix>: ExtractListArray,
+{
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRStructure<Ix>> {
-        let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
+        let array: GenericListArray<Ix> =
+            GenericListArray::extract_list_array(&array).ok_or_else(|| {
+                PyErr::new::<PyTypeError, _>(format!(
+                    "invalid array type {}, expected List or LargeList",
+                    array.data_type()
+                ))
+            })?;
+        debug!("extracted array of type {}", array.data_type());
+        let arr_type = SparseIndexListType::try_from(array.data_type())
+            .map_err(|e| PyTypeError::new_err(format!("invalid array type: {:?}", e)))?;
+
+        let col_inds: &Int32Array = array.values().as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
-                "invalid array type {}, expected List",
-                array.data_type()
+                "invalid element type {}, expected Int32",
+                array.values().data_type()
             ))
         })?;
-
-        let field = match sa.data_type() {
-            DataType::List(f) => f,
-            DataType::LargeList(f) => f,
-            _ => unreachable!("downcast and type are inconsistent"),
-        };
-        let rows: &Int32Array = sa.values().as_any().downcast_ref().ok_or_else(|| {
-            PyErr::new::<PyTypeError, _>(format!(
-                "invalid element type {}, expected Struct",
-                sa.values().data_type()
-            ))
-        })?;
-
-        let idx_t: SparseIndexType = field
-            .try_extension_type()
-            .map_err(|e| PyTypeError::new_err(format!("invalid index type: {}", e)))?;
+        let col_inds = downcast_array(&col_inds);
 
         Ok(CSRStructure {
             n_rows: array.len(),
-            n_cols: idx_t.dimension(),
-            array: downcast_array(array.as_ref()),
-            col_inds: downcast_array(&rows),
+            n_cols: arr_type.index_type.dimension(),
+            array,
+            col_inds,
         })
     }
 }
@@ -124,15 +148,22 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSR<Ix> for CSRStructur
     }
 }
 
-impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
+impl<Ix, V> CSRMatrix<Ix, V>
+where
+    Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>,
+    V: ArrowPrimitiveType,
+{
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
-    pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRMatrix<Ix>> {
+    pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRMatrix<Ix, V>> {
         let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
-                "invalid array type {}, expected List",
+                "invalid array type {}, expected List or LargeList",
                 array.data_type()
             ))
         })?;
+        // type-check the columns
+        let _arr_type = SparseRowType::try_from(array.data_type())
+            .map_err(|e| PyTypeError::new_err(format!("invalid array type: {:?}", e)))?;
 
         let rows: &StructArray = sa.values().as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
@@ -142,35 +173,20 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
         })?;
 
         let fields = rows.fields();
-
-        if fields.len() != 2 {
-            return Err(PyErr::new::<PyValueError, _>(
-                "row entries must have 2 fields",
-            ));
-        }
+        assert_eq!(fields.len(), 2);
 
         let idx_f = &fields[0];
         let val_f = &fields[1];
-
-        if idx_f.name() != "index" {
-            return Err(PyErr::new::<PyValueError, _>(
-                "first row field must be 'index'",
-            ));
-        }
-        if val_f.name() != "value" {
-            return Err(PyErr::new::<PyValueError, _>(
-                "first row field must be 'value'",
-            ));
-        }
 
         let idx_t: SparseIndexType = idx_f
             .try_extension_type()
             .map_err(|e| PyTypeError::new_err(format!("invalid index type: {}", e)))?;
 
-        if val_f.data_type() != &DataType::Float32 {
+        if val_f.data_type() != &V::DATA_TYPE {
             return Err(PyErr::new::<PyTypeError, _>(format!(
-                "invalid value column type {}, expected Float32",
-                val_f.data_type()
+                "invalid value column type {}, expected {}",
+                val_f.data_type(),
+                V::DATA_TYPE
             )));
         }
 
@@ -184,13 +200,17 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
     }
 
     /// Get the values for a row in the matrix.
-    pub fn row_vals(&self, row: usize) -> &[f32] {
+    pub fn row_vals(&self, row: usize) -> &[V::Native] {
         let (start, end) = self.extent(row);
         &self.values.values()[start..end]
     }
 }
 
-impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSR<Ix> for CSRMatrix<Ix> {
+impl<Ix, V> CSR<Ix> for CSRMatrix<Ix, V>
+where
+    Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>,
+    V: ArrowPrimitiveType,
+{
     fn array(&self) -> &GenericListArray<Ix> {
         &self.array
     }

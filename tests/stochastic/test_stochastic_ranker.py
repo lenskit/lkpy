@@ -30,6 +30,7 @@ from lenskit.pipeline import topn_pipeline
 from lenskit.splitting import simple_test_pair
 from lenskit.stochastic import StochasticTopNRanker
 from lenskit.testing import BasicComponentTests, ScorerTests, scored_lists
+from lenskit.training import TrainingOptions
 
 _log = get_logger(__name__)
 
@@ -244,13 +245,15 @@ def test_scale_affects_ranking(ml_ds: Dataset):
     Test that different softmax scales produce different levels of ranking variation.
     """
     rng = np.random.default_rng()
-    pipe = topn_pipeline(ImplicitMFScorer())
-    pipe.train(ml_ds)
+    pipe = topn_pipeline(ImplicitMFScorer(embedding_size=32, weight=5))
+    pipe.train(ml_ds, TrainingOptions(rng=rng))
+
+    seed1, seed2, seed3 = rng.bit_generator.random_raw(3)
 
     topn = TopNRanker()
-    samp_frac = StochasticTopNRanker(scale=0.05)
-    samp_one = StochasticTopNRanker(scale=1)
-    samp_hundred = StochasticTopNRanker(scale=50)
+    samp_frac = StochasticTopNRanker(scale=0.01, rng=int(seed1))
+    samp_one = StochasticTopNRanker(scale=1, rng=int(seed2))
+    samp_hundred = StochasticTopNRanker(scale=50, rng=int(seed3))
 
     jc_frac = []
     jc_one = []
@@ -258,10 +261,13 @@ def test_scale_affects_ranking(ml_ds: Dataset):
 
     for uid in rng.choice(ml_ds.users.ids(), size=500):
         ilist = recommend(pipe, uid)
-        rl_topn = topn(items=ilist, n=10)
-        rl_frac = samp_frac(items=ilist, n=10)
-        rl_one = samp_one(items=ilist, n=10)
-        rl_hundred = samp_hundred(items=ilist, n=10)
+        rl_topn = topn(items=ilist, n=20)
+        rl_frac = samp_frac(items=ilist, n=20)
+        assert len(rl_frac) == 20
+        rl_one = samp_one(items=ilist, n=20)
+        assert len(rl_one) == 20
+        rl_hundred = samp_hundred(items=ilist, n=20)
+        assert len(rl_hundred) == 20
 
         jc_frac.append(_jaccard(rl_topn, rl_frac))
         jc_one.append(_jaccard(rl_topn, rl_one))

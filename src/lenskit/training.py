@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, overload, runtime_checkable
 
 import numpy as np
 
@@ -25,6 +25,9 @@ from lenskit.data.dataset import Dataset
 from lenskit.logging import get_logger, item_progress
 from lenskit.pipeline.components import Component
 from lenskit.random import RNGInput, random_generator
+
+if TYPE_CHECKING:
+    import torch
 
 _log = get_logger(__name__)
 
@@ -55,7 +58,13 @@ class TrainingOptions:
     that into a NumPy :class:`~numpy.random.Generator`.
     """
 
-    def random_generator(self) -> np.random.Generator:
+    @overload
+    def random_generator(self, *, type: Literal["numpy"] = "numpy") -> np.random.Generator: ...
+    @overload
+    def random_generator(self, *, type: Literal["torch"]) -> torch.Generator: ...
+    def random_generator(
+        self, *, type: Literal["numpy", "torch"] = "numpy"
+    ) -> np.random.Generator | torch.Generator:
         """
         Obtain a random generator from the configured RNG or seed.
 
@@ -65,7 +74,7 @@ class TrainingOptions:
             seed.  Components should call it once at the beginning of their
             training procesess.
         """
-        return random_generator(self.rng)
+        return random_generator(self.rng, type=type)
 
     def configured_device(self, *, gpu_default: bool = False) -> str:
         """
@@ -105,9 +114,11 @@ class Trainable(Protocol):  # pragma: nocover
     -   They are usually components (:class:`~lenskit.pipeline.Component`), with
         an appropriate ``__call__`` method.
     -   They should be pickleable.
-    -   They should also usually implement
-        :class:`~lenskit.state.ParameterContainer`, to allow the learned
-        parameters to be serialized and deserialized without pickling.
+
+    ..
+        -   They should also usually implement
+            :class:`~lenskit.state.ParameterContainer`, to allow the learned
+            parameters to be serialized and deserialized without pickling.
 
     Stability:
         Full
@@ -217,7 +228,7 @@ class UsesTrainer(IterativeTraining, Component, ABC):
     :class:`ModelTrainer`.  This class implements :class:`IterativeTraining` for
     compatibility, but the :class:`IterativeTraining` interface is deprecated.
 
-    The component's configuration must have an ``epochs`` attribute noting the
+    The component's configuration must have an ``epochs`` attribute defining the
     number of epochs to train.
 
     Stability:
@@ -300,12 +311,14 @@ class ModelTrainer(ABC):
     implement :class:`UsesTrainer` will return an object implementing this
     protocol from their :meth:`~UsesTrainer.create_trainer` method.
 
-    This protocol only defines the core aspects of training a model. Trainers
-    should also implement :class:`~lenskit.state.ParameterContainer` to allow
-    training to be checkpointed and resumed.
+    ..
 
-    It is also a good idea for the trainer to be pickleable, but the parameter
-    container interface is the primary mechanism for checkpointing.
+        This protocol only defines the core aspects of training a model. Trainers
+        should also implement :class:`~lenskit.state.ParameterContainer` to allow
+        training to be checkpointed and resumed.
+
+        It is also a good idea for the trainer to be pickleable, but the parameter
+        container interface is the primary mechanism for checkpointing.
 
     Stability:
         Full
@@ -319,9 +332,11 @@ class ModelTrainer(ABC):
         must be usable.
         """
 
-    @abstractmethod
     def finalize(self) -> None:
         """
         Finish the training process, cleaning up any unneeded data structures
         and doing any finalization steps to the model.
+
+        The default implementation does nothing.
         """
+        pass

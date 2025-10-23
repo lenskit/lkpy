@@ -142,6 +142,7 @@ lenskit-task = "lenskit.cli.task:task"
 lenskit-train = "lenskit.cli.train:train"
 lenskit-tune = "lenskit.cli.tune:tune"
 lenskit-recommend = "lenskit.cli.recommend:recommend"
+lenskit-profile = "lenskit.cli.profile:profile"
 
 # configure build tools
 [tool.maturin]

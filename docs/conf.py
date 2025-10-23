@@ -60,16 +60,16 @@ highlight_language = "python3"
 html_theme = "pydata_sphinx_theme"
 html_logo = "LKLogo2.png"
 if _parsed_ver.is_devrelease:
-    html_baseurl = "https://lkpy.lenskit.org/latest/"
+    html_baseurl = "https://lenskit.org/latest/"
 else:
-    html_baseurl = "https://lkpy.lenskit.org/stable/"
+    html_baseurl = "https://lenskit.org/stable/"
 html_css_files = [
     "css/custom.css",
 ]
 
 html_theme_options = {
     "switcher": {
-        "json_url": "https://lkpy.lenskit.org/versions.json",
+        "json_url": "https://lenskit.org/versions.json",
         "version_match": "2024.0dev",
     },
     "show_version_warning_banner": True,
@@ -99,7 +99,7 @@ html_theme_options = {
     # "github_user": "lenskit",
     # 'github_repo': 'lkpy',
     # 'travis_button': False,
-    # 'canonical_url': 'https://lkpy.lenskit.org/',
+    # 'canonical_url': 'https://lenskit.org/',
     # 'font_family': 'Charter, serif'
     # 'font_family': '"Source Sans Pro", "Georgia Pro", Georgia, serif',
     # 'font_size': '15px',

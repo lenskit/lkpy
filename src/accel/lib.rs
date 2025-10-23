@@ -10,6 +10,7 @@ use pyo3::prelude::*;
 use rayon::{current_num_threads, ThreadPoolBuilder};
 
 mod als;
+mod arrow;
 mod atomic;
 mod data;
 mod funksvd;
@@ -17,7 +18,6 @@ mod indirect_hashing;
 mod knn;
 mod progress;
 mod sparse;
-mod types;
 
 /// Entry point for LensKit accelerator module.
 #[pymodule]
@@ -30,7 +30,8 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<funksvd::FunkSVDTrainer>()?;
     m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
     m.add_function(wrap_pyfunction!(thread_count, m)?)?;
-    m.add_function(wrap_pyfunction!(sparse::sparse_row_debug, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse::sparse_row_debug_type, m)?)?;
+    m.add_function(wrap_pyfunction!(sparse::sparse_structure_debug_large, m)?)?;
 
     Ok(())
 }

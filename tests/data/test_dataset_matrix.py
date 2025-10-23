@@ -370,6 +370,15 @@ def test_matrix_csr_structure(ml_ds: Dataset):
     assert csr.nnz == ml_ds.interaction_count
 
 
+def test_matrix_csr_structure_arrow(ml_ds: Dataset):
+    matrix = ml_ds.interactions().matrix()
+    csr = matrix.csr_structure(format="arrow")
+    assert len(csr) == matrix.n_rows
+    assert csr.shape == (matrix.n_rows, matrix.n_cols)
+    assert len(csr.indices) == matrix.count()
+    assert not csr.has_values
+
+
 def test_matrix_coo_structure(ml_ds: Dataset):
     matrix = ml_ds.interactions().matrix()
     coo = matrix.coo_structure()

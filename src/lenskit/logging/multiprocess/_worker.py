@@ -22,7 +22,8 @@ from dataclasses import dataclass
 from logging import Handler, LogRecord, getLogger
 from threading import Lock
 from time import perf_counter
-from typing import Self, overload
+from typing import Any, Self, overload
+from uuid import UUID
 
 import structlog
 import zmq
@@ -104,11 +105,21 @@ class WorkerContext:
     zmq: zmq.Context[zmq.Socket[bytes]]
     _log_handler: ZMQLogHandler
     _ref_count: int = 0
+    _is_driver: bool = False
 
-    def __init__(self, config: WorkerLogConfig):
+    def __init__(
+        self,
+        config: WorkerLogConfig,
+        *,
+        driver: bool = False,
+        zmq: zmq.Context[zmq.Socket[bytes]] | None = None,
+    ):
         self.config = config
         if self.config.authkey is None:
             self.config.authkey = mp.current_process().authkey
+        self._is_driver = driver
+        if zmq is not None:
+            self.zmq = zmq
 
     @staticmethod
     def active() -> WorkerContext | None:
@@ -123,8 +134,13 @@ class WorkerContext:
             raise RuntimeError("worker context already active")
         _active_context = self
 
-        self.zmq = zmq.Context()
+        if not self._is_driver:
+            self.zmq = zmq.Context()
+
         self._log_handler = ZMQLogHandler(self.zmq, self.config)
+
+        if self._is_driver:
+            return
 
         root = getLogger()
         root.addHandler(self._log_handler)
@@ -144,12 +160,15 @@ class WorkerContext:
 
     def shutdown(self):
         global _active_context
-        root = getLogger()
-        root.removeHandler(self._log_handler)
-        set_progress_impl(None)
+        if not self._is_driver:
+            root = getLogger()
+            root.removeHandler(self._log_handler)
+            set_progress_impl(None)
 
         self._log_handler.shutdown()
-        self.zmq.term()
+        if not self._is_driver:
+            self.zmq.term()
+
         _active_context = None
 
     def send_task(self, task: Task):
@@ -157,9 +176,15 @@ class WorkerContext:
 
     def send_progress(self, update: ProgressMessage):
         """
-        Send a progrss update event.
+        Send a progress update event.
         """
         self._log_handler.send_progress(update)
+
+    def send_record(self, sink_id: UUID, record: Any):
+        """
+        Send a record to a record sink.
+        """
+        self._log_handler.send_record(sink_id, record)
 
     def __enter__(self):
         if self._ref_count == 0:
@@ -304,6 +329,9 @@ class ZMQLogHandler(Handler):
             str(update.progress_id).encode(),
             update.model_dump_json().encode(),
         )
+
+    def send_record(self, sink_id: UUID, record: Any):
+        self._send_message(LogChannel.RECORD, sink_id.hex.encode(), pickle.dumps(record))
 
     def _send_message(self, channel: LogChannel, name: bytes, data: bytes):
         mac = self._auth.hash_message(channel, name, data)

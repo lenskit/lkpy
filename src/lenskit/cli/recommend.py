@@ -15,6 +15,7 @@ import lenskit.operations as ops
 from lenskit import batch
 from lenskit.data import Dataset, ItemList, ListILC, UserIDKey
 from lenskit.logging import Stopwatch, get_logger, item_progress
+from lenskit.pipeline import PipelineProfiler
 from lenskit.random import random_generator
 
 _log = get_logger(__name__)
@@ -36,6 +37,7 @@ _log = get_logger(__name__)
 @click.option("-d", "--dataset", metavar="DATA", type=Path, help="Use dataset DATA.")
 @click.option("-u", "--users-file", type=Path, metavar="FILE", help="Load list of users from FILE.")
 @click.option("--random-users", type=int, metavar="N", help="Recommend for N random users.")
+@click.option("--profile", type=Path, metavar="FILE", help="Profile profile inference.")
 @click.argument("PIPE_FILE", type=Path)
 @click.argument("USERS", nargs=-1)
 def recommend(
@@ -48,6 +50,7 @@ def recommend(
     random_users: int | None,
     list_length: int | None,
     dataset: Path | None,
+    profile: Path | None,
     pipe_file: Path,
     users: list,
 ):
@@ -75,13 +78,17 @@ def recommend(
         log.info("selecting random users", count=random_users)
         users = rng.choice(data.users.ids(), random_users)  # type: ignore
 
+    profiler = None
+    if profile:
+        profiler = PipelineProfiler(pipe, profile)
+
     if use_batch or use_ray or process_count is not None:
         if use_ray:
             n_jobs = "ray"
         else:
             n_jobs = process_count
 
-        all_recs = batch.recommend(pipe, users, list_length, n_jobs=n_jobs)
+        all_recs = batch.recommend(pipe, users, list_length, n_jobs=n_jobs, profiler=profiler)
     else:
         timer = Stopwatch(start=False)
         all_recs = None if out_file is None else ListILC(UserIDKey)
@@ -90,7 +97,7 @@ def recommend(
                 ulog = log.bind(user=user)
                 ulog.debug("generating single-user recommendations")
                 with timer.measure(accumulate=True):
-                    recs = ops.recommend(pipe, user, list_length)
+                    recs = ops.recommend(pipe, user, list_length, profiler=profiler)
                 ulog.info(
                     "recommended for user",
                     length=len(recs),
@@ -111,6 +118,9 @@ def recommend(
             timer,
             timer.elapsed() * 1000 / len(users),
         )
+
+    if profiler is not None:
+        profiler.close()
 
     if out_file is not None:
         assert all_recs is not None

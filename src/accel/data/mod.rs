@@ -21,6 +21,7 @@ mod index;
 mod sampling;
 mod selection;
 mod sorting;
+mod transpose;
 
 pub use coordinates::CoordinateTable;
 pub use index::IDIndex;
@@ -33,6 +34,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     data.add_class::<IDIndex>()?;
     data.add_class::<CoordinateTable>()?;
 
+    data.add_function(wrap_pyfunction!(transpose::transpose_csr, &data)?)?;
     data.add_function(wrap_pyfunction!(sorting::is_sorted_coo, &data)?)?;
     data.add_function(wrap_pyfunction!(sorting::argsort_descending, &data)?)?;
     data.add_function(wrap_pyfunction!(selection::negative_mask, &data)?)?;

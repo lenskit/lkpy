@@ -15,7 +15,7 @@ import os
 from abc import abstractmethod
 from hashlib import md5
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 from uuid import UUID
 
 import numpy as np
@@ -23,6 +23,8 @@ from numpy.random import Generator, SeedSequence, default_rng
 from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
 if TYPE_CHECKING:  # avoid circular import
+    import torch
+
     from lenskit.data import RecQuery
 
 SeedLike: TypeAlias = int | Sequence[int] | np.random.SeedSequence
@@ -154,7 +156,13 @@ def init_global_rng(
         torch.manual_seed(int_seed)  # type: ignore
 
 
-def random_generator(seed: RNGInput = None) -> Generator:
+@overload
+def random_generator(seed: RNGInput = None, *, type: Literal["numpy"] = "numpy") -> Generator: ...
+@overload
+def random_generator(seed: RNGInput = None, *, type: Literal["torch"]) -> torch.Generator: ...
+def random_generator(
+    seed: RNGInput = None, *, type: Literal["numpy", "torch"] = "numpy"
+) -> Generator | torch.Generator:
     """
     Create a a random generator with the given seed, falling back to a global
     generator if no seed is provided.  If no global generator has been
@@ -162,10 +170,42 @@ def random_generator(seed: RNGInput = None) -> Generator:
     """
 
     global _global_rng
+    match type:
+        case "numpy":
+            return _numpy_rng(seed)
+        case "torch":
+            return _torch_rng(seed)
+        case _:  # pragma: nocover
+            raise ValueError(f"invalid RNG type {type}")
+
+
+def _numpy_rng(seed: RNGInput = None) -> np.random.Generator:
     if seed is None and _global_rng is not None:
         return _global_rng
     else:
         return default_rng(seed)
+
+
+def _torch_rng(seed: RNGInput = None) -> torch.Generator:
+    import torch
+
+    gen = torch.Generator()
+    if isinstance(seed, int):
+        gen.manual_seed(seed)
+    elif isinstance(seed, SeedSequence):
+        gen.manual_seed(int(seed.generate_state(1)[0]))
+    elif isinstance(seed, Sequence):
+        seed = SeedSequence(seed)
+        return gen.manual_seed(int(seed.generate_state(1)[0]))
+    elif isinstance(seed, np.random.Generator):
+        i32 = np.iinfo(np.int32)
+        gen.manual_seed(int(seed.integers(i32.min, i32.max)))
+    elif isinstance(seed, np.random.BitGenerator):
+        gen.manual_seed(seed.random_raw())
+    elif _global_rng is not None:
+        return _torch_rng(_global_rng)
+
+    return gen
 
 
 def spawn_seed(seed: RNGInput = None) -> np.random.SeedSequence:

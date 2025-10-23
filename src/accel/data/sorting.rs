@@ -22,7 +22,7 @@ use pyo3::{
 };
 use rayon::slice::ParallelSliceMut;
 
-use crate::types::checked_array;
+use crate::arrow::checked_array;
 
 const PAR_SORT_THRESHOLD: usize = 10_000;
 
