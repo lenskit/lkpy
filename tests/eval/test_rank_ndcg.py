@@ -9,7 +9,7 @@ import pandas as pd
 
 import hypothesis.strategies as st
 from hypothesis import given
-from pytest import approx, mark
+from pytest import approx, mark, warns
 
 from lenskit.data import ItemList
 from lenskit.metrics import call_metric
@@ -36,11 +36,20 @@ def test_ndcg_perfect():
     assert call_metric(NDCG, recs, truth) == approx(1.0)
 
 
-def test_ndcg_perfect_k_short():
+def test_ndcg_perfect_n_short():
     recs = ItemList([2, 3, 1], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
     assert call_metric(NDCG, recs, truth, n=2) == approx(1.0)
     assert call_metric(NDCG, recs[:2], truth, n=2) == approx(1.0)
+
+
+def test_ndcg_perfect_k_short():
+    recs = ItemList([2, 3, 1], ordered=True)
+    truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
+    with warns(DeprecationWarning):
+        assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
+    with warns(DeprecationWarning):
+        assert call_metric(NDCG, recs[:2], truth, k=2) == approx(1.0)
 
 
 def test_ndcg_shorter_not_best():
