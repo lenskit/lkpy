@@ -6,147 +6,94 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from typing import Sequence
-
 import numpy as np
+import scipy.sparse as sps
 
 from lenskit.data import ItemList
-from lenskit.metrics import GeometricRankWeight, RankWeight
 
 
 def entropy(
-    items: ItemList,
-    *,
-    categories: str,
-    k: int | None = None,
+    items: ItemList, categories: np.ndarray | sps.spmatrix, *, n: int | None = None
 ) -> float:
     """
-    Compute the Shannon entropy over categorical distributions in an ItemList.
-
-    This metric measures the diversity of categories represented in the ItemList.
-    Higher entropy indicates more diverse category representation.
+    Compute Shannon entropy over categorical distributions.
 
     Args:
-        items:
-            The ItemList to evaluate.
-        categories:
-            The name of the field containing category data.
-        k:
-            The depth to evaluate. If None, uses the full list length.
+        items: Item list to evaluate.
+        categories: Item * category matrix (dense or sparse).
+        n: Optional depth to evaluate; defaults to full list.
 
     Returns:
-        The Shannon entropy.
-
-    Stability:
-        Experimental
+        Shannon entropy or NaN if no valid data is available.
     """
-    if k is None:
-        k = len(items)
-
-    top_k_items = items[:k]
-
-    category_lists = _extract_categories(top_k_items, categories)
-    if category_lists is None:
+    if n is None:
+        n = len(items)
+    if n == 0:
         return np.nan
 
-    category_counts = defaultdict(int)
-    for cats in category_lists:
-        if not cats:
-            continue
-        for cat in cats:
-            category_counts[cat] += 1
-
-    if not category_counts:
-        return np.nan
-
-    total_count = sum(category_counts.values())
-    category_probs = {cat: count / total_count for cat, count in category_counts.items()}
-
-    entropy_value = -sum(p * np.log2(p) for p in category_probs.values() if p > 0)
-    return entropy_value
+    truncated = categories[:n]
+    return matrix_column_entropy(truncated)
 
 
 def rank_biased_entropy(
-    items: ItemList,
-    *,
-    categories: str | None,
-    weight: RankWeight | None = None,
-    k: int | None = None,
+    items: ItemList, categories: np.ndarray | sps.spmatrix, *, weight=None, n: int | None = None
 ) -> float:
     """
-    Compute rank-biased entropy (RBE) over categorical distributions in an ItemList.
-
-    This metric measures diversity of categories with position-based weights.
-    It gives more importance to items at higher ranks. Higher values indicate more
-    diverse category representation at the top of the list.
+    Compute rank-biased Shannon entropy over categorical distributions.
 
     Args:
-        items:
-            The ItemList to evaluate.
-        categories:
-            The name of the field containing category data.
-        weight:
-            RankWeight instance to compute item weights. Defaults to GeometricRankWeight(0.85).
-        k:
-            The depth to evaluate. If None, uses the full list length.
+        items: Item list to evaluate.
+        categories: Item * category matrix (dense or sparse).
+        weight: Optional RankWeight. Defaults to GeometricRankWeight(0.85).
+        n: Optional depth to evaluate; defaults to full list.
 
     Returns:
-        The rank-biased entropy.
-
-    Stability:
-        Experimental
+        Rank-biased Shannon entropy or NaN if no valid data is available.
     """
-    if k is None:
-        k = len(items)
+    from lenskit.metrics import GeometricRankWeight
 
-    top_k_items = items[:k]
+    if n is None:
+        n = len(items)
+    if n == 0:
+        return np.nan
+
+    truncated = categories[:n]
 
     if weight is None:
         weight = GeometricRankWeight(0.85)
 
-    category_lists = _extract_categories(top_k_items, categories)
-    if category_lists is None:
+    ranks = np.arange(1, n + 1)
+    wvec = weight.weight(ranks)
+    return matrix_column_entropy(truncated, weights=wvec)
+
+
+def matrix_column_entropy(
+    matrix: np.ndarray | sps.spmatrix, weights: np.ndarray | None = None
+) -> float:
+    """
+    Compute Shannon entropy from a matrix of items * categories.
+
+    Args:
+        matrix: Dense or sparse array of item * category values.
+        weights: Optional per-item weight vector. If None, all items are equal.
+
+    Returns:
+        Shannon entropy (float) or np.nan if matrix is empty or all zeros.
+    """
+    if sps.issparse(matrix):
+        matrix = matrix.toarray()
+
+    if matrix.shape[0] == 0 or matrix.shape[1] == 0:
         return np.nan
 
-    ranks = np.arange(1, k + 1)
-    weights = weight.weight(ranks)
+    if weights is not None:
+        matrix = matrix * weights[:, np.newaxis]
 
-    weighted_counts = defaultdict(float)
-    for cats, w in zip(category_lists, weights):
-        if not cats:
-            continue
-        if isinstance(cats, str):
-            cats = [cats]
-        for cat in cats:
-            weighted_counts[cat] += float(w)
+    counts = np.sum(matrix, axis=0)
+    counts = counts[counts > 0]
 
-    if not weighted_counts:
+    if len(counts) == 0 or np.sum(counts) == 0:
         return np.nan
 
-    total_weight = sum(weighted_counts.values())
-    if total_weight == 0:
-        return 0.0
-
-    category_probs = [count / total_weight for count in weighted_counts.values()]
-    entropy_value = -sum(p * np.log2(p) for p in category_probs if p > 0)
-    return entropy_value
-
-
-def _extract_categories(
-    items: ItemList,
-    categories: str | None,
-) -> Sequence[Sequence[str]] | None:
-    """
-    Helper function to extract categories from items.
-    """
-    if categories is None:
-        return None
-
-    field_data = items.field(categories)
-    if field_data is None:
-        return None
-
-    return [
-        list(cats) if isinstance(cats, (list, tuple, np.ndarray)) else [cats] for cats in field_data
-    ]
+    probs = counts / np.sum(counts)
+    return float(-np.sum(probs * np.log2(probs)))
