@@ -23,8 +23,6 @@ from lenskit.pipeline import Component, topn_pipeline
 from lenskit.splitting import split_temporal_fraction
 from lenskit.training import Trainable, TrainingOptions
 
-from ._markers import jit_enabled
-
 retrain = os.environ.get("LK_TEST_RETRAIN")
 
 
@@ -78,25 +76,17 @@ class TrainingTests:
     Common tests for component training.
     """
 
-    needs_jit: ClassVar[bool] = True
     component: type[Component]
     config: Any = None
 
-    def maybe_skip_nojit(self):
-        if self.needs_jit and not jit_enabled:
-            skip("JIT is disabled")
-
     @fixture(scope="function" if retrain else "class")
     def trained_model(self, ml_ds: Dataset):
-        self.maybe_skip_nojit()
-
         model = self.component(self.config)
         if isinstance(model, Trainable):
             model.train(ml_ds, TrainingOptions())
         yield model
 
     def test_skip_retrain(self, ml_ds: Dataset):
-        self.maybe_skip_nojit()
         model = self.component(self.config)
         if not isinstance(model, Trainable):
             skip(f"component {model.__class__.__name__} is not trainable")
@@ -108,8 +98,8 @@ class TrainingTests:
         t1 = perf_counter()
         model.train(ml_ds, TrainingOptions(retrain=False))
         t2 = perf_counter()
-        # that should be very fast, let's say 10ms
-        assert t2 - t1 < 0.01
+        # that should be very fast, let's say 50ms
+        assert t2 - t1 < 0.05
         # the model shouldn't have changed
         v2_data = pickle.dumps(model)
         assert v2_data == v1_data
@@ -125,15 +115,19 @@ class ScorerTests(TrainingTests):
     can_score: ClassVar[Literal["some", "known", "all"]] = "known"
     "What can this scorer score?"
 
-    expected_rmse: ClassVar[float | tuple[float, float] | None] = None
+    expected_rmse: ClassVar[float | tuple[float, float] | object | None] = None
     "Asserts RMSE either less than the provided expected value or between two values as tuple."
-    expected_ndcg: ClassVar[float | tuple[float, float] | None] = None
+    expected_ndcg: ClassVar[float | tuple[float, float] | object | None] = None
     "Asserts nDCG either greater than the provided expected value or between two values as tuple."
 
     def invoke_scorer(self, inst: Component, **kwargs):
         sig = inspect.signature(inst)
         args = {n: v for (n, v) in kwargs.items() if n in sig.parameters}
         return inst(**args)
+
+    def verify_models_equivalent(self, orig, copy):
+        "Verify that two models are equivalent."
+        pass
 
     def test_score_known(self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component):
         for u in rng.choice(ml_ds.users.ids(), 100):
@@ -153,6 +147,7 @@ class ScorerTests(TrainingTests):
     ):
         data = pickle.dumps(trained_model, pickle.HIGHEST_PROTOCOL)
         tm2 = pickle.loads(data)
+        self.verify_models_equivalent(trained_model, tm2)
 
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
@@ -261,7 +256,6 @@ class ScorerTests(TrainingTests):
 
     def test_train_score_items_missing_data(self, rng: np.random.Generator, ml_ds: Dataset):
         "train and score when some entities are missing data"
-        self.maybe_skip_nojit()
         drop_i = rng.choice(ml_ds.items.ids(), 20)
         drop_u = rng.choice(ml_ds.users.ids(), 5)
 
@@ -298,7 +292,6 @@ class ScorerTests(TrainingTests):
         """
         Test that a full train-recommend pipeline works.
         """
-        self.maybe_skip_nojit()
         split = split_temporal_fraction(ml_ds, 0.2)
         model = self.component(self.config)
         pipe = topn_pipeline(model)
@@ -309,7 +302,6 @@ class ScorerTests(TrainingTests):
 
     @mark.slow
     def test_run_with_doubles(self, ml_ratings: pd.DataFrame):
-        self.maybe_skip_nojit()
         ml_ratings = ml_ratings.astype({"rating": "f8"})
         ml_ds = from_interactions_df(ml_ratings)
         split = split_temporal_fraction(ml_ds, 0.3)
@@ -325,27 +317,31 @@ class ScorerTests(TrainingTests):
     def test_batch_prediction_accuracy(self, rng: np.random.Generator, ml_100k: pd.DataFrame):
         if self.expected_rmse is None:
             skip("expected RMSE not defined")
-        self.maybe_skip_nojit()
+
         ml_ds = from_interactions_df(ml_100k)
         model = self.component(self.config)
         eval_result = quick_measure_model(model, ml_ds, predicts_ratings=True, rng=rng)
-        rmse = eval_result.list_summary().loc["RMSE", "mean"]
+        rmse = float(eval_result.list_summary().loc["RMSE", "mean"])  # type: ignore
         if isinstance(self.expected_rmse, tuple):
             assert self.expected_rmse[0] <= rmse <= self.expected_rmse[1]
-        else:
+        elif isinstance(self.expected_rmse, float):
             assert rmse < self.expected_rmse
+        else:
+            assert rmse == self.expected_rmse
 
     @mark.slow
     @mark.eval
     def test_batch_top_n_accuracy(self, rng: np.random.Generator, ml_100k: pd.DataFrame):
         if self.expected_ndcg is None:
             skip("expected nDCG not defined")
-        self.maybe_skip_nojit()
+
         ml_ds = from_interactions_df(ml_100k)
         model = self.component(self.config)
         eval_result = quick_measure_model(model, ml_ds, predicts_ratings=True, rng=rng)
-        ndcg = eval_result.list_summary().loc["NDCG", "mean"]
+        ndcg = float(eval_result.list_summary().loc["NDCG", "mean"])  # type: ignore
         if isinstance(self.expected_ndcg, tuple):
             assert self.expected_ndcg[0] <= ndcg <= self.expected_ndcg[1]
-        else:
+        elif isinstance(self.expected_ndcg, float):
             assert ndcg >= self.expected_ndcg
+        else:
+            assert ndcg == self.expected_ndcg

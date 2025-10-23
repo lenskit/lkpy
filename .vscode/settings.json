@@ -1,5 +1,4 @@
 {
-  "deno.enable": true,
   "files.exclude": {
     "**/__pycache__": true,
     ".hypothesis/": true,
@@ -45,5 +44,8 @@
     "tests"
   ],
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true
+  "python.testing.pytestEnabled": true,
+  "mise.configureExtensionsUseSymLinks": true,
+  "mise.configureExtensionsUseShims": false,
+  "mise.configureExtensionsAutomatically": true
 }

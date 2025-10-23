@@ -44,13 +44,6 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: 🧐 Inspect environment
-        if: runner.os != 'Windows'
-        run: |
-          set -x
-          env
-          ${CC:-cc} --version
-
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |

@@ -42,6 +42,7 @@ class JupyterProgress(Progress):  # pragma: nocover
         fields: dict[str, str | None],
     ):
         super().__init__()
+        self._limit = RateLimit()
         self.current = 0
         self.total = total
         if total:

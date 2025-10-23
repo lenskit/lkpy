@@ -38,6 +38,7 @@ class RecPipelineBuilder:
     is_predictor: bool = False
     _predict_transform: Component | None = None
     _fallback: Component | None = None
+    _reranker: CompRec | None = None
 
     def __init__(self):
         from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
@@ -144,10 +145,32 @@ class RecPipelineBuilder:
         rank = pipe.add_component(
             "ranker", self._ranker.component, self._ranker.config, items=n_score, n=n_n
         )
-        pipe.alias("recommender", rank)
-        pipe.default_component("recommender")
+
+        # If a reranker is configured, attach it
+        if self._reranker is not None:
+            rerank = pipe.add_component(
+                "reranker", self._reranker.component, self._reranker.config, items=rank, n=n_n
+            )
+            pipe.alias("recommender", rerank)
+            pipe.default_component("recommender")
+        else:
+            pipe.alias("recommender", rank)
+            pipe.default_component("recommender")
 
         return pipe.build()
+
+    def reranker(self, reranker: Component | ComponentConstructor, config: object | None = None):
+        """
+        Specify a reranker to add to the pipeline.
+
+        Args:
+            reranker:
+                The reranker to use in the pipeline.
+            config:
+                Configuration parameters to initialize the reranker if a reranker is specified.
+        """
+        self._reranker = CompRec(reranker, config)
+        return self
 
 
 def topn_builder(

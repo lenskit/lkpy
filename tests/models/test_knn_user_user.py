@@ -36,12 +36,52 @@ class TestUserKNNExplicit(BasicComponentTests, ScorerTests):
     component = UserKNNScorer
     expected_rmse = (0.855, 0.965)
 
+    def test_internal_data(
+        self, ml_ratings: pd.DataFrame, ml_ds: Dataset, trained_model: UserKNNScorer
+    ):
+        algo = trained_model
+        # it should have computed correct means
+        umeans = ml_ds.user_stats()["mean_rating"]
+        mlmeans = pd.Series(algo.user_means, index=algo.users, name="mean")
+        mlmeans.index.name = "user_id"
+        umeans, mlmeans = umeans.align(mlmeans)
+        assert mlmeans.values == approx(umeans.values)
+
+        # we should be able to reconstruct rating values
+        uir = ml_ratings.set_index(["user_id", "item_id"]).rating
+        rates = algo.user_ratings.to_scipy().tocoo()
+        ui_rbdf = pd.DataFrame(
+            {
+                "user_id": algo.users.ids(rates.row),
+                "item_id": algo.items.ids(rates.col),
+                "nrating": rates.data,
+            }
+        ).set_index(["user_id", "item_id"])
+        ui_rbdf = ui_rbdf.join(mlmeans)
+        ui_rbdf["rating"] = ui_rbdf["nrating"] + ui_rbdf["mean"]
+        ui_rbdf["orig_rating"] = uir
+        assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
+
+        # running the predictor should work
+        preds = algo(query=4, items=ItemList([1016]))
+        assert len(preds) == 1
+        assert preds.ids() == [1016]
+        assert preds.scores() == approx([3.62221550680778])
+
+    def verify_models_equivalent(self, orig: UserKNNScorer, copy: UserKNNScorer):
+        assert np.all(copy.user_means == orig.user_means)
+
 
 class TestUserKNNImplicit(BasicComponentTests, ScorerTests):
     can_score = "some"
     component = UserKNNScorer
     config = UserKNNConfig(max_nbrs=30, feedback="implicit")
     expected_ndcg = 0.03
+
+    def verify_models_equivalent(self, orig, copy):
+        assert copy.user_means is None
+        assert copy.users == orig.users
+        assert copy.items == orig.items
 
 
 def test_uu_train(ml_ratings, ml_ds):
@@ -130,51 +170,6 @@ def test_uu_predict_live_ratings(ml_ratings):
     assert preds.loc[1016] == approx(3.62221550680778)
 
 
-def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
-    orig = UserKNNScorer(k=30)
-    _log.info("training model")
-    orig.train(ml_ds)
-
-    fn = tmp_path / "uu.model"
-    _log.info("saving to %s", fn)
-    with fn.open("wb") as f:
-        pickle.dump(orig, f)
-
-    _log.info("reloading model")
-    with fn.open("rb") as f:
-        algo = pickle.load(f)
-
-    _log.info("checking model")
-
-    # it should have computed correct means
-    umeans = ml_ds.user_stats()["mean_rating"]
-    mlmeans = pd.Series(algo.user_means, index=algo.users, name="mean")
-    mlmeans.index.name = "user_id"
-    umeans, mlmeans = umeans.align(mlmeans)
-    assert mlmeans.values == approx(umeans.values)
-
-    # we should be able to reconstruct rating values
-    uir = ml_ratings.set_index(["user_id", "item_id"]).rating
-    rates = algo.user_ratings.to_scipy().tocoo()
-    ui_rbdf = pd.DataFrame(
-        {
-            "user_id": algo.users.ids(rates.row),
-            "item_id": algo.items.ids(rates.col),
-            "nrating": rates.data,
-        }
-    ).set_index(["user_id", "item_id"])
-    ui_rbdf = ui_rbdf.join(mlmeans)
-    ui_rbdf["rating"] = ui_rbdf["nrating"] + ui_rbdf["mean"]
-    ui_rbdf["orig_rating"] = uir
-    assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
-
-    # running the predictor should work
-    preds = algo(query=4, items=ItemList([1016]))
-    assert len(preds) == 1
-    assert preds.ids() == [1016]
-    assert preds.scores() == approx([3.62221550680778])
-
-
 def test_uu_predict_unknown_empty(ml_ds):
     algo = UserKNNScorer(k=30, min_nbrs=2)
     algo.train(ml_ds)
@@ -204,22 +199,6 @@ def test_uu_implicit(ml_ratings):
     preds = preds.scores("pandas", index="ids")
     assert preds is not None
     assert all(preds[preds.notna()] > 0)
-
-
-@mark.slow
-def test_uu_save_load_implicit(tmp_path, ml_ratings):
-    "Save and load user-user on an implicit data set."
-    orig = UserKNNScorer(k=20, feedback="implicit")
-    data = ml_ratings.loc[:, ["user_id", "item_id"]]
-
-    orig.train(from_interactions_df(data))
-    ser = pickle.dumps(orig)
-
-    algo = pickle.loads(ser)
-
-    assert algo.user_means is None
-    assert algo.users == orig.users
-    assert algo.items == orig.items
 
 
 @mark.slow

@@ -1,0 +1,8 @@
+[meta]
+name = "iknn-explicit"
+
+[options]
+base = "std:topn-predict"
+
+[components.scorer]
+class = "lenskit.knn.ItemKNNScorer"

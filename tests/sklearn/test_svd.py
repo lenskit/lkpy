@@ -31,6 +31,12 @@ class TestBiasedSVD(BasicComponentTests, ScorerTests):
     config = svd.BiasedSVDConfig(embedding_size=25, damping=10)
     expected_rmse = (0.915, 0.925)
 
+    def verify_models_equivalent(self, orig, copy):
+        assert copy.bias_.global_bias == orig.bias_.global_bias
+        assert np.all(copy.bias_.user_biases == orig.bias_.user_biases)
+        assert np.all(copy.bias_.item_biases == orig.bias_.item_biases)
+        assert np.all(copy.user_components_ == orig.user_components_)
+
 
 def test_svd_basic_build():
     algo = svd.BiasedSVDScorer(features=2)
@@ -78,18 +84,3 @@ def test_svd_predict_bad_user():
     assert preds is not None
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
-
-
-@mark.slow
-def test_svd_save_load(ml_ds: Dataset):
-    original = svd.BiasedSVDScorer(features=20)
-    original.train(ml_ds)
-
-    mod = pickle.dumps(original)
-    _log.info("serialized to %d bytes", len(mod))
-    algo = pickle.loads(mod)
-
-    assert algo.bias_.global_bias == original.bias_.global_bias
-    assert np.all(algo.bias_.user_biases == original.bias_.user_biases)
-    assert np.all(algo.bias_.item_biases == original.bias_.item_biases)
-    assert np.all(algo.user_components_ == original.user_components_)

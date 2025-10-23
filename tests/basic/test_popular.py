@@ -18,8 +18,10 @@ simple_df = pd.DataFrame(
 
 
 class TestPopScore(BasicComponentTests, ScorerTests):
-    needs_jit = False
     component = PopScorer
+
+    def verify_models_equivalent(self, orig, copy):
+        assert all(copy.item_scores_ == orig.item_scores_)
 
 
 def test_popscore_quantile(rng, ml_ds):
@@ -60,13 +62,3 @@ def test_popscore_counts(rng, ml_ds):
     items = rng.choice(counts.index, 100)
     scores = pop(ItemList(item_ids=items))
     assert all(scores.scores() == counts.loc[items])
-
-
-def test_popscore_save_load(ml_ds):
-    original = PopScorer()
-    original.train(ml_ds)
-
-    mod = pickle.dumps(original)
-    pop = pickle.loads(mod)
-
-    assert all(pop.item_scores_ == original.item_scores_)

@@ -1,7 +1,8 @@
 [tools]
-rust = "stable"
+rust = { version = "stable", components = "rustfmt,cargo,rustc" }
 shfmt = "latest"
 uv = "latest"
+pre-commit = "4"
 
 [settings]
 experimental = true

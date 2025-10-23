@@ -449,6 +449,10 @@ class MatrixRelationshipSet(RelationshipSet):
         """
         Get this relationship matrix as a SciPy sparse matrix.
 
+        .. note::
+            If the selected attribute has missing values, they are *omitted* from the
+            returned matrix.
+
         Args:
             attribute:
                 The attribute to return, or ``None`` to return an indicator-only
@@ -464,22 +468,37 @@ class MatrixRelationshipSet(RelationshipSet):
         nnz = self._table.num_rows
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
+        mask = None
         if attribute is None or (attribute == "count" and "count" not in self._table.column_names):
             values = np.ones(nnz, dtype=np.float32)
         else:
-            values = self._table.column(attribute).to_numpy()
+            value_col = self._table.column(attribute)
+            if value_col.null_count:
+                mask = value_col.is_valid()
+                values = value_col.filter(mask).to_numpy()
+                mask = mask.to_numpy()
+            else:
+                values = value_col.to_numpy()
 
-        if layout == "csr":
+        if layout == "csr" and mask is None:
             if legacy:
                 return sps.csr_matrix((values, colinds, self._row_ptrs), shape=(n_rows, n_cols))
             else:
                 return sps.csr_array((values, colinds, self._row_ptrs), shape=(n_rows, n_cols))
-        elif layout == "coo":
-            rowinds = self._table.column(num_col_name(self.row_type))
+        else:
+            rowinds = self._table.column(num_col_name(self.row_type)).to_numpy()
+            if mask is not None:
+                colinds = colinds[mask]
+                rowinds = rowinds[mask]
             if legacy:
-                return sps.coo_matrix((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+                mat = sps.coo_matrix((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+                if layout == "csr":
+                    mat = mat.tocsr()
             else:
-                return sps.coo_array((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+                mat = sps.coo_array((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+                if layout == "csr":
+                    mat = mat.tocsr()
+            return mat
 
     @overload
     def torch(
@@ -490,6 +509,10 @@ class MatrixRelationshipSet(RelationshipSet):
     def torch(self, attribute: str | None = None, *, layout: LAYOUT = "csr") -> torch.Tensor:
         """
         Get this relationship matrix as a PyTorch sparse tensor.
+
+        .. note::
+            If the selected attribute has missing values, they are *omitted* from the
+            returned matrix.
 
         Args:
             attribute:
@@ -507,28 +530,40 @@ class MatrixRelationshipSet(RelationshipSet):
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
         colinds = torch.tensor(np.require(colinds, requirements="W"))
+        mask = None
         if attribute is None or (attribute == "count" and "count" not in self._table.column_names):
             values = torch.ones(nnz, dtype=torch.float32)
-        elif pa.types.is_timestamp(self._table.field(attribute).type):
-            vals = self._table.column(attribute)
-            vals = vals.cast(pa.timestamp("s")).cast(pa.int64())
-            values = torch.tensor(vals.to_numpy())
         else:
-            values = torch.tensor(self._table.column(attribute).to_numpy())
+            mask = None
+            value_col = self._table.column(attribute)
+            if value_col.null_count:
+                mask = value_col.is_valid()
+                value_col = value_col.filter(mask)
+                mask = mask.to_numpy()
 
-        if layout == "csr":
+            if pa.types.is_timestamp(self._table.field(attribute).type):
+                value_col = value_col.cast(pa.timestamp("s")).cast(pa.int64())
+
+            values = torch.tensor(value_col.to_numpy())
+
+        if layout == "csr" and mask is None:
             return torch.sparse_csr_tensor(
                 crow_indices=torch.tensor(self._row_ptrs),
                 col_indices=colinds,
                 values=values,
                 size=(n_rows, n_cols),
             )
-        elif layout == "coo":
+        else:
             rowinds = torch.tensor(self._table.column(num_col_name(self.row_type)).to_numpy())
             indices = torch.stack((rowinds, colinds))
-            return torch.sparse_coo_tensor(
+            if mask is not None:
+                indices = indices[:, torch.as_tensor(mask)]
+            mat = torch.sparse_coo_tensor(
                 indices=indices, values=values, size=(n_rows, n_cols)
             ).coalesce()
+            if layout == "csr":
+                mat = mat.to_sparse_csr()
+            return mat
 
     def sample_negatives(
         self,

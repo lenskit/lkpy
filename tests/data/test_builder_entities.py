@@ -60,6 +60,17 @@ def test_add_new_entity_ids():
     assert np.all(ds.entities("user").ids() == ["a", "b", "x", "y", "z"])
 
 
+def test_add_invalid_entity_class_name():
+    dsb = DatasetBuilder()
+    with raises(ValueError, match="invalid"):
+        dsb.add_entities("_item", ["a", "b", "c"])
+
+    dsb.add_entities("item", ["a", "b", "c"])
+    ds = dsb.build()
+    assert ds.item_count == 3
+    assert np.all(ds.items.ids() == ["a", "b", "c"])
+
+
 def test_add_duplicate_entities_forbidden():
     dsb = DatasetBuilder()
 

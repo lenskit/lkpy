@@ -7,9 +7,6 @@ recipe:
   name: lenskit
   version: ${{ version }}
 
-build:
-  number: 0
-
 source:
   - if: version == "2100.0a0+dev0"
     then:
@@ -17,6 +14,8 @@ source:
     else:
       path: ../dist/lenskit-${{version}}.tar.gz
 
+build:
+  number: 0
 outputs:
   - package:
       name: lenskit
@@ -29,13 +28,13 @@ outputs:
 
     requirements:
       build:
-        - ${{ compiler('rust') }}
+        - ${{ compiler("rust") }}
       host:
-        - python =3.11
+        - python ${{ python_min }}.*
         - pip
         - maturin >=1,<2
       run:
-        - python >=3.11,<4
+        - python >=${{ python_min }}
         - typing-extensions >=4.12,<5
         - pyarrow >=20,<21
         - pandas >=2.0,<3
@@ -57,6 +56,7 @@ outputs:
         - prettytable >=3.14,<4
         - xopen >=2.0,<3
         - lazy-loader >=0.4
+        - deepmerge >=2.0,<3
 
     tests:
       - python:
@@ -65,6 +65,7 @@ outputs:
             - lenskit.data
             - lenskit.als
             - lenskit.knn
+          pip_check: false
       - script:
           - python -m lenskit --verbose doctor --full
       - script:
@@ -91,8 +92,11 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
-        - ${{ pin_subpackage('lenskit') }}
+        - python >=${{ python_min }}
+        - lenskit >=2025.3
 
   - package:
       name: lenskit-sklearn
@@ -101,13 +105,17 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - scikit-learn >=1.2,<2
     tests:
       - python:
           imports:
             - lenskit.sklearn.svd
+          pip_check: false
       - script:
           - pytest -m "not slow" tests/sklearn
         files:
@@ -131,13 +139,17 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - implicit >=0.7.2
     tests:
       - python:
           imports:
             - lenskit.implicit
+          pip_check: false
       - script:
           - pytest -m "not slow" tests/implicit
         files:
@@ -161,13 +173,17 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - hpfrec =0.2
     tests:
       - python:
           imports:
             - lenskit.hpf
+          pip_check: false
       - script:
           - pytest -m "not slow" tests/hpf
         files:
@@ -191,15 +207,19 @@ outputs:
       script:
         - "true"
     requirements:
+      host:
+        - python ${{ python_min }}.*
       run:
+        - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
         - torch-geometric >=2.6,<3
     tests:
       - python:
           imports:
-            - lenskit.hpf
+            - lenskit.graphs.lightgcn
+          pip_check: false
       - script:
-          - pytest -m "not slow" tests/hpf
+          - pytest -m "not slow" tests/graphs
         files:
           source:
             - tests/
@@ -213,6 +233,23 @@ outputs:
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
+
+  - package:
+      name: lenskit-tune
+    build:
+      noarch: python
+      script:
+        - "true"
+    requirements:
+      host:
+        - python ${{ python_min }}.*
+      run:
+        - python >=${{ python_min }}
+        - ${{ pin_subpackage('lenskit') }}
+        - ray-tune >=2.42,<3
+    tests:
+      - script:
+          - lenskit tune --help
 
 about:
   license: MIT

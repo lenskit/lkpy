@@ -6,6 +6,7 @@
 
 import os
 import sys
+import warnings
 from importlib.metadata import entry_points
 from pathlib import Path
 
@@ -77,5 +78,9 @@ def version():
 
 cli_plugins = entry_points(group="lenskit.cli.plugins")
 for plugin in cli_plugins:
-    cmd = plugin.load()
+    try:
+        cmd = plugin.load()
+    except ImportError as e:
+        warnings.warn(f"cannot load CLI {plugin.name}: {e}", ImportWarning)
+
     lenskit.add_command(cmd)

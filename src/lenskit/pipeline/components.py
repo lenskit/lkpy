@@ -30,7 +30,7 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning, resolve_type_string
+from .types import Lazy, TypecheckWarning
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -217,33 +217,10 @@ class Placeholder(Component[Any]):
     Simple no-op component to use as a placeholder in partial pipelines.
     """
 
+    config: PlaceholderConfig
+
     def __call__(self, **kwargs: Any) -> Any:
         raise NotImplementedError("attempted to invoke placeholder component")
-
-
-def instantiate_component(
-    comp: str | type | FunctionType, config: Mapping[str, Any] | None
-) -> Callable[..., object]:
-    """
-    Utility function to instantiate a component given its class, function, or
-    string representation.
-
-    Stability:
-        Internal
-    """
-    if isinstance(comp, str):
-        comp = resolve_type_string(comp)
-
-    # make the type checker happy
-    assert not isinstance(comp, str)
-
-    if isinstance(comp, FunctionType):
-        return comp
-    elif issubclass(comp, Component):
-        cfg = comp.validate_config(config)
-        return comp(cfg)  # type: ignore
-    else:  # pragma: nocover
-        return comp()  # type: ignore
 
 
 def component_inputs(

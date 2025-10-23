@@ -95,7 +95,13 @@ fn train_row_solve(
 
     let a = a.into_nalgebra();
     let y = y.into_nalgebra();
-    let cholesky = a.cholesky().expect("matrix is not positive definite");
+    let cholesky = match a.cholesky() {
+        Some(c) => c,
+        None => {
+            error!("matrix is not positive definite");
+            panic!("matrix is not positive definite");
+        }
+    };
 
     let soln = cholesky.solve(&y);
     let soln = soln.into_ndarray1();

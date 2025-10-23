@@ -313,5 +313,7 @@ class ZMQLogHandler(Handler):
 
 
 def send_task(task: Task):
-    assert _active_context is not None
-    _active_context.send_task(task)
+    if _active_context is not None:
+        _active_context.send_task(task)
+    else:
+        _log.warn("no logging context is active")

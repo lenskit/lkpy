@@ -376,3 +376,39 @@ def test_matrix_coo_structure(ml_ds: Dataset):
     assert coo.nrows == ml_ds.user_count
     assert coo.ncols == ml_ds.item_count
     assert coo.nnz == ml_ds.interaction_count
+
+
+def test_matrix_scipy_coo_partial(ml_ratings: pd.DataFrame, rng: np.random.Generator):
+    ml_ratings = ml_ratings.copy()
+    ml_ratings.loc[rng.choice(len(ml_ratings), 1000, replace=False), "rating"] = np.nan
+    ds = from_interactions_df(ml_ratings)
+
+    matrix = ds.interactions().matrix()
+
+    coo = matrix.scipy(attribute="rating", layout="coo")
+    assert coo.nnz == matrix.count() - 1000
+    assert np.all(np.isfinite(coo.data))
+
+
+def test_matrix_scipy_csr_partial(ml_ratings: pd.DataFrame, rng: np.random.Generator):
+    ml_ratings = ml_ratings.copy()
+    ml_ratings.loc[rng.choice(len(ml_ratings), 1000, replace=False), "rating"] = np.nan
+    ds = from_interactions_df(ml_ratings)
+
+    matrix = ds.interactions().matrix()
+
+    coo = matrix.scipy(attribute="rating", layout="coo")
+    assert coo.nnz == matrix.count() - 1000
+    assert np.all(np.isfinite(coo.data))
+
+
+def test_matrix_tensor_partial(ml_ratings: pd.DataFrame, rng: np.random.Generator):
+    ml_ratings = ml_ratings.copy()
+    ml_ratings.loc[rng.choice(len(ml_ratings), 1000, replace=False), "rating"] = np.nan
+    ds = from_interactions_df(ml_ratings)
+
+    matrix = ds.interactions().matrix()
+
+    coo = matrix.torch(attribute="rating")
+    assert len(coo.values()) == matrix.count() - 1000
+    assert torch.all(torch.isfinite(coo.values()))
