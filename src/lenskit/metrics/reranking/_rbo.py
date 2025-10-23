@@ -16,7 +16,7 @@ def rank_biased_overlap(
     reference: ItemList,
     reranked: ItemList,
     weight: RankWeight | None = None,
-    k: int = 10,
+    n: int = 10,
 ) -> float:
     """
     Computes the Rank Biased Overlap (RBO) between two item rankings.
@@ -29,7 +29,7 @@ def rank_biased_overlap(
             The second item list to compare.
         weight:
             The rank weighting to use. If None, defaults to GeometricRankWeight(0.85).
-        k:
+        n:
             The depth to which to compute the overlap (default 10).
 
     Returns:
@@ -40,7 +40,7 @@ def rank_biased_overlap(
     """
     if weight is None:
         weight = GeometricRankWeight(0.85)
-    weights = weight.weight(np.arange(1, k + 1))
+    weights = weight.weight(np.arange(1, n + 1))
 
     sum = 0
     total_weights = 0
