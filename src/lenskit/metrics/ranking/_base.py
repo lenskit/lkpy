@@ -53,7 +53,7 @@ class RankingMetricBase(Metric):
     @property
     def label(self):
         """
-        Default name — class name, optionally @K.
+        Default name — class name, optionally @N.
         """
         name = self.__class__.__name__
         if self.n is not None:
@@ -63,11 +63,11 @@ class RankingMetricBase(Metric):
 
     def truncate(self, items: ItemList):
         """
-        Truncate an item list if it is longer than :attr:`k`.
+        Truncate an item list if it is longer than :attr:`n`.
         """
         if self.n is not None:
             if not items.ordered:
-                raise ValueError("top-k filtering requires ordered list")
+                raise ValueError("top-n filtering requires ordered list")
             if len(items) > self.n:
                 return items[: self.n]
 
