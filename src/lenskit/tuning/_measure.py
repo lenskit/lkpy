@@ -82,7 +82,7 @@ def measure_list(
     metrics["DCG"] = float(call_metric(DCG, recs, test))
     metrics["NDCG"] = float(call_metric(NDCG, recs, test))
     metrics["RecipRank"] = float(call_metric(RecipRank, recs, test))
-    metrics["Hit10"] = float(call_metric(Hit, recs, test, k=10))
+    metrics["Hit10"] = float(call_metric(Hit, recs, test, n=10))
 
     if preds is not None:
         log.debug("measuring rating predictions")

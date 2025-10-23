@@ -46,7 +46,7 @@ class NDCG(ListMetric, RankingMetricBase):
         \\end{align*}
 
     Args:
-        k:
+        n:
             The maximum recommendation list length to consider (longer lists are
             truncated).
         weight:
@@ -71,13 +71,14 @@ class NDCG(ListMetric, RankingMetricBase):
 
     def __init__(
         self,
-        k: int | None = None,
+        n: int | None = None,
         *,
+        k: int | None = None,
         weight: RankWeight = LogRankWeight(),
         discount: Discount | None = None,
         gain: str | None = None,
     ):
-        super().__init__(k=k)
+        super().__init__(n, k=k)
         self.weight = weight
         self.discount = discount
         if discount is not None:
@@ -86,8 +87,8 @@ class NDCG(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"NDCG@{self.k}"
+        if self.n is not None:
+            return f"NDCG@{self.n}"
         else:
             return "NDCG"
 
@@ -101,8 +102,8 @@ class NDCG(ListMetric, RankingMetricBase):
             gains = test.field(self.gain, "pandas", index="ids")
             if gains is None:
                 raise KeyError(f"test items have no field {self.gain}")
-            if self.k:
-                gains = gains.nlargest(n=self.k)
+            if self.n:
+                gains = gains.nlargest(n=self.n)
             else:
                 gains = gains.sort_values(ascending=False)
             iweight = self.weight.weight(np.arange(1, len(gains) + 1))
@@ -111,8 +112,8 @@ class NDCG(ListMetric, RankingMetricBase):
         else:
             realized = _binary_dcg(recs, test, self.weight)
             n = len(test)
-            if self.k and self.k < n:
-                n = self.k
+            if self.n and self.n < n:
+                n = self.n
             ideal = fixed_dcg(n, self.weight)
 
         return realized / ideal
@@ -137,7 +138,7 @@ class DCG(ListMetric, RankingMetricBase):
     using the unnormalized version.
 
     Args:
-        k:
+        n:
             The maximum recommendation list length to consider (longer lists are
             truncated).
         discount:
@@ -159,13 +160,14 @@ class DCG(ListMetric, RankingMetricBase):
 
     def __init__(
         self,
-        k: int | None = None,
+        n: int | None = None,
         *,
+        k: int | None = None,
         weight: RankWeight = LogRankWeight(),
         discount: Discount | None = None,
         gain: str | None = None,
     ):
-        super().__init__(k=k)
+        super().__init__(n, k=k)
         self.weight = weight
         self.discount = discount
         if discount is not None:
@@ -174,8 +176,8 @@ class DCG(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"DCG@{self.k}"
+        if self.n is not None:
+            return f"DCG@{self.n}"
         else:
             return "DCG"
 

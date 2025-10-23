@@ -9,7 +9,7 @@ import pandas as pd
 
 import hypothesis.strategies as st
 from hypothesis import given
-from pytest import approx, mark
+from pytest import approx, mark, warns
 
 from lenskit.data import ItemList
 from lenskit.metrics import call_metric
@@ -36,11 +36,20 @@ def test_ndcg_perfect():
     assert call_metric(NDCG, recs, truth) == approx(1.0)
 
 
+def test_ndcg_perfect_n_short():
+    recs = ItemList([2, 3, 1], ordered=True)
+    truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
+    assert call_metric(NDCG, recs, truth, n=2) == approx(1.0)
+    assert call_metric(NDCG, recs[:2], truth, n=2) == approx(1.0)
+
+
 def test_ndcg_perfect_k_short():
     recs = ItemList([2, 3, 1], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
-    assert call_metric(NDCG, recs[:2], truth, k=2) == approx(1.0)
+    with warns(DeprecationWarning):
+        assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
+    with warns(DeprecationWarning):
+        assert call_metric(NDCG, recs[:2], truth, k=2) == approx(1.0)
 
 
 def test_ndcg_shorter_not_best():
@@ -49,7 +58,7 @@ def test_ndcg_shorter_not_best():
     b_ideal = fixed_dcg(3)
     r_ideal = array_dcg(np.array([5.0, 4.0, 3.0]))
     assert call_metric(NDCG, recs, truth) == approx(fixed_dcg(2) / b_ideal)
-    assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
+    assert call_metric(NDCG, recs, truth, n=2) == approx(1.0)
     assert call_metric(NDCG, recs, truth, gain="rating") == approx(
         array_dcg(np.array([3.0, 5.0])) / r_ideal
     )
@@ -58,19 +67,19 @@ def test_ndcg_shorter_not_best():
 def test_ndcg_perfect_k():
     recs = ItemList([2, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
+    assert call_metric(NDCG, recs, truth, n=2) == approx(1.0)
 
 
 def test_ndcg_perfect_k_norate():
     recs = ItemList([1, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
+    assert call_metric(NDCG, recs, truth, n=2) == approx(1.0)
 
 
 def test_ndcg_almost_perfect_k_gain():
     recs = ItemList([1, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert call_metric(NDCG, recs, truth, k=2, gain="rating") == approx(
+    assert call_metric(NDCG, recs, truth, n=2, gain="rating") == approx(
         array_dcg(np.array([3.0, 4.0])) / array_dcg(np.array([5.0, 4.0]))
     )
 
@@ -79,14 +88,14 @@ def test_ndcg_almost_perfect_k_gain():
     st.lists(integer_ids(), min_size=1, max_size=100, unique=True),
     st.integers(1, 100),
 )
-def test_ndcg_alt_discount(items, k):
+def test_ndcg_alt_discount(items, n):
     rng = np.random.default_rng()
     picked = rng.choice(items, size=max(len(items) // 2, 1), replace=False)
     recs = ItemList(items, ordered=True)
     truth = ItemList(picked)
 
-    mv_weighted = call_metric(NDCG, recs, truth, k=k)
-    mv_legacy = call_metric(NDCG, recs, truth, k=k, discount=np.log2)
+    mv_weighted = call_metric(NDCG, recs, truth, n=n)
+    mv_legacy = call_metric(NDCG, recs, truth, n=n, discount=np.log2)
 
     try:
         assert mv_weighted == approx(mv_legacy)

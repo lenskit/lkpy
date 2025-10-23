@@ -11,7 +11,7 @@ import numpy as np
 from lenskit.data import ItemList
 
 
-def least_item_promoted(reference: ItemList, reranked: ItemList, k: int = 10) -> float:
+def least_item_promoted(reference: ItemList, reranked: ItemList, n: int = 10) -> float:
     """
     Compute the Least Item Promoted (LIP) metric.
 
@@ -24,7 +24,7 @@ def least_item_promoted(reference: ItemList, reranked: ItemList, k: int = 10) ->
             The original/base ranking.
         reranked:
             The reranked list.
-        k:
+        n:
             The depth to evaluate (default 10).
 
     Returns:
@@ -38,12 +38,12 @@ def least_item_promoted(reference: ItemList, reranked: ItemList, k: int = 10) ->
         return np.nan
 
     reference_ids = reference.ids()
-    lip_rank = k
-    for item_id in reranked[:k].ids():
+    lip_rank = n
+    for item_id in reranked[:n].ids():
         indices = np.where(reference_ids == item_id)[0]
         if indices.size > 0:
             rank = indices[0]
             if rank > lip_rank:
                 lip_rank = rank
 
-    return lip_rank - k
+    return lip_rank - n
