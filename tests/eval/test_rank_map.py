@@ -44,10 +44,10 @@ def test_ap_partial_hits():
 
 
 def test_ap_cutoff_k():
-    ap = _test_ap([1, 2, 3, 4, 5], [1, 3, 5], k=3)
+    ap = _test_ap([1, 2, 3, 4, 5], [1, 3, 5], n=3)
     assert ap == pytest.approx((1.0 + 2 / 3) / 3)
 
-    ap = _test_ap([1, 2, 3, 4, 5], [4, 5, 6], k=2)
+    ap = _test_ap([1, 2, 3, 4, 5], [4, 5, 6], n=2)
     assert ap == pytest.approx(0.0)
 
 

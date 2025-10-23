@@ -110,7 +110,7 @@ def test_recall_long_rel():
     rel = np.arange(100)
     items = [1, 0, 150, 3, 10]
 
-    r = _test_recall(items, rel, k=5)
+    r = _test_recall(items, rel, n=5)
     assert r == approx(0.8)
 
 
@@ -118,7 +118,7 @@ def test_recall_long_items():
     rel = np.arange(100)
     items = [1, 0, 150, 3, 10, 30, 120, 4, 17]
 
-    r = _test_recall(items, rel, k=5)
+    r = _test_recall(items, rel, n=5)
     assert r == approx(0.8)
 
 
@@ -126,5 +126,5 @@ def test_recall_partial_rel():
     rel = np.arange(100)
     items = [1, 0, 150, 3, 10]
 
-    r = _test_recall(items, rel, k=10)
+    r = _test_recall(items, rel, n=10)
     assert r == approx(0.4)

@@ -81,33 +81,33 @@ def test_dcg_perfect():
 def test_dcg_perfect_k_short():
     recs = ItemList([2, 3, 1], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert call_metric(DCG, recs, truth, k=2) == approx(2.0)
-    assert call_metric(DCG, recs[:2], truth, k=2) == approx(2.0)
+    assert call_metric(DCG, recs, truth, n=2) == approx(2.0)
+    assert call_metric(DCG, recs[:2], truth, n=2) == approx(2.0)
 
 
 def test_dcg_shorter_not_best():
     recs = ItemList([1, 2], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
     assert call_metric(DCG, recs, truth) == approx(fixed_dcg(2))
-    assert call_metric(DCG, recs, truth, k=2) == approx(2.0)
+    assert call_metric(DCG, recs, truth, n=2) == approx(2.0)
     assert call_metric(DCG, recs, truth, gain="rating") == approx(array_dcg(np.array([3.0, 5.0])))
 
 
 def test_dcg_perfect_k():
     recs = ItemList([2, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert call_metric(DCG, recs, truth, k=2) == approx(2.0)
+    assert call_metric(DCG, recs, truth, n=2) == approx(2.0)
 
 
 def test_dcg_perfect_k_norate():
     recs = ItemList([1, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert call_metric(DCG, recs, truth, k=2) == approx(2.0)
+    assert call_metric(DCG, recs, truth, n=2) == approx(2.0)
 
 
 def test_dcg_almost_perfect_k_gain():
     recs = ItemList([1, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert call_metric(DCG, recs, truth, k=2, gain="rating") == approx(
+    assert call_metric(DCG, recs, truth, n=2, gain="rating") == approx(
         array_dcg(np.array([3.0, 4.0]))
     )
