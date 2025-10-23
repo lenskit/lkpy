@@ -70,6 +70,7 @@ def test_duplicate_metric(demo_recs):
 
     bms = RunAnalysis()
     bms.add_metric(NDCG(n=10))
+    bms.add_metric(NDCG(n=10))
     bms.add_metric(RBP)
     bms.add_metric(RecipRank)
 
