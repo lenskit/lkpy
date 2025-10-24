@@ -15,7 +15,7 @@ from pytest import approx, fixture, mark, raises
 from lenskit.basic import PopScorer
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.metrics import NDCG, Recall
-from lenskit.metrics._accum import MetricAccumulator, MetricWrapper
+from lenskit.metrics._accum import MeasurementCollector, MetricWrapper
 from lenskit.metrics._base import DecomposedMetric, GlobalMetric, ListMetric, Metric
 from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
@@ -25,7 +25,7 @@ _log = logging.getLogger(__name__)
 
 @fixture
 def basic_accumulator():
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(Recall(5))
     acc.add_metric(NDCG(5))
     return acc
@@ -42,7 +42,7 @@ def sample_lists():
 
 
 def test_accumulator_empty_and_unmeasured_defaults():
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     # initial state
     assert acc.metrics == []
     assert acc.list_metrics().empty
@@ -63,7 +63,7 @@ def test_accumulator_empty_and_unmeasured_defaults():
 
 
 def test_accumulator_measures_list_and_summary(sample_lists):
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(ListLength())
 
     acc.measure_list(sample_lists["recs1"], sample_lists["test1"], user="u1")
@@ -78,7 +78,7 @@ def test_accumulator_measures_list_and_summary(sample_lists):
 
 
 def test_accumulator_empty_itemlists():
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(ListLength())
 
     acc.measure_list(ItemList([]), ItemList([1, 2]), user="u1")
@@ -91,7 +91,7 @@ def test_accumulator_empty_itemlists():
 
 
 def test_list_metrics_no_key_fields():
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(ListLength())
     acc.measure_list(ItemList([1, 2]), ItemList([1]))
     metrics = acc.list_metrics()
@@ -103,7 +103,7 @@ def test_list_metrics_no_key_fields():
 
 
 def test_wrap_metric_with_class():
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     wrapper = acc._wrap_metric(ListLength, label="ListLength", default=None)
     assert isinstance(wrapper.metric, ListLength)
     assert wrapper.label == "ListLength"
@@ -113,7 +113,7 @@ def test_wrap_metric_function_label():
     def custom_metric(recs, test):
         return len(recs)
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     wrapper = acc._wrap_metric(custom_metric, None, None)
     assert wrapper.label == "function"
 
@@ -130,7 +130,7 @@ def test_wrap_metric_function_label():
     ],
 )
 def test_accumulator_key_fields(keys, expected_names):
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(ListLength())
     acc.measure_list(ItemList([1, 2]), ItemList([2]), **keys)
     assert acc._key_fields == expected_names
@@ -150,13 +150,13 @@ def test_accumulator_key_fields(keys, expected_names):
     ],
 )
 def test_add_metric_types(metric_input, expected_type):
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(metric_input)
     assert isinstance(acc.metrics[0].metric, expected_type)
 
 
 def test_custom_labels_and_defaults():
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(ListLength(), label="CustomLength")
     assert acc.metrics[0].label == "CustomLength"
     acc.add_metric(ListLength(), default=99.0)
@@ -173,7 +173,7 @@ def test_global_metric():
         def measure_run(self, run, test):
             return 42.0
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(DummyGlobalMetric())
     result = acc.metrics[0].measure_run(ItemListCollection([]), ItemListCollection([]))
     assert result == 42.0
@@ -185,7 +185,7 @@ def test_callable_metric():
     def _callable(recs, test):
         return len(recs)
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(_callable, label="callable_metric")
     recs = ItemList([1, 2, 3])
     test_il = ItemList([1])
@@ -206,7 +206,7 @@ def test_scalar_metric():
         def summarize(self, values):
             return 99.0
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(ScalarMetric())
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     summary = acc.summary_metrics()
@@ -234,7 +234,7 @@ def test_mixed_metric_behavior():
             numeric_vals = [v if isinstance(v, float) else v["b"] for v in values]
             return {"mean": np.mean(numeric_vals)}
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(MixedMetric())
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     acc.measure_list(ItemList([2]), ItemList([2]), user="u2")
@@ -260,7 +260,7 @@ def test_none_extract_metric():
         def summarize(self, values):
             return {"mean": sum(values) / len(values)}
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(NoneExtractMetric())
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     df = acc.list_metrics()
@@ -304,7 +304,7 @@ def test_measure_metric_with_none_summarize():
         def summarize(self, values):
             return None
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(NoSummarizeMetric())
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
 
@@ -319,7 +319,7 @@ def test_full_workflow_integration_improved(ml_ds):
     split = split_temporal_fraction(ml_ds, 0.2, filter_test_users=True)
     scorer = PopScorer()
     scorer.train(split.train)
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(Recall(10))
     acc.add_metric(NDCG(10))
 
@@ -413,7 +413,7 @@ def test_empty_intermediate_values():
         def summarize(self, values):
             return {"mean": 0.0}
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(TestMetric())
 
     summary = acc.summary_metrics()
@@ -421,7 +421,7 @@ def test_empty_intermediate_values():
 
 
 def test_accumulator_duplicate_labels():
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(ListLength(), label="dup")
     acc.add_metric(ListLength(), label="dup")
 
@@ -439,7 +439,7 @@ def test_accumulator_with_default_value_on_none_result():
         def summarize(self, values):
             return {"mean": 123}
 
-    acc = MetricAccumulator()
+    acc = MeasurementCollector()
     acc.add_metric(NoneMetric(), default=99.0)
     acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
     metrics = acc.list_metrics()

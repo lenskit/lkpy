@@ -75,11 +75,16 @@ class MetricWrapper:
             raise TypeError(f"metric {self.metric} does not support global measurement")
 
 
-class MetricAccumulator:
+class MeasurementCollector:
     """
-    Accumulates metric measurements over multiple recommendation lists.
+    Collect metric measurements over multiple recommendation lists.
 
-    This class separates metric accumulation from the evaluation loop.
+    This class separates metric collection and aggregation from the main
+    evaluation loop.
+
+    .. versionchanged:: 2025.5
+        This class was renamed from ``MetricAccumulator``.  ``MetricAccumulator``
+        is preserved as a deprecated alias for ``MeasurementCollector``.
 
     Stability:
         Caller
