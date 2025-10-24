@@ -16,7 +16,7 @@ import pandas as pd
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import item_progress
-from lenskit.metrics._accum import MeasurementCollector
+from lenskit.metrics import MeasurementCollector
 
 from ._base import Metric, MetricFunction
 

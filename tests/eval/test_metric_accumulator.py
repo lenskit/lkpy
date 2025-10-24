@@ -15,8 +15,8 @@ from pytest import approx, fixture, mark, raises
 from lenskit.basic import PopScorer
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.metrics import NDCG, Recall
-from lenskit.metrics._accum import MeasurementCollector, MetricWrapper
 from lenskit.metrics._base import DecomposedMetric, GlobalMetric, ListMetric, Metric
+from lenskit.metrics._collect import MeasurementCollector, MetricWrapper
 from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
 
