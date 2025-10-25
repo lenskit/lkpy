@@ -24,8 +24,8 @@ def test_entropy_uniform():
     data = [1, 1, 1]
     sparse = sps.csr_matrix((data, (row, col)), shape=(3, 3))
 
-    dense_result = entropy(items, dense, n=3)
-    sparse_result = entropy(items, sparse, n=3)
+    dense_result = entropy(items, dense)  # n is lenght of items i.e. 3
+    sparse_result = entropy(items, sparse, n=5)  # n is max(5, len(items)) i.e. 3
 
     assert dense_result == approx(np.log2(3), abs=0.02)
     assert sparse_result == approx(dense_result, abs=0.001)
@@ -59,7 +59,7 @@ def test_rank_biased_entropy():
     data2 = [1, 1, 1, 1, 1]
     categories2 = sps.csr_matrix((data2, (row2, col2)), shape=(5, 3))
 
-    result1 = rank_biased_entropy(items, categories1, n=5)
+    result1 = rank_biased_entropy(items, categories1)  # n is length of items i.e. 5
     result2 = rank_biased_entropy(items, categories2, n=5)
 
     # categories1 more diverse due to weights
