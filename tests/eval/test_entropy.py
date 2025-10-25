@@ -135,3 +135,14 @@ def test_rank_biased_entropy_partial_weighted():
     result = rank_biased_entropy(items, categories, weight=weight, n=3)
     # entropy positive but less than log2(3) due to weights
     assert 0 < result <= np.log2(3)
+
+
+def test_n_zero():
+    items = ItemList([1, 2, 3], ordered=True)
+    dense = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+    e_result = entropy(items, dense, n=0)
+    rbe_result = rank_biased_entropy(items, dense, n=0)
+
+    assert np.isnan(e_result)
+    assert np.isnan(rbe_result)
