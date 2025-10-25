@@ -31,7 +31,9 @@ def entropy(
     if n == 0:
         return np.nan
 
-    truncated = categories[:n]
+    n = min(n, len(items))
+
+    truncated = categories[:n, :] if sps.issparse(categories) else categories[:n]
     return matrix_column_entropy(truncated)
 
 
@@ -57,7 +59,9 @@ def rank_biased_entropy(
     if n == 0:
         return np.nan
 
-    truncated = categories[:n]
+    n = min(n, len(items))
+
+    truncated = categories[:n, :] if sps.issparse(categories) else categories[:n]
 
     if weight is None:
         weight = GeometricRankWeight(0.85)
@@ -80,20 +84,25 @@ def matrix_column_entropy(
     Returns:
         Shannon entropy (float) or np.nan if matrix is empty or all zeros.
     """
-    if sps.issparse(matrix):
-        matrix = matrix.toarray()
 
     if matrix.shape[0] == 0 or matrix.shape[1] == 0:
         return np.nan
 
     if weights is not None:
-        matrix = matrix * weights[:, np.newaxis]
+        if sps.issparse(matrix):
+            matrix = matrix.multiply(weights[:, np.newaxis])
+        else:
+            matrix = matrix * weights[:, np.newaxis]
 
-    counts = np.sum(matrix, axis=0)
-    counts = counts[counts > 0]
+    if sps.issparse(matrix):
+        values = np.asarray(matrix.sum(axis=0)).ravel()
+    else:
+        values = matrix.sum(axis=0)
 
-    if len(counts) == 0 or np.sum(counts) == 0:
-        return np.nan
+    values = values + 1e-6
 
-    probs = counts / np.sum(counts)
-    return float(-np.sum(probs * np.log2(probs)))
+    total = np.sum(values)
+    probs = values / total
+    entropy = float(-np.sum(probs * np.log2(probs)))
+
+    return entropy
