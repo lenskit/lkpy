@@ -62,13 +62,13 @@ def test_mrr_array_late():
 
 
 def test_mrr_k_trunc():
-    rr = _test_rr(np.arange(1, 21, 1, "u4"), [20, 10], k=5)
+    rr = _test_rr(np.arange(1, 21, 1, "u4"), [20, 10], n=5)
     assert rr == approx(0.0)
 
-    rr = _test_rr(np.arange(1, 21, 1, "u4"), [20, 10, 5], k=5)
+    rr = _test_rr(np.arange(1, 21, 1, "u4"), [20, 10, 5], n=5)
     assert rr == approx(0.2)
 
 
 def test_mrr_k_short():
-    rr = _test_rr(np.arange(1, 5, 1, "u4"), [2], k=10)
+    rr = _test_rr(np.arange(1, 5, 1, "u4"), [2], n=10)
     assert rr == approx(0.5)

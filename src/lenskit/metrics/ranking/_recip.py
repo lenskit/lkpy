@@ -30,8 +30,8 @@ class RecipRank(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"RecipRank@{self.k}"
+        if self.n is not None:
+            return f"RecipRank@{self.n}"
         else:
             return "RecipRank"
 

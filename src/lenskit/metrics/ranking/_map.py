@@ -20,8 +20,8 @@ class AveragePrecision(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"AveragePrecision@{self.k}"
+        if self.n is not None:
+            return f"AveragePrecision@{self.n}"
         else:
             return "AveragePrecision"
 

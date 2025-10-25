@@ -31,11 +31,12 @@ class GiniBase(DecomposedMetric, RankingMetricBase):
 
     def __init__(
         self,
+        n: int | None = None,
         *,
-        items: int | pd.Series | pd.DataFrame | Dataset,
         k: int | None = None,
+        items: int | pd.Series | pd.DataFrame | Dataset,
     ):
-        super().__init__(k)
+        super().__init__(n, k=k)
         if isinstance(items, int):
             self.item_count = items
         elif isinstance(items, Dataset):
@@ -52,7 +53,7 @@ class ListGini(GiniBase):
     appears in.
 
     Args:
-        k:
+        n:
             The maximum recommendation list length.
         items:
             The total number of items, a data frame or series of item data, or a
@@ -89,7 +90,7 @@ class ExposureGini(GiniBase):
     and computes the Gini coefficient of the total exposure.
 
     Args:
-        k:
+        n:
             The maximum recommendation list length.
         items:
             The total number of items, a data frame or series of item data, or a
@@ -108,12 +109,13 @@ class ExposureGini(GiniBase):
 
     def __init__(
         self,
+        n: int | None = None,
         *,
-        items: int | pd.Series | pd.DataFrame | Dataset,
         k: int | None = None,
+        items: int | pd.Series | pd.DataFrame | Dataset,
         weight: RankWeight = GeometricRankWeight(),
     ):
-        super().__init__(k=k, items=items)
+        super().__init__(n=n, k=k, items=items)
         self.weight = weight
 
     @override

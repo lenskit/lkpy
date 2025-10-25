@@ -52,7 +52,7 @@ class RBP(ListMetric, RankingMetricBase):
         for published research results.
 
     Args:
-        k:
+        n:
             The maximum recommendation list length.
         weight:
             The rank weighting model to use.  Defaults to
@@ -74,13 +74,14 @@ class RBP(ListMetric, RankingMetricBase):
 
     def __init__(
         self,
-        k: int | None = None,
+        n: int | None = None,
         *,
+        k: int | None = None,
         weight: RankWeight | None = None,
         patience: float = 0.85,
         normalize: bool = False,
     ):
-        super().__init__(k)
+        super().__init__(n, k=k)
         self.patience = patience
         if weight is None:
             weight = GeometricRankWeight(patience)
@@ -89,8 +90,8 @@ class RBP(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"RBP@{self.k}"
+        if self.n is not None:
+            return f"RBP@{self.n}"
         else:
             return "RBP"
 
