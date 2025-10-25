@@ -33,7 +33,8 @@ def entropy(
 
     n = min(n, len(items))
 
-    truncated = categories[:n, :] if sps.issparse(categories) else categories[:n]
+    truncated = categories[:n, :]
+
     return matrix_column_entropy(truncated)
 
 
@@ -61,7 +62,7 @@ def rank_biased_entropy(
 
     n = min(n, len(items))
 
-    truncated = categories[:n, :] if sps.issparse(categories) else categories[:n]
+    truncated = categories[:n, :]
 
     if weight is None:
         weight = GeometricRankWeight(0.85)
@@ -92,13 +93,9 @@ def matrix_column_entropy(
         if sps.issparse(matrix):
             matrix = matrix.multiply(weights[:, np.newaxis])
         else:
-            matrix = matrix * weights[:, np.newaxis]
+            matrix = np.multiply(matrix, weights[:, np.newaxis])
 
-    if sps.issparse(matrix):
-        values = np.asarray(matrix.sum(axis=0)).ravel()
-    else:
-        values = matrix.sum(axis=0)
-
+    values = np.asarray(matrix.sum(axis=0)).ravel()
     values = values + 1e-6
 
     total = np.sum(values)
