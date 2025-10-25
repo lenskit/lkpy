@@ -26,8 +26,8 @@ class Hit(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"Hit@{self.k}"
+        if self.n is not None:
+            return f"Hit@{self.n}"
         else:
             return "Hit"
 

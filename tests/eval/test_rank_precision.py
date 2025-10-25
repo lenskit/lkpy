@@ -14,10 +14,10 @@ from lenskit.metrics.ranking import Precision
 from lenskit.testing import demo_recs  # noqa: F401
 
 
-def _test_prec(items, rel, **k):
+def _test_prec(items, rel, **kw):
     recs = ItemList(items, ordered=True)
     truth = ItemList(rel)
-    return Precision(**k).measure_list(recs, truth)
+    return Precision(**kw).measure_list(recs, truth)
 
 
 def test_precision_empty_none():
@@ -101,7 +101,7 @@ def test_prec_long_rel():
     rel = np.arange(100)
     items = [1, 0, 150, 3, 10]
 
-    r = _test_prec(items, rel, k=5)
+    r = _test_prec(items, rel, n=5)
     assert r == approx(0.8)
 
 
@@ -109,7 +109,7 @@ def test_prec_long_items():
     rel = np.arange(100)
     items = [1, 0, 150, 3, 10, 30, 120, 4, 17]
 
-    r = _test_prec(items, rel, k=5)
+    r = _test_prec(items, rel, n=5)
     assert r == approx(0.8)
 
 
@@ -117,5 +117,5 @@ def test_prec_short_items():
     rel = np.arange(100)
     items = [1, 0, 150]
 
-    r = _test_prec(items, rel, k=5)
+    r = _test_prec(items, rel, n=5)
     assert r == approx(2 / 3)

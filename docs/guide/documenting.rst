@@ -96,9 +96,9 @@ and MRR, assuming that your algorithm identifier is in a column named ``model``
 and the target list length is in ``N``::
 
     rla = RunAnalysis()
-    rla.add_metric(Hit(k=N))
-    rla.add_metric(NDCG(k=N))
-    rla.add_metric(RecipRank(k=N))
+    rla.add_metric(Hit(n=N))
+    rla.add_metric(NDCG(n=N))
+    rla.add_metric(RecipRank(n=N))
     results = rla.measure(recs, test)
     # group by agorithm
     model_metrics = results.list_summary('model')

@@ -109,13 +109,13 @@ def test_hit_long_items():
     items = [1, 0, 150, 3, 10, 30, 120, 4, 17]
     items = np.array(items)
 
-    r = _test_hit(items, rel, k=5)
+    r = _test_hit(items, rel, n=5)
     assert r == 1
 
     items += 200
     items[5] = 5
 
-    r = _test_hit(np.array(items) + 200, rel, k=5)
+    r = _test_hit(np.array(items) + 200, rel, n=5)
     assert r == 0
 
 
@@ -123,5 +123,5 @@ def test_hit_partial_rel():
     rel = np.arange(100)
     items = [1, 0, 150, 3, 10]
 
-    r = _test_hit(items, rel, k=10)
+    r = _test_hit(items, rel, n=10)
     assert r == 1

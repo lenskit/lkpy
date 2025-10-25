@@ -12,8 +12,8 @@ from typing import Callable, ParamSpec
 
 from lenskit.data import ItemList
 
-from ._accum import MetricAccumulator
 from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
+from ._collect import MeasurementCollector
 from ._quick import quick_measure_model
 from .basic import ListLength, TestItemCount
 from .bulk import RunAnalysis, RunAnalysisResult
@@ -41,7 +41,7 @@ from .reranking import least_item_promoted, rank_biased_overlap
 __all__ = [
     "Metric",
     "MetricFunction",
-    "MetricAccumulator",
+    "MeasurementCollector",
     "ListMetric",
     "GlobalMetric",
     "RankingMetricBase",
@@ -72,6 +72,13 @@ __all__ = [
 ]
 
 P = ParamSpec("P")
+MetricAccumulator = MeasurementCollector
+"""
+Deprecated alias for :class:`MeasurementCollector`.
+
+.. deprecated:: 2025.5
+    Use the new name.
+"""
 
 
 def call_metric(
