@@ -110,8 +110,10 @@ jobs:
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
         run: |
-          coverage report
+          uv run coverage report
           cp .coverage coverage.db
+        env:
+          UV_NO_SYNC: 1
 
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
