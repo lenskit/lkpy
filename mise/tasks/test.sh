@@ -7,7 +7,8 @@
 #USAGE arg "<arg>" var=#true default="tests" help="Arguments and paths to pytest"
 
 set -eo pipefail
-source "$MISE_PROJECT_ROOT/mise/task-functions.sh"
+. "$MISE_PROJECT_ROOT/mise/task-functions.sh"
+. "$MISE_PROJECT_ROOT/.venv/bin/activate"
 
 declare -a test_args=()
 declare -a build_args=()
@@ -37,7 +38,7 @@ fi
 # need eval to properly quote these arguments
 eval "test_args+=($usage_arg)"
 msg "running tests"
-echo-run uv run --no-sync pytest "${test_args[@]}"
+echo-run pytest "${test_args[@]}"
 
 if [[ $usage_accel_coverage = true ]]; then
     mise run coverage:collect-rust

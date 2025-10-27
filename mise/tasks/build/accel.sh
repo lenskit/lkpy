@@ -7,6 +7,7 @@
 set -eo pipefail
 
 . "$MISE_PROJECT_ROOT/mise/task-functions.sh"
+. "$MISE_PROJECT_ROOT/.venv/bin/activate"
 
 declare -a build_args=()
 if [[ $usage_release = true ]]; then
