@@ -51,9 +51,6 @@ jobs:
           if [ "${{matrix.python}}" = "3.13" ]; then
             uv_extra="--no-extra ray"
           fi
-          if [ "$(uname)" = Linux ]; then
-            export CC=gcc
-          fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
         env:
           SETUPTOOLS_RUST_CARGO_PROFILE: release
