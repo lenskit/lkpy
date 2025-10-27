@@ -8,7 +8,7 @@ import os
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
-    "LLVM_PROFILE_FILE" in os.environ,
-    reason="Rust coverage is enabled, but these tests are not worth the cost",
-)
+if "LLVM_PROFILE_FILE" in os.environ:
+    pytest.skip(
+        "Rust coverage is enabled, but these tests are not worth the cost", allow_module_level=True
+    )
