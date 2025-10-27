@@ -3,6 +3,8 @@ rust = { version = "stable", components = "rustfmt,cargo,rustc" }
 shfmt = "latest"
 uv = "latest"
 pre-commit = "4"
+cargo-binstall = "latest"
+"cargo:cargo-binutils" = "latest"
 
 [settings]
 experimental = true
