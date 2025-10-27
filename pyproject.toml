@@ -225,6 +225,7 @@ log_cli_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(mess
 log_file_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(message)s"
 log_file_level = "DEBUG"
 addopts = "--benchmark-skip"
+testpaths = "tests"
 doctest_plus = true
 doctest_subpackage_requires = ["src/lenskit/hpf.py = hpfrec"]
 consider_namespace_packages = true
