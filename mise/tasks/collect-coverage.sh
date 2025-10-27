@@ -3,9 +3,10 @@
 #MISE wait_for=["test"]
 
 set -eo pipefail
+set -x
 
-cargo profdata merge -sparse .coverage-prof/lenskit-tests-*.profraw -o .coverage-prof/lenskit-tests.profdata
-cargo cov -- export --instr-profile=.coverage-prof/lenskit-tests.profdata target/debug/lib_accel.dylib --format=lcov >lcov.info
+cargo profdata -- merge -sparse .coverage-prof/lenskit-test-*.profraw -o .coverage-prof/lenskit-test.profdata
+cargo cov -- export --instr-profile=.coverage-prof/lenskit-test.profdata target/release/lib_accel.dylib --format=lcov >lcov.info
 if [[ -e .coverage ]]; then
     echo-run coverage xml
 fi
