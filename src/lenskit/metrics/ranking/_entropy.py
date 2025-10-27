@@ -95,7 +95,7 @@ def matrix_column_entropy(
         else:
             matrix = np.multiply(matrix, weights[:, np.newaxis])
 
-    values = np.asarray(matrix.sum(axis=0)).ravel()
+    values = np.asarray(matrix.sum(axis=0))
     values = values + 1e-6
 
     total = np.sum(values)
