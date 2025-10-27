@@ -37,7 +37,7 @@ fi
 # need eval to properly quote these arguments
 eval "test_args+=($usage_arg)"
 msg "running tests"
-echo-run pytest "${test_args[@]}"
+echo-run uv run --no-sync pytest "${test_args[@]}"
 
 if [[ $usage_accel_coverage = true ]]; then
     mise run coverage:collect-rust
