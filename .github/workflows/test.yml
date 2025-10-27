@@ -101,7 +101,7 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv sync -p 3.11 --no-default-groups --group test
+          uv sync -p 3.11
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
