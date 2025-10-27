@@ -22,7 +22,7 @@ def test_entropy_uniform():
     row = [0, 1, 2]
     col = [0, 1, 2]
     data = [1, 1, 1]
-    sparse = sps.csr_matrix((data, (row, col)), shape=(3, 3))
+    sparse = sps.csr_array((data, (row, col)), shape=(3, 3))
 
     dense_result = entropy(items, dense)  # n is lenght of items i.e. 3
     sparse_result = entropy(items, sparse, n=5)  # n is max(5, len(items)) i.e. 3
@@ -37,7 +37,7 @@ def test_entropy_partial():
     row = [0, 1, 2, 3]
     col = [0, 1, 0, 1]
     data = [1, 1, 1, 1]
-    sparse = sps.csr_matrix((data, (row, col)), shape=(4, 2))
+    sparse = sps.csr_array((data, (row, col)), shape=(4, 2))
 
     dense_result = entropy(items, dense, n=2)
     sparse_result = entropy(items, sparse, n=2)
@@ -52,12 +52,12 @@ def test_rank_biased_entropy():
     row1 = [0, 1, 2, 3, 4]
     col1 = [0, 1, 2, 0, 0]
     data1 = [1, 1, 1, 1, 1]
-    categories1 = sps.csr_matrix((data1, (row1, col1)), shape=(5, 3))
+    categories1 = sps.csr_array((data1, (row1, col1)), shape=(5, 3))
     # less diverse: category 0 dominates early
     row2 = [0, 1, 2, 3, 4]
     col2 = [0, 0, 0, 1, 2]
     data2 = [1, 1, 1, 1, 1]
-    categories2 = sps.csr_matrix((data2, (row2, col2)), shape=(5, 3))
+    categories2 = sps.csr_array((data2, (row2, col2)), shape=(5, 3))
 
     result1 = rank_biased_entropy(items, categories1)  # n is length of items i.e. 5
     result2 = rank_biased_entropy(items, categories2, n=5)
@@ -74,7 +74,7 @@ def test_matrix_column_entropy_weighted():
     row = [0, 1, 2]
     col = [0, 1, 0]
     data = [1, 1, 1]
-    sparse = sps.csr_matrix((data, (row, col)), shape=(3, 2))
+    sparse = sps.csr_array((data, (row, col)), shape=(3, 2))
     weights = np.array([1.0, 0.5, 0.5])
 
     dense_unweighted = matrix_column_entropy(dense)
@@ -92,7 +92,7 @@ def test_matrix_column_entropy_weighted():
 
 def test_matrix_column_entropy_empty():
     dense_empty = np.array([]).reshape(0, 3)
-    sparse_empty = sps.csr_matrix((0, 3))
+    sparse_empty = sps.csr_array((0, 3))
 
     assert np.isnan(matrix_column_entropy(dense_empty))
     assert np.isnan(matrix_column_entropy(sparse_empty))
@@ -100,7 +100,7 @@ def test_matrix_column_entropy_empty():
 
 def test_matrix_column_entropy_all_zeros():
     dense_zeros = np.zeros((3, 4))
-    sparse_zeros = sps.csr_matrix((3, 4))
+    sparse_zeros = sps.csr_array((3, 4))
 
     dense_result = matrix_column_entropy(dense_zeros)
     sparse_result = matrix_column_entropy(sparse_zeros)
@@ -116,7 +116,7 @@ def test_entropy_large_sparse():
     row = [0, 2, 4, 6, 8]
     col = [0, 1, 2, 3, 4]
     data = [1, 1, 1, 1, 1]
-    categories = sps.csr_matrix((data, (row, col)), shape=(10, 5))
+    categories = sps.csr_array((data, (row, col)), shape=(10, 5))
 
     result = entropy(items, categories, n=10)
     # uniform distribution across 5 categories
@@ -129,7 +129,7 @@ def test_rank_biased_entropy_partial_weighted():
     row = [0, 1, 3]
     col = [0, 1, 2]
     data = [1, 1, 1]
-    categories = sps.csr_matrix((data, (row, col)), shape=(5, 3))
+    categories = sps.csr_array((data, (row, col)), shape=(5, 3))
     weight = GeometricRankWeight(0.5)
 
     result = rank_biased_entropy(items, categories, weight=weight, n=3)

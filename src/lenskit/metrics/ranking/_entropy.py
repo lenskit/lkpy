@@ -90,10 +90,7 @@ def matrix_column_entropy(
         return np.nan
 
     if weights is not None:
-        if sps.issparse(matrix):
-            matrix = matrix.multiply(weights[:, np.newaxis])
-        else:
-            matrix = np.multiply(matrix, weights[:, np.newaxis])
+        matrix = matrix * weights[:, np.newaxis]
 
     values = np.asarray(matrix.sum(axis=0))
     values = values + 1e-6
