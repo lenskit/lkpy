@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Collect code coverage"
 #MISE wait_for=["test"]
-#USAGE flag="-r --release" help="Profile with release data."
+#USAGE flag "-r --release" help="Profile with release data."
 
 set -eo pipefail
 . "$MISE_PROJECT_ROOT/mise/task-functions.sh"
