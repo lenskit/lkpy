@@ -4,7 +4,7 @@ shfmt = "latest"
 uv = "latest"
 pre-commit = "4"
 cargo-binstall = "latest"
-"cargo:cargo-binutils" = "latest"
+"cargo:cargo-binutils" = "0.3"
 
 [settings]
 experimental = true
