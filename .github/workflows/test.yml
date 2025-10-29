@@ -98,6 +98,8 @@ jobs:
 
       - name: Install mise-en-place
         uses: jdx/mise-action@v2
+        with:
+          cache: false
 
       - name: 📦 Set up Python dependencies
         run: |
