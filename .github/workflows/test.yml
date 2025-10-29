@@ -26,6 +26,7 @@ jobs:
           - ubuntu-latest
           - ubuntu-24.04-arm
           - macos-latest
+          - macos-15-intel
           - windows-latest
         exclude:
           - python: "3.13"
