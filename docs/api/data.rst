@@ -22,6 +22,10 @@ Data Sets
     ~lenskit.data.Dataset
     ~lenskit.data.EntitySet
     ~lenskit.data.AttributeSet
+    ~lenskit.data.ScalarAttributeSet
+    ~lenskit.data.ListAttributeSet
+    ~lenskit.data.VectorAttributeSet
+    ~lenskit.data.SparseAttributeSet
     ~lenskit.data.RelationshipSet
     ~lenskit.data.MatrixRelationshipSet
     ~lenskit.data.CSRStructure

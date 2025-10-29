@@ -238,6 +238,11 @@ class VectorAttributeSet(AttributeSet):
 
     @property
     def dim_names(self) -> list[str] | None:
+        """
+        Get the names of the dimensions of this vector.  I.e., if the vector
+        is storing weights attached to tags, the dimension names will be the
+        tags.
+        """
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
@@ -252,6 +257,9 @@ class VectorAttributeSet(AttributeSet):
 
     @property
     def vector_size(self) -> int:
+        """
+        Get the size (dimensionality) of this vector attribute.
+        """
         assert self._spec.vector_size is not None, "vector column has no size"
         return self._spec.vector_size
 
@@ -321,6 +329,12 @@ class SparseAttributeSet(AttributeSet):
 
     @property
     def dim_names(self) -> list[str] | None:
+        """
+        Get the names of the dimensions of this vector.  I.e., if the vector
+        is storing weights attached to tags, the dimension names will be the
+        tags.
+        """
+
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
