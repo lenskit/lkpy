@@ -26,7 +26,6 @@ jobs:
           - ubuntu-latest
           - ubuntu-24.04-arm
           - macos-latest
-          - macos-15-intel
           - windows-latest
         exclude:
           - python: "3.13"
@@ -44,10 +43,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python }}
-
-      - name: Clear lockfile on macOS x86_64
-        if: matrix.platform == 'macos-15-intel'
-        run: rm uv.lock
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
@@ -190,6 +185,51 @@ jobs:
             coverage.db
             coverage.xml
 
+  mac-intel:
+    name: macOS Intel tests
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Set up Python dependencies
+        run: |
+          uv pip install --group=test -e .
+
+      - name: 🔍 Inspect environment
+        run: |
+          lenskit doctor --full
+
+      - name: 🏃🏻‍➡️ Test LKPY
+        run: |
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
+        run: |
+          coverage xml
+          coverage report
+          cp .coverage coverage.db
+
+      - name: 📤 Upload test results
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-mac-intel
+          path: |
+            test*.log
+            coverage.db
+            coverage.xml
+
   eval-tests:
     name: Evaluation-based tests
     runs-on: ubuntu-latest
@@ -315,6 +355,7 @@ jobs:
       - mindep
       - eval-tests
       - doc-tests
+      - mac-intel
 
     if: ${{ !cancelled() }}
     steps:
