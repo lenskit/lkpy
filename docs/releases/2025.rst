@@ -9,6 +9,18 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.5.0:
+
+2025.5.0
+~~~~~~~~
+
+- Documentation updates.
+- Rename rank metric ``k`` arguments to ``n`` (with ``k`` as a deprecated alias).
+- Rename ``MetricAccumulator`` to
+  :class:`~lenskit.metrics.MeasurementCollector`, to reserve the “accumulator”
+  name for other accumulation purposes.
+- Add test coverage measurements for Rust accelerator code.
+
 .. _2025.4.0:
 
 2025.4.0
