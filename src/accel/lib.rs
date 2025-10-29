@@ -13,6 +13,7 @@ mod als;
 mod arrow;
 mod atomic;
 mod data;
+mod errors;
 mod funksvd;
 mod indirect_hashing;
 mod knn;

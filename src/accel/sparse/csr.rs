@@ -8,7 +8,6 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use log::*;
-use pyo3::prelude::*;
 
 use arrow::{
     array::{
@@ -21,6 +20,7 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
 
 use crate::arrow::{lists::ExtractListArray, SparseIndexListType, SparseRowType};
+use crate::ok_or_pyerr;
 
 use super::SparseIndexType;
 
@@ -107,23 +107,22 @@ where
 {
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRStructure<Ix>> {
-        let array: GenericListArray<Ix> =
-            GenericListArray::extract_list_array(&array).ok_or_else(|| {
-                PyErr::new::<PyTypeError, _>(format!(
-                    "invalid array type {}, expected List or LargeList",
-                    array.data_type()
-                ))
-            })?;
+        let array: GenericListArray<Ix> = ok_or_pyerr!(
+            GenericListArray::extract_list_array(&array),
+            PyTypeError,
+            "invalid array type {}, expected List or LargeList",
+            array.data_type()
+        )?;
         debug!("extracted array of type {}", array.data_type());
         let arr_type = SparseIndexListType::try_from(array.data_type())
             .map_err(|e| PyTypeError::new_err(format!("invalid array type: {:?}", e)))?;
 
-        let col_inds: &Int32Array = array.values().as_any().downcast_ref().ok_or_else(|| {
-            PyErr::new::<PyTypeError, _>(format!(
-                "invalid element type {}, expected Int32",
-                array.values().data_type()
-            ))
-        })?;
+        let col_inds: &Int32Array = ok_or_pyerr!(
+            array.values().as_any().downcast_ref(),
+            PyTypeError,
+            "invalid element type {}, expected Int32",
+            array.values().data_type()
+        )?;
         let col_inds = downcast_array(&col_inds);
 
         Ok(CSRStructure {
@@ -151,22 +150,22 @@ where
 {
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRMatrix<Ix, V>> {
-        let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
-            PyErr::new::<PyTypeError, _>(format!(
-                "invalid array type {}, expected List or LargeList",
-                array.data_type()
-            ))
-        })?;
+        let sa: &GenericListArray<Ix> = ok_or_pyerr!(
+            array.as_any().downcast_ref(),
+            PyTypeError,
+            "invalid array type {}, expected List or LargeList",
+            array.data_type()
+        )?;
         // type-check the columns
         let _arr_type = SparseRowType::try_from(array.data_type())
             .map_err(|e| PyTypeError::new_err(format!("invalid array type: {:?}", e)))?;
 
-        let rows: &StructArray = sa.values().as_any().downcast_ref().ok_or_else(|| {
-            PyErr::new::<PyTypeError, _>(format!(
-                "invalid element type {}, expected Struct",
-                sa.values().data_type()
-            ))
-        })?;
+        let rows: &StructArray = ok_or_pyerr!(
+            sa.values().as_any().downcast_ref(),
+            PyTypeError,
+            "invalid element type {}, expected Struct",
+            sa.values().data_type()
+        )?;
 
         let fields = rows.fields();
         assert_eq!(fields.len(), 2);
@@ -179,7 +178,7 @@ where
             .map_err(|e| PyTypeError::new_err(format!("invalid index type: {}", e)))?;
 
         if val_f.data_type() != &V::DATA_TYPE {
-            return Err(PyErr::new::<PyTypeError, _>(format!(
+            return Err(PyTypeError::new_err(format!(
                 "invalid value column type {}, expected {}",
                 val_f.data_type(),
                 V::DATA_TYPE
