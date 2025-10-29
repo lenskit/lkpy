@@ -45,6 +45,10 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Clear lockfile on macOS x86_64
+        if: matrix.platform == 'macos-15-intel'
+        run: rm uv.lock
+
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
