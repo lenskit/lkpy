@@ -19,19 +19,21 @@ pub use types::SparseRowType;
 use arrow::array::Array;
 use pyo3::prelude::*;
 
+use crate::ok_or_pyerr;
+
 pub fn checked_array_ref<'array, T: Array + 'static>(
     name: &str,
     tstr: &str,
     array: &'array dyn Array,
 ) -> PyResult<&'array T> {
-    array.as_any().downcast_ref().ok_or_else(|| {
-        PyErr::new::<PyTypeError, _>(format!(
-            "invalid {} type {}, expected {}",
-            name,
-            array.data_type(),
-            tstr
-        ))
-    })
+    ok_or_pyerr!(
+        array.as_any().downcast_ref(),
+        PyTypeError,
+        "invalid {} type {}, expected {}",
+        name,
+        array.data_type(),
+        tstr
+    )
 }
 
 pub fn checked_array<'array, E: ArrowPrimitiveType + 'static>(

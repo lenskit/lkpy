@@ -22,7 +22,7 @@ use pyo3::{
 };
 use rayon::slice::ParallelSliceMut;
 
-use crate::arrow::checked_array;
+use crate::{arrow::checked_array, ok_or_pyerr};
 
 const PAR_SORT_THRESHOLD: usize = 10_000;
 
@@ -35,12 +35,18 @@ pub(super) fn is_sorted_coo<'py>(
 ) -> PyResult<bool> {
     let mut last = None;
     for PyArrowType(batch) in data {
-        let col1 = batch
-            .column_by_name(c1)
-            .ok_or_else(|| PyValueError::new_err(format!("unknown column: {}", c1)))?;
-        let col2 = batch
-            .column_by_name(c2)
-            .ok_or_else(|| PyValueError::new_err(format!("unknown column: {}", c2)))?;
+        let col1 = ok_or_pyerr!(
+            batch.column_by_name(c1),
+            PyValueError,
+            "unknown column: {}",
+            c1
+        )?;
+        let col2 = ok_or_pyerr!(
+            batch.column_by_name(c2),
+            PyValueError,
+            "unknown column: {}",
+            c2
+        )?;
 
         let col1: Int32Array = checked_array(c1, col1)?;
         let col2: Int32Array = checked_array(c2, col2)?;
