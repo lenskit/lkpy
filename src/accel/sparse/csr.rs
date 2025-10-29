@@ -33,9 +33,7 @@ pub enum IxVar<T32, T64> {
 
 /// A compressed sparse row matrix with only structure, not values.
 pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
-    #[allow(dead_code)]
     pub n_rows: usize,
-    #[allow(dead_code)]
     pub n_cols: usize,
     array: GenericListArray<Ix>,
     pub col_inds: Int32Array,
@@ -63,7 +61,6 @@ pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
     }
 
     /// Get the number of observed values in the matrix.
-    #[allow(dead_code)]
     fn nnz(&self) -> usize {
         self.row_ptrs()[self.len()].try_into().unwrap()
     }
@@ -83,7 +80,6 @@ pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
     }
 
     /// Get the column indices for a row in the matrix.
-    #[allow(dead_code)]
     fn row_cols(&self, row: usize) -> &[i32] {
         let (start, end) = self.extent(row);
         &self.col_inds().values()[start..end]

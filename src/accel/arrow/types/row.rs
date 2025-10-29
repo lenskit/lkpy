@@ -13,7 +13,6 @@ use super::SparseIndexType;
 /// Arrow extension type for sparse rows.
 #[derive(Debug)]
 pub struct SparseRowType {
-    #[allow(dead_code)]
     pub offset_type: DataType,
     #[allow(dead_code)]
     pub index_name: String,
@@ -23,7 +22,7 @@ pub struct SparseRowType {
 
 impl SparseRowType {
     /// Create a new sparse row extension for the given dimension.
-    #[allow(dead_code)]
+    #[cfg(false)]
     pub fn create(dim: usize) -> SparseRowType {
         SparseRowType {
             offset_type: DataType::Int32,
@@ -34,7 +33,7 @@ impl SparseRowType {
     }
 
     /// Create a new sparse row extension for the given dimension with large offsets.
-    #[allow(dead_code)]
+    #[cfg(false)]
     pub fn create_large(dim: usize) -> SparseRowType {
         SparseRowType {
             offset_type: DataType::Int64,

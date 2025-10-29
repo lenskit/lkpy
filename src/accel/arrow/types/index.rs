@@ -25,7 +25,7 @@ pub struct SparseMeta {
 
 impl SparseMeta {
     /// Create a new sparse row metadata object.
-    #[allow(dead_code)]
+    #[cfg(false)]
     pub fn create(dim: usize) -> SparseMeta {
         SparseMeta { dimension: dim }
     }
