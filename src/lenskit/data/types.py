@@ -30,14 +30,14 @@ ID: TypeAlias = CoreID | NPID
 "Allowable identifier types."
 IDArray: TypeAlias = np.ndarray[tuple[int], np.dtype[NPID]]
 "NumPy arrays of identifiers."
-IDSequence: TypeAlias = (
+IDSequence: TypeAlias = """
     Sequence[ID]
     | IDArray
     | pa.StringArray
-    | "pa.IntegerArray[Any]"
-    | "pa.ChunkedArray[Any]"
-    | "pd.Series[CoreID]"
-)
+    | pa.IntegerArray[Any]
+    | pa.ChunkedArray[Any]
+    | pd.Series[CoreID]
+    """
 "Sequences of identifiers."
 
 V = TypeVar("V", bound=np.number[Any], default=np.float32)
