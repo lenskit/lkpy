@@ -108,6 +108,14 @@ class AttributeSet:
         else:
             return self._selected.to_numpy()
 
+    def cat_matrix(
+        self, *, normalize: Literal["unit" | "distribution"] = None
+    ) -> NDArray[np.floating[Any]] | csr_array:
+        """
+        Compute a categorical matrix.
+        """
+        raise NotImplementedError
+
     @property
     def dim_names(self) -> list[str] | None:
         """
@@ -218,6 +226,35 @@ class ScalarAttributeSet(AttributeSet):
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
 
+    _category_vocab: Vocabulary | None = None
+
+    def cat_matrix(self, *, normalize: Literal["unit" | "distribution"] = None) -> csr_array:
+        """
+        Create item * category matrix for scalar attributes.
+        """
+        arr = self.arrow()
+        if pa.types.is_floating(arr.type):
+            raise TypeError
+
+        values = arr.to_pylist()
+        vocab = self._category_vocab
+        cat_to_idx = {val: i for i, val in enumerate(vocab)}
+
+        s = pd.Series(values)
+        df = s.reset_index()
+        df["col"] = df[0].map(cat_to_idx)
+        df = df.dropna(subset=["col"])
+
+        row_indices = df["index"].to_numpy(dtype=np.int32)
+        col_indices = df["col"].to_numpy(dtype=np.int32)
+        data = np.ones(len(row_indices), dtype=np.float32)
+
+        matrix = csr_array(
+            (data, (row_indices, col_indices)), shape=(len(values), len(vocab)), dtype=np.float32
+        )
+
+        return matrix
+
 
 class ListAttributeSet(AttributeSet):
     def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
@@ -230,6 +267,35 @@ class ListAttributeSet(AttributeSet):
         elif missing == "omit":
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
+
+    _category_vocab: Vocabulary | None = None
+
+    def cat_matrix(self, *, normalize: Literal["unit" | "distribution"] = None) -> csr_array:
+        """
+        Create item * category matrix for list attributes.
+        """
+        arr = self.arrow()
+        if not (pa.types.is_list(arr.type)):
+            raise TypeError
+
+        values = arr.to_pylist()
+        vocab = self._category_vocab
+        cat_to_idx = {val: i for i, val in enumerate(vocab)}
+
+        s = pd.Series(values)
+        df = s.explode().reset_index()
+        df["col"] = df[0].map(cat_to_idx)
+        df = df.dropna(subset=["col"])
+
+        row_indices = df["index"].to_numpy(dtype=np.int32)
+        col_indices = df["col"].to_numpy(dtype=np.int32)
+        data = np.ones(len(row_indices), dtype=np.float32)
+
+        matrix = csr_array(
+            (data, (row_indices, col_indices)), shape=(len(values), len(vocab)), dtype=np.float32
+        )
+
+        return matrix
 
 
 class VectorAttributeSet(AttributeSet):
