@@ -30,6 +30,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: Install dependencies
         run: uv sync --group=scripting
@@ -147,6 +148,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: Set up Rclone configuration
         run: |

@@ -44,6 +44,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
@@ -144,6 +145,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
@@ -193,6 +195,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
@@ -240,6 +243,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
@@ -297,6 +301,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
@@ -371,6 +376,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
