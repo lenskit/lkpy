@@ -48,11 +48,8 @@ repos:
 
       - id: license-headers
         name: add license headers
-        language: python
-        entry: python -X utf8 utils/update-headers.py --error-on-change
+        language: system
+        entry: ./utils/update-headers.py --error-on-change
         types_or:
           - python
           - rust
-        additional_dependencies:
-          - docopt-ng >=0.9.0
-          - unbeheader ~=1.3
