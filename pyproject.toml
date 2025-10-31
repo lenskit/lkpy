@@ -164,9 +164,10 @@ torch = [
   { index = "pytorch-gpu", group = "gpu" },
 ]
 
-# [[tool.uv.index]]
-# name = "lk-torch-cpu"
-# url = "https://pypi.lenskit.org/torch/cpu"
+# use the LensKit index to prefer CPU PyTorch
+[[tool.uv.index]]
+name = "lk-torch-cpu"
+url = "https://pypi.lenskit.org/torch/cpu/"
 
 [[tool.uv.index]]
 name = "pytorch-gpu"
