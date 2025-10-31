@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 
 from lenskit.basic import PopScorer
-from lenskit.data import DatasetBuilder, ItemList, ItemListCollection, from_interactions_df
+from lenskit.data import DatasetBuilder, ItemList, from_interactions_df
 from lenskit.logging import get_logger
 from lenskit.pipeline import RecPipelineBuilder
 from lenskit.reranking.fair import FAIRReranker, FAIRRerankerConfig
