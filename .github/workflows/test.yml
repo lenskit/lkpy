@@ -403,7 +403,16 @@ jobs:
           coverage combine --keep test-logs/*/coverage.db
           coverage xml
           coverage html -d lenskit-coverage
-          coverage report --format=markdown >coverage.md
+          coverage report
+
+      - name: Delete separate coverage reports
+        run: rm -rf test-logs
+
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          path: lenskit-coverage
+          name: lenskit-coverage-report
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v4.2.0
