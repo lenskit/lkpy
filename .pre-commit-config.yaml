@@ -20,11 +20,11 @@ repos:
     # Ruff version.
     rev: v0.14.2
     hooks:
-      # Run the linter.
-      - id: ruff
-        args: [--fix]
       # Run the formatter.
       - id: ruff-format
+      # Run the linter.
+      - id: ruff-check
+        args: [--fix]
 
   - repo: local
     hooks:
