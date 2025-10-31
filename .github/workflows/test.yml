@@ -28,11 +28,6 @@ jobs:
           - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
-        exclude:
-          - python: "3.13"
-            platform: macos-latest
-          - python: "3.13"
-            platform: windows-latest
 
     steps:
       - name: 🛒 Checkout
