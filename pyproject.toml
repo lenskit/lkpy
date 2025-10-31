@@ -11,6 +11,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Operating System :: OS Independent",
   "Intended Audience :: Science/Research",
 ]
@@ -22,7 +23,7 @@ dynamic = ["version"]
 dependencies = [
   "typing-extensions ~=4.12",
   "pandas ~=2.0",
-  "pyarrow >=20,<21",
+  "pyarrow >=20,!=21.*",
   "numpy >=1.25",
   "scipy >=1.11",
   "torch ~=2.4",

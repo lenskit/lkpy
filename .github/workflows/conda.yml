@@ -20,6 +20,7 @@ jobs:
         platform:
           - ubuntu-latest
           - macos-latest
+          - macos-15-intel
           - windows-latest
 
     steps:
