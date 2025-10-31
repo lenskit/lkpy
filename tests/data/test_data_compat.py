@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import subprocess as sp
+import sys
 from os import environ, fspath
 from pathlib import Path
 
@@ -26,6 +27,9 @@ _ml_path = Path("data/ml-20m.zip")
 @mark.parametrize("version", LK_VERSIONS)
 def test_data_backwards_compat(version, tmpdir: Path):
     "Test that we can load datasets prepared by old versions."
+    if version <= "2025.1.1" and sys.version_info >= (3, 14):
+        skip("2025.1.1 doesn't run on Python 3.14")
+
     _log.info("processing ML file", version=version)
 
     try:
