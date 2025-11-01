@@ -387,12 +387,8 @@ jobs:
       - name: ⛙ Merge and report
         run: |
           coverage combine --keep test-logs/*/coverage.db
-          coverage xml
           coverage html -d lenskit-coverage
           coverage report
-
-      - name: Delete separate coverage reports
-        run: rm -rf test-logs
 
       - name: Upload coverage HTML
         uses: actions/upload-artifact@v4
