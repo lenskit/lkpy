@@ -117,12 +117,28 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.model.train(True)
 
         if platform.system() not in ("Linux", "Darwin"):
-            _log.warn("compiled models are only usable on Linux and macOS")
+            _log.warn(
+                "compiled models are only usable on Linux and macOS, using uncompiled model",
+                err_code="LKW-TCOMP",
+            )
         elif torch.__version__ < "2.8":
-            _log.warn("compiled models require Torch >=2.8")
+            _log.warn(
+                "compiled models require Torch >=2.8, using uncompiled model", err_code="LKW-TCOMP"
+            )
         else:
             _log.debug("compiling FlexMF model")
-            self._compiled_model = torch.compile(self.model)
+            try:
+                self._compiled_model = torch.compile(self.model)
+            except RuntimeError as e:
+                (msg,) = e.args
+                if msg.startswith("torch.compile"):
+                    _log.warn(
+                        "Torch compilation failed, using uncompiled model",
+                        exc_info=e,
+                        err_code="LKW-TCOMP",
+                    )
+                else:
+                    raise e
 
         self.setup_optimizer()
 
