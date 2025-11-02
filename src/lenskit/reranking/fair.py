@@ -176,7 +176,8 @@ class FAIRReranker(Component[ItemList], Trainable):
                 f"Dataset is missing required '{protected}' attribute for item entities"
             )
 
-        self.protected_attributes = items.attribute(protected).numpy()
+        prot = items.attribute(protected).numpy()
+        self.protected_attributes = np.equal(prot, True)
         self.vocab = items.vocabulary
 
         log.info(
