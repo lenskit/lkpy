@@ -28,11 +28,6 @@ jobs:
           - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
-        exclude:
-          - python: "3.13"
-            platform: macos-latest
-          - python: "3.13"
-            platform: windows-latest
 
     steps:
       - name: 🛒 Checkout
@@ -54,8 +49,6 @@ jobs:
             uv_extra="--no-extra ray --no-extra tune"
           fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
@@ -152,7 +145,6 @@ jobs:
           uv sync --only-group=test
           uv pip install --resolution=lowest-direct '.[sklearn,hpf,implicit,funksvd]'
         env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
           CC: gcc
 
       - name: 🔍 Inspect environment
@@ -201,8 +193,6 @@ jobs:
         run: |
           uv sync --only-group=test
           uv pip install --resolution=lowest-direct .
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: 🔍 Inspect environment
         run: |
@@ -249,8 +239,6 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -307,8 +295,6 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test --group doc  --group demo
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -401,9 +387,14 @@ jobs:
       - name: ⛙ Merge and report
         run: |
           coverage combine --keep test-logs/*/coverage.db
-          coverage xml
           coverage html -d lenskit-coverage
-          coverage report --format=markdown >coverage.md
+          coverage report
+
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          path: lenskit-coverage
+          name: lenskit-coverage-report
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v4.2.0
