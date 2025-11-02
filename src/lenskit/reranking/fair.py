@@ -14,7 +14,6 @@ from __future__ import annotations
 from collections import deque
 
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
 from scipy.stats import binom
 from typing_extensions import override
@@ -177,7 +176,8 @@ class FAIRReranker(Component[ItemList], Trainable):
                 f"Dataset is missing required '{protected}' attribute for item entities"
             )
 
-        self.protected_attributes = items.attribute(protected).pandas().astype(bool)
+        self.protected_attributes = items.attribute(protected).numpy()
+        self.vocab = items.vocabulary
 
         log.info(
             "[%s] computed thresholds with p=%.2f, alpha=%.2f → alpha_c=%.8f",
@@ -188,17 +188,19 @@ class FAIRReranker(Component[ItemList], Trainable):
         )
 
     def __call__(self, items: ItemList, n: int | None = None) -> ItemList:
-        item_ids = items.ids()
+        list_size = len(items)
+        item_numbers = items.numbers(vocabulary=self.vocab, missing="negative")
 
-        with pd.option_context("future.no_silent_downcasting", True):
-            is_protected = self.protected_attributes.reindex(item_ids).fillna(False).values
+        is_protected = np.full(list_size, False)
+
+        mask_vocab_items = item_numbers >= 0
+        is_protected[mask_vocab_items] = self.protected_attributes[item_numbers[mask_vocab_items]]
 
         p_items = deque(np.nonzero(is_protected)[0])
         up_items = deque(np.nonzero(np.logical_not(is_protected))[0])
 
         count_prot = 0
         reranked_indices = []
-        list_size = len(item_ids)
         n_config = self.config.n
 
         # check that runtime n <= configured n
