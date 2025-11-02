@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections import deque
 
 import numpy as np
+import pandas as pd
 from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
 from scipy.stats import binom
 from typing_extensions import override
@@ -176,7 +177,7 @@ class FAIRReranker(Component[ItemList], Trainable):
                 f"Dataset is missing required '{protected}' attribute for item entities"
             )
 
-        self.protected_attributes = items.attribute(protected).pandas()
+        self.protected_attributes = items.attribute(protected).pandas().astype(bool)
 
         log.info(
             "[%s] computed thresholds with p=%.2f, alpha=%.2f → alpha_c=%.8f",
@@ -189,10 +190,11 @@ class FAIRReranker(Component[ItemList], Trainable):
     def __call__(self, items: ItemList, n: int | None = None) -> ItemList:
         item_ids = items.ids()
 
-        is_protected = self.protected_attributes.reindex(item_ids).fillna(False).values
+        with pd.option_context("future.no_silent_downcasting", True):
+            is_protected = self.protected_attributes.reindex(item_ids).fillna(False).values
 
         p_items = deque(np.nonzero(is_protected)[0])
-        up_items = deque(np.nonzero(~is_protected)[0])
+        up_items = deque(np.nonzero(np.logical_not(is_protected))[0])
 
         count_prot = 0
         reranked_indices = []
@@ -212,15 +214,13 @@ class FAIRReranker(Component[ItemList], Trainable):
                     reranked_indices.append(p_items.popleft())
                     count_prot += 1
                 else:
-                    reranked_indices.extend(up_items)
-                    break
+                    reranked_indices.append(up_items.popleft())
             else:
                 if up_items:
                     reranked_indices.append(up_items.popleft())
                 else:
-                    reranked_indices.extend(p_items)
-                    count_prot += len(p_items)
-                    break
+                    reranked_indices.append(p_items.popleft())
+                    count_prot += 1
 
         topn_reranked = ItemList(items[reranked_indices], ordered=True)
         return topn_reranked
