@@ -17,6 +17,7 @@ use rayon::prelude::*;
 use log::*;
 
 use crate::{
+    parallel::maybe_fuse,
     progress::ProgressHandle,
     sparse::{CSRMatrix, CSR},
 };
@@ -46,9 +47,7 @@ pub(super) fn train_explicit_matrix<'py>(
     );
 
     let frob: f32 = py.allow_threads(|| {
-        this.outer_iter_mut()
-            .into_par_iter()
-            .enumerate()
+        maybe_fuse(this.outer_iter_mut().into_par_iter().enumerate())
             .map(|(i, row)| {
                 let f = train_row_solve(&matrix, i, row, &other, reg);
                 progress.tick();

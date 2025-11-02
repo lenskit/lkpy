@@ -9,11 +9,12 @@ import pyarrow as pa
 from lenskit.data.types import NPMatrix, NPVector
 from lenskit.funksvd import FunkSVDTrainingData, FunkSVDTrainingParams
 
-from . import als, data
+from . import als, data, slim
 
 __all__ = [
     "als",
     "data",
+    "slim",
     "init_accel_pool",
     "thread_count",
     "FunkSVDTrainer",

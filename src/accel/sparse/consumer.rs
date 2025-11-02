@@ -58,6 +58,7 @@ impl ArrowCSRConsumer {
             val_bld: Float32Builder::new(),
         }
     }
+
     pub(crate) fn new(dim: usize) -> Self {
         Self::from_state(CSRState::new(dim, None))
     }
