@@ -14,7 +14,7 @@ use rayon::prelude::*;
 use crate::{
     arrow::checked_array_ref,
     atomic::AtomicCell,
-    knn::accum::{collect_items_averaged, collect_items_summed},
+    knn::accum::{collect_items_averaged, collect_items_counts, collect_items_summed},
     sparse::{CSRMatrix, CSR},
 };
 
@@ -30,7 +30,7 @@ pub fn score_explicit<'py>(
     tgt_items: PyArrowType<ArrayData>,
     max_nbrs: usize,
     min_nbrs: usize,
-) -> PyResult<PyArrowType<ArrayData>> {
+) -> PyResult<(PyArrowType<ArrayData>, PyArrowType<ArrayData>)> {
     py.allow_threads(|| {
         let sims = sim_matrix(sims.0)?;
         let ref_items = make_array(ref_items.0);
@@ -66,9 +66,10 @@ pub fn score_explicit<'py>(
 
         let heaps = AtomicCell::unwrap_vec(heaps);
         let out = collect_items_averaged(&heaps, tgt_is, min_nbrs);
+        let counts = collect_items_counts(&heaps, tgt_is);
         assert_eq!(out.len(), tgt_is.len());
 
-        Ok(out.into_data().into())
+        Ok((out.into_data().into(), counts.into_data().into()))
     })
 }
 
@@ -81,7 +82,7 @@ pub fn score_implicit<'py>(
     tgt_items: PyArrowType<ArrayData>,
     max_nbrs: usize,
     min_nbrs: usize,
-) -> PyResult<PyArrowType<ArrayData>> {
+) -> PyResult<(PyArrowType<ArrayData>, PyArrowType<ArrayData>)> {
     py.allow_threads(|| {
         let sims = sim_matrix(sims.0)?;
         let ref_items = make_array(ref_items.0);
@@ -112,9 +113,10 @@ pub fn score_implicit<'py>(
 
         let heaps = AtomicCell::unwrap_vec(heaps);
         let out = collect_items_summed(&heaps, &tgt_is, min_nbrs);
+        let counts = collect_items_counts(&heaps, tgt_is);
         assert_eq!(out.len(), tgt_is.len());
 
-        Ok(out.into_data().into())
+        Ok((out.into_data().into(), counts.into_data().into()))
     })
 }
 

@@ -20,11 +20,11 @@ def score_explicit(
     tgt_items: pa.Int32Array,
     max_nbrs: int,
     min_nbrs: int,
-) -> pa.FloatArray: ...
+) -> tuple[pa.FloatArray, pa.Int32Array]: ...
 def score_implicit(
     sims: SparseRowArray,
     ref_items: pa.Int32Array,
     tgt_items: pa.Int32Array,
     max_nbrs: int,
     min_nbrs: int,
-) -> pa.FloatArray: ...
+) -> tuple[pa.FloatArray, pa.Int32Array]: ...

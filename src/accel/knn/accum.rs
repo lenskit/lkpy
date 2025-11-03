@@ -7,7 +7,7 @@
 //! Accumulator for scores in k-NN.
 use std::collections::BinaryHeap;
 
-use arrow::array::{Float32Array, Float32Builder, Int32Array};
+use arrow::array::{Float32Array, Float32Builder, Int32Array, Int32Builder};
 use ordered_float::NotNan;
 use pyo3::{exceptions::PyValueError, prelude::*};
 
@@ -188,6 +188,21 @@ impl<T> Ord for AccEntry<T> {
         // reverse the ordering to make a min-heap
         other.weight.cmp(&self.weight)
     }
+}
+pub(super) fn collect_items_counts<T>(
+    heaps: &[ScoreAccumulator<T>],
+    tgt_is: &Int32Array,
+) -> Int32Array {
+    let mut out = Int32Builder::with_capacity(tgt_is.len());
+    for ti in tgt_is {
+        if let Some(ti) = ti {
+            let acc = &heaps[ti as usize];
+            out.append_value(acc.len() as i32);
+        } else {
+            out.append_null();
+        }
+    }
+    out.finish()
 }
 
 pub(super) fn collect_items_averaged(
