@@ -190,7 +190,7 @@ class ScorerTests(TrainingTests):
             assert arr2 is not None
             try:
                 assert arr2 == approx(arr, nan_ok=True, abs=1.0e-3)
-            except AssertionError as e:
+            except AssertionError as e:  # pragma: nocover
                 bad = arr2 != arr
                 bad &= np.isfinite(arr)
                 print(f"original result:\n{scored.to_df()[bad]}")
