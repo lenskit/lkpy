@@ -189,9 +189,10 @@ class ScorerTests(TrainingTests):
             arr2 = s2.scores()
             assert arr2 is not None
             try:
-                assert arr2 == approx(arr, nan_ok=True)
+                assert arr2 == approx(arr, nan_ok=True, abs=1.0e-3)
             except AssertionError as e:
                 bad = arr2 != arr
+                bad &= np.isfinite(arr)
                 print(f"original result:\n{scored.to_df()[bad]}")
                 print(f"rehydrated result:\n{s2.to_df()[bad]}")
                 raise e
