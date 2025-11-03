@@ -184,7 +184,7 @@ class ScorerTests(TrainingTests):
             assert arr is not None
             arr2 = s2.scores()
             assert arr2 is not None
-            assert arr2 == approx(arr, nan_ok=True, abs=0.1)
+            assert arr2 == approx(arr, nan_ok=True)
 
     def test_score_unknown_user(
         self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
