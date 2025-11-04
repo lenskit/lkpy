@@ -11,7 +11,6 @@ use rayon::{current_num_threads, ThreadPoolBuilder};
 
 mod als;
 mod arrow;
-mod atomic;
 mod data;
 mod errors;
 mod funksvd;

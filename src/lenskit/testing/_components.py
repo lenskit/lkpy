@@ -17,6 +17,7 @@ from pytest import approx, fixture, mark, skip
 from lenskit import batch, operations
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.builder import DatasetBuilder
+from lenskit.logging import get_logger
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import Component, Pipeline, predict_pipeline, topn_pipeline
 from lenskit.pipeline.builder import PipelineBuilder
@@ -24,6 +25,7 @@ from lenskit.splitting import split_temporal_fraction
 from lenskit.training import Trainable, TrainingOptions
 
 retrain = os.environ.get("LK_TEST_RETRAIN")
+_log = get_logger(__name__)
 
 
 class BasicComponentTests:
@@ -169,9 +171,11 @@ class ScorerTests(TrainingTests):
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
             items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
+            _log.info("scoring with original model")
             scored = self.invoke_scorer(trained_pipeline, query=u, items=items)
             assert isinstance(scored, ItemList)
 
+            _log.info("scoring with rehydrated model")
             s2 = self.invoke_scorer(p2, query=u, items=items)
             assert isinstance(s2, ItemList)
 
@@ -184,7 +188,14 @@ class ScorerTests(TrainingTests):
             assert arr is not None
             arr2 = s2.scores()
             assert arr2 is not None
-            assert arr2 == approx(arr, nan_ok=True, abs=0.1)
+            try:
+                assert arr2 == approx(arr, nan_ok=True, abs=1.0e-3)
+            except AssertionError as e:  # pragma: nocover
+                bad = arr2 != arr
+                bad &= np.isfinite(arr)
+                print(f"original result:\n{scored.to_df()[bad]}")
+                print(f"rehydrated result:\n{s2.to_df()[bad]}")
+                raise e
 
     def test_score_unknown_user(
         self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline

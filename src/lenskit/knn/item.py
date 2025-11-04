@@ -233,7 +233,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
         # set up rating array
         # get rated item positions & limit to in-model items
-        ri_nums = ratings.numbers(format="numpy", vocabulary=self.items, missing="negative")
+        ri_nums = ratings.numbers(vocabulary=self.items, missing="negative")
         ri_mask = ri_nums >= 0
         ri_arr = pa.array(ri_nums, mask=~ri_mask)
         n_invalid = ri_arr.null_count
@@ -257,24 +257,26 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ri_vals[ri_mask] -= self.item_means[ri_nums[ri_mask]]
             ri_vals = pa.array(ri_vals, mask=~ri_mask)
 
-            scores = _accel.knn.score_explicit(
+            scores, counts = _accel.knn.score_explicit(
                 self.sim_matrix,
                 ri_arr,
                 ri_vals,
                 ti_arr,
                 self.config.max_nbrs,
                 self.config.min_nbrs,
-            ).to_numpy(zero_copy_only=False, writable=True)
+            )
+            scores = scores.to_numpy(zero_copy_only=False, writable=True)
             scores[ti_mask] += self.item_means[ti_nums[ti_mask]]
 
         else:
-            scores = _accel.knn.score_implicit(
+            scores, counts = _accel.knn.score_implicit(
                 self.sim_matrix, ri_arr, ti_arr, self.config.max_nbrs, self.config.min_nbrs
-            ).to_numpy(zero_copy_only=False)
+            )
+            scores = scores.to_numpy(zero_copy_only=False, writable=True)
 
         log.debug(
             "scored %d items",
             int(np.isfinite(scores).sum()),
         )
 
-        return ItemList(items, scores=scores)
+        return ItemList(items, scores=scores, nbr_counts=counts)
