@@ -16,6 +16,7 @@ from pytest import approx, mark
 from lenskit.data import ItemList
 from lenskit.metrics import call_metric
 from lenskit.metrics.ranking import RBP, LogRankWeight
+from lenskit.metrics.ranking._rbp import rank_biased_precision
 from lenskit.testing import demo_recs, integer_ids  # noqa: F401
 
 _log = logging.getLogger(__name__)
@@ -109,3 +110,21 @@ def test_rbp_missing():
     truth = ItemList([1, 2, 3])
     # (1 + 0.5) * 0.5
     assert call_metric(RBP(patience=0.5), recs, truth) == approx(0.75)
+
+
+def test_rbp_weight_field():
+    items = [1, 2, 3, 4, 5]
+    weights = [1.0, 0.8, 0.6, 0.4, 0.2]
+
+    recs = ItemList(item_ids=items, weight=weights, ordered=True)
+    truth = ItemList([2, 4])  # items at positions 2 and 4
+
+    # (0.8 + 0.4) / (1.0 + 0.8 + 0.6 + 0.4 + 0.2) = 1.2 / 3.0 = 0.4
+    assert call_metric(RBP, recs, truth, weight_field="weight") == approx(0.4)
+
+
+def test_rank_biased_precision():
+    good = np.array([False, True, False, True, False])
+    weights = np.array([1.0, 0.8, 0.6, 0.4, 0.2])
+    result = rank_biased_precision(good, weights, normalization=3.0)
+    assert result == approx(1.2 / 3.0)
