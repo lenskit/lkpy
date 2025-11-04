@@ -9,12 +9,10 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use pyo3::prelude::*;
-use rayon::prelude::*;
 
 use crate::{
     arrow::checked_array_ref,
-    atomic::AtomicCell,
-    knn::accum::{collect_items_averaged, collect_items_summed},
+    knn::accum::{collect_items_averaged, collect_items_counts, collect_items_summed},
     sparse::{CSRMatrix, CSR},
 };
 
@@ -30,7 +28,7 @@ pub fn score_explicit<'py>(
     tgt_items: PyArrowType<ArrayData>,
     max_nbrs: usize,
     min_nbrs: usize,
-) -> PyResult<PyArrowType<ArrayData>> {
+) -> PyResult<(PyArrowType<ArrayData>, PyArrowType<ArrayData>)> {
     py.allow_threads(|| {
         let sims = sim_matrix(sims.0)?;
         let ref_items = make_array(ref_items.0);
@@ -43,12 +41,12 @@ pub fn score_explicit<'py>(
         let ref_vslice = ref_vs.values();
         let tgt_is: &Int32Array = checked_array_ref("target item", "Int32", &tgt_items)?;
 
-        let heaps = AtomicCell::new_vec(ScoreAccumulator::new_array(sims.n_cols, tgt_is));
+        let mut heaps = ScoreAccumulator::new_array(sims.n_cols, tgt_is);
+        // let heaps = AtomicCell::new_vec(ScoreAccumulator::new_array(sims.n_cols, tgt_is));
 
         // we loop reference items, looking for targets.
         // in the common (slow) top-N case, reference items are shorter than targets.
-        let iter = ref_islice.into_par_iter().zip(ref_vslice.into_par_iter());
-        iter.try_for_each(|(ri, rv)| {
+        for (ri, rv) in ref_islice.iter().zip(ref_vslice.iter()) {
             let ri = *ri as usize;
             let rv = *rv;
             let (sp, ep) = sims.extent(ri);
@@ -57,18 +55,16 @@ pub fn score_explicit<'py>(
                 let ti = sims.col_inds.value(i);
                 let sim = sims.values.value(i);
 
-                // get the heap, initializing if needed.
-                let cell = &heaps[ti as usize];
-                cell.update(|acc| acc.add_value(max_nbrs, sim, rv))?;
+                let acc = &mut heaps[ti as usize];
+                acc.add_value(max_nbrs, sim, rv)?;
             }
-            Ok::<_, PyErr>(())
-        })?;
+        }
 
-        let heaps = AtomicCell::unwrap_vec(heaps);
         let out = collect_items_averaged(&heaps, tgt_is, min_nbrs);
+        let counts = collect_items_counts(&heaps, tgt_is);
         assert_eq!(out.len(), tgt_is.len());
 
-        Ok(out.into_data().into())
+        Ok((out.into_data().into(), counts.into_data().into()))
     })
 }
 
@@ -81,7 +77,7 @@ pub fn score_implicit<'py>(
     tgt_items: PyArrowType<ArrayData>,
     max_nbrs: usize,
     min_nbrs: usize,
-) -> PyResult<PyArrowType<ArrayData>> {
+) -> PyResult<(PyArrowType<ArrayData>, PyArrowType<ArrayData>)> {
     py.allow_threads(|| {
         let sims = sim_matrix(sims.0)?;
         let ref_items = make_array(ref_items.0);
@@ -91,11 +87,11 @@ pub fn score_implicit<'py>(
         let ref_islice = ref_is.values();
         let tgt_is: &Int32Array = checked_array_ref("target item", "Int32", &tgt_items)?;
 
-        let heaps = AtomicCell::new_vec(ScoreAccumulator::new_array(sims.n_cols, tgt_is));
+        let mut heaps = ScoreAccumulator::new_array(sims.n_cols, tgt_is);
 
         // we loop reference items, looking for targets.
         // in the common (slow) top-N case, reference items are shorter than targets.
-        ref_islice.into_par_iter().try_for_each(|ri| {
+        for ri in ref_islice {
             let ri = *ri as usize;
             let (sp, ep) = sims.extent(ri);
             for i in sp..ep {
@@ -103,18 +99,16 @@ pub fn score_implicit<'py>(
                 let ti = sims.col_inds.value(i);
                 let sim = sims.values.value(i);
 
-                // get the heap, initializing if needed.
-                let cell = &heaps[ti as usize];
-                cell.update(|acc| acc.add_weight(max_nbrs, sim))?;
+                let acc = &mut heaps[ti as usize];
+                acc.add_weight(max_nbrs, sim)?;
             }
-            Ok::<_, PyErr>(())
-        })?;
+        }
 
-        let heaps = AtomicCell::unwrap_vec(heaps);
         let out = collect_items_summed(&heaps, &tgt_is, min_nbrs);
+        let counts = collect_items_counts(&heaps, tgt_is);
         assert_eq!(out.len(), tgt_is.len());
 
-        Ok(out.into_data().into())
+        Ok((out.into_data().into(), counts.into_data().into()))
     })
 }
 
