@@ -85,7 +85,7 @@ jobs:
             pyarch: x86
             target: x86
             manylinux: auto
-          - host: macos-13
+          - host: macos-15-intel
             pyarch: x64
             target: x86_64
             manylinux: auto
