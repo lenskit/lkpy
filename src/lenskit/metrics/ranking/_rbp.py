@@ -13,7 +13,9 @@ from ._base import ListMetric, RankingMetricBase
 from ._weighting import GeometricRankWeight, RankWeight
 
 
-def rank_biased_precision(good: np.ndarray, weights: np.ndarray, normalization: float) -> float:
+def rank_biased_precision(
+    good: np.ndarray, weights: np.ndarray, normalization: float = 1.0
+) -> float:
     """
     Compute rank-biased precision given explicit weights.
 
@@ -23,7 +25,7 @@ def rank_biased_precision(good: np.ndarray, weights: np.ndarray, normalization: 
         weights:
             Weight for each item position (same length as good).
         normalization:
-            Normalization factor.
+            Optional normalization factor, defaults to 1.0.
 
     Returns:
         RBP score
@@ -84,6 +86,10 @@ class RBP(ListMetric, RankingMetricBase):
         normalize:
             Whether to normalize the RBP scores; if ``True``, divides the RBP
             score by the maximum achievable with the test data (as in nDCG).
+        weight_field:
+            Name of a field in the item list to use as weights. If provided,
+            weights are read from this field instead of being computed from
+            the rank model.
 
     Stability:
         Caller
@@ -133,33 +139,23 @@ class RBP(ListMetric, RankingMetricBase):
         if self.weight_field is not None:
             # use custom weights from field
             weights = recs.field(self.weight_field)
-            weights = np.asarray(weights)
-
             normalization = np.sum(weights).item()
 
         else:
             ranks = recs.ranks()
             assert ranks is not None
 
-            # we only need to sum good weights
-            good_ranks = ranks[good]
-            weight = self.weight.weight(good_ranks)
-
-            # compute weights array aligned with all items
-            weights = np.zeros(k)
-            weights[good] = weight
+            weights = self.weight.weight(ranks)
 
             # figure out normalization
             wmax = self.weight.series_sum()
             if self.normalize:
                 # normalize by max achieveable RBP
-                normalization = np.sum(weight[: min(nrel, k)]).item()
+                normalization = np.sum(weights[: min(nrel, k)]).item()
             elif wmax is not None:
                 # normalization defined by metric
                 normalization = wmax
             else:
-                # normalize by total weight
-                all_weight = self.weight.weight(ranks)
-                normalization = np.sum(all_weight).item()
+                normalization = np.sum(weights).item()
 
         return rank_biased_precision(good, weights, normalization)
