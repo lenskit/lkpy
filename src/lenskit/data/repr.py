@@ -46,16 +46,13 @@ class ReprWriter:
             text = text + "\n"
         lines = text.splitlines(True)
         for line in lines:
-            self._write(line, eol=False)
+            self._write(line)
 
-    def _write(self, text: str, *, eol: bool):
+    def _write(self, text: str):
         if self.newline and self.current_indent:
             self.out.write(" " * self.current_indent)
         self.out.write(text)
-        if eol:
-            self.out.write("\n")
-            self.newline = True
-        elif text:
+        if text:
             self.newline = text[-1] == "\n"
 
     def indent(self, *, size: int = 2):
@@ -96,15 +93,15 @@ class ObjectRepr:
             writer.write(f" ({self.comment})")
         if self.attrs:
             writer.write(" {\n")
-            for k, v in self.attrs.items():
-                if isinstance(v, HasObjectRepr):
-                    vor = v._lk_object_repr()
-                    writer.write(f"{k}: ")
-                    with writer.indent():
+            with writer.indent():
+                for k, v in self.attrs.items():
+                    if isinstance(v, HasObjectRepr):
+                        vor = v._lk_object_repr()
+                        writer.write(f"{k}: ")
                         vor.write(writer)
-                    writer.writeln()
-                else:
-                    writer.writeln(f"  {k}: {repr(v)}")
+                        writer.writeln()
+                    else:
+                        writer.writeln(f"{k}: {repr(v)}")
             writer.write("}")
 
         writer.write(">")
