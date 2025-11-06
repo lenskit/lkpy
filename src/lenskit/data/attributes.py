@@ -281,8 +281,6 @@ class ListAttributeSet(AttributeSet):
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
 
-    _category_vocab: Vocabulary | None = None
-
     def cat_matrix(
         self, *, normalize: Literal["unit", "distribution"] | None = None
     ) -> tuple[csr_array, Vocabulary]:
