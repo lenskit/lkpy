@@ -4,7 +4,17 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from dataclasses import dataclass
+
 from lenskit.data.repr import ReprWriter, object_repr
+
+
+@dataclass
+class MsgBox:
+    msg: str
+
+    def _lk_object_repr(self):
+        return object_repr("MsgBox", self.msg)
 
 
 def test_empty_writer():
@@ -65,3 +75,9 @@ def test_words():
 def test_attrs():
     s = object_repr("Hello", "world", entities=10).string()
     assert s == "<Hello world {\n  entities: 10\n}>"
+
+
+def test_nested_repr():
+    box = MsgBox("readme")
+    s = object_repr("Hello", "world", box=box).string()
+    assert s == "<Hello world {\n  box: <MsgBox readme>\n}>"
