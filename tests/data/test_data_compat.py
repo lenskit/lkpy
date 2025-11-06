@@ -60,7 +60,7 @@ def test_data_backwards_compat(version, tmpdir: Path):
 
 @mark.realdata
 @mark.skipif(not _ml_path.exists(), reason="ml-20m not available")
-@mark.parametrize("version", LK_VERSIONS)
+@mark.parametrize("version", LK_VERSIONS.keys())
 def test_data_backwards_ml20m(version, tmpdir: Path):
     "Test that we can load datasets prepared by old versions (ML20M)."
     try:
@@ -76,6 +76,7 @@ def test_data_backwards_ml20m(version, tmpdir: Path):
     sp.check_call(
         [
             "uvx",
+            f"--python={LK_VERSIONS[version]}",
             "--isolated",
             pkg,
             "data",
