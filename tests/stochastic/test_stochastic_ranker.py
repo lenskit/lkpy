@@ -190,7 +190,7 @@ def test_stochasticity(rng):
     items = ItemList(item_ids=iids, scores=scores)
     size = 50
 
-    TRIALS = 100
+    TRIALS = 250
     topn = StochasticTopNRanker(n=size)
 
     _log.info("testing stochastic ranking: top %d of %d", size, len(items))
@@ -234,7 +234,13 @@ def test_stochasticity(rng):
         _log.info("trial %d: 𝜏=%.3f, p=%.3f", i, tau.statistic, tau.pvalue)
 
     pvals = np.array(pvals)
-    _log.info("trial p-value statistics: mean=%.3f, median=%.3f", np.mean(pvals), np.median(pvals))
+    _log.info(
+        "trial p-value statistics: mean=%.3f, median=%.3f, pass=%d/%d",
+        np.mean(pvals),
+        np.median(pvals),
+        np.sum(pvals < 0.05).item(),
+        TRIALS,
+    )
     # do 90% of trials pass the test?
     assert np.mean(pvals < 0.05) >= 0.9
 
