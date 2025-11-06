@@ -109,12 +109,12 @@ class AttributeSet:
             return self._selected.to_numpy()
 
     def cat_matrix(
-        self, *, normalize: Literal["unit" | "distribution"] = None
-    ) -> NDArray[np.floating[Any]] | csr_array:
+        self, *, normalize: Literal["unit", "distribution"] | None = None
+    ) -> tuple[NDArray[np.floating] | csr_array, Vocabulary]:
         """
-        Compute a categorical matrix.
+        Compute a categorical matrix representation of the attribute.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @property
     def dim_names(self) -> list[str] | None:
@@ -226,34 +226,47 @@ class ScalarAttributeSet(AttributeSet):
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
 
-    _category_vocab: Vocabulary | None = None
+    def cat_matrix(
+        self, *, normalize: Literal["unit", "distribution"] | None = None
+    ) -> tuple[csr_array, Vocabulary]:
+        """
+        Create item * category sparse matrix for scalar attributes.
 
-    def cat_matrix(self, *, normalize: Literal["unit" | "distribution"] = None) -> csr_array:
+        Returns:
+            Tuple of (sparse matrix, vocabulary of categories)
         """
-        Create item * category matrix for scalar attributes.
-        """
+
         arr = self.arrow()
-        if pa.types.is_floating(arr.type):
-            raise TypeError
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
 
-        values = arr.to_pylist()
-        vocab = self._category_vocab
-        cat_to_idx = {val: i for i, val in enumerate(vocab)}
+        unique_vals = pc.unique(arr)
 
-        s = pd.Series(values)
-        df = s.reset_index()
-        df["col"] = df[0].map(cat_to_idx)
-        df = df.dropna(subset=["col"])
+        vocab = Vocabulary(unique_vals.to_numpy(), reorder=True)
 
-        row_indices = df["index"].to_numpy(dtype=np.int32)
-        col_indices = df["col"].to_numpy(dtype=np.int32)
+        values = arr.to_numpy()
+
+        # mapping each row's scalar value to a category index
+        cat_nums = vocab.numbers(values, missing="negative").astype(np.int32)
+
+        valid = cat_nums >= 0
+
+        # row indices are positions of valid rows
+        row_indices = np.nonzero(valid)[0].astype(np.int32)
+
+        # category indices
+        col_indices = cat_nums[valid]
+
         data = np.ones(len(row_indices), dtype=np.float32)
 
         matrix = csr_array(
-            (data, (row_indices, col_indices)), shape=(len(values), len(vocab)), dtype=np.float32
+            (data, (row_indices, col_indices)),
+            shape=(len(values), len(vocab)),
+            dtype=np.float32,
         )
 
-        return matrix
+        matrix = normalize_matrix(matrix, normalize)
+        return matrix, vocab
 
 
 class ListAttributeSet(AttributeSet):
@@ -270,32 +283,56 @@ class ListAttributeSet(AttributeSet):
 
     _category_vocab: Vocabulary | None = None
 
-    def cat_matrix(self, *, normalize: Literal["unit" | "distribution"] = None) -> csr_array:
+    def cat_matrix(
+        self, *, normalize: Literal["unit", "distribution"] | None = None
+    ) -> tuple[csr_array, Vocabulary]:
         """
         Create item * category matrix for list attributes.
+
+        Returns:
+            Tuple of (sparse matrix, vocabulary of categories)
         """
+
         arr = self.arrow()
-        if not (pa.types.is_list(arr.type)):
-            raise TypeError
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
 
-        values = arr.to_pylist()
-        vocab = self._category_vocab
-        cat_to_idx = {val: i for i, val in enumerate(vocab)}
+        assert isinstance(arr, pa.ListArray)
 
-        s = pd.Series(values)
-        df = s.explode().reset_index()
-        df["col"] = df[0].map(cat_to_idx)
-        df = df.dropna(subset=["col"])
+        values_arr = arr.values
 
-        row_indices = df["index"].to_numpy(dtype=np.int32)
-        col_indices = df["col"].to_numpy(dtype=np.int32)
+        offsets_arr = arr.offsets
+
+        offsets = offsets_arr.to_numpy()
+        flat_vals = values_arr.to_numpy()
+
+        if self._vocab is None:
+            self._vocab = Vocabulary(flat_vals, reorder=True)
+        vocab = self._vocab
+
+        cat_nums = vocab.numbers(flat_vals, missing="negative").astype(np.int32)
+
+        # compute row lengths: lens[i] = number of items in row i
+        lens = (offsets[1:] - offsets[:-1]).astype(np.int32)
+
+        row_indices = np.repeat(np.arange(len(lens), dtype=np.int32), lens)
+
+        col_indices = cat_nums
+
+        # filter out negatives
+        valid = col_indices >= 0
+        row_indices = row_indices[valid]
+        col_indices = col_indices[valid]
+
         data = np.ones(len(row_indices), dtype=np.float32)
 
         matrix = csr_array(
-            (data, (row_indices, col_indices)), shape=(len(values), len(vocab)), dtype=np.float32
+            (data, (row_indices, col_indices)), shape=(len(lens), len(vocab)), dtype=np.float32
         )
 
-        return matrix
+        matrix = normalize_matrix(matrix, normalize)
+
+        return matrix, vocab
 
 
 class VectorAttributeSet(AttributeSet):
@@ -452,3 +489,52 @@ def _replace_vectors(
     value_mask = pa.array(value_mask)
     new_vals = pc.replace_with_mask(arr.values, value_mask, values.values)
     return pa.FixedSizeListArray.from_arrays(new_vals, size, mask=pc.invert(out_valid))
+
+
+def normalize_matrix(
+    matrix: csr_array | NDArray[np.floating[Any]], normalize: Literal["unit", "distribution"] | None
+) -> csr_array | NDArray[np.floating[Any]]:
+    """
+    Normalize rows of a matrix.
+
+    Args:
+        matrix: Sparse or dense matrix to normalize
+        normalize: Normalization mode ("unit" for L2, "distribution" for L1)
+
+    Returns:
+        Normalized matrix
+    """
+    if normalize is None:
+        return matrix
+
+    is_sparse = isinstance(matrix, csr_array)
+
+    if normalize == "unit":
+        if is_sparse:
+            row_norms = np.sqrt(np.array(matrix.multiply(matrix).sum(axis=1)))
+            row_norms[row_norms == 0] = 1.0
+            matrix.data /= np.repeat(row_norms, np.diff(matrix.indptr))
+        else:
+            row_norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+            row_norms[row_norms == 0] = 1.0
+            matrix = matrix / row_norms
+
+    elif normalize == "distribution":
+        if is_sparse:
+            if np.any(matrix.data < 0):
+                raise ValueError(
+                    "Cannot normalize to distribution: matrix contains negative values"
+                )
+            row_sums = np.array(matrix.sum(axis=1))
+            row_sums[row_sums == 0] = 1.0
+            matrix.data /= np.repeat(row_sums, np.diff(matrix.indptr))
+        else:
+            if np.any(matrix < 0):
+                raise ValueError(
+                    "Cannot normalize to distribution: matrix contains negative values"
+                )
+            row_sums = matrix.sum(axis=1, keepdims=True)
+            row_sums[row_sums == 0] = 1.0
+            matrix = matrix / row_sums
+
+    return matrix
