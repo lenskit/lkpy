@@ -22,8 +22,11 @@ class Progress:
     uuid: UUID
     total: int | float | None
 
-    def __init__(self, *args: Any, uuid: UUID | None = None, **kwargs: Any):
+    def __init__(
+        self, *args: Any, uuid: UUID | None = None, total: int | float | None = None, **kwargs: Any
+    ):
         self.uuid = uuid if uuid is not None else uuid4()
+        self.total = total
 
     @classmethod
     def handle_message(cls, update: ProgressMessage):
