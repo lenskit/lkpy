@@ -11,6 +11,7 @@ Data attribute accessors.
 from __future__ import annotations
 
 import json
+from abc import ABC, abstractmethod
 from typing import Literal
 
 import numpy as np
@@ -47,7 +48,7 @@ def attr_set(
             raise ValueError(f"unsupported layout {spec.layout}")
 
 
-class AttributeSet:
+class AttributeSet(ABC):
     """
     Base class for attributes associated with entities.
 
@@ -61,6 +62,10 @@ class AttributeSet:
     name: str
     """
     The name of the attribute.
+    """
+    layout: AttrLayout
+    """
+    The attribute layout.
     """
     _spec: ColumnSpec
     _table: pa.Table
@@ -77,6 +82,7 @@ class AttributeSet:
         rows: pa.Int32Array | None,
     ):
         self.name = name
+        self.layout = spec.layout
         self._spec = spec
         self._table = table
         self._vocab = vocab
@@ -89,6 +95,13 @@ class AttributeSet:
             return self.name
         else:
             return f"{vn}.{self.name}"
+
+    @property
+    @abstractmethod
+    def data_type(self) -> pa.DataType:
+        """
+        Get the data type of this attribute set.
+        """
 
     def ids(self) -> IDArray:
         """
