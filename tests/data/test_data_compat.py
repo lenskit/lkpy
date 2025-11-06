@@ -16,20 +16,18 @@ from lenskit.data.matrix import SparseRowArray
 from lenskit.logging import get_logger
 from lenskit.testing import ml_test_dir
 
-# The LensKit versions we want to test backwards compatibility with
-LK_VERSIONS = ["2025.1.1"]
+# The LensKit versions we want to test backwards compatibility with,
+# along with the appropriate Python versions.
+LK_VERSIONS = {"2025.1.1": "3.11"}
 
 _log = get_logger(__name__)
 _ml_path = Path("data/ml-20m.zip")
 
 
 @mark.slow
-@mark.parametrize("version", LK_VERSIONS)
+@mark.parametrize("version", LK_VERSIONS.keys())
 def test_data_backwards_compat(version, tmpdir: Path):
     "Test that we can load datasets prepared by old versions."
-    if version <= "2025.1.1" and sys.version_info >= (3, 14):
-        skip("2025.1.1 doesn't run on Python 3.14")
-
     _log.info("processing ML file", version=version)
 
     try:
@@ -43,6 +41,7 @@ def test_data_backwards_compat(version, tmpdir: Path):
     sp.check_call(
         [
             "uvx",
+            f"--python={LK_VERSIONS[version]}",
             "--isolated",
             pkg,
             "data",
