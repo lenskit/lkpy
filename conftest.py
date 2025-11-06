@@ -8,6 +8,7 @@ import logging
 import os
 import warnings
 
+import numpy as np
 import structlog
 import torch
 from numpy.random import Generator, default_rng
@@ -43,6 +44,13 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 os.environ["LK_SKIP_LOG_SETUP"] = "1"
+
+
+@fixture
+def fresh_rng() -> Generator:
+    "Fixture to provide a fresh (non-fixed) RNG for tests that need it."
+    seed = np.random.SeedSequence()
+    return np.random.default_rng(seed)
 
 
 @fixture
