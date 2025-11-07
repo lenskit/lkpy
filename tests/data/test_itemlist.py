@@ -322,6 +322,35 @@ def test_numbers_arrow(src):
     assert np.all(nums.to_numpy() == np.arange(5))
 
 
+def test_numbers_arrow_negative():
+    il = ItemList(item_ids=["a", "q", "b"])
+
+    nums = il.numbers(format="arrow", vocabulary=VOCAB, missing="negative")
+    assert isinstance(nums, pa.Int32Array)
+    assert nums.null_count == 0
+    assert nums.to_pylist() == [0, -1, 1]
+
+
+def test_numbers_arrow_null():
+    il = ItemList(item_ids=["a", "q", "b"])
+
+    nums = il.numbers(format="arrow", vocabulary=VOCAB, missing="null")
+    assert isinstance(nums, pa.Int32Array)
+    assert nums.null_count == 1
+    assert nums.is_valid().to_pylist() == [True, False, True]
+    assert nums.to_pylist() == [0, None, 1]
+
+
+def test_numbers_arrow_null_vocab():
+    il = ItemList(item_ids=["a", "q", "b"], vocabulary=VOCAB)
+
+    nums = il.numbers(format="arrow", vocabulary=VOCAB, missing="null")
+    assert isinstance(nums, pa.Int32Array)
+    assert nums.null_count == 1
+    assert nums.is_valid().to_pylist() == [True, False, True]
+    assert nums.to_pylist() == [0, None, 1]
+
+
 def test_pandas_df():
     data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)

@@ -597,7 +597,7 @@ class ItemList:
         format: Literal["arrow"],
         *,
         vocabulary: Vocabulary | None = None,
-        missing: Literal["error", "negative"] = "error",
+        missing: Literal["error", "negative", "null"] = "error",
     ) -> pa.Array[pa.Int32Scalar]: ...
     @overload
     def numbers(
@@ -612,7 +612,7 @@ class ItemList:
         format: LiteralString = "numpy",
         *,
         vocabulary: Vocabulary | None = None,
-        missing: Literal["error", "negative"] = "error",
+        missing: Literal["error", "negative", "null"] = "error",
     ) -> ArrayLike:
         """
         Get the item numbers.
@@ -633,10 +633,14 @@ class ItemList:
             :class:`Vocabulary`.
         """
         if vocabulary is not None and vocabulary != self._vocab:
+            if format == "torch":
+                nums = self.numbers(format="numpy", vocabulary=vocabulary, missing=missing)  # type: ignore
+                return torch.from_numpy(nums)
+
             # we need to translate vocabulary
             ids = self.ids()
-            mta = MTArray(vocabulary.numbers(ids, missing=missing))
-            return mta.to(format)
+
+            return vocabulary.numbers(ids, format=format, missing=missing)
 
         if self._numbers is None:
             if self._vocab is None:
@@ -646,6 +650,11 @@ class ItemList:
 
         if missing == "error" and np.any(self._numbers.numpy() < 0):
             raise KeyError("item IDs")
+        if missing == "null":
+            assert format == "arrow"
+            nums = self._numbers.to("numpy")
+            return pa.array(nums, mask=nums < 0)
+
         return self._numbers.to(format)
 
     @overload
