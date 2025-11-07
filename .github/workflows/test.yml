@@ -35,6 +35,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: jdx/mise-action@v3
+        with:
+          install: false
+
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -65,7 +69,7 @@ jobs:
 
       - name: 🕺🏻 Test LensKit CLI
         run: |
-          ./tests/cli/run.sh --coverage --cov-append
+          mise run test-cli -- --coverage --cov-append
         shell: bash -e
 
       - name: 📐 Coverage results
@@ -188,6 +192,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: jdx/mise-action@v3
+        with:
+          install: false
+
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -209,7 +217,7 @@ jobs:
 
       - name: 🕺🏻 Test LensKit CLI
         run: |
-          ./tests/cli/run.sh --coverage --cov-append
+          mise run test-cli -- --coverage --cov-append
         shell: bash -e
 
       - name: 📐 Coverage results
@@ -238,6 +246,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - uses: jdx/mise-action@v3
+        with:
+          install: false
 
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
@@ -270,7 +282,7 @@ jobs:
 
       - name: 🕺🏻 Test LensKit CLI
         run: |
-          ./tests/cli/run.sh --coverage --cov-append tests/cli/test-tune.sh
+          mise run test-cli -- --coverage --cov-append tests/cli/test-tune.sh
         shell: bash -e
 
       - name: 📐 Coverage results
