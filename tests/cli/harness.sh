@@ -74,7 +74,10 @@ require() {
     fi
 }
 
-if ! grep -qv '^begin-suite' "$TEST"; then
+if grep -q '^begin-suite' "$TEST"; then
+    dbg "test will start itself"
+else
+    dbg "auto-starting suite"
     begin-suite
 fi
 . "$TEST"
