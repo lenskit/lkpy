@@ -53,7 +53,9 @@ for test in "${test_files[@]}"; do
         msg "test $test completed"
     fi
     rm -rf "$TEST_WORK"
-    taps+=("$tap_file")
+    if [[ -s "$tap_file" ]]; then
+        taps+=("$tap_file")
+    fi
 done
 
 if [[ $usage_coverage = true ]]; then
