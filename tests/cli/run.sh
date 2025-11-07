@@ -42,7 +42,7 @@ for test in "${test_files[@]}"; do
     msg "running test $test"
     tap_file="${test%%.sh}.tap"
     dbg "saving output to $tap_file"
-    export TEST_WORK=$(mktemp -d -t lk-cli-test)
+    export TEST_WORK=$(mktemp -d)
     dbg "using temporary directory $TEST_WORK"
     dbg "invoking test"
     bash --noprofile --norc "$TEST_DIR/harness.sh" "$test" 5>"$tap_file"
