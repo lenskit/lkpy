@@ -830,6 +830,7 @@ class ItemList:
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["table"] = "table",
         columns: dict[str, pa.DataType] | None = None,
     ) -> pa.Table: ...
@@ -839,6 +840,7 @@ class ItemList:
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["array"],
         columns: dict[str, pa.DataType] | None = None,
     ) -> pa.StructArray: ...
@@ -847,6 +849,7 @@ class ItemList:
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["table", "array"] = "table",
         columns: dict[str, pa.DataType] | None = None,
     ):
@@ -860,7 +863,7 @@ class ItemList:
             names = list(columns.keys())
         else:
             if columns is None:
-                columns = self.arrow_types(ids=ids, numbers=numbers)
+                columns = self.arrow_types(ids=ids, numbers=numbers, ranks=ranks)
 
             for c_name, c_type in columns.items():
                 names.append(c_name)
@@ -890,7 +893,9 @@ class ItemList:
         else:  # pragma: nocover
             raise ValueError(f"unsupported target type {type}")
 
-    def arrow_types(self, *, ids: bool = True, numbers: bool = False) -> dict[str, pa.DataType]:
+    def arrow_types(
+        self, *, ids: bool = True, numbers: bool = False, ranks: bool = True
+    ) -> dict[str, pa.DataType]:
         """
         Get the Arrow data types for this item list.
         """
@@ -905,7 +910,7 @@ class ItemList:
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()
 
-        if self.ordered:
+        if self.ordered and ranks:
             types["rank"] = pa.int32()
 
         for n, f in self._fields.items():
@@ -969,6 +974,20 @@ class ItemList:
                 picked = argtopn(scores, n)
 
         return self._take(picked, ordered=True)
+
+    def concat(self, other: ItemList) -> ItemList:
+        """
+        Concatenate this item list with another.
+
+        If ``self`` has a vocabulary that accomodates the item IDs in ``other``,
+        the returned item list will share the vocabulary.
+        """
+
+        ordered = self.ordered and other.ordered
+        tbl = pa.concat_tables(
+            [self.to_arrow(ids=True, ranks=ordered), other.to_arrow(ids=True, ranks=ordered)]
+        )
+        return ItemList.from_arrow(tbl, vocabulary=self.vocabulary)
 
     @overload
     def remove(

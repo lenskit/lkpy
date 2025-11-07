@@ -907,3 +907,49 @@ def test_repr_lazy_rank():
     assert re.search(r"numbers: \[0 .*\]", ilr)
     assert re.search(r"ids: <lazy>", ilr)
     assert re.search(r"rank: \[0 .*\]", ilr)
+
+
+def test_item_list_concat_same_vocab():
+    il1 = ItemList(["a", "b"], vocabulary=VOCAB)
+    il2 = ItemList(["c", "d"], vocabulary=VOCAB)
+    il = il1.concat(il2)
+    assert len(il) == 4
+    assert all(il.ids() == ["a", "b", "c", "d"])
+    assert all(il.numbers() == np.arange(4))
+    assert il.vocabulary is VOCAB
+
+
+def test_item_list_concat_no_vocab():
+    il1 = ItemList(["a", "b"])
+    il2 = ItemList(["c", "d"])
+    il = il1.concat(il2)
+    assert len(il) == 4
+    assert all(il.ids() == ["a", "b", "c", "d"])
+    assert il.vocabulary is None
+
+
+def test_item_list_concat_first_vocab():
+    il1 = ItemList(["a", "b"], vocabulary=VOCAB)
+    il2 = ItemList(["c", "d"])
+    il = il1.concat(il2)
+    assert len(il) == 4
+    assert all(il.ids() == ["a", "b", "c", "d"])
+    assert all(il.numbers() == np.arange(4))
+    assert il.vocabulary is VOCAB
+
+
+def test_item_list_concat_first_vocab_no_match():
+    il1 = ItemList(["a", "b"], vocabulary=VOCAB)
+    il2 = ItemList(["c", "d", "q"])
+    il = il1.concat(il2)
+    assert len(il) == 5
+    assert all(il.ids() == ["a", "b", "c", "d", "q"])
+
+
+def test_item_list_concat_second_vocab():
+    il1 = ItemList(["a", "b"])
+    il2 = ItemList(["c", "d"], vocabulary=VOCAB)
+    il = il1.concat(il2)
+    assert len(il) == 4
+    assert all(il.ids() == ["a", "b", "c", "d"])
+    assert il.vocabulary is None
