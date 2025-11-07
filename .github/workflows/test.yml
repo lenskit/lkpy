@@ -63,6 +63,11 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit --cov-append tests
 
+      - name: 🕺🏻 Test LensKit CLI
+        run: |
+          ./tests/cli/run.sh --coverage --cov-append
+        shell: bash -e
+
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
         run: |
@@ -202,6 +207,11 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
 
+      - name: 🕺🏻 Test LensKit CLI
+        run: |
+          ./tests/cli/run.sh --coverage --cov-append
+        shell: bash -e
+
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
         run: |
@@ -257,6 +267,11 @@ jobs:
       - name: Run Eval Tests
         run: |
           pytest --cov-append --cov=src/lenskit -m 'eval or realdata' --log-file test-eval.log tests
+
+      - name: 🕺🏻 Test LensKit CLI
+        run: |
+          ./tests/cli/run.sh --coverage --cov-append tests/cli/test-tune.sh
+        shell: bash -e
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
