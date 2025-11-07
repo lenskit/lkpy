@@ -14,7 +14,10 @@ fi
 if [[ -z $ML_TEST_DIR ]]; then
     die "missing ML_TEST_DIR env var"
 fi
-perl "$TEST_DIR/count-tests.pl" "$1" >&5
+
+begin-suite() {
+    perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
+}
 
 run-python() {
     local status
@@ -71,4 +74,7 @@ require() {
     fi
 }
 
+if ! grep -qv '^begin-suite' "$TEST"; then
+    begin-suite
+fi
 . "$TEST"
