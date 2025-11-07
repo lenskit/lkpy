@@ -70,7 +70,7 @@ jobs:
       - name: 🕺🏻 Test LensKit CLI
         run: |
           mise run test-cli -- --coverage --cov-append
-        shell: bash -e
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
@@ -218,7 +218,7 @@ jobs:
       - name: 🕺🏻 Test LensKit CLI
         run: |
           mise run test-cli -- --coverage --cov-append
-        shell: bash -e
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
@@ -283,7 +283,7 @@ jobs:
       - name: 🕺🏻 Test LensKit CLI
         run: |
           mise run test-cli -- --coverage --cov-append tests/cli/test-tune.sh
-        shell: bash -e
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
