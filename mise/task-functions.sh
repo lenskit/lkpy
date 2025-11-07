@@ -1,4 +1,10 @@
-VERBOSE="${VERBOSE:-0}"
+if [[ -z $VERBOSE ]]; then
+    if [[ $usage_verbose == true ]]; then
+        VERBOSE=1
+    else
+        VERBOSE=0
+    fi
+fi
 
 dbg() {
     if (($VERBOSE)); then
@@ -8,6 +14,20 @@ dbg() {
 
 msg() {
     echo "$@" >&2
+}
+
+err() {
+    echo "ERROR: $*" >&2
+}
+
+die() {
+    local ec=2
+    if [[ "$1" =~ '^-[0-9]$' ]]; then
+        ec=${1#-}
+        shift
+    fi
+    err "$@"
+    exit $ec
 }
 
 echo-run() {
