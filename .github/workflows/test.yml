@@ -261,6 +261,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test
+          uv pip install optuna
 
       - name: Cache ML data
         uses: actions/cache@v4
