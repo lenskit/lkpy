@@ -1,3 +1,3 @@
-run-python lenskit doctor
+run-lenskit doctor
 
-run-python lenskit doctor --packages --paths
+run-lenskit doctor --packages --paths

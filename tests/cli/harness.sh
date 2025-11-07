@@ -18,15 +18,20 @@ perl "$TEST_DIR/count-tests.pl" "$1" >&5
 
 run-python() {
     local status
-    echo "+ python -m $*"
-    $PYRUN -m "$@"
+    echo "+ python $*"
+    $PYRUN "$@"
     status="$?"
     if (($status)); then
         not_ok "$@"
-        echo "# command failed: $PYRUN -m $0" >&5
+        echo "# command failed: $PYRUN $0" >&5
     else
         ok "$@"
     fi
+    return $status
+}
+
+run-lenskit() {
+    run-python -m lenskit "$@"
     return "$?"
 }
 

@@ -45,7 +45,7 @@ for test in "${test_files[@]}"; do
     export TEST_WORK=$(mktemp -d -t lk-cli-test)
     dbg "using temporary directory $TEST_WORK"
     dbg "invoking test"
-    bash --noprofile --norc "$TEST_DIR/run-test.sh" "$test" 5>"$tap_file"
+    bash --noprofile --norc "$TEST_DIR/harness.sh" "$test" 5>"$tap_file"
     status="$?"
     if (($status)); then
         err "test $test errored with $status"
