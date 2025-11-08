@@ -88,15 +88,15 @@ class Vocabulary:
         elif isinstance(keys, np.ndarray) or isinstance(keys, list) or isinstance(keys, pd.Series):
             key_arr = pa.array(keys)  # type: ignore
         elif isinstance(keys, pa.ChunkedArray):
-            key_arr = keys.drop_null().combine_chunks()
+            key_arr = keys.combine_chunks()
         elif isinstance(keys, pa.Array):
             key_arr = keys
         else:
-            key_arr = pa.array(sorted(set(keys)))  # type: ignore
+            key_arr = pa.array(keys)  # type: ignore
 
         if reorder:
             self._pd_index = None
-            key_arr = key_arr.unique().sort()
+            key_arr = key_arr.drop_null().unique().sort()
 
         assert key_arr.null_count == 0
         self._array = key_arr
