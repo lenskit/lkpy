@@ -25,8 +25,7 @@ from typing_extensions import Any
 
 from lenskit.torch import safe_tensor
 
-from .matrix import normalize_matrix
-from .matrix import SparseIndexListType, SparseRowArray, SparseRowType
+from .matrix import SparseIndexListType, SparseRowArray, SparseRowType, normalize_matrix
 from .repr import object_repr
 from .schema import AttrLayout, ColumnSpec
 from .types import IDArray
@@ -241,6 +240,7 @@ class AttributeSet(ABC):
 
 class ScalarAttributeSet(AttributeSet):
     _cat_vocab: Vocabulary | None = None
+
     @property
     def data_type(self) -> pa.DataType:
         return self._table.field(self.name).type
@@ -301,6 +301,7 @@ class ScalarAttributeSet(AttributeSet):
 
 class ListAttributeSet(AttributeSet):
     _cat_vocab: Vocabulary | None = None
+
     def __str__(self):  # pragma: nocover
         return object_repr(
             "ScalarAttributeSet",
@@ -375,6 +376,7 @@ class ListAttributeSet(AttributeSet):
         matrix = normalize_matrix(matrix, normalize)
 
         return matrix, vocab
+
     def __str__(self):  # pragma: nocover
         return object_repr(
             "ListAttributeSet",
@@ -513,6 +515,7 @@ class VectorAttributeSet(AttributeSet):
         matrix = normalize_matrix(mat, normalize)
 
         return matrix, vocab
+
     def __str__(self):  # pragma: nocover
         return object_repr(
             "VectorAttributeSet",
@@ -616,6 +619,7 @@ class SparseAttributeSet(AttributeSet):
         matrix = normalize_matrix(mat, normalize)
 
         return matrix, vocab
+
     def __str__(self):  # pragma: nocover
         return object_repr(
             "SparseAttributeSet",
