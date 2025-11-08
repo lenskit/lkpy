@@ -51,9 +51,10 @@ guide to how to use LensKit for research, education, and other purposes.
     documenting
 
 .. toctree::
-    :caption: Support Code
+    :caption: Utilities and Diagnostics
     :maxdepth: 1
 
     logging
+    diagnostics
     parallelism
     ../cli/index

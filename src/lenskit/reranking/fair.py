@@ -176,7 +176,9 @@ class FAIRReranker(Component[ItemList], Trainable):
                 f"Dataset is missing required '{protected}' attribute for item entities"
             )
 
-        self.protected_attributes = items.attribute(protected).pandas()
+        prot = items.attribute(protected).numpy()
+        self.protected_attributes = np.equal(prot, True)
+        self.vocab = items.vocabulary
 
         log.info(
             "[%s] computed thresholds with p=%.2f, alpha=%.2f → alpha_c=%.8f",
@@ -187,16 +189,19 @@ class FAIRReranker(Component[ItemList], Trainable):
         )
 
     def __call__(self, items: ItemList, n: int | None = None) -> ItemList:
-        item_ids = items.ids()
+        list_size = len(items)
+        item_numbers = items.numbers(vocabulary=self.vocab, missing="negative")
 
-        is_protected = self.protected_attributes.reindex(item_ids).fillna(False).values
+        is_protected = np.full(list_size, False)
+
+        mask_vocab_items = item_numbers >= 0
+        is_protected[mask_vocab_items] = self.protected_attributes[item_numbers[mask_vocab_items]]
 
         p_items = deque(np.nonzero(is_protected)[0])
-        up_items = deque(np.nonzero(~is_protected)[0])
+        up_items = deque(np.nonzero(np.logical_not(is_protected))[0])
 
         count_prot = 0
         reranked_indices = []
-        list_size = len(item_ids)
         n_config = self.config.n
 
         # check that runtime n <= configured n
@@ -212,15 +217,13 @@ class FAIRReranker(Component[ItemList], Trainable):
                     reranked_indices.append(p_items.popleft())
                     count_prot += 1
                 else:
-                    reranked_indices.extend(up_items)
-                    break
+                    reranked_indices.append(up_items.popleft())
             else:
                 if up_items:
                     reranked_indices.append(up_items.popleft())
                 else:
-                    reranked_indices.extend(p_items)
-                    count_prot += len(p_items)
-                    break
+                    reranked_indices.append(p_items.popleft())
+                    count_prot += 1
 
         topn_reranked = ItemList(items[reranked_indices], ordered=True)
         return topn_reranked

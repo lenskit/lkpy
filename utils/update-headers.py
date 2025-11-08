@@ -1,9 +1,17 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
 # Copyright (C) 2023-2025 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "docopt-ng >=0.9.0",
+#   "unbeheader ~=1.3",
+# ]
+# ///
 
 """
 Update headers in source files.

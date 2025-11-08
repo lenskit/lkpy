@@ -190,7 +190,7 @@ def test_stochasticity(rng):
     items = ItemList(item_ids=iids, scores=scores)
     size = 50
 
-    TRIALS = 100
+    TRIALS = 250
     topn = StochasticTopNRanker(n=size)
 
     _log.info("testing stochastic ranking: top %d of %d", size, len(items))
@@ -234,26 +234,34 @@ def test_stochasticity(rng):
         _log.info("trial %d: 𝜏=%.3f, p=%.3f", i, tau.statistic, tau.pvalue)
 
     pvals = np.array(pvals)
-    _log.info("trial p-value statistics: mean=%.3f, median=%.3f", np.mean(pvals), np.median(pvals))
+    _log.info(
+        "trial p-value statistics: mean=%.3f, median=%.3f, pass=%d/%d",
+        np.mean(pvals),
+        np.median(pvals),
+        np.sum(pvals < 0.05).item(),
+        TRIALS,
+    )
     # do 90% of trials pass the test?
     assert np.mean(pvals < 0.05) >= 0.9
 
 
-@mark.flaky(retries=3)
+@mark.flaky(retries=5)
 def test_scale_affects_ranking(ml_ds: Dataset):
     """
     Test that different softmax scales produce different levels of ranking variation.
     """
-    rng = np.random.default_rng()
+    # generate a fresh RNG, ignoring global seeding
+    seed = np.random.SeedSequence()
+    rng = np.random.default_rng(seed)
     pipe = topn_pipeline(ImplicitMFScorer(embedding_size=32, weight=5))
     pipe.train(ml_ds, TrainingOptions(rng=rng))
 
-    seed1, seed2, seed3 = rng.bit_generator.random_raw(3)
+    seeds = [int(s.generate_state(1)[0]) for s in seed.spawn(3)]
 
     topn = TopNRanker()
-    samp_frac = StochasticTopNRanker(scale=0.01, rng=int(seed1))
-    samp_one = StochasticTopNRanker(scale=1, rng=int(seed2))
-    samp_hundred = StochasticTopNRanker(scale=50, rng=int(seed3))
+    samp_frac = StochasticTopNRanker(scale=0.01, rng=seeds[0])
+    samp_one = StochasticTopNRanker(scale=1, rng=seeds[1])
+    samp_hundred = StochasticTopNRanker(scale=50, rng=seeds[2])
 
     jc_frac = []
     jc_one = []

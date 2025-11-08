@@ -34,6 +34,7 @@ from ..arrow import explode_column
 from ..builder import DatasetBuilder
 from ..container import DataContainer
 from ..items import ItemList
+from ..repr import object_repr
 from ..types import ID, Column
 from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
 
@@ -510,6 +511,11 @@ class ItemListCollection(Generic[KL], ABC):
                 when ``pos`` is out-of-bounds.
         """
         pass
+
+    def __str__(self):
+        return object_repr(
+            "ItemListCollection", ",".join(self.key_fields), comment=f"{len(self)} lists"
+        ).string()
 
 
 class ItemListCollector(Protocol):

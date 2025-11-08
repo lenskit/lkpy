@@ -49,5 +49,5 @@
   "python.testing.pytestEnabled": true,
   "mise.configureExtensionsUseSymLinks": true,
   "mise.configureExtensionsUseShims": false,
-  "mise.configureExtensionsAutomatically": true
+  "mise.configureExtensionsAutomatically": false
 }

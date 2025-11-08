@@ -18,13 +18,13 @@ repos:
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.13.2
+    rev: v0.14.2
     hooks:
-      # Run the linter.
-      - id: ruff
-        args: [--fix]
       # Run the formatter.
       - id: ruff-format
+      # Run the linter.
+      - id: ruff-check
+        args: [--fix]
 
   - repo: local
     hooks:
@@ -48,11 +48,8 @@ repos:
 
       - id: license-headers
         name: add license headers
-        language: python
-        entry: python -X utf8 utils/update-headers.py --error-on-change
+        language: system
+        entry: ./utils/update-headers.py --error-on-change
         types_or:
           - python
           - rust
-        additional_dependencies:
-          - docopt-ng >=0.9.0
-          - unbeheader ~=1.3
