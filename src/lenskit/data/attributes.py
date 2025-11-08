@@ -11,6 +11,7 @@ Data attribute accessors.
 from __future__ import annotations
 
 import json
+from abc import ABC, abstractmethod
 from typing import Literal
 
 import numpy as np
@@ -22,10 +23,11 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_array
 from typing_extensions import Any
 
-from lenskit.data.matrix import SparseRowArray
 from lenskit.torch import safe_tensor
 
 from .matrix import normalize_matrix
+from .matrix import SparseIndexListType, SparseRowArray, SparseRowType
+from .repr import object_repr
 from .schema import AttrLayout, ColumnSpec
 from .types import IDArray
 from .vocab import Vocabulary
@@ -47,7 +49,7 @@ def attr_set(
             raise ValueError(f"unsupported layout {spec.layout}")
 
 
-class AttributeSet:
+class AttributeSet(ABC):
     """
     Base class for attributes associated with entities.
 
@@ -61,6 +63,10 @@ class AttributeSet:
     name: str
     """
     The name of the attribute.
+    """
+    layout: AttrLayout
+    """
+    The attribute layout.
     """
     _spec: ColumnSpec
     _table: pa.Table
@@ -77,10 +83,26 @@ class AttributeSet:
         rows: pa.Int32Array | None,
     ):
         self.name = name
+        self.layout = spec.layout
         self._spec = spec
         self._table = table
         self._vocab = vocab
         self._selected = rows
+
+    @property
+    def _qname(self):
+        vn = self._vocab.name
+        if vn is None:
+            return self.name
+        else:
+            return f"{vn}.{self.name}"
+
+    @property
+    @abstractmethod
+    def data_type(self) -> pa.DataType:
+        """
+        Get the data type of this attribute set.
+        """
 
     def ids(self) -> IDArray:
         """
@@ -219,6 +241,9 @@ class AttributeSet:
 
 class ScalarAttributeSet(AttributeSet):
     _cat_vocab: Vocabulary | None = None
+    @property
+    def data_type(self) -> pa.DataType:
+        return self._table.field(self.name).type
 
     def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
         arr = self.arrow()
@@ -276,6 +301,31 @@ class ScalarAttributeSet(AttributeSet):
 
 class ListAttributeSet(AttributeSet):
     _cat_vocab: Vocabulary | None = None
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "ScalarAttributeSet",
+            f"{self._qname}: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "ScalarAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
+
+
+class ListAttributeSet(AttributeSet):
+    @property
+    def data_type(self) -> pa.DataType:
+        lt = self._table.field(self.name).type
+        assert isinstance(lt, pa.ListType)
+        return lt.value_type
 
     def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
         arr = self.arrow()
@@ -325,12 +375,35 @@ class ListAttributeSet(AttributeSet):
         matrix = normalize_matrix(matrix, normalize)
 
         return matrix, vocab
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "ListAttributeSet",
+            f"{self._qname}: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "ListAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
 
 
 class VectorAttributeSet(AttributeSet):
     _names: list[str] | None = None
     _size: int | None = None
     _cat_vocab: Vocabulary | None = None
+
+    @property
+    def data_type(self) -> pa.DataType:
+        lt = self._table.field(self.name).type
+        assert isinstance(lt, pa.ListType)
+        return lt.value_type
 
     @property
     def dim_names(self) -> list[str] | None:
@@ -440,11 +513,35 @@ class VectorAttributeSet(AttributeSet):
         matrix = normalize_matrix(mat, normalize)
 
         return matrix, vocab
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "VectorAttributeSet",
+            f"{self._qname}[{self.vector_size}]: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "VectorAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            dim=self.vector_size,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
 
 
 class SparseAttributeSet(AttributeSet):
     _names: list[str] | None = None
     _cat_vocab: Vocabulary | None = None
+
+    @property
+    def data_type(self) -> pa.DataType | None:
+        lt = self._table.field(self.name).type
+        assert isinstance(lt, (SparseRowType, SparseIndexListType))
+        return lt.value_type
 
     @property
     def dim_names(self) -> list[str] | None:
@@ -465,6 +562,14 @@ class SparseAttributeSet(AttributeSet):
                 self._names = json.loads(nstr)
 
         return self._names
+
+    @property
+    def vector_size(self) -> int:
+        """
+        Get the size (dimensionality) of this vector attribute.
+        """
+        assert self._spec.vector_size is not None, "sparse vector column has no size"
+        return self._spec.vector_size
 
     def arrow(self) -> SparseRowArray:
         arr = super().arrow()
@@ -511,6 +616,24 @@ class SparseAttributeSet(AttributeSet):
         matrix = normalize_matrix(mat, normalize)
 
         return matrix, vocab
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "SparseAttributeSet",
+            f"{self._qname}[{self.vector_size}]: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "SparseAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            dim=self.vector_size,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
 
 
 def _replace_vectors(

@@ -9,6 +9,17 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.6.0:
+
+2025.6.0
+~~~~~~~~
+
+- Add and test support for Python 3.14.
+- Adjust dependencies to allow PyArrow 22 (but not 21, due to miscompiled
+  Windows wheels).
+- Disabled parallel scoring in :class:`~lenskit.knn.ItemKNNScorer` to fix
+  problems with nondeterministic results (:pr:`922`).
+
 .. _2025.5.0:
 
 2025.5.0

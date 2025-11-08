@@ -16,6 +16,7 @@ from lenskit.logging import get_logger
 
 from ..adapt import Column, column_name, normalize_columns
 from ..items import ItemList
+from ..repr import object_repr
 from ._base import ItemListCollection, MutableItemListCollection
 from ._keys import ID, GenericKey, K, Ko, create_key_type, key_dict, key_fields
 
@@ -240,3 +241,11 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
 
     def __getitem__(self, pos: int, /) -> tuple[K, ItemList]:
         return self._lists[pos]
+
+    def __repr__(self):
+        return object_repr(
+            "ItemListCollection",
+            comment=f"{len(self)} lists",
+            storage="list",
+            key=",".join(self.key_fields),
+        ).string()

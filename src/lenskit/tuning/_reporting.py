@@ -65,7 +65,7 @@ class ProgressReport(ray.tune.ProgressReporter):
             self._bar.finish()
         else:
             total = len(trials)
-            if total <= self._bar.total:
+            if self._bar.total and total <= self._bar.total:
                 total = None
 
             n_new = 0

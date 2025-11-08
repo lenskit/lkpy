@@ -41,6 +41,7 @@ def main():
 
 @click.group("lenskit")
 @click.option("-v", "--verbose", "verbosity", count=True, help="Enable verbose logging output")
+@click.option("--skip-log-setup", is_flag=True, hidden=True, envvar="LK_SKIP_LOG_SETUP")
 @click.option(
     "-R",
     "--project-root",
@@ -48,16 +49,17 @@ def main():
     metavar="DIR",
     help="Look for project root in DIR for configuration files.",
 )
-def lenskit(verbosity: int, project_root: Path | None):
+def lenskit(verbosity: int, project_root: Path | None, skip_log_setup: bool = False):
     """
     Data and pipeline operations with LensKit.
     """
 
     # this code is run before any other command logic, so we can do global setup
-    lc = LoggingConfig()
-    if verbosity:
-        lc.set_verbose(verbosity)
-    lc.apply()
+    if not skip_log_setup:
+        lc = LoggingConfig()
+        if verbosity:
+            lc.set_verbose(verbosity)
+        lc.apply()
 
     if project_root is None:
         if pr := os.environ.get("LK_PROJECT_ROOT"):

@@ -22,16 +22,12 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
+          - "3.14"
         platform:
           - ubuntu-latest
           - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
-        exclude:
-          - python: "3.13"
-            platform: macos-latest
-          - python: "3.13"
-            platform: windows-latest
 
     steps:
       - name: 🛒 Checkout
@@ -40,20 +36,19 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
           uv_extra=
-          if [ "${{matrix.python}}" = "3.13" ]; then
-            uv_extra="--no-extra ray"
+          if [ "${{matrix.python}}" = "3.14" ]; then
+            uv_extra="--no-extra ray --no-extra tune"
           fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
@@ -140,16 +135,16 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
           uv sync --only-group=test
           uv pip install --resolution=lowest-direct '.[sklearn,hpf,implicit,funksvd]'
         env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
           CC: gcc
 
       - name: 🔍 Inspect environment
@@ -189,16 +184,15 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
           uv sync --only-group=test
           uv pip install --resolution=lowest-direct .
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: 🔍 Inspect environment
         run: |
@@ -236,16 +230,15 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -293,16 +286,15 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test --group doc  --group demo
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -367,9 +359,10 @@ jobs:
           git config user.email lkbot@lenskit.org
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
@@ -394,9 +387,14 @@ jobs:
       - name: ⛙ Merge and report
         run: |
           coverage combine --keep test-logs/*/coverage.db
-          coverage xml
           coverage html -d lenskit-coverage
-          coverage report --format=markdown >coverage.md
+          coverage report
+
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          path: lenskit-coverage
+          name: lenskit-coverage-report
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v4.2.0
