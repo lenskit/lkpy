@@ -35,6 +35,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: jdx/mise-action@v3
+        with:
+          cache: false
+          install: true
+
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -62,6 +67,12 @@ jobs:
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit --cov-append tests
+
+      - name: 🕺🏻 Test LensKit CLI
+        if: runner.os != 'Windows'
+        run: |
+          mise run test-cli -- --coverage --cov-append
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
@@ -183,6 +194,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: jdx/mise-action@v3
+        with:
+          install: false
+
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -201,6 +216,11 @@ jobs:
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
+
+      - name: 🕺🏻 Test LensKit CLI
+        run: |
+          mise run test-cli -- --coverage --cov-append
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
@@ -229,6 +249,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: jdx/mise-action@v3
+        with:
+          install: false
+
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -239,6 +263,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test
+          uv pip install optuna
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -257,6 +282,11 @@ jobs:
       - name: Run Eval Tests
         run: |
           pytest --cov-append --cov=src/lenskit -m 'eval or realdata' --log-file test-eval.log tests
+
+      - name: 🕺🏻 Test LensKit CLI
+        run: |
+          mise run test-cli -- --coverage --cov-append tests/cli/test-tune.sh
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
