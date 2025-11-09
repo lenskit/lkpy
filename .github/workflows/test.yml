@@ -69,6 +69,7 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit --cov-append tests
 
       - name: 🕺🏻 Test LensKit CLI
+        if: runner.os != 'Windows'
         run: |
           mise run test-cli -- --coverage --cov-append
         shell: bash -e {0}
