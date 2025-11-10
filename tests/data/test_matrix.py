@@ -104,7 +104,7 @@ def test_normalize_distribution_zero_rows():
     )
     result = normalize_matrix(sparse_zero, normalize="distribution")
 
-    assert np.allclose(np.asarray(result[0, :].sum()), 1.0)
+    assert np.allclose(np.asarray(result[[0], :].sum()), 1.0)
     assert np.allclose(result[[1], :].toarray(), [[0.0, 0.0]])
 
     dense_zero = np.array([[1.0, 2.0], [0.0, 0.0]], dtype=np.float32)
