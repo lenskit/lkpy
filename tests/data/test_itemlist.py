@@ -953,3 +953,58 @@ def test_item_list_concat_second_vocab():
     assert len(il) == 4
     assert all(il.ids() == ["a", "b", "c", "d"])
     assert il.vocabulary is None
+
+
+def test_item_list_update_nothing():
+    base = ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5))
+    il = base.update(ItemList())
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == base.scores())
+
+
+def test_item_list_update_add_field():
+    base = ItemList(ITEMS, vocabulary=VOCAB)
+    il = base.update(ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5)))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == np.arange(5))
+
+
+def test_item_list_update_add_field_no_vocab():
+    base = ItemList(ITEMS, vocabulary=VOCAB)
+    il = base.update(ItemList(ITEMS, scores=np.arange(5)))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == np.arange(5))
+
+
+def test_item_list_update_some_items():
+    base = ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5))
+    il = base.update(ItemList(ITEMS[1:4], scores=np.arange(1, 4) * 100))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == [0, 100, 200, 300, 4, 5])
+
+
+def test_item_list_update_add_for_some_items():
+    base = ItemList(ITEMS, vocabulary=VOCAB)
+    il = base.update(ItemList(ITEMS[1:4], scores=np.arange(1, 4) * 100))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == [None, 100, 200, 300, None, None])

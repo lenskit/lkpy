@@ -148,6 +148,7 @@ class ItemList:
     # storage for individual components of the item list
     _ids: pa.Array | None = None
     _ids_numpy: IDArray | None = None
+    _id_idx: _data_accel.IDIndex | None = None
     _mask_cache: tuple[ItemList, np.ndarray[tuple[int], np.dtype[np.bool_]]] | None = None
     _numbers: MTArray[np.int32] | None = None
     _vocab: Vocabulary | None = None
@@ -575,6 +576,11 @@ class ItemList:
             case _:  # pragma: nocover
                 raise ValueError(f"unknown format {format}")
 
+    def _id_index(self) -> _data_accel.IDIndex:
+        if self._id_idx is None:
+            self._id_idx = _data_accel.IDIndex(self.ids(format="arrow"))
+        return self._id_idx
+
     @overload
     def numbers(
         self,
@@ -988,6 +994,54 @@ class ItemList:
             [self.to_arrow(ids=True, ranks=ordered), other.to_arrow(ids=True, ranks=ordered)]
         )
         return ItemList.from_arrow(tbl, vocabulary=self.vocabulary)
+
+    def update(self, other: ItemList) -> ItemList:
+        """
+        Create a copy of the item list, updated with new data from another list.
+
+        This creates a new item list with the same items as ``self``, but with
+        new or modified fields from ``other``.  For any item in both ``self``
+        and ``other``, and each field present in ``other``, the values of that
+        field in ``other`` are used instead of ``self``.  That is:
+
+        - If a field is only present in ``self``, it is used unchanged.
+        - If a field is only present in ``other``, its values are used for the
+          items that appear in both sets, and items only in ``self`` have an
+          unset / null value for the field (``NaN`` for foating arrays).
+        - If a field is present in both lists, then its values from ``other``
+          are used for items appearing in ``other``, and the values from
+          ``self`` are used for items that appear only in ``self``.
+        - Items that appear only in ``other`` are ignored.
+
+        .. note::
+            Only the *presence or absence* of an item in ``self`` and ``other``
+            is considered, not the nullity of individual field values.  If a
+            field appears in both ``self`` and ``other``, and some of its values
+            in ``other`` are null or ``NaN``, then they will be null or ``NaN``
+            in the resulting item list, regardless of the value of that field
+            for those items on ``self``.
+
+            That is, this method does not do item-level coalescing of null field
+            values.
+
+
+        Args:
+            other:
+                The item list to merge into this one.
+        Returns:
+            The updated item list.
+        """
+        id_idx = self._id_index()
+        o_ids = other.ids(format="arrow")
+        o_pos = id_idx.get_indexes(o_ids)
+        o_mask = o_pos.is_valid().to_numpy(zero_copy_only=False)
+        o_arr = o_pos.fill_null(-1).to_numpy()
+
+        fields = {}
+        for k, v in other._fields.items():
+            fields[k] = MTArray.scatter(self._fields.get(k, len(self)), o_arr, v, mask=o_mask)
+
+        return ItemList()
 
     @overload
     def remove(
