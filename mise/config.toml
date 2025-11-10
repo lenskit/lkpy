@@ -5,6 +5,7 @@ uv = "latest"
 pre-commit = "4"
 cargo-binstall = "latest"
 "cargo:cargo-binutils" = "0.3"
+usage = "latest"
 
 [settings]
 experimental = true
