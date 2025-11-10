@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from typing import TypeVar
+
 import numpy as np
 import pyarrow as pa
 
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import ID
+
+A = TypeVar("A", bound=pa.Array)
 
 def transpose_csr(
     matrix: SparseRowArray, permute: bool
@@ -17,6 +21,8 @@ def negative_mask(n: int, indices: pa.Int32Array) -> pa.BooleanArray:
     """
     ...
 
+def scatter_array(dst: A, idx: pa.Array, src: A) -> A: ...
+def scatter_array_empty(dst_size: int, idx: pa.Array, src: A) -> A: ...
 def sample_negatives(
     coords: CoordinateTable,
     rows: np.ndarray[tuple[int], np.dtype[np.int32]],
@@ -34,8 +40,8 @@ class IDIndex:
     Backend implementation for ID indexes / vocabularies.
     """
     def __init__(self, ids: pa.Array | None = None): ...
-    def get_index(self, id: ID): ...
-    def get_indexes(self, ids: pa.Array): ...
+    def get_index(self, id: ID) -> int: ...
+    def get_indexes(self, ids: pa.Array) -> pa.Array: ...
     def id_array(self) -> pa.Array: ...
     def __len__(self) -> int: ...
 
