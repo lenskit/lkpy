@@ -77,6 +77,35 @@ class MTArray(Generic[NPT]):
         else:
             return cls(array)
 
+    @classmethod
+    def scatter(
+        cls,
+        dst: MTArray[NPT] | int,
+        idx: NDArray[np.integer],
+        src: MTArray[NPT],
+        *,
+        mask: NDArray[np.bool_] | None = None,
+    ) -> MTArray[NPT]:
+        """
+        “Scatter” the values of a source array into positions of a destination
+        array, or into a new array.
+        """
+        if isinstance(dst, int):
+            if src._torch is not None:
+                st = src._torch
+                dt = torch.empty_like(st)
+                it = torch.from_numpy(idx).to(st.device)
+                if mask is not None:
+                    mt = torch.from_numpy(mask).to(it.device)
+                    it = it[mt]
+                    st = st[mt]
+
+                dt.scatter_(0, it, st)
+                return MTArray.wrap(st)
+            else:
+                sa = src.arrow()
+                da = pa.nulls(dst, type=sa.type())
+
     @property
     def shape(self) -> tuple[int, ...]:
         if self._shape is None:
