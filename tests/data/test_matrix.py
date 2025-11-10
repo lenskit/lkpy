@@ -26,8 +26,8 @@ def test_normalize_unit_sparse():
     row_norms = np.sqrt(np.asarray(result.multiply(result).sum(axis=1)).ravel())
     assert np.allclose(row_norms, 1.0)
 
-    assert np.allclose(result[0].toarray(), [[0.6, 0.8]])
-    assert np.allclose(result[1].toarray(), [[1 / np.sqrt(2), 1 / np.sqrt(2)]])
+    assert np.allclose(result[0, :].toarray(), [[0.6, 0.8]])
+    assert np.allclose(result[1, :].toarray(), [[1 / np.sqrt(2), 1 / np.sqrt(2)]])
 
 
 def test_normalize_unit_dense():
@@ -52,9 +52,9 @@ def test_normalize_unit_zero_rows():
     )
     result = normalize_matrix(sparse_zero, normalize="unit")
 
-    assert np.allclose(result[0].toarray(), [[0.6, 0.8]])
+    assert np.allclose(result[0, :].toarray(), [[0.6, 0.8]])
     # second row should remain zero
-    assert np.allclose(result[1].toarray(), [[0.0, 0.0]])
+    assert np.allclose(result[1, :].toarray(), [[0.0, 0.0]])
 
     # dense matrix with zero row
     dense_zero = np.array([[3.0, 4.0], [0.0, 0.0]], dtype=np.float32)
@@ -78,8 +78,8 @@ def test_normalize_distribution_sparse():
     row_sums = np.asarray(result.sum(axis=1)).ravel()
     assert np.allclose(row_sums, 1.0)
 
-    assert np.allclose(result[0].toarray(), [[1 / 6, 2 / 6, 3 / 6]])
-    assert np.allclose(result[1].toarray(), [[0.5, 0.5, 0.0]])
+    assert np.allclose(result[0, :].toarray(), [[1 / 6, 2 / 6, 3 / 6]])
+    assert np.allclose(result[1, :].toarray(), [[0.5, 0.5, 0.0]])
 
 
 def test_normalize_distribution_dense():
@@ -104,8 +104,8 @@ def test_normalize_distribution_zero_rows():
     )
     result = normalize_matrix(sparse_zero, normalize="distribution")
 
-    assert np.allclose(np.asarray(result[0].sum()), 1.0)
-    assert np.allclose(result[1].toarray(), [[0.0, 0.0]])
+    assert np.allclose(np.asarray(result[0, :].sum()), 1.0)
+    assert np.allclose(result[1, :].toarray(), [[0.0, 0.0]])
 
     dense_zero = np.array([[1.0, 2.0], [0.0, 0.0]], dtype=np.float32)
     result = normalize_matrix(dense_zero, normalize="distribution")
