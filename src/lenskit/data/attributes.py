@@ -298,6 +298,24 @@ class ScalarAttributeSet(AttributeSet):
         matrix = normalize_matrix(matrix, normalize)
         return matrix, vocab
 
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "ScalarAttributeSet",
+            f"{self._qname}: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "ScalarAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
+
 
 class ListAttributeSet(AttributeSet):
     _cat_vocab: Vocabulary | None = None
