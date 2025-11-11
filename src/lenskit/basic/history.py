@@ -73,13 +73,14 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
         log = _log.bind(user_id=query.user_id)
         id_type = self.interactions.row_vocabulary.ids().dtype
         if isinstance(query.user_id, str) and issubclass(id_type.type, np.number):
-            query.user_id = id_type.type(query.user_id)
+            query.user_id = id_type.type(query.user_id)  # type: ignore
 
-        if query.user_items is None:
+        if query.history_items is None:
             trace(log, "looking up user history")
-            query.user_items = self.interactions.row_items(query.user_id)
-            if query.user_items is not None:
-                log.debug("fetched %d history items", len(query.user_items))
+            query.history_items = self.interactions.row_items(query.user_id)
+            query.user_items = query.history_items
+            if query.history_items is not None:
+                log.debug("fetched %d history items", len(query.history_items))
             else:
                 log.debug("no history found")
 
