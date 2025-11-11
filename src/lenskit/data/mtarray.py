@@ -105,7 +105,7 @@ class MTArray(Generic[NPT]):
             if src._torch is not None:
                 st = src._torch
                 dt = torch.full((dst,), torch.nan, dtype=st.dtype, device=st.device)
-                it = torch.from_numpy(idx).to(st.device, non_blocking=True)
+                it = torch.from_numpy(idx).to(st.device, dtype=torch.int64, non_blocking=True)
                 if mask is not None:
                     mt = torch.from_numpy(mask).to(it.device, non_blocking=True)
                     it = it[mt]
@@ -120,7 +120,7 @@ class MTArray(Generic[NPT]):
                 return MTArray.wrap(res)
         elif dst._torch is not None:
             st = src.torch().to(dst._torch.device, non_blocking=True)
-            it = torch.from_numpy(idx).to(dst._torch.device, non_blocking=True)
+            it = torch.from_numpy(idx).to(st.device, dtype=torch.int64, non_blocking=True)
             dt = dst._torch.scatter(0, it, st)
             return MTArray.wrap(dt)
         else:
