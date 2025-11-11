@@ -23,12 +23,12 @@ from lenskit.testing import BasicComponentTests, ScorerTests
 
 class TestLightGCNPairwise(BasicComponentTests, ScorerTests):
     component = LightGCNScorer
-    config = LightGCNConfig(loss="pairwise")
+    config = LightGCNConfig(loss="pairwise", epochs=3)
 
 
 class TestLightGCNLogistic(BasicComponentTests, ScorerTests):
     component = LightGCNScorer
-    config = LightGCNConfig(loss="logistic")
+    config = LightGCNConfig(loss="logistic", epochs=3)
 
 
 @mark.slow
