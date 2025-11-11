@@ -19,7 +19,11 @@ from lenskit._accel import data
 @given(
     st.data(),
     nph.arrays(
-        nph.floating_dtypes(endianness="=", sizes=(16, 32, 64)), nph.array_shapes(max_dims=1)
+        st.one_of(
+            nph.integer_dtypes(endianness="="),
+            nph.floating_dtypes(endianness="=", sizes=(16, 32, 64)),
+        ),
+        nph.array_shapes(max_dims=1),
     ),
     st.sampled_from([np.int32, np.int64]),
 )
@@ -56,7 +60,15 @@ def test_scatter_dst_size(hd: st.DataObject, size, idx_t: np.dtype):
         )
     else:
         idx = np.asarray([], dtype=idx_t)
-    src = hd.draw(nph.arrays(nph.floating_dtypes(endianness="=", sizes=(16, 32, 64)), len(idx)))
+    src = hd.draw(
+        nph.arrays(
+            st.one_of(
+                nph.integer_dtypes(endianness="="),
+                nph.floating_dtypes(endianness="=", sizes=(16, 32, 64)),
+            ),
+            len(idx),
+        )
+    )
 
     idx_a = pa.array(idx)
     src_a = pa.array(src)
