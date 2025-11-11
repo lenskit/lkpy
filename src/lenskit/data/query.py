@@ -150,16 +150,29 @@ class RecQuery:
         elif isinstance(self.query_source, str):
             return self._items(self.query_source)
         else:
-            items = None
-            for src in self.query_source:
-                il2 = self._items(src)
-                if il2 is not None:
-                    if items is None:
-                        items = il2
-                    else:
-                        items = items.concat(il2)
+            return self.combined_items(*self.query_source)
 
-            return items
+    @property
+    def all_items(self) -> ItemList | None:
+        """
+        Get a single list of all items mentioned in the query.
+        """
+        return self.combined_items("history", "session", "context")
+
+    def combined_items(self, *sources: QueryItemSource) -> ItemList | None:
+        """
+        Obtain a combined list of items from one or more sources.
+        """
+        items = None
+        for src in sources:
+            il2 = self._items(src)
+            if il2 is not None:
+                if items is None:
+                    items = il2
+                else:
+                    items = items.concat(il2)
+
+        return items
 
     def _items(self, source: QueryItemSource | None):
         match source:

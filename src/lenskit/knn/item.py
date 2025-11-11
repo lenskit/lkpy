@@ -224,10 +224,10 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         log = _log.bind(user_id=query.user_id, n_items=len(items))
         trace(log, "beginning prediction")
 
-        ratings = query.user_items
+        ratings = query.query_items
         if ratings is None or len(ratings) == 0:
             if ratings is None:
-                warnings.warn("no user history, did you omit a history component?", DataWarning)
+                warnings.warn("no query items, did you omit a history component?", DataWarning)
             log.debug("user has no history, returning")
             return ItemList(items, scores=np.nan)
 
