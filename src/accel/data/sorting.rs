@@ -8,21 +8,15 @@ use std::cmp::Reverse;
 
 use arrow::{
     array::{
-        make_array, Array, ArrayData, ArrowPrimitiveType, Float16Array, Float32Array, Float64Array,
-        Int16Array, Int32Array, Int64Array, Int8Array, PrimitiveArray, RecordBatch, UInt16Array,
-        UInt32Array, UInt64Array, UInt8Array,
+        make_array, Array, ArrayData, ArrowPrimitiveType, Int32Array, PrimitiveArray, RecordBatch,
     },
     pyarrow::PyArrowType,
 };
-use arrow_schema::DataType;
 use ordered_float::{FloatCore, NotNan};
-use pyo3::{
-    exceptions::{PyTypeError, PyValueError},
-    prelude::*,
-};
+use pyo3::{exceptions::PyValueError, prelude::*};
 use rayon::slice::ParallelSliceMut;
 
-use crate::dispatch_array;
+use crate::match_array_type;
 use crate::{arrow::checked_array, ok_or_pyerr};
 
 const PAR_SORT_THRESHOLD: usize = 10_000;
@@ -77,7 +71,10 @@ pub(crate) fn argsort_descending<'py>(
 ) -> PyResult<PyArrowType<ArrayData>> {
     let scores = make_array(scores.0);
     let array = py.allow_threads(|| {
-        let indices = dispatch_array!(scores, float argsort_float, int argsort_int)?;
+        let indices = match_array_type!(scores, {
+            floating(arr) => argsort_float(arr),
+            integer(arr) => argsort_int(arr),
+        })?;
 
         PyResult::Ok(Int32Array::from(indices))
     })?;

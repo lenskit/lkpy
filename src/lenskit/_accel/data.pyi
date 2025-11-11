@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import TypeVar
-
 import numpy as np
 import pyarrow as pa
+from typing_extensions import TypeVar
 
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import ID
 
-A = TypeVar("A", bound=pa.Array)
+A = TypeVar("A", bound=pa.Array, default=pa.Array)
 
 def transpose_csr(
     matrix: SparseRowArray, permute: bool
