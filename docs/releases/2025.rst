@@ -19,6 +19,11 @@ information on how to upgrade your code.
   Windows wheels).
 - Disabled parallel scoring in :class:`~lenskit.knn.ItemKNNScorer` to fix
   problems with nondeterministic results (:pr:`922`).
+- Initial support for session-based recommendation, through additional methods
+  on :class:`~lenskit.data.RecQuery` (:pr:`929`).  Item KNN and the ALS
+  recommenders now support session-based recommendation as well.  The changes to
+  support this also add support for related-item recommendation through “context
+  items” in query. See :ref:`session-queries` for further information.
 
 .. _2025.5.0:
 
