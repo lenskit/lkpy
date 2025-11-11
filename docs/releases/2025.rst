@@ -48,6 +48,10 @@ Deprecations
   configuration.
 - :attr:`lenskit.data.RecQuery.user_items` is deprecated in favor of
   :class:`~lenskit.data.RecQuery.history_items`.
+- Removed fixed defaults for ``row_entity`` and ``col_entity`` on
+  :meth:`~lenskit.dataset.RelationshipSet.matrix`, now defaulting to the first
+  and last entities involved in the relationship.  This does not change anything
+  for code working on standard interactions.
 
 Platform and Build Support
 --------------------------
