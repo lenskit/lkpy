@@ -991,7 +991,8 @@ class ItemList:
 
         ordered = self.ordered and other.ordered
         tbl = pa.concat_tables(
-            [self.to_arrow(ids=True, ranks=ordered), other.to_arrow(ids=True, ranks=ordered)]
+            [self.to_arrow(ids=True, ranks=ordered), other.to_arrow(ids=True, ranks=ordered)],
+            promote_options="default",
         )
         return ItemList.from_arrow(tbl, vocabulary=self.vocabulary)
 
