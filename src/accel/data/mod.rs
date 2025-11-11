@@ -40,6 +40,8 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     data.add_function(wrap_pyfunction!(sorting::argsort_descending, &data)?)?;
     data.add_function(wrap_pyfunction!(selection::negative_mask, &data)?)?;
     data.add_function(wrap_pyfunction!(sampling::sample_negatives, &data)?)?;
+    data.add_function(wrap_pyfunction!(scatter::scatter_array, &data)?)?;
+    data.add_function(wrap_pyfunction!(scatter::scatter_array_empty, &data)?)?;
     data.add_function(wrap_pyfunction!(hash_array, &data)?)?;
 
     Ok(())

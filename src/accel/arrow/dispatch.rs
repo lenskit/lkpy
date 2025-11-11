@@ -6,64 +6,197 @@
 
 //! Macros for dispatching Arrow operations.
 
+/// Dispatch call based on high-level Arrow types.
+#[macro_export]
+macro_rules! match_array_type {
+    ($arr:expr, {$($ty:ident($var:ident) => $e:expr),+$(,)?}) => {{
+        let _macro_mat_dt = $arr.data_type();
+        let _macro_mat_rv = None;
+        $(let _macro_mat_rv = $crate::match_branches!(_macro_mat_rv, _macro_mat_dt, $ty $var, $arr, $e);)*
+        _macro_mat_rv.ok_or_else(||
+            pyo3::exceptions::PyTypeError::new_err(format!(
+                "unsupported type {}",
+                $arr.data_type()
+            )))
+        }}
+}
+
+/// Internal helper macro for [match_array_type].
+#[macro_export]
+macro_rules! ma_invoke_branch {
+    ($arr: expr, $ety:ty, $var: ident, $e: expr) => {{
+        let $var = $arr.as_any().downcast_ref::<$ety>().unwrap();
+        let res = $e;
+        Some(res)
+    }};
+}
+
+/// Internal helper macro for [match_array_type].
+#[macro_export]
+macro_rules! match_branches {
+    ($in:expr, $dt:expr, size $var:ident, $arr:expr, $e:expr) => {
+        $in.or_else(|| match $dt {
+            arrow_schema::DataType::Int32 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int32Array, $var, $e)
+            }
+            arrow_schema::DataType::Int64 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int64Array, $var, $e)
+            }
+            _ => None,
+        })
+    };
+    ($in:expr, $dt:expr, integer $var:ident, $arr:expr, $e:expr) => {
+        $in.or_else(|| match $dt {
+            arrow_schema::DataType::Int8 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int8Array, $var, $e)
+            }
+            arrow_schema::DataType::Int16 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int16Array, $var, $e)
+            }
+            arrow_schema::DataType::Int32 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int32Array, $var, $e)
+            }
+            arrow_schema::DataType::Int64 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int64Array, $var, $e)
+            }
+            arrow_schema::DataType::UInt8 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::UInt8Array, $var, $e)
+            }
+            arrow_schema::DataType::UInt16 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::UInt16Array, $var, $e)
+            }
+            arrow_schema::DataType::UInt32 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::UInt32Array, $var, $e)
+            }
+            arrow_schema::DataType::UInt64 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::UInt64Array, $var, $e)
+            }
+            _ => None,
+        })
+    };
+    ($in:expr, $dt:expr, floating $var:ident, $arr:expr, $e:expr) => {
+        $in.or_else(|| match $dt {
+            arrow_schema::DataType::Float16 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Float16Array, $var, $e)
+            }
+            arrow_schema::DataType::Float32 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Float32Array, $var, $e)
+            }
+            arrow_schema::DataType::Float64 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Float64Array, $var, $e)
+            }
+        })
+    };
+    ($in:expr, $dt:expr, numeric $var:ident, $arr:expr, $e:expr) => {
+        $in.or_else(|| match $dt {
+            arrow_schema::DataType::Int8 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int8Array, $var, $e)
+            }
+            arrow_schema::DataType::Int16 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int16Array, $var, $e)
+            }
+            arrow_schema::DataType::Int32 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int32Array, $var, $e)
+            }
+            arrow_schema::DataType::Int64 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Int64Array, $var, $e)
+            }
+            arrow_schema::DataType::UInt8 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::UInt8Array, $var, $e)
+            }
+            arrow_schema::DataType::UInt16 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::UInt16Array, $var, $e)
+            }
+            arrow_schema::DataType::UInt32 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::UInt32Array, $var, $e)
+            }
+            arrow_schema::DataType::UInt64 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::UInt64Array, $var, $e)
+            }
+            arrow_schema::DataType::Float16 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Float16Array, $var, $e)
+            }
+            arrow_schema::DataType::Float32 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Float32Array, $var, $e)
+            }
+            arrow_schema::DataType::Float64 => {
+                $crate::ma_invoke_branch!($arr, arrow::array::Float64Array, $var, $e)
+            }
+            _ => None,
+        })
+    };
+}
+
 #[macro_export]
 macro_rules! dispatch_array {
-    ($arr: expr, float $fproc: ident, int $iproc: ident) => (
+    ($arr: expr, float $fproc: ident, int $iproc: ident$(, $($arg: expr),*)?) => (
         match $arr.data_type() {
-            DataType::Float16 => Ok($fproc($arr.as_any().downcast_ref::<Float16Array>().unwrap())),
-            DataType::Float32 => Ok($fproc($arr.as_any().downcast_ref::<Float32Array>().unwrap())),
-            DataType::Float64 => Ok($fproc($arr.as_any().downcast_ref::<Float64Array>().unwrap())),
-            DataType::Int8 => Ok($iproc($arr.as_any().downcast_ref::<Int8Array>().unwrap())),
-            DataType::Int16 => Ok($iproc($arr.as_any().downcast_ref::<Int16Array>().unwrap())),
-            DataType::Int32 => Ok($iproc($arr.as_any().downcast_ref::<Int32Array>().unwrap())),
-            DataType::Int64 => Ok($iproc($arr.as_any().downcast_ref::<Int64Array>().unwrap())),
-            DataType::UInt8 => Ok($iproc($arr.as_any().downcast_ref::<UInt8Array>().unwrap())),
-            DataType::UInt16 => Ok($iproc($arr.as_any().downcast_ref::<UInt16Array>().unwrap())),
-            DataType::UInt32 => Ok($iproc($arr.as_any().downcast_ref::<UInt32Array>().unwrap())),
-            DataType::UInt64 => Ok($iproc($arr.as_any().downcast_ref::<UInt64Array>().unwrap())),
+            arrow_schema::DataType::Float16 => Ok($fproc($arr.as_any().downcast_ref::<arrow::array::Float16Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Float32 => Ok($fproc($arr.as_any().downcast_ref::<arrow::array::Float32Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Float64 => Ok($fproc($arr.as_any().downcast_ref::<arrow::array::Float64Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Int8 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int8Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Int16 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int16Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Int32 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int32Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Int64 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int64Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::UInt8 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::UInt8Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::UInt16 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::UInt16Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::UInt32 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::UInt32Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::UInt64 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::UInt64Array>().unwrap()$(, $($arg),*)?)),
             _ => {
-                Err(PyTypeError::new_err(format!(
+                Err(pyo3::exceptions::PyTypeError::new_err(format!(
                     "unsupported type {}",
                     $arr.data_type()
                 )))
             }
         }
     );
- ($arr: expr, numeric $proc: ident) => (
-    dispatch_array!($arr, float $proc, int $proc)
+ ($arr: expr, numeric $proc: ident$(, $($arg: expr),*)?) => (
+    dispatch_array!($arr, float $proc, int $proc$(, $($arg),*)?)
  );
- ($arr: expr, int $iproc: ident) => (
+ ($arr: expr, int $iproc: ident$(, $($arg: expr),*)?) => (
     match $arr.data_type() {
-            DataType::Int8 => Ok($iproc($arr.as_any().downcast_ref::<Int8Array>().unwrap())),
-            DataType::Int16 => Ok($iproc($arr.as_any().downcast_ref::<Int16Array>().unwrap())),
-            DataType::Int32 => Ok($iproc($arr.as_any().downcast_ref::<Int32Array>().unwrap())),
-            DataType::Int64 => Ok($iproc($arr.as_any().downcast_ref::<Int64Array>().unwrap())),
-            DataType::UInt8 => Ok($iproc($arr.as_any().downcast_ref::<UInt8Array>().unwrap())),
-            DataType::UInt16 => Ok($iproc($arr.as_any().downcast_ref::<UInt16Array>().unwrap())),
-            DataType::UInt32 => Ok($iproc($arr.as_any().downcast_ref::<UInt32Array>().unwrap())),
-            DataType::UInt64 => Ok($iproc($arr.as_any().downcast_ref::<UInt64Array>().unwrap())),
+            arrow_schema::DataType::Int8 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int8Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Int16 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int16Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Int32 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int32Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Int64 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int64Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::UInt8 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::UInt8Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::UInt16 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::UInt16Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::UInt32 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::UInt32Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::UInt64 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::UInt64Array>().unwrap()$(, $($arg),*)?)),
             _ => {
-                return Err(PyTypeError::new_err(format!(
+                return Err(pyo3::exceptions::PyTypeError::new_err(format!(
                     "unsupported type {}",
                     $arr.data_type()
                 )))
             }
         }
  );
- ($arr: expr, float $fproc: ident) => (
-        match $arr.data_type() {
-            DataType::Float16 => Ok($fproc($arr.as_any().downcast_ref::<Float16Array>().unwrap())),
-            DataType::Float32 => Ok($fproc($arr.as_any().downcast_ref::<Float32Array>().unwrap())),
-            DataType::Float64 => Ok($fproc($arr.as_any().downcast_ref::<Float64Array>().unwrap())),
+ ($arr: expr, size $iproc: ident$(, $($arg: expr),*)?) => (
+    match $arr.data_type() {
+            arrow_schema::DataType::Int32 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int32Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Int64 => Ok($iproc($arr.as_any().downcast_ref::<arrow::array::Int64Array>().unwrap()$(, $($arg),*)?)),
             _ => {
-                Err(PyTypeError::new_err(format!(
+                return Err(pyo3::exceptions::PyTypeError::new_err(format!(
+                    "unsupported type {}",
+                    $arr.data_type()
+                )))
+            }
+        }
+ );
+ ($arr: expr, float $fproc: ident$(, $($arg: expr),*)?) => (
+        match $arr.data_type() {
+            arrow_schema::DataType::Float16 => Ok($fproc($arr.as_any().downcast_ref::<arrow::array::Float16Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Float32 => Ok($fproc($arr.as_any().downcast_ref::<arrow::array::Float32Array>().unwrap()$(, $($arg),*)?)),
+            arrow_schema::DataType::Float64 => Ok($fproc($arr.as_any().downcast_ref::<arrow::array::Float64Array>().unwrap()$(, $($arg),*)?)),
+            _ => {
+                Err(pyo3::exceptions::PyTypeError::new_err(format!(
                     "unsupported type {}",
                     $arr.data_type()
                 )))
             }
         }
     );
-    ($arr: expr, int $iproc: ident, float $fproc: ident) => (
-        dispatch_array!($arr, float $fproc, int $proc)
+    ($arr: expr, int $iproc: ident, float $fproc: ident$(, $($arg: expr),*)?) => (
+        dispatch_array!($arr, float $fproc, int $proc, $($arg),*)
     );
 }
