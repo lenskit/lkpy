@@ -1031,6 +1031,14 @@ class ItemList:
         Returns:
             The updated item list.
         """
+        if len(other) == 0:
+            nf = {}
+            for k, v in other._fields.items():
+                if k not in self._fields:
+                    av = v.arrow()
+                    nf[k] = pa.nulls(len(self), type=av.type)
+            return ItemList(self, **nf)
+
         id_idx = self._id_index()
         o_ids = other.ids(format="arrow")
         o_pos = id_idx.get_indexes(o_ids)
@@ -1041,7 +1049,7 @@ class ItemList:
         for k, v in other._fields.items():
             fields[k] = MTArray.scatter(self._fields.get(k, len(self)), o_arr, v, mask=o_mask)
 
-        return ItemList()
+        return ItemList(self, **fields)
 
     @overload
     def remove(

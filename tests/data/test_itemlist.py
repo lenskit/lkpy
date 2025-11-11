@@ -966,6 +966,18 @@ def test_item_list_update_nothing():
     assert np.all(il.scores() == base.scores())
 
 
+def test_item_list_update_nothing_field():
+    base = ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5))
+    il = base.update(ItemList([], x=[]))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == base.scores())
+    assert il.field("x") is not None
+
+
 def test_item_list_update_add_field():
     base = ItemList(ITEMS, vocabulary=VOCAB)
     il = base.update(ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5)))
@@ -996,7 +1008,7 @@ def test_item_list_update_some_items():
     assert all(il.ids() == base.ids())
     assert all(il.numbers() == base.numbers())
     assert il.vocabulary is VOCAB
-    assert np.all(il.scores() == [0, 100, 200, 300, 4, 5])
+    assert np.all(il.scores() == [0, 100, 200, 300, 4])
 
 
 def test_item_list_update_add_for_some_items():
@@ -1007,4 +1019,4 @@ def test_item_list_update_add_for_some_items():
     assert all(il.ids() == base.ids())
     assert all(il.numbers() == base.numbers())
     assert il.vocabulary is VOCAB
-    assert np.all(il.scores() == [None, 100, 200, 300, None, None])
+    assert np.array_equal(il.scores(), [np.nan, 100, 200, 300, np.nan], equal_nan=True)
