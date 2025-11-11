@@ -142,12 +142,12 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
         u_offset = None
         u_feat = None
         if (
-            query.user_items is not None
-            and len(query.user_items) > 0
+            query.query_items is not None
+            and len(query.query_items) > 0
             and self.config.user_embeddings != "prefer"
         ):
             log.debug("training user embedding")
-            u_feat, u_offset = self.new_user_embedding(user_num, query.user_items)
+            u_feat, u_offset = self.new_user_embedding(user_num, query.query_items)
 
         if u_feat is None:
             if user_num is None or self.user_embeddings is None:
