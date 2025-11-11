@@ -22,6 +22,7 @@ use pyo3::{
 };
 use rayon::slice::ParallelSliceMut;
 
+use crate::dispatch_array;
 use crate::{arrow::checked_array, ok_or_pyerr};
 
 const PAR_SORT_THRESHOLD: usize = 10_000;
@@ -76,33 +77,9 @@ pub(crate) fn argsort_descending<'py>(
 ) -> PyResult<PyArrowType<ArrayData>> {
     let scores = make_array(scores.0);
     let array = py.allow_threads(|| {
-        let indices = match scores.data_type() {
-            DataType::Float16 => {
-                argsort_float(scores.as_any().downcast_ref::<Float16Array>().unwrap())
-            }
-            DataType::Float32 => {
-                argsort_float(scores.as_any().downcast_ref::<Float32Array>().unwrap())
-            }
-            DataType::Float64 => {
-                argsort_float(scores.as_any().downcast_ref::<Float64Array>().unwrap())
-            }
-            DataType::Int8 => argsort_int(scores.as_any().downcast_ref::<Int8Array>().unwrap()),
-            DataType::Int16 => argsort_int(scores.as_any().downcast_ref::<Int16Array>().unwrap()),
-            DataType::Int32 => argsort_int(scores.as_any().downcast_ref::<Int32Array>().unwrap()),
-            DataType::Int64 => argsort_int(scores.as_any().downcast_ref::<Int64Array>().unwrap()),
-            DataType::UInt8 => argsort_int(scores.as_any().downcast_ref::<UInt8Array>().unwrap()),
-            DataType::UInt16 => argsort_int(scores.as_any().downcast_ref::<UInt16Array>().unwrap()),
-            DataType::UInt32 => argsort_int(scores.as_any().downcast_ref::<UInt32Array>().unwrap()),
-            DataType::UInt64 => argsort_int(scores.as_any().downcast_ref::<UInt64Array>().unwrap()),
-            _ => {
-                return Err(PyTypeError::new_err(format!(
-                    "unsupported type {}",
-                    scores.data_type()
-                )))
-            }
-        };
+        let indices = dispatch_array!(scores, float argsort_float, int argsort_int)?;
 
-        Ok(Int32Array::from(indices))
+        PyResult::Ok(Int32Array::from(indices))
     })?;
     Ok(array.into_data().into())
 }
