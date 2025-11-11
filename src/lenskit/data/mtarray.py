@@ -115,17 +115,22 @@ class MTArray(Generic[NPT]):
                 return MTArray.wrap(dt)
             else:
                 sa = src.arrow()
-                ia = pa.array(idx)
+                ia = pa.array(idx, mask=np.logical_not(mask) if mask is not None else None)
                 res = _data_accel.scatter_array_empty(dst, ia, sa)
                 return MTArray.wrap(res)
         elif dst._torch is not None:
             st = src.torch().to(dst._torch.device, non_blocking=True)
             it = torch.from_numpy(idx).to(st.device, dtype=torch.int64, non_blocking=True)
+            if mask is not None:
+                mt = torch.from_numpy(mask).to(it.device, non_blocking=True)
+                it = it[mt]
+                st = st[mt]
+
             dt = dst._torch.scatter(0, it, st)
             return MTArray.wrap(dt)
         else:
             da = dst.arrow()
-            ia = pa.array(idx)
+            ia = pa.array(idx, mask=np.logical_not(mask) if mask is not None else None)
             sa = src.arrow()
             res = _data_accel.scatter_array(da, ia, sa)
             return MTArray.wrap(res)
