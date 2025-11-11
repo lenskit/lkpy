@@ -123,6 +123,15 @@ class RelationshipSet:
     def attribute_names(self) -> list[str]:
         return [c for c in self._table.column_names if c not in self._link_cols]
 
+    def item_lists(self) -> ItemListCollection:
+        """
+        Get a view of this relationship set as an item list collection.
+
+        Currently only implemented for :class:`MatrixRelationshipSet`, call
+        :meth:`matrix` first.
+        """
+        raise NotImplementedError("item_lists only implemented for matrix relationship sets")
+
     def count(self):
         if "count" in self._table.column_names:
             count_column = self._table.column("count")
@@ -703,6 +712,16 @@ class MatrixRelationshipSet(RelationshipSet):
         return ItemList.from_arrow(tbl, vocabulary=self.col_vocabulary)
 
     def to_ilc(self) -> ItemListCollection:
+        """
+        Get the rows as an item list collection.
+
+        .. deprecated:: 2025.6
+
+            Deprecated alias for :meth:`item_lists`.
+        """
+        return self.item_lists()
+
+    def item_lists(self) -> ItemListCollection:
         """
         Get the rows as an item list collection.
         """
