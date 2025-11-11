@@ -32,6 +32,10 @@ New Features
   recommenders now support session-based recommendation as well.  The changes to
   support this also add support for related-item recommendation through “context
   items” in query. See :ref:`session-queries` for further information.
+- Removed fixed defaults for ``row_entity`` and ``col_entity`` on
+  :meth:`~lenskit.dataset.RelationshipSet.matrix`, now defaulting to the first
+  and last entities involved in the relationship.  This does not change anything
+  for code working on standard interactions.
 
 Platform and Build Support
 --------------------------

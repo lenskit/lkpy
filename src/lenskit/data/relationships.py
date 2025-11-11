@@ -188,18 +188,29 @@ class RelationshipSet:
         return tbl.to_pandas()
 
     def matrix(
-        self, *, row_entity: str = "user", col_entity: str = "item"
+        self, *, row_entity: str | None = None, col_entity: str | None = None
     ) -> MatrixRelationshipSet:
         """
         Convert this relationship set into a matrix, coalescing duplicate
         observations.
 
+        .. versionchanged:: 2025.6
+
+            Removed the fixed defaults for ``row_entity`` and ``col_entity``.
+
         Args:
             row_entity:
-                The specified row entity of the matrix
+                The specified row entity of the matrix.  Defaults to the first
+                entity in the relationship's list of involved entities.
             col_entity:
-                The specified column entity of the matrix
+                The specified column entity of the matrix. Defaults to the last
+                entity in the relationship's list of involved entities.
         """
+        if row_entity is None:
+            row_entity = self.entities[0]
+        if col_entity is None:
+            col_entity = self.entities[-1]
+
         mat = self._matrix_set.get((row_entity, col_entity), None)
         if mat is None:
             mat = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
