@@ -96,7 +96,7 @@ class RecQuery:
     @classmethod
     def create(cls, data: QueryInput) -> RecQuery:
         """
-        Create a recommenadtion query from an input, filling in available
+        Create a recommendation query from an input, filling in available
         components based on the data type.
 
         Args:
@@ -149,6 +149,17 @@ class RecQuery:
                 return self.history_items
         elif isinstance(self.query_source, str):
             return self._items(self.query_source)
+        else:
+            items = None
+            for src in self.query_source:
+                il2 = self._items(src)
+                if il2 is not None:
+                    if items is None:
+                        items = il2
+                    else:
+                        items = items.concat(il2)
+
+            return items
 
     def _items(self, source: QueryItemSource | None):
         match source:

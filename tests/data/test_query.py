@@ -4,6 +4,8 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from pytest import warns
+
 from lenskit.data import ItemList, RecQuery, Vocabulary
 
 ITEMS = ["a", "b", "c", "d", "e"]
@@ -22,6 +24,18 @@ def test_empty():
 def test_history_items():
     items = ItemList(ITEMS, vocabulary=VOCAB)
     query = RecQuery.create(items)
+    assert query.user_id is None
+    assert query.history_items == items
+    assert query.user_items == items
+    assert query.session_items is None
+    assert query.context_items is None
+    assert query.query_items == items
+
+
+def test_deprecated_user_items():
+    items = ItemList(ITEMS, vocabulary=VOCAB)
+    with warns(DeprecationWarning):
+        query = RecQuery(user_items=items)
     assert query.user_id is None
     assert query.history_items == items
     assert query.user_items == items
