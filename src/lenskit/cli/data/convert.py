@@ -11,6 +11,7 @@ import click
 from lenskit.data.amazon import load_amazon_ratings
 from lenskit.data.collection._list import ListILC
 from lenskit.data.movielens import load_movielens
+from lenskit.data.msweb import load_ms_web
 from lenskit.logging import get_logger
 
 _log = get_logger(__name__)
@@ -19,6 +20,7 @@ _log = get_logger(__name__)
 @click.command("convert")
 @click.option("--movielens", "format", flag_value="movielens", help="Convert MovieLens data.")
 @click.option("--amazon", "format", flag_value="amazon", help="Convert Amazon rating data.")
+@click.option("--ms-web", "format", flag_value="ms-web", help="Convert MSWeb visit logs.")
 @click.option(
     "--item-lists", is_flag=True, help="Convert to an ItemListCollection instead of Dataset."
 )
@@ -46,6 +48,8 @@ def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = F
             data = load_movielens(src[0])
         case "amazon":
             data = load_amazon_ratings(*src)
+        case "ms-web":
+            data = load_ms_web(src[0])
         case _:
             raise ValueError(f"unknown data format {format}")
 
