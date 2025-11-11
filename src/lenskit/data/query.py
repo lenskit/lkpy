@@ -10,6 +10,7 @@ Recommendation queries.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
@@ -75,6 +76,23 @@ class RecQuery:
     The list of items to return from :meth:`query_items`.
     """
 
+    user_items: ItemList | None = None
+    """
+    Deprecated alias for :attr:`history_items`.
+
+    .. deprecated:: 2025.6
+
+        Use :attr:`history_items` instead.  This property will be removed in
+        LensKit 2026.1.
+    """
+
+    def __post_init__(self):
+        if self.user_items is None:
+            self.user_items = self.history_items
+        elif self.history_items is None:
+            warnings.warn("user_items is deprecated, use history_items", DeprecationWarning, 2)
+            self.history_items = self.user_items
+
     @classmethod
     def create(cls, data: QueryInput) -> RecQuery:
         """
@@ -101,22 +119,6 @@ class RecQuery:
             return cls(user_id=data)
         else:  # pragma: nocover
             raise TypeError(f"invalid query input (type {type(data)})")
-
-    @property
-    def user_items(self) -> ItemList | None:
-        """
-        Deprecated alias for :attr:`history_items`.
-
-        .. deprecated:: 2025.6
-
-            Use :attr:`history_items` instead.  This property will be removed in
-            LensKit 2026.1.
-        """
-        return self.history_items
-
-    @user_items.setter
-    def user_items(self, value: ItemList):
-        self.history_items = value
 
     @property
     def query_items(self) -> ItemList | None:
