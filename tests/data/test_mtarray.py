@@ -140,3 +140,111 @@ def test_from_list(xs: list[int]):
 
     tensor = mta.torch()
     assert np.all(tensor.numpy() == xs)
+
+
+@given(
+    st.data(),
+    nph.arrays(
+        dtype=st.one_of(nph.integer_dtypes(endianness="="), nph.floating_dtypes(endianness="=")),
+        shape=nph.array_shapes(max_dims=1),
+    ),
+)
+def test_scatter_arrow(hd: st.DataObject, arr: NDArray[np.generic]):
+    # limit to data types that match
+    assume(np.all(np.isfinite(arr)))
+
+    mta = MTArray(arr)
+
+    size = len(arr)
+    idx = np.asarray(
+        list(hd.draw(st.sets(st.integers(min_value=0, max_value=size - 1)))), dtype=np.int32
+    )
+    src = hd.draw(nph.arrays(arr.dtype, len(idx)))
+
+    mtr = MTArray.scatter(mta, idx, MTArray.wrap(src))
+
+    res = mtr.numpy()
+    assert len(res) == len(arr)
+    mask = np.ones(len(res), np.bool_)
+    mask[idx] = False
+
+    assert np.array_equal(res[idx], src, equal_nan=True)
+    assert np.array_equal(res[mask], arr[mask], equal_nan=True)
+
+
+@given(
+    st.data(),
+    st.integers(0, 16 * 1024),
+)
+def test_scatter_arrow(hd: st.DataObject, size):
+    if size:
+        idx = np.asarray(
+            list(hd.draw(st.sets(st.integers(min_value=0, max_value=size - 1)))), dtype=np.int32
+        )
+    else:
+        idx = np.asarray([], dtype=np.int32)
+    src = hd.draw(nph.arrays(nph.floating_dtypes(endianness="="), len(idx)))
+
+    mtr = MTArray.scatter(size, idx, MTArray.wrap(src))
+
+    res = mtr.numpy()
+    assert len(res) == size
+    mask = np.ones(len(res), np.bool_)
+    mask[idx] = False
+
+    assert np.array_equal(res[idx], src, equal_nan=True)
+    assert np.all(np.isnan(res[mask]))
+
+
+@given(
+    st.data(),
+    nph.arrays(
+        dtype=st.one_of(nph.integer_dtypes(endianness="="), nph.floating_dtypes(endianness="=")),
+        shape=nph.array_shapes(max_dims=1),
+    ),
+)
+def test_scatter_torch(hd: st.DataObject, arr: NDArray[np.generic]):
+    # limit to data types that match
+    assume(np.all(np.isfinite(arr)))
+
+    mta = MTArray(torch.from_numpy(arr))
+
+    size = len(arr)
+    idx = np.asarray(
+        list(hd.draw(st.sets(st.integers(min_value=0, max_value=size - 1)))), dtype=np.int32
+    )
+    src = hd.draw(nph.arrays(arr.dtype, len(idx)))
+
+    mtr = MTArray.scatter(mta, idx, MTArray.wrap(src))
+
+    res = mtr.torch()
+    assert len(res) == len(arr)
+    mask = np.ones(len(res), np.bool_)
+    mask[idx] = False
+
+    assert np.array_equal(res[idx], src, equal_nan=True)
+    assert np.array_equal(res[torch.from_numpy(mask)], arr[mask], equal_nan=True)
+
+
+@given(
+    st.data(),
+    st.integers(0, 16 * 1024),
+)
+def test_scatter_torch(hd: st.DataObject, size):
+    if size:
+        idx = np.asarray(
+            list(hd.draw(st.sets(st.integers(min_value=0, max_value=size - 1)))), dtype=np.int32
+        )
+    else:
+        idx = np.asarray([], dtype=np.int32)
+    src = hd.draw(nph.arrays(nph.floating_dtypes(endianness="="), len(idx)))
+
+    mtr = MTArray.scatter(size, idx, MTArray.wrap(torch.from_numpy(src)))
+
+    res = mtr.torch()
+    assert res.shape[0] == size
+    mask = np.ones(len(res), np.bool_)
+    mask[idx] = False
+
+    assert np.array_equal(res[idx], src, equal_nan=True)
+    assert np.all(np.isnan(res[torch.from_numpy(mask)].numpy()))
