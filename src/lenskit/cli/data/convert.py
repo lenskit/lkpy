@@ -9,7 +9,6 @@ from pathlib import Path
 import click
 
 from lenskit.data.amazon import load_amazon_ratings
-from lenskit.data.collection._list import ListILC
 from lenskit.data.movielens import load_movielens
 from lenskit.data.msweb import load_ms_web
 from lenskit.logging import get_logger
@@ -58,10 +57,7 @@ def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = F
         icls = data.default_interaction_class()
         log.info("extracting %s data", icls)
         rels = data.interactions(icls).matrix()
-        ilc: ListILC = ListILC.from_dict(
-            {(rels.row_vocabulary.id(i),): rels.row_items(number=i) for i in range(rels.n_rows)},  # type: ignore
-            f"{rels.row_type}_id",
-        )
+        ilc = rels.item_lists()
         log.info("saving to native Parquet format")
         ilc.save_parquet(dst)
     else:
