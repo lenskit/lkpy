@@ -96,6 +96,11 @@ def _load_ms_dataset(path: Path) -> Dataset:
     dsb.add_entity_class("session")
     votes = pa.Table.from_pylist(session_votes)
     dsb.add_interactions(
-        "visit", votes, entities=["session", "item"], missing="insert", default=True
+        "visit",
+        votes,
+        entities=["session", "item"],
+        missing="insert",
+        default=True,
+        allow_repeats=False,
     )
     return dsb.build()
