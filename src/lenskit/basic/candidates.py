@@ -46,6 +46,10 @@ class AllTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
     """
     Candidate selector that selects all known items from the training data.
 
+    .. deprecated:: 2025.6
+        Use :class:`TrainingItemsCandidateSelector` with ``None``
+        for :attr:`TrainingItemsCandidateConfig.exclude` instead.
+
     Stability:
         Caller
     """
@@ -59,12 +63,17 @@ class AllTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
 class UnratedTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
     """
     Candidate selector that selects all known items from the training data that
-    do not appear in the request user's history (:attr:`RecQuery.history_items`).
-    If no item history is available, then all training items are returned.
+    do not appear in the request user's history
+    (:attr:`RecQuery.history_items`). If no item history is available, then all
+    training items are returned.
 
     In order to look up the user's history in the training data, this needs to
     be combined with a component like
     :class:`~.history.UserTrainingHistoryLookup`.
+
+    .. deprecated:: 2025.6
+        Use :class:`TrainingItemsCandidateSelector` with default settings or the
+        ``"history"`` option for :attr:`TrainingItemsCandidateConfig.exclude` instead.
 
     Stability:
         Caller
