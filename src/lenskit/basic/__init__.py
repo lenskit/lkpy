@@ -9,7 +9,12 @@ Basic and baseline pipeline components.
 """
 
 from .bias import BiasConfig, BiasModel, BiasScorer, Damping
-from .candidates import AllTrainingItemsCandidateSelector, UnratedTrainingItemsCandidateSelector
+from .candidates import (
+    AllTrainingItemsCandidateSelector,
+    TrainingItemsCandidateConfig,
+    TrainingItemsCandidateSelector,
+    UnratedTrainingItemsCandidateSelector,
+)
 from .composite import FallbackScorer
 from .history import UserTrainingHistoryLookup
 from .popularity import PopConfig, PopScorer
@@ -28,6 +33,8 @@ __all__ = [
     "RandomSelector",
     "SoftmaxRanker",
     "UserTrainingHistoryLookup",
+    "TrainingItemsCandidateConfig",
+    "TrainingItemsCandidateSelector",
     "UnratedTrainingItemsCandidateSelector",
     "AllTrainingItemsCandidateSelector",
     "FallbackScorer",

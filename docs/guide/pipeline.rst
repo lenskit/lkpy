@@ -335,7 +335,7 @@ The convenience methods are equivalent to the following pipeline code:
     # find candidates from the training data
     default_candidates = pipe.add_component(
         'candidate-selector',
-        UnratedTrainingItemsCandidateSelector,
+        TrainingItemsCandidateSelector,
         query=history,
     )
     # if the client provided items as a pipeline input, use those; otherwise
