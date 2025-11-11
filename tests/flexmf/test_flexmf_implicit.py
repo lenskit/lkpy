@@ -15,12 +15,18 @@ from lenskit.testing import BasicComponentTests, ScorerTests
 class TestFlexMFImplicit(BasicComponentTests, ScorerTests):
     expected_ndcg = (0.01, 0.25)
     component = FlexMFImplicitScorer
-    config = FlexMFImplicitConfig()
+    config = FlexMFImplicitConfig(epochs=3)
+
+
+class TestFlexMFBPR(BasicComponentTests, ScorerTests):
+    expected_ndcg = (0.01, 0.25)
+    component = FlexMFImplicitScorer
+    config = FlexMFImplicitConfig(loss="pairwise", epochs=3)
 
 
 class TestFlexMFWARP(BasicComponentTests, ScorerTests):
     component = FlexMFImplicitScorer
-    config = FlexMFImplicitConfig(loss="warp")
+    config = FlexMFImplicitConfig(loss="warp", epochs=3)
 
 
 def test_config_defaults():
