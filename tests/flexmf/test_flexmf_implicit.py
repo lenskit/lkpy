@@ -6,7 +6,7 @@
 
 from itertools import product
 
-from pytest import mark
+from pytest import mark, skip
 
 from lenskit.flexmf import FlexMFImplicitConfig, FlexMFImplicitScorer
 from lenskit.testing import BasicComponentTests, ScorerTests
@@ -17,16 +17,34 @@ class TestFlexMFImplicit(BasicComponentTests, ScorerTests):
     component = FlexMFImplicitScorer
     config = FlexMFImplicitConfig(epochs=3)
 
+    def test_skip_retrain(self, ml_ds):
+        skip("not needed")
+
+    def test_run_with_doubles(self, ml_ratings):
+        skip("FlexMF is fine with doubles")
+
 
 class TestFlexMFBPR(BasicComponentTests, ScorerTests):
     expected_ndcg = (0.01, 0.25)
     component = FlexMFImplicitScorer
     config = FlexMFImplicitConfig(loss="pairwise", epochs=3)
 
+    def test_skip_retrain(self, ml_ds):
+        skip("not needed")
+
+    def test_run_with_doubles(self, ml_ratings):
+        skip("FlexMF is fine with doubles")
+
 
 class TestFlexMFWARP(BasicComponentTests, ScorerTests):
     component = FlexMFImplicitScorer
     config = FlexMFImplicitConfig(loss="warp", epochs=3)
+
+    def test_skip_retrain(self, ml_ds):
+        skip("not needed")
+
+    def test_run_with_doubles(self, ml_ratings):
+        skip("FlexMF is fine with doubles")
 
 
 def test_config_defaults():
