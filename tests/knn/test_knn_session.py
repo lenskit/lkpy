@@ -20,5 +20,5 @@ def test_knn_batch_msweb(msweb: TTSplit):
     pipe.train(msweb.train)
 
     recs = batch.recommend(pipe, msweb.test, 10)
-    assert recs.key_fields == ["session_id"]
+    assert recs.key_fields == ("session_id",)
     assert len(recs) == len(msweb.test)
