@@ -322,6 +322,35 @@ def test_numbers_arrow(src):
     assert np.all(nums.to_numpy() == np.arange(5))
 
 
+def test_numbers_arrow_negative():
+    il = ItemList(item_ids=["a", "q", "b"])
+
+    nums = il.numbers(format="arrow", vocabulary=VOCAB, missing="negative")
+    assert isinstance(nums, pa.Int32Array)
+    assert nums.null_count == 0
+    assert nums.to_pylist() == [0, -1, 1]
+
+
+def test_numbers_arrow_null():
+    il = ItemList(item_ids=["a", "q", "b"])
+
+    nums = il.numbers(format="arrow", vocabulary=VOCAB, missing="null")
+    assert isinstance(nums, pa.Int32Array)
+    assert nums.null_count == 1
+    assert nums.is_valid().to_pylist() == [True, False, True]
+    assert nums.to_pylist() == [0, None, 1]
+
+
+def test_numbers_arrow_null_vocab():
+    il = ItemList(item_ids=["a", "q", "b"], vocabulary=VOCAB)
+
+    nums = il.numbers(format="arrow", vocabulary=VOCAB, missing="null")
+    assert isinstance(nums, pa.Int32Array)
+    assert nums.null_count == 1
+    assert nums.is_valid().to_pylist() == [True, False, True]
+    assert nums.to_pylist() == [0, None, 1]
+
+
 def test_pandas_df():
     data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
@@ -878,3 +907,116 @@ def test_repr_lazy_rank():
     assert re.search(r"numbers: \[0 .*\]", ilr)
     assert re.search(r"ids: <lazy>", ilr)
     assert re.search(r"rank: \[0 .*\]", ilr)
+
+
+def test_item_list_concat_same_vocab():
+    il1 = ItemList(["a", "b"], vocabulary=VOCAB)
+    il2 = ItemList(["c", "d"], vocabulary=VOCAB)
+    il = il1.concat(il2)
+    assert len(il) == 4
+    assert all(il.ids() == ["a", "b", "c", "d"])
+    assert all(il.numbers() == np.arange(4))
+    assert il.vocabulary is VOCAB
+
+
+def test_item_list_concat_no_vocab():
+    il1 = ItemList(["a", "b"])
+    il2 = ItemList(["c", "d"])
+    il = il1.concat(il2)
+    assert len(il) == 4
+    assert all(il.ids() == ["a", "b", "c", "d"])
+    assert il.vocabulary is None
+
+
+def test_item_list_concat_first_vocab():
+    il1 = ItemList(["a", "b"], vocabulary=VOCAB)
+    il2 = ItemList(["c", "d"])
+    il = il1.concat(il2)
+    assert len(il) == 4
+    assert all(il.ids() == ["a", "b", "c", "d"])
+    assert all(il.numbers() == np.arange(4))
+    assert il.vocabulary is VOCAB
+
+
+def test_item_list_concat_first_vocab_no_match():
+    il1 = ItemList(["a", "b"], vocabulary=VOCAB)
+    il2 = ItemList(["c", "d", "q"])
+    il = il1.concat(il2)
+    assert len(il) == 5
+    assert all(il.ids() == ["a", "b", "c", "d", "q"])
+
+
+def test_item_list_concat_second_vocab():
+    il1 = ItemList(["a", "b"])
+    il2 = ItemList(["c", "d"], vocabulary=VOCAB)
+    il = il1.concat(il2)
+    assert len(il) == 4
+    assert all(il.ids() == ["a", "b", "c", "d"])
+    assert il.vocabulary is None
+
+
+def test_item_list_update_nothing():
+    base = ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5))
+    il = base.update(ItemList())
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == base.scores())
+
+
+def test_item_list_update_nothing_field():
+    base = ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5))
+    il = base.update(ItemList([], x=[]))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == base.scores())
+    assert il.field("x") is not None
+
+
+def test_item_list_update_add_field():
+    base = ItemList(ITEMS, vocabulary=VOCAB)
+    il = base.update(ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5)))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == np.arange(5))
+
+
+def test_item_list_update_add_field_no_vocab():
+    base = ItemList(ITEMS, vocabulary=VOCAB)
+    il = base.update(ItemList(ITEMS, scores=np.arange(5)))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == np.arange(5))
+
+
+def test_item_list_update_some_items():
+    base = ItemList(ITEMS, vocabulary=VOCAB, scores=np.arange(5))
+    il = base.update(ItemList(ITEMS[1:4], scores=np.arange(1, 4) * 100))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.all(il.scores() == [0, 100, 200, 300, 4])
+
+
+def test_item_list_update_add_for_some_items():
+    base = ItemList(ITEMS, vocabulary=VOCAB)
+    il = base.update(ItemList(ITEMS[1:4], scores=np.arange(1, 4) * 100))
+
+    assert len(il) == 5
+    assert all(il.ids() == base.ids())
+    assert all(il.numbers() == base.numbers())
+    assert il.vocabulary is VOCAB
+    assert np.array_equal(il.scores(), [np.nan, 100, 200, 300, np.nan], equal_nan=True)

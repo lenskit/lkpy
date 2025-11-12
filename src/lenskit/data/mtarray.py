@@ -17,6 +17,7 @@ import torch
 from numpy.typing import ArrayLike, NDArray
 from typing_extensions import Generic, Literal, LiteralString, Self, Sequence, TypeVar, overload
 
+from lenskit._accel import data as _data_accel
 from lenskit.torch import safe_tensor
 
 NPT = TypeVar("NPT", bound=np.generic)
@@ -68,6 +69,16 @@ class MTArray(Generic[NPT]):
             elif isinstance(array, (pa.Tensor, np.ndarray)):
                 self._shape = array.shape
 
+    @overload
+    @classmethod
+    def wrap(
+        cls, array: NDArray[NPT] | torch.Tensor | pa.Array | pa.Tensor | Sequence | ArrayLike
+    ) -> Self: ...
+    @overload
+    @classmethod
+    def wrap(
+        cls, array: NDArray[NPT] | torch.Tensor | pa.Array | pa.Tensor | Sequence | ArrayLike | None
+    ) -> Self | None: ...
     @classmethod
     def wrap(
         cls, array: NDArray[NPT] | torch.Tensor | pa.Array | pa.Tensor | Sequence | ArrayLike | None
@@ -76,6 +87,53 @@ class MTArray(Generic[NPT]):
             return None
         else:
             return cls(array)
+
+    @classmethod
+    def scatter(
+        cls,
+        dst: MTArray[NPT] | int,
+        idx: NDArray[np.integer],
+        src: MTArray[NPT],
+        *,
+        mask: NDArray[np.bool_] | None = None,
+    ) -> MTArray[NPT]:
+        """
+        “Scatter” the values of a source array into positions of a destination
+        array, or into a new array.
+        """
+        if isinstance(dst, int):
+            if src._torch is not None:
+                st = src._torch
+                dt = torch.full((dst,), torch.nan, dtype=st.dtype, device=st.device)
+                it = torch.from_numpy(idx).to(st.device, dtype=torch.int64, non_blocking=True)
+                if mask is not None:
+                    mt = torch.from_numpy(mask).to(it.device, non_blocking=True)
+                    it = it[mt]
+                    st = st[mt]
+
+                dt.scatter_(0, it, st)
+                return MTArray.wrap(dt)
+            else:
+                sa = src.arrow()
+                ia = pa.array(idx, mask=np.logical_not(mask) if mask is not None else None)
+                res = _data_accel.scatter_array_empty(dst, ia, sa)
+                return MTArray.wrap(res)
+        elif dst._torch is not None:
+            st = src.torch().to(dst._torch.device, non_blocking=True)
+            it = torch.from_numpy(idx).to(st.device, dtype=torch.int64, non_blocking=True)
+            if mask is not None:
+                mt = torch.from_numpy(mask).to(it.device, non_blocking=True)
+                it = it[mt]
+                st = st[mt]
+
+            dt = dst._torch.scatter(0, it, st)
+            return MTArray.wrap(dt)
+        else:
+            da = dst.arrow()
+            ia = pa.array(idx, mask=np.logical_not(mask) if mask is not None else None)
+            sa = src.arrow()
+            res = _data_accel.scatter_array(da, ia, sa)
+            return MTArray.wrap(res)
 
     @property
     def shape(self) -> tuple[int, ...]:

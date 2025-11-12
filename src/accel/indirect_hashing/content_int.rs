@@ -83,7 +83,7 @@ where
                 self.array.data_type()
             );
             let arr = cast(&arr, self.array.data_type())
-                .map_err(|e| PyTypeError::new_err(format!("error castting arrays: {}", e)))?;
+                .map_err(|e| PyTypeError::new_err(format!("error casting arrays: {}", e)))?;
             let arr: &PrimitiveArray<T> = arr.as_primitive();
             arr.clone()
         } else {

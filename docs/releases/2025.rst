@@ -14,11 +14,32 @@ information on how to upgrade your code.
 2025.6.0
 ~~~~~~~~
 
+Bug Fixes
+---------
+
+- Disabled parallel scoring in :class:`~lenskit.knn.ItemKNNScorer` to fix
+  problems with nondeterministic results (:pr:`922`).
+
+New Features
+------------
+
+- Add new :meth:`~lenskit.data.ItemList.concat` and
+  :meth:`~lenskit.data.ItemList.update` methods to
+  :class:`~lenskit.data.ItemList` to make it easier to extend and update item
+  lists (:pr:`927`).
+- Initial support for session-based recommendation, through additional methods
+  on :class:`~lenskit.data.RecQuery` (:pr:`929`).  Item KNN and the ALS
+  recommenders now support session-based recommendation as well.  The changes to
+  support this also add support for related-item recommendation through “context
+  items” in query. See :ref:`session-queries` for further information.
+
+Platform and Build Support
+--------------------------
+
 - Add and test support for Python 3.14.
 - Adjust dependencies to allow PyArrow 22 (but not 21, due to miscompiled
   Windows wheels).
-- Disabled parallel scoring in :class:`~lenskit.knn.ItemKNNScorer` to fix
-  problems with nondeterministic results (:pr:`922`).
+- Various improvements to the test suite to reduce testing overhead.
 
 .. _2025.5.0:
 

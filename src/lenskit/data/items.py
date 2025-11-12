@@ -148,6 +148,7 @@ class ItemList:
     # storage for individual components of the item list
     _ids: pa.Array | None = None
     _ids_numpy: IDArray | None = None
+    _id_idx: _data_accel.IDIndex | None = None
     _mask_cache: tuple[ItemList, np.ndarray[tuple[int], np.dtype[np.bool_]]] | None = None
     _numbers: MTArray[np.int32] | None = None
     _vocab: Vocabulary | None = None
@@ -575,6 +576,11 @@ class ItemList:
             case _:  # pragma: nocover
                 raise ValueError(f"unknown format {format}")
 
+    def _id_index(self) -> _data_accel.IDIndex:
+        if self._id_idx is None:
+            self._id_idx = _data_accel.IDIndex(self.ids(format="arrow"))
+        return self._id_idx
+
     @overload
     def numbers(
         self,
@@ -597,7 +603,7 @@ class ItemList:
         format: Literal["arrow"],
         *,
         vocabulary: Vocabulary | None = None,
-        missing: Literal["error", "negative"] = "error",
+        missing: Literal["error", "negative", "null"] = "error",
     ) -> pa.Array[pa.Int32Scalar]: ...
     @overload
     def numbers(
@@ -612,7 +618,7 @@ class ItemList:
         format: LiteralString = "numpy",
         *,
         vocabulary: Vocabulary | None = None,
-        missing: Literal["error", "negative"] = "error",
+        missing: Literal["error", "negative", "null"] = "error",
     ) -> ArrayLike:
         """
         Get the item numbers.
@@ -633,10 +639,14 @@ class ItemList:
             :class:`Vocabulary`.
         """
         if vocabulary is not None and vocabulary != self._vocab:
+            if format == "torch":
+                nums = self.numbers(format="numpy", vocabulary=vocabulary, missing=missing)  # type: ignore
+                return torch.from_numpy(nums)
+
             # we need to translate vocabulary
             ids = self.ids()
-            mta = MTArray(vocabulary.numbers(ids, missing=missing))
-            return mta.to(format)
+
+            return vocabulary.numbers(ids, format=format, missing=missing)
 
         if self._numbers is None:
             if self._vocab is None:
@@ -646,6 +656,11 @@ class ItemList:
 
         if missing == "error" and np.any(self._numbers.numpy() < 0):
             raise KeyError("item IDs")
+        if missing == "null":
+            assert format == "arrow"
+            nums = self._numbers.to("numpy")
+            return pa.array(nums, mask=nums < 0)
+
         return self._numbers.to(format)
 
     @overload
@@ -821,6 +836,7 @@ class ItemList:
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["table"] = "table",
         columns: dict[str, pa.DataType] | None = None,
     ) -> pa.Table: ...
@@ -830,6 +846,7 @@ class ItemList:
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["array"],
         columns: dict[str, pa.DataType] | None = None,
     ) -> pa.StructArray: ...
@@ -838,6 +855,7 @@ class ItemList:
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["table", "array"] = "table",
         columns: dict[str, pa.DataType] | None = None,
     ):
@@ -851,7 +869,7 @@ class ItemList:
             names = list(columns.keys())
         else:
             if columns is None:
-                columns = self.arrow_types(ids=ids, numbers=numbers)
+                columns = self.arrow_types(ids=ids, numbers=numbers, ranks=ranks)
 
             for c_name, c_type in columns.items():
                 names.append(c_name)
@@ -881,7 +899,9 @@ class ItemList:
         else:  # pragma: nocover
             raise ValueError(f"unsupported target type {type}")
 
-    def arrow_types(self, *, ids: bool = True, numbers: bool = False) -> dict[str, pa.DataType]:
+    def arrow_types(
+        self, *, ids: bool = True, numbers: bool = False, ranks: bool = True
+    ) -> dict[str, pa.DataType]:
         """
         Get the Arrow data types for this item list.
         """
@@ -896,7 +916,7 @@ class ItemList:
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()
 
-        if self.ordered:
+        if self.ordered and ranks:
             types["rank"] = pa.int32()
 
         for n, f in self._fields.items():
@@ -960,6 +980,77 @@ class ItemList:
                 picked = argtopn(scores, n)
 
         return self._take(picked, ordered=True)
+
+    def concat(self, other: ItemList) -> ItemList:
+        """
+        Concatenate this item list with another.
+
+        If ``self`` has a vocabulary that accomodates the item IDs in ``other``,
+        the returned item list will share the vocabulary.
+        """
+
+        ordered = self.ordered and other.ordered
+        tbl = pa.concat_tables(
+            [self.to_arrow(ids=True, ranks=ordered), other.to_arrow(ids=True, ranks=ordered)],
+            promote_options="default",
+        )
+        return ItemList.from_arrow(tbl, vocabulary=self.vocabulary)
+
+    def update(self, other: ItemList) -> ItemList:
+        """
+        Create a copy of the item list, updated with new data from another list.
+
+        This creates a new item list with the same items as ``self``, but with
+        new or modified fields from ``other``.  For any item in both ``self``
+        and ``other``, and each field present in ``other``, the values of that
+        field in ``other`` are used instead of ``self``.  That is:
+
+        - If a field is only present in ``self``, it is used unchanged.
+        - If a field is only present in ``other``, its values are used for the
+          items that appear in both sets, and items only in ``self`` have an
+          unset / null value for the field (``NaN`` for foating arrays).
+        - If a field is present in both lists, then its values from ``other``
+          are used for items appearing in ``other``, and the values from
+          ``self`` are used for items that appear only in ``self``.
+        - Items that appear only in ``other`` are ignored.
+
+        .. note::
+            Only the *presence or absence* of an item in ``self`` and ``other``
+            is considered, not the nullity of individual field values.  If a
+            field appears in both ``self`` and ``other``, and some of its values
+            in ``other`` are null or ``NaN``, then they will be null or ``NaN``
+            in the resulting item list, regardless of the value of that field
+            for those items on ``self``.
+
+            That is, this method does not do item-level coalescing of null field
+            values.
+
+
+        Args:
+            other:
+                The item list to merge into this one.
+        Returns:
+            The updated item list.
+        """
+        if len(other) == 0:
+            nf = {}
+            for k, v in other._fields.items():
+                if k not in self._fields:
+                    av = v.arrow()
+                    nf[k] = pa.nulls(len(self), type=av.type)
+            return ItemList(self, **nf)
+
+        id_idx = self._id_index()
+        o_ids = other.ids(format="arrow")
+        o_pos = id_idx.get_indexes(o_ids)
+        o_mask = o_pos.is_valid().to_numpy(zero_copy_only=False)
+        o_arr = o_pos.fill_null(-1).to_numpy()
+
+        fields = {}
+        for k, v in other._fields.items():
+            fields[k] = MTArray.scatter(self._fields.get(k, len(self)), o_arr, v, mask=o_mask)
+
+        return ItemList(self, **fields)
 
     @overload
     def remove(
