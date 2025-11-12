@@ -13,14 +13,15 @@ from __future__ import annotations
 
 import json
 import warnings
-from typing import Any, NamedTuple, TypeVar, cast
+from typing import Any, Literal, NamedTuple, TypeVar, cast
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import scipy.sparse as sps
 import torch
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
+from scipy.sparse import csr_array
 
 from lenskit._accel import data as _data_accel
 
@@ -542,3 +543,41 @@ def _check_index_type(index_type: pa.DataType, dimension: int | None) -> int:
 pa.register_extension_type(SparseIndexType(0))  # type: ignore
 pa.register_extension_type(SparseIndexListType(0))  # type: ignore
 pa.register_extension_type(SparseRowType(0))  # type: ignore
+
+
+def normalize_matrix(
+    matrix: csr_array | NDArray[np.floating[Any]],
+    normalize: Literal["unit", "distribution"] | None,
+) -> csr_array | NDArray[np.floating[Any]]:
+    """
+    Normalize rows of a matrix.
+
+    Args:
+        matrix: Sparse or dense matrix to normalize
+        normalize: Normalization mode ("unit" for L2, "distribution" for L1)
+
+    Returns:
+        Normalized matrix
+    """
+    if normalize is None:
+        return matrix
+
+    is_sparse = isinstance(matrix, csr_array)
+
+    if normalize == "unit":
+        if is_sparse:
+            stats = sps.linalg.norm(matrix, axis=1)
+        else:
+            stats = np.linalg.norm(matrix, axis=1)
+    else:
+        if (matrix.data if is_sparse else matrix).min() < 0:
+            raise ValueError("Cannot normalize to distribution: negative values present")
+        stats = matrix.sum(axis=1)
+
+    stats[stats == 0] = 1.0
+
+    if is_sparse:
+        result = matrix / stats[:, None]
+        return result.tocsr()
+    else:
+        return matrix / stats[:, None]

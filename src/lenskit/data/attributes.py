@@ -25,7 +25,7 @@ from typing_extensions import Any
 
 from lenskit.torch import safe_tensor
 
-from .matrix import SparseIndexListType, SparseRowArray, SparseRowType
+from .matrix import SparseIndexListType, SparseRowArray, SparseRowType, normalize_matrix
 from .repr import object_repr
 from .schema import AttrLayout, ColumnSpec
 from .types import IDArray
@@ -130,6 +130,23 @@ class AttributeSet(ABC):
         else:
             return self._selected.to_numpy()
 
+    def cat_matrix(
+        self, *, normalize: Literal["unit", "distribution"] | None = None
+    ) -> tuple[NDArray[np.floating] | csr_array, Vocabulary | None]:
+        """
+        Compute a categorical matrix representation of the attribute.
+
+        Args:
+            normalize: Optional normalization method.
+                "unit": Normalize each row to unit length.
+                "distribution": Normalize each row so elements sum to 1
+        Returns:
+            tuple: A tuple containing:
+                matrix (numpy.ndarray or scipy.sparse.csr_array): The categorical matrix.
+                vocab (Vocabulary or None): The vocabulary associated with the categories.
+        """
+        raise NotImplementedError()
+
     @property
     def dim_names(self) -> list[str] | None:
         """
@@ -231,6 +248,8 @@ class AttributeSet(ABC):
 
 
 class ScalarAttributeSet(AttributeSet):
+    _cat_vocab: Vocabulary | None = None
+
     @property
     def data_type(self) -> pa.DataType:
         return self._table.field(self.name).type
@@ -243,6 +262,50 @@ class ScalarAttributeSet(AttributeSet):
         else:
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
+
+    def cat_matrix(
+        self,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ) -> tuple[csr_array, Vocabulary]:
+        """
+        Create item * category sparse matrix for scalar attributes.
+
+        Returns:
+            Tuple of (sparse matrix, vocabulary of categories)
+        """
+
+        arr = self.arrow()
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
+
+        if pa.types.is_floating(arr.type):
+            raise TypeError(f"unsupported ID type {arr.type}")
+
+        if self._cat_vocab is None:
+            vocab = Vocabulary(arr)
+            self._cat_vocab = vocab
+        else:
+            vocab = self._cat_vocab
+
+        indices = vocab.numbers(arr.drop_null())
+        indptr = np.zeros(len(arr) + 1, dtype=np.int32)
+        # validity converted to int will be 1 where item is valid - what we need
+        # result: we have a 1 everywhere there is a non-null scalar value, and 0
+        # elsewehere, which will yield an empty row.
+        indptr[1:] = arr.is_valid().to_numpy(zero_copy_only=False).astype(np.int32)
+        # convert sizes to pointers / offsets
+        indptr = np.cumsum(indptr)
+
+        data = np.ones(len(indices), dtype=np.float32)
+
+        matrix = csr_array(
+            (data, indices, indptr),
+            shape=(len(arr), len(vocab)),
+        )
+
+        matrix = normalize_matrix(matrix, normalize)
+        return matrix, vocab
 
     def __str__(self):  # pragma: nocover
         return object_repr(
@@ -264,6 +327,8 @@ class ScalarAttributeSet(AttributeSet):
 
 
 class ListAttributeSet(AttributeSet):
+    _cat_vocab: Vocabulary | None = None
+
     @property
     def data_type(self) -> pa.DataType:
         lt = self._table.field(self.name).type
@@ -280,6 +345,44 @@ class ListAttributeSet(AttributeSet):
         elif missing == "omit":
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
+
+    def cat_matrix(
+        self,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ) -> tuple[csr_array, Vocabulary]:
+        """
+        Create item * category matrix for list attributes.
+
+        Returns:
+            Tuple of (sparse matrix, vocabulary of categories)
+        """
+
+        arr = self.arrow()
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
+
+        assert isinstance(arr, pa.ListArray)
+
+        values = arr.values.to_numpy()
+        indptr = arr.offsets.to_numpy()
+
+        if self._cat_vocab is None:
+            self._cat_vocab = Vocabulary(values, reorder=True)
+
+        vocab = self._cat_vocab
+        indices = vocab.numbers(values, missing="error")
+
+        data = np.ones(len(indices), dtype=np.float32)
+
+        matrix = csr_array(
+            (data, indices, indptr),
+            shape=(len(arr), len(vocab)),
+        )
+
+        matrix = normalize_matrix(matrix, normalize)
+
+        return matrix, vocab
 
     def __str__(self):  # pragma: nocover
         return object_repr(
@@ -303,6 +406,7 @@ class ListAttributeSet(AttributeSet):
 class VectorAttributeSet(AttributeSet):
     _names: list[str] | None = None
     _size: int | None = None
+    _cat_vocab: Vocabulary | None = None
 
     @property
     def data_type(self) -> pa.DataType:
@@ -397,6 +501,28 @@ class VectorAttributeSet(AttributeSet):
         mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
         return pd.DataFrame(mat, index=ids, columns=self.dim_names)
 
+    def cat_matrix(
+        self,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ) -> tuple[NDArray[np.floating], Vocabulary | None]:
+        """
+        Create item * category matrix for list attributes.
+
+        Returns:
+            dense matrix, vocabulary if present
+        """
+        mat = self.numpy()
+        # dimensions specify names, can be none
+        # turn names into category vocab w/ reorder=False
+        if self._cat_vocab is None and self.dim_names is not None:
+            self._cat_vocab = Vocabulary(np.asarray(self.dim_names), reorder=False)
+
+        vocab = self._cat_vocab
+        matrix = normalize_matrix(mat, normalize)
+
+        return matrix, vocab
+
     def __str__(self):  # pragma: nocover
         return object_repr(
             "VectorAttributeSet",
@@ -419,6 +545,7 @@ class VectorAttributeSet(AttributeSet):
 
 class SparseAttributeSet(AttributeSet):
     _names: list[str] | None = None
+    _cat_vocab: Vocabulary | None = None
 
     @property
     def data_type(self) -> pa.DataType | None:
@@ -478,6 +605,27 @@ class SparseAttributeSet(AttributeSet):
         col = self.arrow()
 
         return col.to_torch()
+
+    def cat_matrix(
+        self,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ) -> tuple[csr_array, Vocabulary | None]:
+        """
+        Create item * category matrix for list attributes.
+
+        Returns:
+            sparse matrix, vocabulary if present
+        """
+        mat = self.scipy()
+        mat = mat.copy()
+        if self._cat_vocab is None and self.dim_names is not None:
+            self._cat_vocab = Vocabulary(np.asarray(self.dim_names), reorder=False)
+
+        vocab = self._cat_vocab
+        matrix = normalize_matrix(mat, normalize)
+
+        return matrix, vocab
 
     def __str__(self):  # pragma: nocover
         return object_repr(
