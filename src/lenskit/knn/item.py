@@ -136,12 +136,12 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
         field = "rating" if self.config.explicit else None
         rmat = data.interactions().matrix().scipy(field, layout="coo").astype(np.float32)
-        n_users, n_items = rmat.shape
+        n_rows, n_items = rmat.shape
         log.info(
             "[%s] made sparse matrix",
             timer,
             n_ratings=rmat.nnz,
-            n_users=data.user_count,
+            n_rows=rmat.shape[0],
         )
 
         rmat, means = self._center_ratings(log, timer, rmat)
@@ -156,7 +156,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         log.info("[%s] computing similarity matrix", timer)
         with item_progress("Neighborhoods", total=n_items) as pb:
             smat = _accel.knn.compute_similarities(
-                ui_mat, iu_mat, (n_users, n_items), self.config.min_sim, self.config.save_nbrs, pb
+                ui_mat, iu_mat, (n_rows, n_items), self.config.min_sim, self.config.save_nbrs, pb
             )
         log.debug("[%s] computed, memory use %s", timer, max_memory())
         assert isinstance(smat, list)
