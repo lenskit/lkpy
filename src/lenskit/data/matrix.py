@@ -566,23 +566,18 @@ def normalize_matrix(
 
     if normalize == "unit":
         if is_sparse:
-            stats = np.sqrt(np.asarray(matrix.multiply(matrix).sum(axis=1)).ravel())
+            stats = sps.linalg.norm(matrix, axis=1)
         else:
             stats = np.linalg.norm(matrix, axis=1)
     else:
         if (matrix.data if is_sparse else matrix).min() < 0:
             raise ValueError("Cannot normalize to distribution: negative values present")
-        if is_sparse:
-            stats = np.asarray(matrix.sum(axis=1)).ravel()
-        else:
-            stats = matrix.sum(axis=1)
+        stats = matrix.sum(axis=1)
 
     stats[stats == 0] = 1.0
 
     if is_sparse:
-        matrix = matrix.copy()
-        matrix.data = matrix.data.astype(np.float32)
-        matrix.data /= np.repeat(stats, np.diff(matrix.indptr))
-        return matrix
+        result = matrix / stats[:, None]
+        return result.tocsr()
     else:
         return matrix / stats[:, None]

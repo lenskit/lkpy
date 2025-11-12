@@ -21,7 +21,7 @@ from lenskit.data.schema import AttrLayout, ColumnSpec
 from lenskit.data.vocab import Vocabulary
 
 
-def test_scalar():
+def test_scalar_cat_matrix():
     data = [1, 2, 1, 3, 2]
     arr = pa.array(data, type=pa.int32())
     table = pa.Table.from_arrays([arr], names=["attr"])
@@ -36,7 +36,7 @@ def test_scalar():
     assert len(cat_vocab) == 3
 
 
-def test_list():
+def test_list_cat_matrix():
     data = [[1, 2], [2, 3], [1], [3], [1, 2]]
     arr = pa.array(data, type=pa.list_(pa.int32()))
     table = pa.Table.from_arrays([arr], names=["attr"])
@@ -51,7 +51,7 @@ def test_list():
     assert len(cat_vocab) == 3
 
 
-def test_vector():
+def test_vector_cat_matrix():
     data = [
         [1.0, 2.0, 3.0],
         [4.0, 5.0, 6.0],
@@ -72,7 +72,7 @@ def test_vector():
     assert cat_vocab is None
 
 
-def test_sparse():
+def test_sparse_cat_matrix():
     mat = csr_array(
         (
             np.array([1, 2, 3, 4, 5]),
@@ -96,7 +96,7 @@ def test_sparse():
     assert cat_vocab is None
 
 
-def test_sparse_vocab():
+def test_sparse_vocab_cat_matrix():
     mat = csr_array(
         (
             np.array([1, 2, 3, 4, 5]),

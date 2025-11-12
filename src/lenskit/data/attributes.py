@@ -135,6 +135,15 @@ class AttributeSet(ABC):
     ) -> tuple[NDArray[np.floating] | csr_array, Vocabulary | None]:
         """
         Compute a categorical matrix representation of the attribute.
+
+        Args:
+            normalize: Optional normalization method.
+                "unit": Normalize each row to unit length.
+                "distribution": Normalize each row so elements sum to 1
+        Returns:
+            tuple: A tuple containing:
+                matrix (numpy.ndarray or scipy.sparse.csr_array): The categorical matrix.
+                vocab (Vocabulary or None): The vocabulary associated with the categories.
         """
         raise NotImplementedError()
 
