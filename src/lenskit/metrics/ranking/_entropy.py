@@ -6,10 +6,18 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
+import pyarrow as pa
 import scipy.sparse as sps
 
-from lenskit.data import ItemList
+from lenskit.data import ItemList, Vocabulary
+from lenskit.data.attributes import attr_set
+from lenskit.data.schema import AttrLayout, ColumnSpec
+
+from ._base import ListMetric, RankingMetricBase
+from ._weighting import RankWeight
 
 
 def entropy(
@@ -100,3 +108,55 @@ def matrix_column_entropy(
     entropy = float(-np.sum(probs * np.log2(probs)))
 
     return entropy
+
+
+class Entropy(ListMetric, RankingMetricBase):
+    """
+    Evaluate diversity using Shannon entropy over item categories.
+
+    Args:
+        field: Name of the field containing categories
+        layout: ('scalar', 'list', 'vector', 'sparse')
+        n: Maximum recommendation list length
+        normalize: Normalization method for the category matrix
+    """
+
+    def __init__(
+        self,
+        field: str,
+        layout: Literal["scalar", "list", "vector", "sparse"],
+        n: int | None = None,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ):
+        super().__init__(n)
+        self.field = field
+        self.layout = AttrLayout[layout.upper()]
+        self.normalize = normalize
+
+    @property
+    def label(self):
+        if self.n is not None:
+            return f"Entropy@{self.n}"
+        else:
+            return "Entropy"
+
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
+        recs = self.truncate(recs)
+
+        field_data = recs.field(self.field, format="arrow")
+
+        # build arrow table with this field
+        table = pa.Table.from_arrays([field_data], names=[self.field])
+
+        # get a vocabulary from the item list
+        vocab = recs.vocabulary
+        if vocab is None:
+            vocab = Vocabulary(recs.ids(format="arrow"))
+
+        # create the attributeset and call call_matrix
+        spec = ColumnSpec(layout=self.layout)
+        attrset = attr_set(self.field, spec, table, vocab, None)
+        matrix, cat_vocab = attrset.cat_matrix(normalize=self.normalize)
+
+        return entropy(recs, matrix, n=self.n)
