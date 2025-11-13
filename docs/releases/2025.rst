@@ -32,6 +32,20 @@ New Features
   recommenders now support session-based recommendation as well.  The changes to
   support this also add support for related-item recommendation through “context
   items” in query. See :ref:`session-queries` for further information.
+- Add :class:`~lenskit.basic.TrainingItemCandidateSelector` to replace the
+  Unrated and All candidate selectors with better configuration.
+
+Deprecations
+------------
+
+- :class:`~lenskit.basic.UnratedTrainingItemsCandidateSelector` is deprecated in
+  favor of :class:`~lenskit.basic.TrainingItemCandidateSelector` with default
+  configuration.
+- :class:`~lenskit.basic.AllTrainingItemsCandidateSelector` is deprecated in
+  favor of :class:`~lenskit.basic.TrainingItemCandidateSelector` with suitable
+  configuration.
+- :attr:`lenskit.data.RecQuery.user_items` is deprecated in favor of
+  :class:`~lenskit.data.RecQuery.history_items`.
 
 Platform and Build Support
 --------------------------
