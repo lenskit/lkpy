@@ -16,7 +16,7 @@ from ._hit import Hit
 from ._map import AveragePrecision
 from ._pop import MeanPopRank
 from ._pr import Precision, Recall
-from ._rbp import RBP
+from ._rbp import RBP, rank_biased_precision
 from ._recip import RecipRank
 from ._weighting import GeometricRankWeight, LogRankWeight, RankWeight
 
@@ -32,6 +32,7 @@ __all__ = [
     "NDCG",
     "DCG",
     "RBP",
+    "rank_biased_precision",
     "MeanPopRank",
     "AveragePrecision",
     "ListGini",

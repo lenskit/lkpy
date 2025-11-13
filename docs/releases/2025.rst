@@ -34,6 +34,8 @@ New Features
   items” in query. See :ref:`session-queries` for further information.
 - Add :class:`~lenskit.basic.TrainingItemCandidateSelector` to replace the
   Unrated and All candidate selectors with better configuration.
+- New function :func:`~lenskit.metrics.ranking.rank_biased_precision` to expose
+  the inner computations of RBP.
 
 Deprecations
 ------------
