@@ -204,26 +204,38 @@ class FAIRReranker(Component[ItemList], Trainable):
         reranked_indices = []
         n_config = self.config.n
 
-        # check that runtime n <= configured n
-        if n is not None and n > n_config:
-            raise ValueError(f"The requested rerank length n={n}, exceeds configured n={n_config}.")
+        # check that runtime n = configured n
+        if n is not None:
+            if n > n_config:
+                raise ValueError(
+                    f"The requested rerank length n={n}, exceeds configured n={n_config}."
+                )
+            elif n < n_config:
+                _log.warning(
+                    "FA*IR: model trained for n=%d used on n=%d; fairness test might be violated.",
+                    n_config,
+                    n,
+                )
+
         # use provided n or fallback to config.n (never larger than list size)
         n = min(n or n_config, list_size)
 
         # rerank the list
         for i in range(n):
-            if count_prot < self.m_list_[i]:
-                if p_items:
+            if count_prot < self.m_list_[i] and p_items:
+                reranked_indices.append(p_items.popleft())
+                count_prot += 1
+            elif p_items and up_items:
+                if p_items[0] < up_items[0]:
                     reranked_indices.append(p_items.popleft())
                     count_prot += 1
                 else:
                     reranked_indices.append(up_items.popleft())
+            elif up_items:
+                reranked_indices.append(up_items.popleft())
             else:
-                if up_items:
-                    reranked_indices.append(up_items.popleft())
-                else:
-                    reranked_indices.append(p_items.popleft())
-                    count_prot += 1
+                reranked_indices.append(p_items.popleft())
+                count_prot += 1
 
         topn_reranked = ItemList(items[reranked_indices], ordered=True)
         return topn_reranked

@@ -87,25 +87,28 @@ def test_rerank_small_list():
 @pytest.mark.parametrize(
     "protected",
     [
-        [False] * 6,  # all unprotected
-        [True] * 6,  # all protected
+        [False] * 12,  # all unprotected
+        [True] * 12,  # all protected
     ],
 )
 def test_all_unprotected_items(protected):
-    items = np.arange(6, 12)
+    items = np.arange(6, 18)
     data = make_dataset(items, protected)
 
-    reranker = FAIRReranker(n=6, p=0.5, alpha=0.1)
+    config_n = 12
+    runtime_n = 6
+
+    reranker = FAIRReranker(n=config_n, p=0.5, alpha=0.1)
     reranker.train(data)
 
     sample_vanilla_list = ItemList(item_ids=items, ordered=True)
-    fair_reranked = reranker(sample_vanilla_list)
+    fair_reranked = reranker(sample_vanilla_list, n=runtime_n)
 
     # Nothing to rerank, should return same order
-    assert np.array_equal(fair_reranked.ids(), items)
+    assert np.array_equal(fair_reranked.ids(), items[:runtime_n])
 
     ids = fair_reranked.ids()
-    assert len(ids) == len(set(ids))  # check for duplicates
+    assert len(ids) == len(set(ids)) == runtime_n  # check for duplicates and list length
 
 
 @pytest.mark.parametrize(
