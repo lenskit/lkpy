@@ -6,13 +6,22 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import warnings
+from collections.abc import Iterable, Iterator, Sized
 from dataclasses import dataclass, field
-from typing import Any, Literal, Mapping, TypeAlias
+from typing import Any, Literal, Mapping, NamedTuple, TypeAlias, overload
 
 import pandas as pd
 
-from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
+from lenskit.data import (
+    ID,
+    GenericKey,
+    ItemList,
+    ItemListCollection,
+    QueryIDKey,
+    RecQuery,
+    UserIDKey,
+)
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import invoker
 from lenskit.pipeline import Pipeline, PipelineProfiler
@@ -26,6 +35,15 @@ ItemSource: TypeAlias = None | Literal["test-items"]
 """
 Types of items that can be returned.
 """
+
+
+class BatchRequest(NamedTuple):
+    """
+    A single request for the batch inference runner.
+    """
+
+    query: RecQuery
+    items: ItemList | None = None
 
 
 @dataclass
@@ -120,72 +138,182 @@ class BatchPipelineRunner:
         """
         self.add_invocation(InvocationSpec("recommend", {component: output}, extra_inputs=extra))
 
+    @overload
     def run(
         self,
         pipeline: Pipeline,
-        test_data: ItemListCollection[GenericKey]
-        | Mapping[ID, ItemList]
+        queries: Iterable[RecQuery]
+        | Iterable[tuple[RecQuery, ItemList]]
         | Iterable[ID | GenericKey]
+        | ItemListCollection[GenericKey]
+        | Mapping[ID, ItemList]
         | pd.DataFrame,
+    ) -> BatchResults: ...
+    @overload
+    def run(
+        self,
+        pipeline: Pipeline,
+        *,
+        test_data: Iterable[ID | GenericKey]
+        | ItemListCollection[GenericKey]
+        | Mapping[ID, ItemList]
+        | pd.DataFrame,
+    ) -> BatchResults: ...
+    def run(
+        self,
+        pipeline: Pipeline,
+        queries: Iterable[RecQuery]
+        | Iterable[tuple[RecQuery, ItemList]]
+        | Iterable[ID | GenericKey]
+        | ItemListCollection[GenericKey]
+        | Mapping[ID, ItemList]
+        | pd.DataFrame
+        | None = None,
+        *,
+        test_data: Iterable[ID | GenericKey]
+        | ItemListCollection[GenericKey]
+        | Mapping[ID, ItemList]
+        | pd.DataFrame
+        | None = None,
     ) -> BatchResults:
         """
         Run the pipeline and return its results.
 
         Args:
-            test_data:
-                The collection of test data, as an ItemListCollection, a mapping
-                of user IDs to test data, or as a sequence of item IDs for
-                recommendation.
+            pipeline:
+                The pipeline to run.
+            queries:
+                The collection of test queries use.  See :ref:`batch-queries`
+                for details on the various input formats.
 
         Returns:
             The results, as a nested dictionary.  The outer dictionary maps
-            component output names to inner dictionaries of result data.  These
-            inner dictionaries map user IDs to
+            component output names to inner dictionaries of result data.
         """
-        if isinstance(test_data, pd.DataFrame):
-            test_data = ItemListCollection.from_df(test_data)
+        if test_data is not None:  # pragma: nocover
+            if queries is not None:
+                raise RuntimeError("cannot specify both queries and test_data=")
+            queries = test_data
+            warnings.warn(
+                "the test_data parameter is renamed to queries", DeprecationWarning, stacklevel=2
+            )
 
-        if isinstance(test_data, ItemListCollection):
-            test_iter = test_data.items()
-            key_type = test_data.key_type
-            n_users = len(test_data)
-        elif isinstance(test_data, Mapping):
-            key_type = UserIDKey
-            test_iter = ((UserIDKey(k), v) for (k, v) in test_data.items())  # type: ignore
-            n_users = len(test_data)
-        else:
-            key_type = UserIDKey
-            test_data = list(test_data)
-            test_iter = ((_ensure_key(k), None) for k in test_data)
-            n_users = len(test_data)
+        if queries is None:  # pragma: nocover
+            raise RuntimeError("no queries specified")
 
         prof = self.profiler
         if prof is not None:
             prof = prof.multiprocess()
 
-        log = _log.bind(name=pipeline.name, n_queries=n_users, n_jobs=self.n_jobs)
+        key_type, q_iter, nq = _normalize_query_input(queries)
+
+        log = _log.bind(name=pipeline.name, n_queries=nq, n_jobs=self.n_jobs)
         log.info("beginning batch run")
 
         with (
             invoker(
                 (pipeline, self.invocations, prof), _run_pipeline, n_jobs=self.n_jobs
             ) as worker,
-            item_progress("Recommending", n_users) as progress,
+            item_progress("Inference", nq) as progress,
         ):
             # release our reference, will sometimes free the pipeline memory in this process
             del pipeline
             results = BatchResults(key_type)
             timer = Stopwatch()
-            for key, outs in worker.map(test_iter):
+            n = 0
+            for key, outs in worker.map(q_iter):
+                n += 1
                 for cn, cr in outs.items():
                     results.add_result(cn, key, cr)
                 progress.update()
             timer.stop()
 
-            rate_ms = timer.elapsed() / n_users * 1000
+            rate_ms = timer.elapsed() / n * 1000
             log.info("finished running in %s", timer, time_per_query="{:.1f}ms".format(rate_ms))
 
         return results
+
+
+def _normalize_query_input(
+    queries: Iterable[RecQuery]
+    | Iterable[tuple[RecQuery, ItemList]]
+    | Iterable[ID | GenericKey]
+    | ItemListCollection[GenericKey]
+    | Mapping[ID, ItemList]
+    | pd.DataFrame,
+) -> tuple[type[Any], Iterable[tuple[RecQuery, ItemList | None]], int | None]:
+    if isinstance(queries, pd.DataFrame):
+        warnings.warn(
+            "use an item list collection instead of a DataFrame",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        queries = ItemListCollection.from_df(queries)
+
+    elif isinstance(queries, Mapping):
+        warnings.warn(
+            "query mappings are ambiguous and deprecated, use query lists",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        queries = ItemListCollection.from_dict(queries, "user_id")  # type: ignore
+
+    if isinstance(queries, ItemListCollection):
+        return queries.key_type, _ilc_queries(queries), len(queries)
+
+    n = None
+    if isinstance(queries, Sized):
+        n = len(queries)
+
+    q_iter = iter(queries)
+    try:
+        q_first = next(q_iter)
+    except StopIteration:
+        return tuple, [], 0
+
+    fbr = _make_br(q_first)
+    if fbr.query.query_id is not None:
+        kt = QueryIDKey
+    elif fbr.query.user_id is not None:
+        kt = UserIDKey
+    else:
+        raise ValueError("query must have one of query_id, user_id")
+
+    return kt, _iter_queries(q_first, q_iter), n
+
+
+def _ilc_queries(queries: ItemListCollection):
+    for q, items in queries.items():
+        query = RecQuery(
+            user_id=getattr(q, "user_id", None),
+            query_id=getattr(q, "query_id", None),
+        )
+        yield BatchRequest(query, items)
+
+
+def _iter_queries(
+    first: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey,
+    rest: Iterator[RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey],
+) -> Iterable[BatchRequest]:
+    yield _make_br(first)
+    for item in rest:
+        yield _make_br(item)
+
+
+def _make_br(q: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey) -> BatchRequest:
+    if isinstance(q, RecQuery):
+        return BatchRequest(q)
+    elif isinstance(q, tuple):
+        if isinstance(q[0], RecQuery):
+            q, items = q
+            return BatchRequest(q, items)  # type: ignore
+        else:
+            warnings.warn("bare tuples are deprecated", DeprecationWarning, stacklevel=3)
+            q = RecQuery(user_id=q)  # type: ignore
+            return BatchRequest(q)
+    else:
+        q = RecQuery(user_id=q)
+        return BatchRequest(q)
 
 
 def _ensure_key(key: ID | tuple[ID, ...]):
@@ -197,20 +325,24 @@ def _ensure_key(key: ID | tuple[ID, ...]):
 
 def _run_pipeline(
     ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None],
-    req: tuple[GenericKey, ItemList],
+    req: BatchRequest,
 ) -> tuple[GenericKey, dict[str, object]]:
     pipeline, invocations, profiler = ctx
-    key, test_items = req
+    query, test_items = req
+    if query.query_id is not None:
+        key = QueryIDKey(query.query_id)
+    elif query.user_id is not None:
+        key = UserIDKey(query.user_id)
+    else:
+        raise RuntimeError("query must have one of query_id, user_id")
 
     result = {}
 
     _log.debug("running pipeline", name=pipeline.name, key=key)
     for inv in invocations:
-        inputs: dict[str, Any] = {}
-        if hasattr(key, "user_id"):
-            inputs["query"] = key.user_id  # type: ignore
+        inputs: dict[str, Any] = {"query": query}
         match inv.items:
-            case "test-items":
+            case "test-items" if test_items is not None:
                 inputs["items"] = test_items
 
         inputs.update(inv.extra_inputs)

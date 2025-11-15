@@ -23,6 +23,7 @@ from .collection import (
     ItemListCollector,
     ListILC,
     MutableItemListCollection,
+    QueryIDKey,
     UserIDKey,
 )
 from .dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
@@ -54,6 +55,7 @@ __all__ = [
     "MutableItemListCollection",
     "ListILC",
     "UserIDKey",
+    "QueryIDKey",
     "GenericKey",
     "load_movielens",
     "load_movielens_df",
