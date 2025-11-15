@@ -15,7 +15,7 @@ import pyarrow as pa
 
 from pytest import mark, raises, warns
 
-from lenskit.data import ItemList
+from lenskit.data import ItemList, QueryIDKey
 from lenskit.data.collection import ItemListCollection, MutableItemListCollection, UserIDKey
 from lenskit.data.collection._keys import create_key, project_key
 from lenskit.data.dataset import Dataset
@@ -234,6 +234,16 @@ def test_to_df_warn_empty():
     print(df)
     assert len(df) == 4
     assert df["user_id"].tolist() == [72, 82, 82, 82]
+
+
+def test_rename(rng, ml_ratings: pd.DataFrame):
+    ml_ratings = ml_ratings.rename(columns={"user": "user_id", "item": "item_id"})
+    ilc = ItemListCollection.from_df(ml_ratings, UserIDKey)
+
+    il2 = ilc.rename_key(user_id="query_id")
+    assert il2.key_fields == ("query_id",)
+    assert il2.key_type == QueryIDKey
+    assert len(il2) == len(ilc)
 
 
 def test_to_arrow():
