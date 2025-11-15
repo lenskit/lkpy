@@ -9,6 +9,7 @@ from pathlib import Path
 from pytest import fixture, skip
 
 from lenskit import batch
+from lenskit.data import RecQuery
 from lenskit.knn.item import ItemKNNScorer
 from lenskit.pipeline import topn_pipeline
 from lenskit.splitting import TTSplit
@@ -19,6 +20,13 @@ def test_knn_batch_msweb(msweb: TTSplit):
     pipe = topn_pipeline(ItemKNNScorer(feedback="implicit"))
     pipe.train(msweb.train)
 
-    recs = batch.recommend(pipe, msweb.test, 10)
-    assert recs.key_fields == ("session_id",)
-    assert len(recs) == len(msweb.test)
+    queries = [
+        RecQuery(query_id=k.session_id, session_items=il[:5])
+        for (k, il) in msweb.test.items()
+        if len(il) > 5
+    ]
+    _test = {k: il[5:] for (k, il) in msweb.test.items() if len(il) > 5}
+
+    recs = batch.recommend(pipe, queries, 10)
+    assert recs.key_fields == ("query_id",)
+    assert len(recs) == len(queries)

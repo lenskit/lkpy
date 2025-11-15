@@ -45,7 +45,20 @@ class UserIDKey(NamedTuple):
     user_id: ID
 
 
-KEY_CACHE: dict[tuple[str, ...], type[tuple]] = {("user_id",): UserIDKey}
+class QueryIDKey(NamedTuple):
+    """
+    Key type for query IDs.  This is used for :ref:`item list collections
+    <item-list-collections>` that are keyed by query ID, a common setup for
+    recommendation runs and test data.
+    """
+
+    query_id: ID
+
+
+KEY_CACHE: dict[tuple[str, ...], type[tuple]] = {
+    ("user_id",): UserIDKey,
+    ("query_id",): QueryIDKey,
+}
 
 
 def key_fields(kt: type[tuple]) -> tuple[str]:

@@ -15,7 +15,7 @@ class BatchResults:
     """
     Results from a batch recommendation run.  Results consist of the outputs of
     various pipeline components for each of the test users.  Results may be
-    ``None``, if the pipeline produced no output for that user.
+    ``None``, if the pipeline produced no output for that query.
 
     Stability:
         Caller

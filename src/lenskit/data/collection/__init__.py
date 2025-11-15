@@ -9,12 +9,13 @@ Item list collections.
 """
 
 from ._base import ItemListCollection, ItemListCollector, MutableItemListCollection
-from ._keys import GenericKey, UserIDKey, key_dict
+from ._keys import GenericKey, QueryIDKey, UserIDKey, key_dict
 from ._list import ListILC
 
 __all__ = [
     "GenericKey",
     "UserIDKey",
+    "QueryIDKey",
     "ItemListCollection",
     "ItemListCollector",
     "MutableItemListCollection",

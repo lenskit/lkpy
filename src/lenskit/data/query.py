@@ -86,6 +86,14 @@ class RecQuery:
         LensKit 2026.1.
     """
 
+    query_id: ID | None = None
+    """
+    An identifier for this query.
+
+    Query identifiers are used for things like mapping batch recommendation
+    outputs to their inputs.
+    """
+
     def __post_init__(self):
         if self.user_items is None:
             self.user_items = self.history_items
