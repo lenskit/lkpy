@@ -29,7 +29,7 @@ from lenskit.random import random_generator
 from .items import ItemList
 from .matrix import COOStructure, CSRStructure, SparseRowArray
 from .schema import RelationshipSchema, id_col_name, num_col_name
-from .types import ID, LAYOUT, MAT_AGG
+from .types import ID, LAYOUT
 from .vocab import Vocabulary
 
 if TYPE_CHECKING:
@@ -409,7 +409,10 @@ class MatrixRelationshipSet(RelationshipSet):
 
     @override
     def matrix(
-        self, *, combine: MAT_AGG | dict[str, MAT_AGG] | None = None
+        self,
+        *,
+        row_entity: str | None = None,
+        col_entity: str | None = None,
     ) -> MatrixRelationshipSet:
         # already a matrix relationship set
         return self
