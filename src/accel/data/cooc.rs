@@ -89,7 +89,11 @@ fn count_items(counts: &mut HashMap<(i32, i32), i32, FxBuildHasher>, items: &[i3
         let start = if ordered { i + 1 } else { 0 };
         if start < n {
             for j in start..n {
-                *counts.entry((i as i32, j as i32)).or_default() += 1;
+                if i != j {
+                    let ri = items[i as usize];
+                    let ci = items[j as usize];
+                    *counts.entry((ri, ci)).or_default() += 1;
+                }
             }
         }
     }

@@ -13,6 +13,7 @@ import pandas as pd
 from scipy.sparse import coo_array
 
 from lenskit.data import Dataset
+from lenskit.data.adapt import from_interactions_df
 
 
 def test_basic_cooc(ml_ds: Dataset, rng: np.random.Generator):
@@ -27,12 +28,17 @@ def test_basic_cooc(ml_ds: Dataset, rng: np.random.Generator):
     for i in rng.choice(ml_ds.item_count, 50):
         l1 = item_tbl[item_tbl["item_num"] == i]
         lim = item_tbl[item_tbl["user_num"].isin(l1["user_num"])]
+        lim = lim[lim["item_num"] != i]
         counts = lim.groupby("item_num")["user_num"].count()
         sp, ep = item_cooc.indptr[i : i + 2]
         assert np.all(item_cooc.data[sp:ep] == counts.loc[item_cooc.indices[sp:ep]].values)
 
 
-def test_ordered_cooc(ml_ds: Dataset, rng: np.random.Generator):
+def test_ordered_cooc(ml_ratings: pd.DataFrame, rng: np.random.Generator):
+    # equal timestamps mess things up
+    ratings = ml_ratings.drop_duplicates(subset=["timestamp"])
+
+    ml_ds = from_interactions_df(ratings)
     item_cooc = ml_ds.interactions().co_occurrences("item", order="timestamp")
     assert isinstance(item_cooc, coo_array)
     assert item_cooc.shape == (ml_ds.item_count, ml_ds.item_count)
