@@ -42,6 +42,8 @@ Building Data Sets
     ~lenskit.data.from_interactions_df
     ~lenskit.data.load_movielens
     ~lenskit.data.load_movielens_df
+    ~lenskit.data.load_amazon_ratings
+    ~lenskit.data.load_ms_web
 
 
 Item Data
