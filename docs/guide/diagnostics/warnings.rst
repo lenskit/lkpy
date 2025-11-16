@@ -6,6 +6,25 @@ LensKit Warnings
 This page documents some of the warnings LensKit emits, with explanations (and
 sometimes solutions).
 
+Data Deprecations
+~~~~~~~~~~~~~~~~~
+
+.. _LKW_BATCHIN:
+
+BATCHIN: Batch inference input deprecations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``BATCHIN`` family of warnings were added in 2025.6 to warn about deprecated
+input types for batch inference (:mod:`lenskit.batch`), which are scheduled for
+removal in LensKit 2026:
+
+- Passing a mapping of user IDs to candidate sets as the user / query list.
+- Passing a data frame as the user/query list.
+- Passing an iterable of bare tuples (named tuples are still supported).
+
+See :ref:`batch-queries` for currently-supported query types.
+
+
 PyTorch-related warnings
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

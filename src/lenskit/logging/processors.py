@@ -9,6 +9,7 @@ LensKit logging processors and converters.
 """
 
 import multiprocessing as mp
+import re
 from collections import deque
 from datetime import datetime
 from typing import Any
@@ -17,6 +18,7 @@ import structlog
 from structlog.typing import EventDict
 
 LOGGED_ERRORS = deque([], 5)
+_WARN_CODE_RE = re.compile(r"\s+\((LKW-\w+)\)$")
 
 
 def filter_exceptions(logger: Any, method: str, event_dict: EventDict) -> EventDict:
@@ -73,4 +75,11 @@ def add_process_info(logger: Any, method: str, event_dict: EventDict) -> EventDi
 def log_warning(message, category, filename, lineno, file=None, line=None):
     log = structlog.stdlib.get_logger("lenskit")
     log = log.bind(category=category.__name__, file=filename, lineno=lineno)
-    log.warning(str(message))
+    message = str(message)
+    m = _WARN_CODE_RE.search(message)
+    if m:
+        message = message[: m.start()]
+        code = m.group(1)
+        log.warning(message, err_code=code)
+    else:
+        log.warning(message)

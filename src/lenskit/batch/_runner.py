@@ -244,7 +244,7 @@ def _normalize_query_input(
 ) -> tuple[type[Any], Iterable[tuple[RecQuery, ItemList | None]], int | None]:
     if isinstance(queries, pd.DataFrame):
         warnings.warn(
-            "use an item list collection instead of a DataFrame",
+            "use an item list collection instead of a DataFrame (LKW-BATCHIN)",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -252,7 +252,7 @@ def _normalize_query_input(
 
     elif isinstance(queries, Mapping):
         warnings.warn(
-            "query mappings are ambiguous and deprecated, use query lists",
+            "query mappings are ambiguous and deprecated, use query lists (LKW-BATCHIN)",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -313,7 +313,7 @@ def _make_br(q: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey) -> Batch
             return BatchRequest(q)
         else:
             warnings.warn(
-                "bare tuples are ambiguous and will be unsupported in 2026",
+                "bare tuples are ambiguous and will be unsupported in 2026 (LKW-BATCHIN)",
                 DeprecationWarning,
                 stacklevel=3,
             )
