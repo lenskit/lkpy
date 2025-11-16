@@ -36,6 +36,8 @@ New Features
   Unrated and All candidate selectors with better configuration.
 - New function :func:`~lenskit.metrics.ranking.rank_biased_precision` to expose
   the inner computations of RBP.
+- Add new method :meth:`~lenskit.data.RelationshipSet.co_occurrences` to count
+  entity co-occurrences in a dataset.
 
 Deprecations
 ------------
