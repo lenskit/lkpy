@@ -307,8 +307,16 @@ def _make_br(q: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey) -> Batch
         if isinstance(q[0], RecQuery):
             q, items = q
             return BatchRequest(q, items)  # type: ignore
+        elif hasattr(q, "user_id"):
+            # we have a named tuple with user IDs
+            q = RecQuery(user_id=getattr(q, "user_id"))
+            return BatchRequest(q)
         else:
-            warnings.warn("bare tuples are deprecated", DeprecationWarning, stacklevel=3)
+            warnings.warn(
+                "bare tuples are ambiguous and will be unsupported in 2026",
+                DeprecationWarning,
+                stacklevel=3,
+            )
             q = RecQuery(user_id=q)  # type: ignore
             return BatchRequest(q)
     else:
