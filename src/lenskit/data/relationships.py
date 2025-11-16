@@ -156,7 +156,8 @@ class RelationshipSet:
         For ordered co-occurrences, the interactions are ordered by the
         attribute specified by ``order``, and the resulting matrix ``M`` may not
         be symmetric.  ``M[i,j]`` counts the number of times item ``j`` has
-        appeared **after** item ``i``.
+        appeared **after** item ``i``.  The order does not need to be global —
+        an attribute recording order *within* a group is sufficient.
 
         If ``group`` is specified, it controls the grouping for counting
         co-occurrences. For example, if a relationship connects the ``user``,
