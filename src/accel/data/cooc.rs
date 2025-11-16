@@ -17,24 +17,28 @@ use log::*;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use rustc_hash::FxBuildHasher;
 
-use crate::arrow::checked_array_ref;
+use crate::{arrow::checked_array_ref, progress::ProgressHandle};
 
 /// Count co-occurrances.
 #[pyfunction]
-pub fn count_cooc(
+pub fn count_cooc<'py>(
+    _py: Python<'py>,
     groups: PyArrowType<ArrayData>,
     items: PyArrowType<ArrayData>,
     ordered: bool,
+    progress: Bound<'py, PyAny>,
 ) -> PyResult<PyArrowType<RecordBatch>> {
     let groups = make_array(groups.0);
     let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
     let items = make_array(items.0);
     let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
+
     // TODO: parallelize this logic
     let mut counts = HashMap::with_hasher(FxBuildHasher);
     let mut cur_group = -1;
     let mut cur_items = Vec::new();
 
+    let pb = ProgressHandle::from_input(progress);
     for (g, i) in groups.iter().zip(items) {
         if let (Some(g), Some(i)) = (g, i) {
             assert!(g >= 0);
@@ -44,6 +48,7 @@ pub fn count_cooc(
                 cur_items.clear();
             }
             cur_items.push(i);
+            pb.tick();
         }
     }
 

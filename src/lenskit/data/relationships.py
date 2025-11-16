@@ -23,7 +23,7 @@ from typing_extensions import Literal, overload, override
 
 from lenskit._accel import data as _accel_data
 from lenskit.diagnostics import FieldError
-from lenskit.logging import get_logger
+from lenskit.logging import get_logger, item_progress
 from lenskit.random import random_generator
 
 from .items import ItemList
@@ -204,11 +204,13 @@ class RelationshipSet:
         _log.debug("sorting table by %s", sorts)
         tbl = self._table.sort_by(sorts)
         _log.debug("counting co-occurrences")
-        result = _accel_data.count_cooc(
-            tbl.column(gc).combine_chunks(),
-            tbl.column(ec).combine_chunks(),
-            order is not None,
-        )
+        with item_progress("co-occurrences", tbl.num_rows) as pb:
+            result = _accel_data.count_cooc(
+                tbl.column(gc).combine_chunks(),
+                tbl.column(ec).combine_chunks(),
+                order is not None,
+                pb,
+            )
         n = len(self._vocabularies[entity])
 
         indices = np.stack(
