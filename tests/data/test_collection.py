@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from pytest import mark, raises, warns
 
@@ -356,7 +357,11 @@ def test_write_recs_parquet(demo_recs, tmpdir: Path):
     rec_f = tmpdir / "recs.parquet"
 
     split.test.save_parquet(test_f)
+    print(pq.read_metadata(test_f))
+    print(pq.read_metadata(test_f).schema)
     recs.save_parquet(rec_f)
+    print(pq.read_metadata(rec_f))
+    print(pq.read_metadata(rec_f).schema)
 
     t2 = ItemListCollection.load_parquet(test_f)
     assert list(t2.keys()) == list(split.test.keys())
