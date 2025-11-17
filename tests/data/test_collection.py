@@ -168,9 +168,11 @@ def test_from_df(rng, ml_ratings: pd.DataFrame):
 
     for uid in rng.choice(ml_ratings["user_id"].unique(), 25):
         items = ilc.lookup(user_id=uid)
+        assert items is not None
         udf = ml_ratings[ml_ratings["user_id"] == uid]
         assert len(items) == len(udf)
         assert np.all(np.unique(items.ids()) == np.unique(udf["item_id"]))
+        assert items.field("user_id") is None
 
     tot = sum(len(il) for il in ilc.lists())
     assert tot == len(ml_ratings)

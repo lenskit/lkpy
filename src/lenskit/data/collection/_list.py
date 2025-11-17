@@ -138,6 +138,7 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
         df = normalize_columns(df, *columns)
         ilc = cls(key)  # type: ignore
         for k, gdf in df.groupby(list(fields)):
+            gdf = gdf.drop(columns=fields, errors="ignore")
             ilc.add(ItemList.from_df(gdf), *k)
 
         return ilc
