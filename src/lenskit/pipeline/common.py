@@ -41,10 +41,10 @@ class RecPipelineBuilder:
     _reranker: CompRec | None = None
 
     def __init__(self):
-        from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
+        from lenskit.basic.candidates import TrainingItemsCandidateSelector
         from lenskit.basic.topn import TopNRanker
 
-        self._selector = CompRec(UnratedTrainingItemsCandidateSelector)
+        self._selector = CompRec(TrainingItemsCandidateSelector)
         self._ranker = CompRec(TopNRanker)
 
     def scorer(self, score: Component | ComponentConstructor, config: object | None = None):
@@ -189,7 +189,7 @@ def topn_builder(
             The pipeline options to configure the base pipeline.
     """
 
-    from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
+    from lenskit.basic.candidates import TrainingItemsCandidateSelector
     from lenskit.basic.history import UserTrainingHistoryLookup
     from lenskit.basic.topn import TopNRanker
 
@@ -202,7 +202,7 @@ def topn_builder(
 
     lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
     cand_sel = pipe.add_component(
-        "candidate-selector", UnratedTrainingItemsCandidateSelector, query=lookup
+        "candidate-selector", TrainingItemsCandidateSelector, query=lookup
     )
     candidates = pipe.use_first_of("candidates", items, cand_sel)
 
