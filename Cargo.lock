@@ -628,7 +628,7 @@ dependencies = [
 
 [[package]]
 name = "lenskit"
-version = "2025.6.1"
+version = "2025.6.2"
 dependencies = [
  "arrow",
  "arrow-schema",
