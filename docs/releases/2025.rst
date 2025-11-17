@@ -16,6 +16,8 @@ information on how to upgrade your code.
 
 - Fix a small bug in :meth:`lenskit.data.ItemListCollection.from_df` that duplicated
   user or session ID columns (:pr:`952`).
+- Fixed :class:`~lenskit.data.ItemList`'s ``__getitem__`` to work correctly with
+  negative slice bounds.
 
 .. _2025.6.0:
 
