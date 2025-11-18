@@ -21,10 +21,10 @@ license-files = ["LICENSE.md"]
 dynamic = ["version"]
 dependencies = [
   "typing-extensions ~=4.12",
-  "pandas ~=2.0",
+  "pandas ~=2.3",
   "pyarrow >=20,!=21.*",
-  "numpy >=1.25",
-  "scipy >=1.11",
+  "numpy >=2.0",
+  "scipy >=1.13",
   "torch ~=2.4",
   "more-itertools >=9.0",
   "threadpoolctl >=3.0",
