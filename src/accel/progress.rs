@@ -107,7 +107,7 @@ impl ProgressHandle {
     }
 
     fn refresh(&self, count: usize) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             py.check_signals()?;
             if let Some(pb) = &self.pb {
                 let kwargs = PyDict::new(py);

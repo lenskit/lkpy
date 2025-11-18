@@ -29,7 +29,7 @@ pub fn score_explicit<'py>(
     max_nbrs: usize,
     min_nbrs: usize,
 ) -> PyResult<(PyArrowType<ArrayData>, PyArrowType<ArrayData>)> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let sims = sim_matrix(sims.0)?;
         let ref_items = make_array(ref_items.0);
         let ref_rates = make_array(ref_rates.0);
@@ -78,7 +78,7 @@ pub fn score_implicit<'py>(
     max_nbrs: usize,
     min_nbrs: usize,
 ) -> PyResult<(PyArrowType<ArrayData>, PyArrowType<ArrayData>)> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let sims = sim_matrix(sims.0)?;
         let ref_items = make_array(ref_items.0);
         let tgt_items = make_array(tgt_items.0);

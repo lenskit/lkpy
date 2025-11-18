@@ -645,7 +645,7 @@ dependencies = [
  "hex",
  "log",
  "nalgebra 0.34.1",
- "ndarray 0.17.1",
+ "ndarray",
  "nshare",
  "numpy",
  "ordered-float",
@@ -831,21 +831,6 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "rawpointer",
-]
-
-[[package]]
-name = "ndarray"
-version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c7c9125e8f6f10c9da3aad044cc918cf8784fa34de857b1aa68038eb05a50a9"
-dependencies = [
- "matrixmultiply",
- "num-complex",
- "num-integer",
- "num-traits",
- "portable-atomic",
- "portable-atomic-util",
- "rawpointer",
  "rayon",
 ]
 
@@ -856,7 +841,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60f2f3256fd1d647fdaac74abad0682766a6ffde01f8ccc138f9e1c641ac997c"
 dependencies = [
  "nalgebra 0.33.2",
- "ndarray 0.16.1",
+ "ndarray",
 ]
 
 [[package]]
@@ -915,7 +900,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b2dba356160b54f5371b550575b78130a54718b4c6e46b3f33a6da74a27e78b"
 dependencies = [
  "libc",
- "ndarray 0.16.1",
+ "ndarray",
  "num-complex",
  "num-integer",
  "num-traits",

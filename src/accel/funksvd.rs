@@ -92,7 +92,7 @@ impl FunkSVDTrainer {
         let mut uf_col = uf_mat.column_mut(feature);
         let mut if_col = if_mat.column_mut(feature);
 
-        py.allow_threads(|| {
+        py.detach(|| {
             let mut sse = 0.0;
 
             for s in 0..n {

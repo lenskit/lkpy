@@ -70,7 +70,7 @@ pub(crate) fn argsort_descending<'py>(
     scores: PyArrowType<ArrayData>,
 ) -> PyResult<PyArrowType<ArrayData>> {
     let scores = make_array(scores.0);
-    let array = py.allow_threads(|| {
+    let array = py.detach(|| {
         let indices = match_array_type!(scores, {
             floating(arr) => argsort_float(arr),
             integer(arr) => argsort_int(arr),

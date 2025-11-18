@@ -45,7 +45,7 @@ pub(super) fn train_explicit_matrix<'py>(
         other.nrows()
     );
 
-    let frob: f32 = py.allow_threads(|| {
+    let frob: f32 = py.detach(|| {
         this.outer_iter_mut()
             .into_par_iter()
             .enumerate()

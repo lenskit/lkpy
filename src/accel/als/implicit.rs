@@ -47,7 +47,7 @@ pub(super) fn train_implicit_matrix<'py>(
         "beginning implicit ALS training half with {} rows",
         other.nrows()
     );
-    let frob: f32 = py.allow_threads(|| {
+    let frob: f32 = py.detach(|| {
         this.outer_iter_mut()
             .into_par_iter()
             .enumerate()

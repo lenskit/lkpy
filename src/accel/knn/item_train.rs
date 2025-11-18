@@ -34,7 +34,7 @@ pub fn compute_similarities<'py>(
         Some(progress.unbind())
     };
 
-    py.allow_threads(|| {
+    py.detach(|| {
         // extract the data
         debug!("preparing {}x{} training", nu, ni);
         debug!(
