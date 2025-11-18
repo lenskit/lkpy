@@ -8,14 +8,13 @@ description = "Toolkit for recommender systems research, teaching, and more."
 authors = [{ name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" }]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Operating System :: OS Independent",
   "Intended Audience :: Science/Research",
 ]
-requires-python = ">= 3.11"
+requires-python = ">= 3.12"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE.md"]
@@ -189,7 +188,7 @@ omit = ["src/lenskit/_version.py"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]

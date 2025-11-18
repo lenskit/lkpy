@@ -1,7 +1,7 @@
 context:
   name: lenskit
   version: ${{env.get("LK_PACKAGE_VERSION", default="2100.0a0+dev0")}}
-  python_min: "3.11"
+  python_min: "3.12"
 
 recipe:
   name: lenskit
