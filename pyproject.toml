@@ -115,7 +115,7 @@ cpu = ["torch ~=2.4"]
 gpu = ["torch ~=2.4"]
 
 [project.optional-dependencies]
-sklearn = ["scikit-learn ~=1.2"]
+sklearn = ["scikit-learn ~=1.5"]
 funksvd = []
 hpf = ["hpfrec~=0.2.12"]
 implicit = ["implicit >=0.7.2"]

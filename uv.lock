@@ -1773,7 +1773,7 @@ requires-dist = [
     { name = "ray", extras = ["tune"], marker = "extra == 'tune'", specifier = "~=2.42" },
     { name = "requests", specifier = "~=2.28" },
     { name = "rich", specifier = ">=13.5" },
-    { name = "scikit-learn", marker = "extra == 'sklearn'", specifier = "~=1.2" },
+    { name = "scikit-learn", marker = "extra == 'sklearn'", specifier = "~=1.5" },
     { name = "scipy", specifier = ">=1.13" },
     { name = "setuptools", specifier = ">=80" },
     { name = "structlog", specifier = ">=23.2" },
