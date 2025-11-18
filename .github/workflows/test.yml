@@ -21,7 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         python:
-          - "3.11"
           - "3.12"
           - "3.13"
           - "3.14"
@@ -111,7 +110,7 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv sync -p 3.11
+          uv sync -p 3.12
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
@@ -150,7 +149,7 @@ jobs:
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           activate-environment: true
 
       - name: 📦 Set up Python dependencies
@@ -203,7 +202,7 @@ jobs:
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           activate-environment: true
 
       - name: 📦 Set up Python dependencies
@@ -394,7 +393,7 @@ jobs:
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           activate-environment: true
 
       - name: 📦 Set up Python dependencies
