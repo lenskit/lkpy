@@ -96,6 +96,9 @@ class NDCG(ListMetric, RankingMetricBase):
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
+        if len(test) == 0:
+            return float("nan")
+
         if self.gain:
             realized = _graded_dcg(recs, test, self.gain, self.weight)
 
