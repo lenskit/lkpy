@@ -6,18 +6,14 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 import numpy as np
-import pyarrow as pa
 import scipy.sparse as sps
+from scipy.sparse import csr_array
 
-from lenskit.data import ItemList, Vocabulary
-from lenskit.data.attributes import attr_set
-from lenskit.data.schema import AttrLayout, ColumnSpec
+from lenskit.data import Dataset, ItemList, Vocabulary
+from lenskit.metrics import RankWeight
 
 from ._base import ListMetric, RankingMetricBase
-from ._weighting import RankWeight
 
 
 def entropy(
@@ -114,49 +110,113 @@ class Entropy(ListMetric, RankingMetricBase):
     """
     Evaluate diversity using Shannon entropy over item categories.
 
+    This metric measures the diversity of categories in recommendation list.
+    Higher entropy indicates more diverse category distribution.
+
     Args:
-        field: Name of the field containing categories
-        layout: ('scalar', 'list', 'vector', 'sparse')
-        n: Maximum recommendation list length
-        normalize: Normalization method for the category matrix
+        dataset: The dataset containing item entities and attributes
+        attribute: Name of the attribute to use for categories (e.g., 'genre', 'tag')
+        n: Recommendation list length to evaluate
+
+    Stability:
+        Caller
     """
+
+    dataset: Dataset
+    attribute: str
+    _cat_matrix: np.ndarray | csr_array
+    _item_vocab: Vocabulary
 
     def __init__(
         self,
-        field: str,
-        layout: Literal["scalar", "list", "vector", "sparse"],
+        dataset: Dataset,
+        attribute: str,
         n: int | None = None,
-        *,
-        normalize: Literal["unit", "distribution"] | None = None,
     ):
         super().__init__(n)
-        self.field = field
-        self.layout = AttrLayout[layout.upper()]
-        self.normalize = normalize
+        self.dataset = dataset
+        self.attribute = attribute
+
+        # get items entity set / attribute set
+        items = dataset.entities("items")
+        attr_set = items.attribute(attribute)
+
+        # compute category matrix once at initialization
+        self._cat_matrix, _ = attr_set.cat_matrix(normalize="distribution")
+        self._item_vocab = items.vocabulary
 
     @property
     def label(self):
+        base = f"Entropy({self.attribute})"
         if self.n is not None:
-            return f"Entropy@{self.n}"
-        else:
-            return "Entropy"
+            return f"{base}@{self.n}"
+        return base
 
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
-        field_data = recs.field(self.field, format="arrow")
+        item_nums = recs.numbers(vocabulary=self._item_vocab, missing="error")
 
-        # build arrow table with this field
-        table = pa.Table.from_arrays([field_data], names=[self.field])
+        categories = self._cat_matrix[item_nums, :]
 
-        # get a vocabulary from the item list
-        vocab = recs.vocabulary
-        if vocab is None:
-            vocab = Vocabulary(recs.ids(format="arrow"))
+        return entropy(recs, categories, n=None)
 
-        # create the attributeset and call call_matrix
-        spec = ColumnSpec(layout=self.layout)
-        attrset = attr_set(self.field, spec, table, vocab, None)
-        matrix, cat_vocab = attrset.cat_matrix(normalize=self.normalize)
 
-        return entropy(recs, matrix, n=self.n)
+class RankBiasedEntropy(ListMetric, RankingMetricBase):
+    """
+    Evaluate diversity using rank-biased Shannon entropy over item categories.
+
+    This metric measures the diversity of categories in recommendation list
+    with rank-based weighting, giving more importance to items at the top
+    of the recommendation list.
+
+    Args:
+        dataset: The dataset containing item entities and attributes
+        attribute: Name of the attribute to use for categories (e.g., 'genre', 'tag')
+        n: Recommendation list length to evaluate
+        weight: Rank weighting model. Defaults to GeometricRankWeight(0.85)
+
+    Stability:
+        Caller
+    """
+
+    dataset: Dataset
+    attribute: str
+    weight: RankWeight | None
+    _cat_matrix: np.ndarray | csr_array
+    _item_vocab: Vocabulary
+
+    def __init__(
+        self,
+        dataset: Dataset,
+        attribute: str,
+        n: int | None = None,
+        *,
+        weight: RankWeight | None = None,
+    ):
+        super().__init__(n)
+        self.dataset = dataset
+        self.attribute = attribute
+        self.weight = weight
+
+        items = dataset.entities("items")
+        attr_set = items.attribute(attribute)
+
+        self._cat_matrix, _ = attr_set.cat_matrix(normalize="distribution")
+        self._item_vocab = items.vocabulary
+
+    @property
+    def label(self):
+        base = f"RBEntropy({self.attribute})"
+        if self.n is not None:
+            return f"{base}@{self.n}"
+        return base
+
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
+        recs = self.truncate(recs)
+
+        item_nums = recs.numbers(vocabulary=self._item_vocab, missing="error")
+
+        categories = self._cat_matrix[item_nums, :]
+
+        return rank_biased_entropy(recs, categories, weight=self.weight, n=None)
