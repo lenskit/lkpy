@@ -10,7 +10,7 @@ LensKit ranking (and list) metrics.
 
 from ._base import RankingMetricBase
 from ._dcg import DCG, NDCG
-from ._entropy import entropy, rank_biased_entropy
+from ._entropy import Entropy, RankBiasedEntropy
 from ._gini import ExposureGini, ListGini
 from ._hit import Hit
 from ._map import AveragePrecision
@@ -37,6 +37,6 @@ __all__ = [
     "AveragePrecision",
     "ListGini",
     "ExposureGini",
-    "entropy",
-    "rank_biased_entropy",
+    "Entropy",
+    "RankBiasedEntropy",
 ]

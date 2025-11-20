@@ -9,8 +9,8 @@ import scipy.sparse as sps
 
 from pytest import approx
 
-from lenskit.data import ItemList
-from lenskit.metrics import GeometricRankWeight, entropy, rank_biased_entropy
+from lenskit.data import Dataset, ItemList, Vocabulary
+from lenskit.metrics import Entropy, GeometricRankWeight, RankBiasedEntropy
 from lenskit.metrics.ranking._entropy import matrix_column_entropy
 
 
