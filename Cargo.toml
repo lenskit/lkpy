@@ -31,8 +31,9 @@ serde_json = "^1.0"
 
 arrow = { version = "^57", features = ["pyarrow"], default-features = false }
 arrow-schema = { version = "^57", features = ["serde"] }
+nalgebra = { version = "^0.33", default-features = false, features = ["std"] }
 ndarray = { version = "^0.16", features = ["rayon"] }
-ndarray-linalg = { version = "^0.17", default-features = false }
+nshare = { version = "^0.10", default-features = false, features = ["ndarray", "nalgebra"] }
 numpy = "^0.26"
 
 [profile.dev]

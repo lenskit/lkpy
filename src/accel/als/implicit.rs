@@ -9,7 +9,7 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
-use ndarray_linalg::cholesky::SolveC;
+use nshare::{IntoNalgebra, IntoNdarray1};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -93,8 +93,18 @@ fn train_row_solve(
     vals += 1.0;
     let y = mt.dot(&vals);
 
-    let soln = a.solvec(&y).expect("Cholesky solve error");
+    let a = a.into_nalgebra();
+    let y = y.into_nalgebra();
+    let cholesky = match a.cholesky() {
+        Some(c) => c,
+        None => {
+            error!("matrix is not positive definite");
+            panic!("matrix is not positive definite");
+        }
+    };
 
+    let soln = cholesky.solve(&y);
+    let soln = soln.into_ndarray1();
     let deltas = &soln - &row_data;
     row_data.assign(&soln);
 
