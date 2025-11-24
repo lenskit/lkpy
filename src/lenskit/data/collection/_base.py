@@ -9,6 +9,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from itertools import batched
 from os import PathLike
 from pathlib import Path
 from typing import (
@@ -25,7 +26,6 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from more_itertools import chunked
 from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
@@ -395,7 +395,7 @@ class ItemListCollection(Generic[KL], ABC):
         if columns is None:
             columns = self.list_schema
 
-        for batch in chunked(self.items(), batch_size):
+        for batch in batched(self.items(), batch_size):
             keys = pa.Table.from_pylist([key_dict(k) for (k, _il) in batch])
             schema = pa.list_(pa.struct(columns))  # type: ignore
             col_elts = [

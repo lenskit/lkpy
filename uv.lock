@@ -1605,7 +1605,6 @@ dependencies = [
     { name = "deepmerge" },
     { name = "humanize" },
     { name = "lazy-loader" },
-    { name = "more-itertools" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "prettytable" },
@@ -1759,7 +1758,6 @@ requires-dist = [
     { name = "implicit", marker = "extra == 'implicit'", specifier = ">=0.7.2" },
     { name = "ipywidgets", marker = "extra == 'notebook'", specifier = "~=8.0" },
     { name = "lazy-loader", specifier = ">=0.4" },
-    { name = "more-itertools", specifier = ">=9.0" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "pandas", specifier = "~=2.3" },
     { name = "prettytable", specifier = "~=3.14" },
@@ -2089,15 +2087,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d7/02/a7fb8b21d4d55ac93cdcde9d3638da5dd0ebdd3a4fed76c7725e10b81cbe/mistune-3.1.4.tar.gz", hash = "sha256:b5a7f801d389f724ec702840c11d8fc48f2b33519102fc7ee739e8177b672164", size = 94588, upload-time = "2025-08-29T07:20:43.594Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7a/f0/8282d9641415e9e33df173516226b404d367a0fc55e1a60424a152913abc/mistune-3.1.4-py3-none-any.whl", hash = "sha256:93691da911e5d9d2e23bc54472892aff676df27a75274962ff9edc210364266d", size = 53481, upload-time = "2025-08-29T07:20:42.218Z" },
-]
-
-[[package]]
-name = "more-itertools"
-version = "10.8.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ea/5d/38b681d3fce7a266dd9ab73c66959406d565b3e85f21d5e66e1181d93721/more_itertools-10.8.0.tar.gz", hash = "sha256:f638ddf8a1a0d134181275fb5d58b086ead7c6a72429ad725c67503f13ba30bd", size = 137431, upload-time = "2025-09-02T15:23:11.018Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/8e/469e5a4a2f5855992e425f3cb33804cc07bf18d48f2db061aec61ce50270/more_itertools-10.8.0-py3-none-any.whl", hash = "sha256:52d4362373dcf7c52546bc4af9a86ee7c4579df9a8dc268be0a2f949d376cc9b", size = 69667, upload-time = "2025-09-02T15:23:09.635Z" },
 ]
 
 [[package]]
