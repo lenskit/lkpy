@@ -9,7 +9,6 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
-use nshare::{IntoNalgebra, IntoNdarray1};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -17,6 +16,7 @@ use rayon::prelude::*;
 use log::*;
 
 use crate::{
+    als::solve::sposv,
     progress::ProgressHandle,
     sparse::{CSRMatrix, CSR},
 };
@@ -92,15 +92,8 @@ fn train_row_solve(
     let v = mt.dot(&vals);
     assert_eq!(v.shape(), &[nd]);
 
-    let mtm = mtm.into_nalgebra();
-    let v = v.into_nalgebra();
-    let soln = if let Some(cholesky) = mtm.view((0, 0), (nd, nd)).cholesky() {
-        cholesky.solve(&v)
-    } else {
-        mtm.lu().solve(&v).expect("matrix is non-invertible")
-    };
+    let soln = sposv(&mut mtm, &v).expect("LAPACK error");
 
-    let soln = soln.into_ndarray1();
     let deltas = &soln - &row_data;
     row_data.assign(&soln);
 
