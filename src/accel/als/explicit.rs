@@ -16,7 +16,7 @@ use rayon::prelude::*;
 use log::*;
 
 use crate::{
-    als::solve::sposv,
+    als::solve::POSV,
     progress::ProgressHandle,
     sparse::{CSRMatrix, CSR},
 };
@@ -30,6 +30,7 @@ pub(super) fn train_explicit_matrix<'py>(
     reg: f32,
     progress: Bound<'py, PyAny>,
 ) -> PyResult<f32> {
+    let solver = POSV::load(py)?;
     let matrix_ref = make_array(matrix.0);
     let matrix: CSRMatrix<i32> = CSRMatrix::from_arrow(matrix_ref)?;
 
@@ -50,7 +51,7 @@ pub(super) fn train_explicit_matrix<'py>(
             .into_par_iter()
             .enumerate()
             .map(|(i, row)| {
-                let f = train_row_solve(&matrix, i, row, &other, reg);
+                let f = train_row_solve(&solver, &matrix, i, row, &other, reg);
                 progress.tick();
                 f
             })
@@ -61,6 +62,7 @@ pub(super) fn train_explicit_matrix<'py>(
 }
 
 fn train_row_solve(
+    solver: &POSV,
     matrix: &CSRMatrix<i32>,
     row_num: usize,
     mut row_data: ArrayBase<ViewRepr<&mut f32>, Ix1>,
@@ -92,7 +94,7 @@ fn train_row_solve(
     let v = mt.dot(&vals);
     assert_eq!(v.shape(), &[nd]);
 
-    let soln = sposv(&mut mtm, &v).expect("LAPACK error");
+    let soln = solver.solve(&mut mtm, &v).expect("LAPACK error");
 
     let deltas = &soln - &row_data;
     row_data.assign(&soln);
