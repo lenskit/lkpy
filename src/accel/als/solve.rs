@@ -54,7 +54,8 @@ impl POSV {
     /// Solve a linear system.
     ///
     /// This uses LAPACK `sposv` to solve the linear system. `matrix` must be square,
-    /// symmetric, and positive definite.
+    /// symmetric, and positive definite.  After solving, it will contain the
+    /// Cholesky decomposition.
     pub fn solve(
         &self,
         matrix: &mut Array2<f32>,
