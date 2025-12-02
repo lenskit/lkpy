@@ -58,7 +58,8 @@ pygments_style = "sphinx"
 highlight_language = "python3"
 
 html_theme = "pydata_sphinx_theme"
-html_logo = "LKLogo2.png"
+html_logo = "lenskit-wordmark.png"
+html_favicon = "lenskit-icon.png"
 if _parsed_ver.is_devrelease:
     html_baseurl = "https://lenskit.org/latest/"
 else:
