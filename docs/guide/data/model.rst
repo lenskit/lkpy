@@ -32,6 +32,10 @@ represented in the LensKit data model, in `Chen's entity-relationship notation`_
 
 .. _Chen's entity-relationship notation: https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model
 
+..
+    Michael is annoyed that this requires GraphViz and cannot yet be done in Mermaid.
+    https://github.com/mermaid-js/mermaid/issues/3723
+
 .. graphviz::
 
     graph G {
