@@ -85,19 +85,6 @@ outputs:
             - pyyaml ~=6.0
 
   - package:
-      name: lenskit-funksvd
-    build:
-      noarch: python
-      script:
-        - "true"
-    requirements:
-      host:
-        - python ${{ python_min }}.*
-      run:
-        - python >=${{ python_min }}
-        - lenskit >=2025.3
-
-  - package:
       name: lenskit-sklearn
     build:
       noarch: python
