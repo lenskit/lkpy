@@ -137,6 +137,8 @@ class Entropy(ListMetric, RankingMetricBase):
 
         item_nums = recs.numbers(vocabulary=self._item_vocab, missing="negative")
         item_nums = item_nums[item_nums >= 0]
+        if len(item_nums) == 0:
+            return np.nan
 
         categories = self._cat_matrix[item_nums, :]
 
@@ -196,6 +198,8 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
 
         item_nums = recs.numbers(vocabulary=self._item_vocab, missing="negative")
         item_nums = item_nums[item_nums >= 0]
+        if len(item_nums) == 0:
+            return np.nan
 
         categories = self._cat_matrix[item_nums, :]
 
