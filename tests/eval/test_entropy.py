@@ -11,7 +11,7 @@ from pytest import approx
 
 from lenskit.data import Dataset, ItemList, Vocabulary
 from lenskit.metrics import Entropy, GeometricRankWeight, RankBiasedEntropy
-from lenskit.metrics.ranking._entropy import matrix_column_entropy
+from lenskit.metrics.ranking._entropy import entropy, matrix_column_entropy, rank_biased_entropy
 
 
 def test_entropy_uniform():
@@ -25,7 +25,7 @@ def test_entropy_uniform():
     sparse = sps.csr_array((data, (row, col)), shape=(3, 3))
 
     dense_result = entropy(items, dense)  # n is lenght of items i.e. 3
-    sparse_result = entropy(items, sparse, n=5)  # n is max(5, len(items)) i.e. 3
+    sparse_result = entropy(items, sparse)  # n is max(5, len(items)) i.e. 3
 
     assert dense_result == approx(np.log2(3), abs=0.02)
     assert sparse_result == approx(dense_result, abs=0.001)
@@ -39,8 +39,8 @@ def test_entropy_partial():
     data = [1, 1, 1, 1]
     sparse = sps.csr_array((data, (row, col)), shape=(4, 2))
 
-    dense_result = entropy(items, dense, n=2)
-    sparse_result = entropy(items, sparse, n=2)
+    dense_result = entropy(items, dense)
+    sparse_result = entropy(items, sparse)
 
     assert dense_result == approx(1.0, abs=0.02)
     assert sparse_result == approx(dense_result, abs=0.001)
@@ -59,8 +59,8 @@ def test_rank_biased_entropy():
     data2 = [1, 1, 1, 1, 1]
     categories2 = sps.csr_array((data2, (row2, col2)), shape=(5, 3))
 
-    result1 = rank_biased_entropy(items, categories1)  # n is length of items i.e. 5
-    result2 = rank_biased_entropy(items, categories2, n=5)
+    result1 = rank_biased_entropy(items, categories1)
+    result2 = rank_biased_entropy(items, categories2)
 
     # categories1 more diverse due to weights
     assert 0 < result1 <= np.log2(3)
@@ -118,7 +118,7 @@ def test_entropy_large_sparse():
     data = [1, 1, 1, 1, 1]
     categories = sps.csr_array((data, (row, col)), shape=(10, 5))
 
-    result = entropy(items, categories, n=10)
+    result = entropy(items, categories)
     # uniform distribution across 5 categories
     assert result == approx(np.log2(5), abs=0.02)
 
@@ -132,17 +132,49 @@ def test_rank_biased_entropy_partial_weighted():
     categories = sps.csr_array((data, (row, col)), shape=(5, 3))
     weight = GeometricRankWeight(0.5)
 
-    result = rank_biased_entropy(items, categories, weight=weight, n=3)
+    result = rank_biased_entropy(items, categories, weight=weight)
     # entropy positive but less than log2(3) due to weights
     assert 0 < result <= np.log2(3)
 
 
-def test_n_zero():
-    items = ItemList([1, 2, 3], ordered=True)
-    dense = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+def test_entropy_class_label(ml_ds):
+    e = Entropy(ml_ds, "genres")
+    assert e.label == "Entropy(genres)"
 
-    e_result = entropy(items, dense, n=0)
-    rbe_result = rank_biased_entropy(items, dense, n=0)
+    e10 = Entropy(ml_ds, "genres", n=10)
+    assert e10.label == "Entropy(genres)@10"
 
-    assert np.isnan(e_result)
-    assert np.isnan(rbe_result)
+
+def test_entropy_class_measure_list(ml_ds):
+    e = Entropy(ml_ds, "genres", n=10)
+
+    # get some items from ml_ds
+    items = ml_ds.items.ids()[:15]
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(items[:5])
+
+    val = e.measure_list(recs, truth)
+    assert val >= 0
+    assert val <= np.log2(e._cat_matrix.shape[1])  # max entropy is log2 of category count
+
+
+def test_rank_biased_entropy_class_label(ml_ds):
+    rbe = RankBiasedEntropy(ml_ds, "genres")
+    assert rbe.label == "RBEntropy(genres)"
+
+    rbe10 = RankBiasedEntropy(ml_ds, "genres", n=10)
+    assert rbe10.label == "RBEntropy(genres)@10"
+
+
+def test_rank_biased_entropy_class_measure_list(ml_ds):
+    rbe = RankBiasedEntropy(ml_ds, "genres", n=10)
+
+    items = ml_ds.items.ids()[:15]
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(items[:5])
+
+    val = rbe.measure_list(recs, truth)
+    assert val >= 0
+    assert val <= np.log2(rbe._cat_matrix.shape[1])
+
+    assert isinstance(rbe.weight, GeometricRankWeight)

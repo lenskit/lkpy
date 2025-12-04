@@ -11,39 +11,29 @@ import scipy.sparse as sps
 from scipy.sparse import csr_array
 
 from lenskit.data import Dataset, ItemList, Vocabulary
-from lenskit.metrics import RankWeight
 
 from ._base import ListMetric, RankingMetricBase
 
 
-def entropy(
-    items: ItemList, categories: np.ndarray | sps.spmatrix, *, n: int | None = None
-) -> float:
+def entropy(items: ItemList, categories: np.ndarray | sps.spmatrix) -> float:
     """
     Compute Shannon entropy over categorical distributions.
 
     Args:
         items: Item list to evaluate.
         categories: Item * category matrix (dense or sparse).
-        n: Optional depth to evaluate; defaults to full list.
 
     Returns:
         Shannon entropy or NaN if no valid data is available.
     """
-    if n is None:
-        n = len(items)
-    if n == 0:
+    if len(items) == 0:
         return np.nan
 
-    n = min(n, len(items))
-
-    truncated = categories[:n, :]
-
-    return matrix_column_entropy(truncated)
+    return matrix_column_entropy(categories)
 
 
 def rank_biased_entropy(
-    items: ItemList, categories: np.ndarray | sps.spmatrix, *, weight=None, n: int | None = None
+    items: ItemList, categories: np.ndarray | sps.spmatrix, *, weight: object | None = None
 ) -> float:
     """
     Compute rank-biased Shannon entropy over categorical distributions.
@@ -52,28 +42,21 @@ def rank_biased_entropy(
         items: Item list to evaluate.
         categories: Item * category matrix (dense or sparse).
         weight: Optional RankWeight. Defaults to GeometricRankWeight(0.85).
-        n: Optional depth to evaluate; defaults to full list.
 
     Returns:
         Rank-biased Shannon entropy or NaN if no valid data is available.
     """
     from lenskit.metrics import GeometricRankWeight
 
-    if n is None:
-        n = len(items)
-    if n == 0:
+    if len(items) == 0:
         return np.nan
-
-    n = min(n, len(items))
-
-    truncated = categories[:n, :]
 
     if weight is None:
         weight = GeometricRankWeight(0.85)
 
-    ranks = np.arange(1, n + 1)
+    ranks = np.arange(1, len(items) + 1)
     wvec = weight.weight(ranks)
-    return matrix_column_entropy(truncated, weights=wvec)
+    return matrix_column_entropy(categories, weights=wvec)
 
 
 def matrix_column_entropy(
@@ -114,7 +97,6 @@ class Entropy(ListMetric, RankingMetricBase):
     Higher entropy indicates more diverse category distribution.
 
     Args:
-        dataset: The dataset containing item entities and attributes
         attribute: Name of the attribute to use for categories (e.g., 'genre', 'tag')
         n: Recommendation list length to evaluate
 
@@ -122,7 +104,6 @@ class Entropy(ListMetric, RankingMetricBase):
         Caller
     """
 
-    dataset: Dataset
     attribute: str
     _cat_matrix: np.ndarray | csr_array
     _item_vocab: Vocabulary
@@ -134,11 +115,10 @@ class Entropy(ListMetric, RankingMetricBase):
         n: int | None = None,
     ):
         super().__init__(n)
-        self.dataset = dataset
         self.attribute = attribute
 
         # get items entity set / attribute set
-        items = dataset.entities("items")
+        items = dataset.entities("item")
         attr_set = items.attribute(attribute)
 
         # compute category matrix once at initialization
@@ -155,11 +135,11 @@ class Entropy(ListMetric, RankingMetricBase):
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
-        item_nums = recs.numbers(vocabulary=self._item_vocab, missing="error")
+        item_nums = recs.numbers(vocabulary=self._item_vocab, missing="negative")
 
         categories = self._cat_matrix[item_nums, :]
 
-        return entropy(recs, categories, n=None)
+        return entropy(recs, categories)
 
 
 class RankBiasedEntropy(ListMetric, RankingMetricBase):
@@ -171,7 +151,6 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
     of the recommendation list.
 
     Args:
-        dataset: The dataset containing item entities and attributes
         attribute: Name of the attribute to use for categories (e.g., 'genre', 'tag')
         n: Recommendation list length to evaluate
         weight: Rank weighting model. Defaults to GeometricRankWeight(0.85)
@@ -180,9 +159,8 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
         Caller
     """
 
-    dataset: Dataset
     attribute: str
-    weight: RankWeight | None
+    weight: object
     _cat_matrix: np.ndarray | csr_array
     _item_vocab: Vocabulary
 
@@ -192,14 +170,15 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
         attribute: str,
         n: int | None = None,
         *,
-        weight: RankWeight | None = None,
+        weight: object | None = None,
     ):
         super().__init__(n)
-        self.dataset = dataset
         self.attribute = attribute
-        self.weight = weight
+        from lenskit.metrics import GeometricRankWeight
 
-        items = dataset.entities("items")
+        self.weight = weight if weight is not None else GeometricRankWeight(0.85)
+
+        items = dataset.entities("item")
         attr_set = items.attribute(attribute)
 
         self._cat_matrix, _ = attr_set.cat_matrix(normalize="distribution")
@@ -215,8 +194,8 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
-        item_nums = recs.numbers(vocabulary=self._item_vocab, missing="error")
+        item_nums = recs.numbers(vocabulary=self._item_vocab, missing="negative")
 
         categories = self._cat_matrix[item_nums, :]
 
-        return rank_biased_entropy(recs, categories, weight=self.weight, n=None)
+        return rank_biased_entropy(recs, categories, weight=self.weight)
