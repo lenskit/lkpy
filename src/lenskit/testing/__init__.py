@@ -32,6 +32,7 @@ from ._movielens import (
     ml_test_dir,
     pop_recs,
 )
+from ._msweb import msweb
 
 __all__ = [
     "coo_arrays",
@@ -45,6 +46,7 @@ __all__ = [
     "ml_ds_unchecked",
     "ml_ratings",
     "ml_test_dir",
+    "msweb",
     "demo_recs",
     "pop_recs",
     "set_env_var",

@@ -23,12 +23,14 @@ from .collection import (
     ItemListCollector,
     ListILC,
     MutableItemListCollection,
+    QueryIDKey,
     UserIDKey,
 )
 from .dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
 from .items import ItemList
 from .matrix import COOStructure, CSRStructure
 from .movielens import load_movielens, load_movielens_df
+from .msweb import load_ms_web
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
 from .query import QueryInput, RecQuery
 from .types import ID, NPID, FeedbackType
@@ -54,10 +56,12 @@ __all__ = [
     "MutableItemListCollection",
     "ListILC",
     "UserIDKey",
+    "QueryIDKey",
     "GenericKey",
     "load_movielens",
     "load_movielens_df",
     "load_amazon_ratings",
+    "load_ms_web",
     "MTArray",
     "MTFloatArray",
     "MTGenericArray",

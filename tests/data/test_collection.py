@@ -12,10 +12,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from pytest import mark, raises, warns
 
-from lenskit.data import ItemList
+from lenskit.data import ItemList, QueryIDKey
 from lenskit.data.collection import ItemListCollection, MutableItemListCollection, UserIDKey
 from lenskit.data.collection._keys import create_key, project_key
 from lenskit.data.dataset import Dataset
@@ -167,9 +168,11 @@ def test_from_df(rng, ml_ratings: pd.DataFrame):
 
     for uid in rng.choice(ml_ratings["user_id"].unique(), 25):
         items = ilc.lookup(user_id=uid)
+        assert items is not None
         udf = ml_ratings[ml_ratings["user_id"] == uid]
         assert len(items) == len(udf)
         assert np.all(np.unique(items.ids()) == np.unique(udf["item_id"]))
+        assert items.field("user_id") is None
 
     tot = sum(len(il) for il in ilc.lists())
     assert tot == len(ml_ratings)
@@ -234,6 +237,16 @@ def test_to_df_warn_empty():
     print(df)
     assert len(df) == 4
     assert df["user_id"].tolist() == [72, 82, 82, 82]
+
+
+def test_rename(rng, ml_ratings: pd.DataFrame):
+    ml_ratings = ml_ratings.rename(columns={"user": "user_id", "item": "item_id"})
+    ilc = ItemListCollection.from_df(ml_ratings, UserIDKey)
+
+    il2 = ilc.rename_key(user_id="query_id")
+    assert il2.key_fields == ("query_id",)
+    assert il2.key_type == QueryIDKey
+    assert len(il2) == len(ilc)
 
 
 def test_to_arrow():
@@ -346,7 +359,11 @@ def test_write_recs_parquet(demo_recs, tmpdir: Path):
     rec_f = tmpdir / "recs.parquet"
 
     split.test.save_parquet(test_f)
+    print(pq.read_metadata(test_f))
+    print(pq.read_metadata(test_f).schema)
     recs.save_parquet(rec_f)
+    print(pq.read_metadata(rec_f))
+    print(pq.read_metadata(rec_f).schema)
 
     t2 = ItemListCollection.load_parquet(test_f)
     assert list(t2.keys()) == list(split.test.keys())

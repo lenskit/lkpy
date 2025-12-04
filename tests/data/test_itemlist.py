@@ -570,6 +570,38 @@ def test_subset_slice(ml_ds: Dataset):
     assert np.all(pos.field("rating") == rf[5:10])
 
 
+def test_subset_neg_end_slice(ml_ds: Dataset):
+    row = ml_ds.user_row(user_num=400)
+    assert row is not None
+    ratings = row.field("rating")
+    assert ratings is not None
+
+    pos = row[:-5]
+
+    assert len(pos) == len(row) - 5
+    assert np.all(pos.ids() == row.ids()[:-5])
+    assert np.all(pos.numbers() == row.numbers()[:-5])
+    rf = row.field("rating")
+    assert rf is not None
+    assert np.all(pos.field("rating") == rf[:-5])
+
+
+def test_subset_neg_start_slice(ml_ds: Dataset):
+    row = ml_ds.user_row(user_num=400)
+    assert row is not None
+    ratings = row.field("rating")
+    assert ratings is not None
+
+    pos = row[-5:]
+
+    assert len(pos) == 5
+    assert np.all(pos.ids() == row.ids()[-5:])
+    assert np.all(pos.numbers() == row.numbers()[-5:])
+    rf = row.field("rating")
+    assert rf is not None
+    assert np.all(pos.field("rating") == rf[-5:])
+
+
 def test_from_df():
     df = pd.DataFrame(
         {"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5).astype(np.float32)}

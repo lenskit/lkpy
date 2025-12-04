@@ -24,6 +24,13 @@ def test_ndcg_empty():
     assert call_metric(NDCG, recs, truth) == approx(0.0)
 
 
+def test_ndcg_empty_truth_returns_nan():
+    recs = ItemList([1, 2, 3], ordered=True)
+    truth = ItemList(ordered=True)
+    val = call_metric(NDCG, recs, truth)
+    assert np.isnan(val)
+
+
 def test_ndcg_no_match():
     recs = ItemList([4], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
