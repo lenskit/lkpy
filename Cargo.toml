@@ -6,7 +6,7 @@ license = "MIT"
 rust-version = "1.87"
 
 [lib]
-name = "_accel"
+name = "lenskit_accel"
 path = "src/accel/lib.rs"
 crate-type = ["cdylib"]
 
