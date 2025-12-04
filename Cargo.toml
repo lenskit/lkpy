@@ -1,24 +1,24 @@
 [package]
 name = "lenskit"
-version = "2025.6.2"
+version = "2026.0.0"
 edition = "2021"
 license = "MIT"
 rust-version = "1.87"
 
 [lib]
-name = "_accel"
+name = "lenskit_accel"
 path = "src/accel/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
 log = { version = "^0.4", features = ["release_max_level_debug"] }
-pyo3 = { version = "^0.25", features = ["extension-module", "abi3-py311"] }
-pyo3-log = "^0.12"
+pyo3 = { version = "^0.26", features = ["extension-module", "abi3-py312"] }
+pyo3-log = "^0.13"
 thiserror = "^2"
 
 rayon = "^1.10"
 
-hashbrown = "^0.15"
+hashbrown = "^0.16"
 hex = "^0.4"
 ordered-float = "^5"
 rand = "^0.9"
@@ -29,12 +29,10 @@ sha1 = "^0.10"
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "^1.0"
 
-arrow = { version = "^56", features = ["pyarrow"], default-features = false }
-arrow-schema = { version = "^56", features = ["serde"] }
-nalgebra = { version = "^0.34" }
+arrow = { version = "^57", features = ["pyarrow"], default-features = false }
+arrow-schema = { version = "^57", features = ["serde"] }
 ndarray = { version = "^0.16", features = ["rayon"] }
-nshare = { version = "^0.10", default-features = false, features = ["ndarray", "nalgebra"] }
-numpy = "^0.25"
+numpy = "^0.26"
 
 [profile.dev]
 opt-level = 2

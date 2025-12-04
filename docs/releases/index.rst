@@ -7,6 +7,7 @@ notes in the primary documentation.  Older release notes are on GitHub.
 .. toctree::
     :maxdepth: 1
 
+    2026
     2025
     Older Versions <https://github.com/lenskit/lkpy/releases>
 
@@ -110,11 +111,12 @@ We anchor dependency versions based on when the first release of a year occurs
 (under SemCalVer_).  We won't drop support for a core dependency version
 mid-stream unless absolutely necessary and clearly-communicated.
 
-As of 2024, these versions are:
+As of 2026, these versions are:
 
-*   Python 3.10
-*   Pandas 1.5
-*   SciPy 1.9.0
+*   Python 3.11
+*   Pandas 2.3
+*   NumPy 2.0
+*   SciPy 1.13.0
 
 We do **not** currently include PyTorch in our SPEC0 version commitments, but
-LensKit currently works with PyTorch 2.1 and newer.
+LensKit currently works with PyTorch 2.4 and newer.

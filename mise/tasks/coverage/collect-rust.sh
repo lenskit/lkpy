@@ -14,9 +14,9 @@ fi
 
 OS="$(uname)"
 if [[ $OS = Darwin ]]; then
-    target="$tdir/lib_accel.dylib"
+    target="$tdir/liblenskit_accel.dylib"
 else
-    target="$tdir/lib_accel.so"
+    target="$tdir/liblenskit_accel.so"
 fi
 
 msg "merging coverage data"

@@ -1,0 +1,22 @@
+2026 Releases
+=============
+
+2026 builds on the foundation of :ref:`2025 <2025>` to improve the ergonomics of
+data access, querying, and metrics, and clean up some APIs that seemed good at
+the time, while making it even easier to use LensKit for recommendation
+scenarios besides ID-based personalized recommendation.
+
+There are no new major paradigm shifts, though — pipelines, datasets, and
+components work as they do in the 2025 series, but with more features, some
+rough corners polished off the interfaces, and hopefully fewer bugs.
+
+.. _2026.0.0:
+
+2026.0.0
+~~~~~~~~
+
+Breaking Changes
+----------------
+
+- LensKit now requires Python 3.12 or newer, along with NumPy 2.x, Pandas 2.3 or
+  newer, and SciPy 1.13 or newer (see :ref:`dep-policy`, :pr:`954`).

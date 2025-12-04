@@ -1,7 +1,7 @@
 context:
   name: lenskit
   version: ${{env.get("LK_PACKAGE_VERSION", default="2100.0a0+dev0")}}
-  python_min: "3.11"
+  python_min: "3.12"
 
 recipe:
   name: lenskit
@@ -41,7 +41,6 @@ outputs:
         - numpy >=1.25,<3
         - scipy >=1.11,<2
         - pytorch >=2.4,<3
-        - more-itertools >=9.0
         - threadpoolctl >=3.0
         - structlog >=23.2
         - rich >=13.5,<14
@@ -84,19 +83,6 @@ outputs:
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
-
-  - package:
-      name: lenskit-funksvd
-    build:
-      noarch: python
-      script:
-        - "true"
-    requirements:
-      host:
-        - python ${{ python_min }}.*
-      run:
-        - python >=${{ python_min }}
-        - lenskit >=2025.3
 
   - package:
       name: lenskit-sklearn
