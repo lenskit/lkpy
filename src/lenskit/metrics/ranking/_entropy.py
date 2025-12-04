@@ -96,6 +96,7 @@ class Entropy(ListMetric, RankingMetricBase):
     Higher entropy indicates more diverse category distribution.
 
     Args:
+        dataset: The LensKit dataset containing item entities and their attributes.
         attribute: Name of the attribute to use for categories (e.g., 'genre', 'tag')
         n: Recommendation list length to evaluate
 
@@ -135,6 +136,7 @@ class Entropy(ListMetric, RankingMetricBase):
         recs = self.truncate(recs)
 
         item_nums = recs.numbers(vocabulary=self._item_vocab, missing="negative")
+        item_nums = item_nums[item_nums >= 0]
 
         categories = self._cat_matrix[item_nums, :]
 
@@ -150,6 +152,7 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
     of the recommendation list.
 
     Args:
+        dataset: The LensKit dataset containing item entities and their attributes.
         attribute: Name of the attribute to use for categories (e.g., 'genre', 'tag')
         n: Recommendation list length to evaluate
         weight: Rank weighting model. Defaults to GeometricRankWeight(0.85)
@@ -192,6 +195,7 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
         recs = self.truncate(recs)
 
         item_nums = recs.numbers(vocabulary=self._item_vocab, missing="negative")
+        item_nums = item_nums[item_nums >= 0]
 
         categories = self._cat_matrix[item_nums, :]
 
