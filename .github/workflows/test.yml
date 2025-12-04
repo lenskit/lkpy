@@ -46,6 +46,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           activate-environment: true
+          cache-suffix: vanilla-1
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
