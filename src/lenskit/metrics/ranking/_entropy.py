@@ -13,6 +13,7 @@ from scipy.sparse import csr_array
 from lenskit.data import Dataset, ItemList, Vocabulary
 
 from ._base import ListMetric, RankingMetricBase
+from ._weighting import GeometricRankWeight, RankWeight
 
 
 def entropy(items: ItemList, categories: np.ndarray | sps.spmatrix) -> float:
@@ -33,7 +34,7 @@ def entropy(items: ItemList, categories: np.ndarray | sps.spmatrix) -> float:
 
 
 def rank_biased_entropy(
-    items: ItemList, categories: np.ndarray | sps.spmatrix, *, weight: object | None = None
+    items: ItemList, categories: np.ndarray | sps.spmatrix, *, weight: RankWeight | None = None
 ) -> float:
     """
     Compute rank-biased Shannon entropy over categorical distributions.
@@ -46,8 +47,6 @@ def rank_biased_entropy(
     Returns:
         Rank-biased Shannon entropy or NaN if no valid data is available.
     """
-    from lenskit.metrics import GeometricRankWeight
-
     if len(items) == 0:
         return np.nan
 
@@ -160,7 +159,7 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
     """
 
     attribute: str
-    weight: object
+    weight: RankWeight
     _cat_matrix: np.ndarray | csr_array
     _item_vocab: Vocabulary
 
@@ -170,12 +169,10 @@ class RankBiasedEntropy(ListMetric, RankingMetricBase):
         attribute: str,
         n: int | None = None,
         *,
-        weight: object | None = None,
+        weight: RankWeight | None = None,
     ):
         super().__init__(n)
         self.attribute = attribute
-        from lenskit.metrics import GeometricRankWeight
-
         self.weight = weight if weight is not None else GeometricRankWeight(0.85)
 
         items = dataset.entities("item")
