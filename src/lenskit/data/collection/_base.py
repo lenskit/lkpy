@@ -430,6 +430,19 @@ class ItemListCollection(Generic[KL], ABC):
         Get the schema for the lists in this ILC.
         """
 
+    def rename_key(self, **names: str) -> ItemListCollection:
+        """
+        Rename one or more keys fields in this collection.
+        """
+        from ._list import ListILC
+
+        new_key = [names.get(f, f) for f in self.key_fields]
+        nkt = create_key_type(*new_key)
+        new = ListILC(nkt)
+        for k, il in self.items():
+            new.add(il, *k)
+        return new
+
     @overload
     def lookup(self, key: tuple) -> ItemList | None: ...
     @overload

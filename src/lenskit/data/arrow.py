@@ -77,6 +77,8 @@ def arrow_slice(sel: slice, array: MTArray | A | None) -> A | None:
     if sel.step and sel.step != 1:
         raise ValueError("slices with steps unsupported")
     start = sel.start or 0
+    if start < 0:
+        start = len(array) + start
     if sel.stop is None:
         slen = len(array) - start
     elif sel.stop < 0:

@@ -33,6 +33,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.extlinks",
     "sphinx.ext.todo",
+    "sphinx.ext.graphviz",
     "sphinx_togglebutton",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
@@ -58,7 +59,8 @@ pygments_style = "sphinx"
 highlight_language = "python3"
 
 html_theme = "pydata_sphinx_theme"
-html_logo = "LKLogo2.png"
+html_logo = "lenskit-wordmark.png"
+html_favicon = "lenskit-icon.png"
 if _parsed_ver.is_devrelease:
     html_baseurl = "https://lenskit.org/latest/"
 else:
@@ -154,6 +156,7 @@ doctest_default_flags = (
     doctest.ELLIPSIS | doctest.IGNORE_EXCEPTION_DETAIL | doctest.NORMALIZE_WHITESPACE
 )
 
+graphviz_output_format = "svg"
 mermaid_d3_zoom = True
 
 # -- external links

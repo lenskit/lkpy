@@ -22,7 +22,7 @@ through an ``n_jobs`` keyword argument to the various functions and classes.
     :ref:`parallel-protecting`.
 
 Simple Runs
------------
+~~~~~~~~~~~
 
 If you have a pipeline and want to simply generate recommendations for a batch
 of test users, you can do this with the :py:func:`recommend` function.
@@ -67,12 +67,51 @@ And measure their results:
     RBP    0.06...   0.02... 0.07...
 
 
-The :py:func:`predict` function works similarly, but for rating predictions;
-instead of a simple list of user IDs, it takes a dictionary mapping user IDs to
+The :py:func:`predict` function works similarly, but for rating predictions.
+Instead of a simple list of user IDs, it takes a dictionary mapping user IDs to
 lists of test items (as :py:class:`~lenskit.data.ItemList`).
 
 General Batch Pipeline Runs
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The :py:func:`recommend` and :py:func:`predict` functions are convenience
 wrappers around a more general facility, the :py:class:`BatchPipelineRunner`.
+
+.. _batch-queries:
+
+Batch Queries
+~~~~~~~~~~~~~
+
+.. py:currentmodule:: lenskit.data
+
+The batch inference functions and methods (:func:`~lenskit.batch.recommend`,
+:meth:`~lenskit.batch.BatchPipelineRunner.run`, etc.) accept multiple types of
+input to specify the set of users or test items.
+
+* An iterable (e.g. list) of recommendation queries (as :class:`RecQuery`
+  objects).  The queries must have at least one of :attr:`RecQuery.query_id` and
+  :attr:`RecQuery.user_id` set, so that the output can be properly indexed.
+  Queries should all have the identification method (i.e., all queries have a
+  ``query_id``, or all queries have only a ``user_id``).
+
+* An iterable of 2-element ``(query, items)`` tuples.  The query is a
+  :class:`RecQuery` as in the previous method, and the items is an :class:`ItemList`
+  containing the candidate items (for recommendation) or the items to score (for
+  prediction and scoring).  This is the most general form of input.
+
+* An iterable (e.g. list) of user IDs.  These are passed as
+  :attr:`RecQuery.user_id`, and the resulting outputs are mapped to  ID.
+
+* An :class:`ItemListCollection`.  At least one field of the collection key
+  should be ``user_id``, and these user IDs are used as the query user IDs. The
+  item lists themselves are used as in the tuple method above. Results are
+  indexed by the entire key.
+
+* A mapping (dictionary) of IDs to item lists.  This behaves like the item
+  list collection; the IDs are taken to be user IDs.
+
+* A :class:`pandas.DataFrame`, which is converted to an item list collection.
+
+.. deprecated:: 2025.6
+
+    Mappings and data frames are deprecated in favor of other input types.
