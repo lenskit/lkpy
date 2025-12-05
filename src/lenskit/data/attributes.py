@@ -364,7 +364,7 @@ class ListAttributeSet(AttributeSet):
 
         assert isinstance(arr, pa.ListArray)
 
-        values = arr.values.to_numpy()
+        values = arr.values.to_numpy(zero_copy_only=False)
         indptr = arr.offsets.to_numpy()
 
         if self._cat_vocab is None:

@@ -22,6 +22,7 @@ from .ranking import (
     DCG,
     NDCG,
     RBP,
+    Entropy,
     ExposureGini,
     GeometricRankWeight,
     Hit,
@@ -29,12 +30,11 @@ from .ranking import (
     LogRankWeight,
     MeanPopRank,
     Precision,
+    RankBiasedEntropy,
     RankingMetricBase,
     RankWeight,
     Recall,
     RecipRank,
-    entropy,
-    rank_biased_entropy,
 )
 from .reranking import least_item_promoted, rank_biased_overlap
 
@@ -67,8 +67,8 @@ __all__ = [
     "quick_measure_model",
     "least_item_promoted",
     "rank_biased_overlap",
-    "entropy",
-    "rank_biased_entropy",
+    "Entropy",
+    "RankBiasedEntropy",
 ]
 
 P = ParamSpec("P")
