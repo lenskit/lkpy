@@ -1,6 +1,6 @@
 [package]
 name = "lenskit"
-version = "2025.6.2"
+version = "2025.6.3"
 edition = "2021"
 license = "MIT"
 rust-version = "1.87"
