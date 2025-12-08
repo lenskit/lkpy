@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - future/*
+      - series/*
   pull_request:
 
 concurrency:

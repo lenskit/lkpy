@@ -25,18 +25,21 @@ AZ_LOC = {
     "2014": "https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/ratings_{}.csv",
 }
 
+MSW_BASE = "https://kdd.ics.uci.edu/databases/msweb/"
+
 
 @click.command("fetch")
 @click.option("--movielens", "source", flag_value="movielens", help="Fetch MovieLens data.")
 @click.option("--amazon", "source", flag_value="amazon", help="Fetch Amazon ratings data.")
+@click.option("--ms-web", "source", flag_value="ms-web", help="Fetch MS Web visit logs.")
 @click.option("--edition", default="2023", help="Amazon ratings edition.")
 @click.option("--core", is_flag=True, help="Fetch core instead of full data.")
 @click.option("--force", is_flag=True, help="overwrite existing file")
-@click.option("-D", "--data-dir", "dest", type=Path, help="directory for downloaded data")
+@click.option(
+    "-D", "--data-dir", "dest", default="data", type=Path, help="directory for downloaded data"
+)
 @click.argument("name", nargs=-1)
-def fetch(
-    source: str | None, dest: Path | None, name: list[str], force: bool, edition: str, core: bool
-):
+def fetch(source: str | None, dest: Path, name: list[str], force: bool, edition: str, core: bool):
     """
     Convert data into the LensKit native format.
     """
@@ -56,6 +59,8 @@ def fetch(
         case "amazon":
             for n in name:
                 fetch_amazon_ratings(edition, core, n, dest, force)
+        case "ms-web":
+            fetch_ms_web(dest, force)
         case _:
             raise ValueError(f"unknown data format {source}")
 
@@ -120,6 +125,31 @@ def fetch_amazon_ratings(edition: str, core: bool, name: str, base_dir: Path, fo
         copyfileobj(res, outf, 8 * 1024 * 1024)
 
     log.info("downloaded %s", naturalsize(out_path.stat().st_size, binary=True))
+
+
+def fetch_ms_web(base_dir: Path, force: bool):
+    """
+    Fetch an MS Web data set.
+    """
+    data_name = "anonymous-msweb.data.gz"
+    test_name = "anonymous-msweb.test.gz"
+
+    data_out = base_dir / data_name
+    test_out = base_dir / test_name
+
+    _log.info("fetching Anonymous MS Web dataset into %s", base_dir)
+
+    if force or not data_out.exists():
+        _log.info("fetching training set")
+        with output_file(data_out) as outf:
+            res = urlopen(MSW_BASE + data_name)
+            copyfileobj(res, outf, 8 * 1024 * 1024)
+
+    if force or not test_out.exists():
+        _log.info("fetching test set")
+        with output_file(test_out) as outf:
+            res = urlopen(MSW_BASE + test_name)
+            copyfileobj(res, outf, 8 * 1024 * 1024)
 
 
 @contextmanager

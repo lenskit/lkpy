@@ -8,30 +8,28 @@ description = "Toolkit for recommender systems research, teaching, and more."
 authors = [{ name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" }]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Operating System :: OS Independent",
   "Intended Audience :: Science/Research",
 ]
-requires-python = ">= 3.11"
+requires-python = ">= 3.12"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE.md"]
 dynamic = ["version"]
 dependencies = [
   "typing-extensions ~=4.12",
-  "pandas ~=2.0",
+  "pandas ~=2.3",
   "pyarrow >=20,!=21.*",
-  "numpy >=1.25",
-  "scipy >=1.11",
+  "numpy >=2.0",
+  "scipy >=1.13",
   "torch ~=2.4",
-  "more-itertools >=9.0",
   "threadpoolctl >=3.0",
   "structlog >=23.2",
   "rich >=13.5",
-  "pyzmq >=24",
+  "pyzmq >=26",
   "click ~=8.1",
   "requests ~=2.28",
   "psutil >=6",
@@ -116,7 +114,7 @@ cpu = ["torch ~=2.4"]
 gpu = ["torch ~=2.4"]
 
 [project.optional-dependencies]
-sklearn = ["scikit-learn ~=1.2"]
+sklearn = ["scikit-learn ~=1.5"]
 funksvd = []
 hpf = ["hpfrec~=0.2.12"]
 implicit = ["implicit >=0.7.2"]
@@ -189,7 +187,7 @@ omit = ["src/lenskit/_version.py"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]

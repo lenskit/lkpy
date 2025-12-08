@@ -6,6 +6,7 @@
 
 mod explicit;
 mod implicit;
+mod solve;
 
 use pyo3::prelude::*;
 

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - future/*
+      - series/*
   pull_request:
   release:
     types: [published]
@@ -110,7 +112,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           architecture: ${{matrix.plat.pyarch}}
 
       - name: Build wheels

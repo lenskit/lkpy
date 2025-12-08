@@ -4,9 +4,9 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
+use std::sync::RwLock;
 use std::{
-    ptr,
-    sync::atomic::{AtomicPtr, AtomicUsize, Ordering},
+    sync::atomic::{AtomicUsize, Ordering},
     time::Instant,
 };
 
@@ -14,6 +14,7 @@ use pyo3::{intern, prelude::*, types::PyDict};
 
 const UPDATE_SECS: f64 = 0.2;
 
+#[derive(Clone, Copy)]
 struct UpdateState {
     count: usize,
     time: f64,
@@ -28,7 +29,7 @@ pub(crate) struct ProgressHandle {
     pb: Option<Py<PyAny>>,
     start: Instant,
     count: AtomicUsize,
-    last_update: AtomicPtr<UpdateState>,
+    last_update: RwLock<Option<UpdateState>>,
 }
 
 impl ProgressHandle {
@@ -46,19 +47,16 @@ impl ProgressHandle {
             pb,
             count: AtomicUsize::new(0),
             start: Instant::now(),
-            last_update: AtomicPtr::new(ptr::null_mut()),
+            last_update: RwLock::new(None),
         }
     }
 
     pub fn tick(&self) {
         let count = self.count.fetch_add(1, Ordering::Relaxed) + 1;
 
-        let lu_ptr = self.last_update.load(Ordering::Relaxed);
-
-        let last_update = if lu_ptr.is_null() {
-            None
-        } else {
-            unsafe { Some(&*lu_ptr) }
+        let last_update = {
+            let lock = self.last_update.read().expect("poisoned lock");
+            *lock
         };
 
         let thresh = if let Some(lu) = last_update {
@@ -79,35 +77,19 @@ impl ProgressHandle {
             return;
         }
 
-        // we're ready to set the time!
-        let update = UpdateState {
-            count,
-            time,
-            rate: count as f64 / time,
-        };
-        let update_ptr = Box::leak(Box::new(update));
-        match self.last_update.compare_exchange_weak(
-            lu_ptr,
-            update_ptr,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
-            Ok(_) => {
-                self.refresh(count);
-                // free the old state if needed
-                if !lu_ptr.is_null() {
-                    let _ = unsafe { Box::from_raw(lu_ptr) };
-                }
-            }
-            Err(_) => {
-                // someone else beat us to the update, free our state and go on
-                let _ = unsafe { Box::from_raw(update_ptr) };
-            }
+        // we're ready to set the time! if someone else is writing, do nothing, they've handled it
+        if let Ok(mut lock) = self.last_update.try_write() {
+            *lock = Some(UpdateState {
+                count,
+                time,
+                rate: count as f64 / time,
+            });
+            self.refresh(count);
         }
     }
 
     fn refresh(&self, count: usize) {
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             py.check_signals()?;
             if let Some(pb) = &self.pb {
                 let kwargs = PyDict::new(py);

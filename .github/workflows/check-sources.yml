@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+      - series/*
+      - future/*
   pull_request:
 
 concurrency:
@@ -55,7 +57,7 @@ jobs:
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           activate-environment: true
 
       - name: Install packages

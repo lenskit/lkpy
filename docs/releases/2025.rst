@@ -1,3 +1,5 @@
+.. _2025:
+
 2025 Releases
 =============
 
@@ -8,6 +10,22 @@ version number scheme to “:ref:`SemCalver`”.  See :ref:`migrating` for
 information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
+
+.. _2025.6.1:
+
+2025.6.1
+~~~~~~~~
+
+- Fix a small bug in :meth:`lenskit.data.ItemListCollection.from_df` that duplicated
+  user or session ID columns (:pr:`952`).
+- Fixed :class:`~lenskit.data.ItemList`'s ``__getitem__`` to work correctly with
+  negative slice bounds.
+- Updated common pipelines to use the new
+  :class:`~lenskit.basic.TrainingItemCandidateSelector` instead of the
+  deprecated ``UnratedTrainingItemCandidateSelector``.  The behavior of these
+  pipelines in the standard user-based recommendation configuration is
+  unchanged, but they will now transparently work with other sources of query
+  items (:pr:`953`).
 
 .. _2025.6.0:
 
@@ -36,6 +54,8 @@ New Features
   Unrated and All candidate selectors with better configuration.
 - New function :func:`~lenskit.metrics.ranking.rank_biased_precision` to expose
   the inner computations of RBP.
+- Add new method :meth:`~lenskit.data.RelationshipSet.co_occurrences` to count
+  entity co-occurrences in a dataset.
 
 Deprecations
 ------------
@@ -48,6 +68,10 @@ Deprecations
   configuration.
 - :attr:`lenskit.data.RecQuery.user_items` is deprecated in favor of
   :class:`~lenskit.data.RecQuery.history_items`.
+- Removed fixed defaults for ``row_entity`` and ``col_entity`` on
+  :meth:`~lenskit.dataset.RelationshipSet.matrix`, now defaulting to the first
+  and last entities involved in the relationship.  This does not change anything
+  for code working on standard interactions.
 
 Platform and Build Support
 --------------------------
