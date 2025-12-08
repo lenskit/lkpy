@@ -364,7 +364,7 @@ class ListAttributeSet(AttributeSet):
 
         assert isinstance(arr, pa.ListArray)
 
-        values = arr.values.to_numpy()
+        values = arr.values.to_numpy(zero_copy_only=False)
         indptr = arr.offsets.to_numpy()
 
         if self._cat_vocab is None:
@@ -380,6 +380,7 @@ class ListAttributeSet(AttributeSet):
             shape=(len(arr), len(vocab)),
         )
 
+        matrix = matrix.copy()
         matrix = normalize_matrix(matrix, normalize)
 
         return matrix, vocab
