@@ -20,6 +20,7 @@ from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
 from .ranking import (
     DCG,
+    ILS,
     NDCG,
     RBP,
     ExposureGini,
@@ -69,6 +70,7 @@ __all__ = [
     "rank_biased_overlap",
     "entropy",
     "rank_biased_entropy",
+    "ILS",
 ]
 
 P = ParamSpec("P")
