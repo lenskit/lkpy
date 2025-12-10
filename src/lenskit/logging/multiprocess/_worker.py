@@ -82,7 +82,7 @@ class WorkerLogConfig:
             if mon.log_address is None:
                 raise RuntimeError("monitor has no log address")
             cfg = active_logging_config()
-            level = cfg.effective_level if cfg is not None else logging.INFO
+            level = cfg.effective_level if cfg is not None else logging.DEBUG
             return cls(
                 address=mon.log_address, level=level, authkey=bytes(mp.current_process().authkey)
             )
