@@ -40,4 +40,5 @@ __all__ = [
     "ExposureGini",
     "Entropy",
     "RankBiasedEntropy",
+    "ILS",
 ]

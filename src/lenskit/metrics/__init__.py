@@ -68,14 +68,9 @@ __all__ = [
     "quick_measure_model",
     "least_item_promoted",
     "rank_biased_overlap",
-<<<<<<< feature/ILS
-    "entropy",
-    "rank_biased_entropy",
     "ILS",
-=======
     "Entropy",
     "RankBiasedEntropy",
->>>>>>> main
 ]
 
 P = ParamSpec("P")
