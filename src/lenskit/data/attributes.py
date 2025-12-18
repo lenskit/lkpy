@@ -380,6 +380,7 @@ class ListAttributeSet(AttributeSet):
             shape=(len(arr), len(vocab)),
         )
 
+        matrix = matrix.copy()
         matrix = normalize_matrix(matrix, normalize)
 
         return matrix, vocab

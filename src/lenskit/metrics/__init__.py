@@ -20,6 +20,7 @@ from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
 from .ranking import (
     DCG,
+    ILS,
     NDCG,
     RBP,
     Entropy,
@@ -67,6 +68,7 @@ __all__ = [
     "quick_measure_model",
     "least_item_promoted",
     "rank_biased_overlap",
+    "ILS",
     "Entropy",
     "RankBiasedEntropy",
 ]

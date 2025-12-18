@@ -13,6 +13,7 @@ from ._dcg import DCG, NDCG
 from ._entropy import Entropy, RankBiasedEntropy
 from ._gini import ExposureGini, ListGini
 from ._hit import Hit
+from ._ils import ILS
 from ._map import AveragePrecision
 from ._pop import MeanPopRank
 from ._pr import Precision, Recall
@@ -39,4 +40,5 @@ __all__ = [
     "ExposureGini",
     "Entropy",
     "RankBiasedEntropy",
+    "ILS",
 ]
