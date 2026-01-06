@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike, NDArray
 
-from pytest import skip, warns
+from pytest import mark, warns
 
 from lenskit.data import Dataset, MatrixRelationshipSet, RelationshipSet
 from lenskit.pipeline.types import (
@@ -110,7 +110,7 @@ def test_numpy_scalar_typecheck2():
     assert is_compatible_data(np.int32(4270), np.integer[Any] | int)
 
 
-@skip("broke with NumPy 2.4")
+@mark.skip("broke with NumPy 2.4")
 def test_pandas_typecheck():
     assert is_compatible_data(pd.Series(["a", "b"]), ArrayLike)
 
