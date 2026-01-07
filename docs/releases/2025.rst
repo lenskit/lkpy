@@ -11,6 +11,14 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.6.2:
+
+2025.6.2
+~~~~~~~~
+
+- Put LightGCN in eval mode after training (:pr:`975`)
+- Drop x86 wheels from build and release
+
 .. _2025.6.1:
 
 2025.6.1
