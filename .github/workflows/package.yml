@@ -71,10 +71,6 @@ jobs:
             pyarch: x64
             target: x86_64
             manylinux: 2_28
-          - host: ubuntu-22.04
-            pyarch: x64
-            target: x86
-            manylinux: 2014
           - host: ubuntu-24.04-arm
             pyarch: arm64
             target: aarch64
@@ -82,10 +78,6 @@ jobs:
           - host: windows-latest
             pyarch: x64
             target: x64
-            manylinux: auto
-          - host: windows-latest
-            pyarch: x86
-            target: x86
             manylinux: auto
           - host: macos-15-intel
             pyarch: x64
