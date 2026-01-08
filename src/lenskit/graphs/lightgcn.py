@@ -296,7 +296,7 @@ class LightGCNTrainer(ModelTrainer):
         return {"loss": avg_loss}
 
     def finalize(self):
-        pass
+        self.model.eval()
 
     def batch_loss(self, mb_edges: torch.Tensor, scores: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()
