@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -15,19 +15,20 @@ from lenskit.data import Dataset, ItemList, Vocabulary
 from ._base import ListMetric, RankingMetricBase
 
 
-def intra_list_similarity(items: ItemList, categories: np.ndarray | sps.spmatrix) -> float:
+def intra_list_similarity(items: ItemList, vectors: np.ndarray | sps.spmatrix) -> float:
     """
-    Compute intra-list similarity between item category vectors.
+    Compute intra-list similarity between item vectors.
 
     Args:
         items: Item list to evaluate.
-        categories: Item * category matrix (dense or sparse), unit-normalized.
+        vectors: Matrix (dense or sparse) where each row is a
+        unit-normalized vector representing an item.
 
     Returns:
         Average pairwise cosine similarity or NaN if insufficient data.
     """
 
-    n = categories.shape[0]
+    n = vectors.shape[0]
 
     if len(items) == 0 or n == 0:
         return np.nan
@@ -35,10 +36,10 @@ def intra_list_similarity(items: ItemList, categories: np.ndarray | sps.spmatrix
     if n <= 1:
         return 1.0
 
-    if sps.issparse(categories):
-        similarity_matrix = np.array((categories @ categories.T).toarray())
+    if sps.issparse(vectors):
+        similarity_matrix = np.array((vectors @ vectors.T).toarray())
     else:
-        similarity_matrix = np.array(categories @ categories.T)
+        similarity_matrix = np.array(vectors @ vectors.T)
 
     ils_score = np.sum(np.triu(similarity_matrix, 1)) / (n * (n - 1) / 2)
 
@@ -50,13 +51,12 @@ class ILS(ListMetric, RankingMetricBase):
     Evaluate recommendation diversity using intra-list similarity (ILS).
 
     This metric measures the average pairwise cosine similarity between item
-    category vectors in a recommendation list. Lower values indicate more diverse
-    recommendations (items from different categories), while higher values indicate
-    less diverse recommendations (items from similar categories).
+    vectors in a recommendation list. Lower values indicate more diverse
+    recommendations, while higher values indicate less diverse recommendations.
 
     Args:
         dataset: The LensKit dataset containing item entities and their attributes.
-        attribute: Name of the attribute to use for categories (e.g., 'genre', 'tag').
+        attribute: Name of the attribute or vector source (e.g., 'genre', 'tag').
         n: Recommendation list length to evaluate.
 
     Stability:
@@ -99,6 +99,6 @@ class ILS(ListMetric, RankingMetricBase):
         if len(item_nums) == 0:
             return np.nan
 
-        categories = self._cat_matrix[item_nums, :]
+        vectors = self._cat_matrix[item_nums, :]
 
-        return intra_list_similarity(recs, categories)
+        return intra_list_similarity(recs, vectors)

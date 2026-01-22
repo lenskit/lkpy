@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -23,6 +23,7 @@ from .ranking import (
     ILS,
     NDCG,
     RBP,
+    Entropy,
     ExposureGini,
     GeometricRankWeight,
     Hit,
@@ -30,12 +31,11 @@ from .ranking import (
     LogRankWeight,
     MeanPopRank,
     Precision,
+    RankBiasedEntropy,
     RankingMetricBase,
     RankWeight,
     Recall,
     RecipRank,
-    entropy,
-    rank_biased_entropy,
 )
 from .reranking import least_item_promoted, rank_biased_overlap
 
@@ -68,9 +68,9 @@ __all__ = [
     "quick_measure_model",
     "least_item_promoted",
     "rank_biased_overlap",
-    "entropy",
-    "rank_biased_entropy",
     "ILS",
+    "Entropy",
+    "RankBiasedEntropy",
 ]
 
 P = ParamSpec("P")
