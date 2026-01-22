@@ -7,11 +7,13 @@
 # pyright: strict
 import numpy as np
 import pyarrow as pa
+import pandas as pd
 
 from pytest import raises
 
 from lenskit.data import DatasetBuilder
 from lenskit.diagnostics import DataError
+from lenskit.testing import ml_test_dir
 
 
 def test_empty_builder():
@@ -143,3 +145,38 @@ def test_add_entities_twice():
     assert ds.item_count == 0
     assert ds.user_count == 8
     assert np.all(ds.users.ids() == ["a", "b", "x", "y", "z", "q", "r", "s"])
+
+
+def test_add_entities_with_dataframe():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
+
+    genres = items["genres"].str.split("|")
+    items["genres"] = genres
+
+    dsb.add_entities("item", items)
+
+    ds = dsb.build()
+
+    assert ds.entities("item").attribute("title").is_scalar
+    assert ds.entities("item").attribute("genres").is_list
+
+
+def test_add_entities_with_arrow_table():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
+
+    genres = items["genres"].str.split("|")
+    items["genres"] = genres
+    table = pa.Table.from_pandas(items)
+
+    dsb.add_entities("item", table)
+
+    ds = dsb.build()
+
+    assert ds.entities("item").attribute("title").is_scalar
+    assert ds.entities("item").attribute("genres").is_list

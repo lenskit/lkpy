@@ -265,10 +265,23 @@ class DatasetBuilder:
             duplicates:
                 How to handle duplicate entity IDs.
         """
-        if isinstance(source, pd.DataFrame):  # pragma: nocover
-            raise NotImplementedError()
-        if isinstance(source, pa.Table):  # pragma: nocover
-            raise NotImplementedError()
+        if isinstance(source, pd.DataFrame):
+            source = pa.Table.from_pandas(source)
+        if isinstance(source, pa.Table):
+            entity_col = source.column(cls + "_id")
+            self.add_entities(cls, entity_col)
+
+            for col_name in source.column_names:
+                if not col_name.endswith("_id"):
+                    col_type = source.column(col_name).type
+
+                    if any([pa.types.is_list(col_type), 
+                            pa.types.is_large_list(col_type), 
+                            pa.types.is_fixed_size_list(col_type)]):
+                        self.add_list_attribute(cls, col_name, entity_col, source.column(col_name))
+                    else:
+                        self.add_scalar_attribute(cls, col_name, entity_col, source.column(col_name))
+            return
 
         self._validate_entity_name(cls)
 
