@@ -22,7 +22,7 @@ from lenskit.data import ItemList
 from lenskit.data.adapt import ITEM_COMPAT_COLUMN, normalize_columns
 from lenskit.data.types import AliasedColumn
 
-from ._base import DecomposedMetric, ListMetric, Metric
+from ._base import ListMetric, Metric
 
 _log = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ class PredictMetric(Metric):
         return pred_s, rate_s
 
 
-class RMSE(PredictMetric, ListMetric, DecomposedMetric):
+class RMSE(PredictMetric, ListMetric):
     """
     Compute RMSE (root mean squared error).  This is computed as:
 
@@ -131,36 +131,8 @@ class RMSE(PredictMetric, ListMetric, DecomposedMetric):
         err *= err
         return np.sqrt(np.mean(err))
 
-    @override
-    def compute_list_data(self, output, test):
-        ps, ts = self.align_scores(output, test)
-        err = ps - ts
-        err *= err
-        return np.sum(err), len(err)
 
-    @override
-    def extract_list_metric(self, metric):
-        tot, n = metric
-        if n > 0:
-            return np.sqrt(tot / n)
-        else:
-            return np.nan
-
-    @override
-    def global_aggregate(self, values):
-        tot_sqerr = 0.0
-        tot_n = 0.0
-        for t, n in values:
-            tot_sqerr += t
-            tot_n += n
-
-        if tot_n > 0:
-            return np.sqrt(tot_sqerr / tot_n)
-        else:
-            return np.nan
-
-
-class MAE(PredictMetric, ListMetric, DecomposedMetric):
+class MAE(PredictMetric, ListMetric):
     """
     Compute MAE (mean absolute error).  This is computed as:
 
@@ -181,30 +153,3 @@ class MAE(PredictMetric, ListMetric, DecomposedMetric):
         ps, ts = self.align_scores(predictions, test)
         err = ps - ts
         return np.mean(np.abs(err)).item()
-
-    @override
-    def compute_list_data(self, output, test):
-        ps, ts = self.align_scores(output, test)
-        err = ps - ts
-        return np.sum(np.abs(err)), len(err)
-
-    @override
-    def extract_list_metric(self, metric):
-        tot, n = metric
-        if n > 0:
-            return tot / n
-        else:
-            return np.nan
-
-    @override
-    def global_aggregate(self, values):
-        tot_err = 0.0
-        tot_n = 0.0
-        for t, n in values:
-            tot_err += t
-            tot_n += n
-
-        if n > 0:
-            return tot_err / tot_n
-        else:
-            return np.nan

@@ -16,13 +16,13 @@ from lenskit.data import Dataset, ItemList
 from lenskit.logging import get_logger
 from lenskit.stats import gini
 
-from ._base import DecomposedMetric, RankingMetricBase
+from ._base import RankingMetricBase
 from ._weighting import GeometricRankWeight, RankWeight
 
 _log = get_logger(__name__)
 
 
-class GiniBase(DecomposedMetric, RankingMetricBase):
+class GiniBase(RankingMetricBase):
     """
     Base class for Gini diversity / popularity concentration metrics.
     """
@@ -66,12 +66,12 @@ class ListGini(GiniBase):
     """
 
     @override
-    def compute_list_data(self, output: ItemList, test):
+    def measure_list(self, output: ItemList, test):
         recs = self.truncate(output)
         return recs.ids(format="arrow")
 
     @override
-    def global_aggregate(self, values: list[pa.Array]):
+    def summarize(self, values: list[pa.Array] | pa.ChunkedArray, /):
         log = _log.bind(metric=self.label, item_count=self.item_count)
         log.debug("aggregating for %d lists", len(values))
         chunked = pa.chunked_array(values)
@@ -119,13 +119,13 @@ class ExposureGini(GiniBase):
         self.weight = weight
 
     @override
-    def compute_list_data(self, output: ItemList, test):
+    def measure_list(self, output: ItemList, test):
         recs = self.truncate(output)
         weights = self.weight.weight(np.arange(1, len(recs) + 1))
         return (recs.ids(format="arrow"), pa.array(weights, type=pa.float32()))
 
     @override
-    def global_aggregate(self, values: list[tuple[pa.Array, pa.FloatArray]]):
+    def summarize(self, values: list[tuple[pa.Array, pa.FloatArray]]):
         log = _log.bind(metric=self.label, item_count=self.item_count)
         log.debug("aggregating for %d lists", len(values))
         table = pa.Table.from_batches(
