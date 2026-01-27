@@ -21,6 +21,11 @@ Breaking Changes
 - LensKit now requires Python 3.12 or newer, along with NumPy 2.x, Pandas 2.3 or
   newer, and SciPy 1.13 or newer (see :ref:`dep-policy`, :pr:`954`).
 - We no longer publish 32-bit binary wheels.
+- Removed ``DecomposedMetric``, as the :class:`~lenskit.metrics.Metric` interface
+  is now decomposed. All metrics based on listwise measurements or intermediate
+  results should directly extend from ``Metric`` or :class:`~lenskit.metrics.ListMetric`.
+  (:pr:`983`)
+- ``GlobalMetric`` no longer inherits from ``Metric``, and may be removed in a future release.
 
 Minor Changes
 -------------
