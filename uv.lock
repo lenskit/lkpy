@@ -1853,7 +1853,7 @@ dev = [
     { name = "pydata-sphinx-theme", specifier = "~=0.16.0" },
     { name = "pyprojroot", specifier = ">=0.3" },
     { name = "pyright", specifier = ">=1.1" },
-    { name = "pytest", specifier = "~=8.2" },
+    { name = "pytest", specifier = ">=8.2,<10" },
     { name = "pytest-benchmark", specifier = "~=5.1" },
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
@@ -1868,7 +1868,7 @@ dev = [
     { name = "sphinx-new-tab-link", specifier = ">=0.8.0" },
     { name = "sphinx-togglebutton", specifier = ">=0.3.2,<0.4" },
     { name = "sphinxcontrib-bibtex", specifier = ">=2.0" },
-    { name = "sphinxcontrib-mermaid", specifier = ">=1.0.0,<2" },
+    { name = "sphinxcontrib-mermaid", specifier = "~=2.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
     { name = "tomlkit", specifier = "~=0.13.2" },
     { name = "unbeheader", specifier = "~=1.3" },
@@ -1883,7 +1883,7 @@ doc = [
     { name = "sphinx-new-tab-link", specifier = ">=0.8.0" },
     { name = "sphinx-togglebutton", specifier = ">=0.3.2,<0.4" },
     { name = "sphinxcontrib-bibtex", specifier = ">=2.0" },
-    { name = "sphinxcontrib-mermaid", specifier = ">=1.0.0,<2" },
+    { name = "sphinxcontrib-mermaid", specifier = "~=2.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
 ]
 gpu = [{ name = "torch", specifier = "~=2.4", index = "https://download.pytorch.org/whl/cu128/", conflict = { package = "lenskit", group = "gpu" } }]
@@ -1902,7 +1902,7 @@ scripting = [
 ]
 test = [
     { name = "hypothesis", specifier = ">=6.16" },
-    { name = "pytest", specifier = "~=8.2" },
+    { name = "pytest", specifier = ">=8.2,<10" },
     { name = "pytest-benchmark", specifier = "~=5.1" },
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
@@ -3368,7 +3368,7 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "8.4.2"
+version = "9.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
@@ -3377,9 +3377,9 @@ dependencies = [
     { name = "pluggy" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/5c/00a0e072241553e1a7496d638deababa67c5058571567b92a7eaa258397c/pytest-8.4.2.tar.gz", hash = "sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01", size = 1519618, upload-time = "2025-09-04T14:34:22.711Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/db/7ef3487e0fb0049ddb5ce41d3a49c235bf9ad299b6a25d5780a89f19230f/pytest-9.0.2.tar.gz", hash = "sha256:75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11", size = 1568901, upload-time = "2025-12-06T21:30:51.014Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/a4/20da314d277121d6534b3a980b29035dcd51e6744bd79075a6ce8fa4eb8d/pytest-8.4.2-py3-none-any.whl", hash = "sha256:872f880de3fc3a5bdc88a11b39c9710c3497a547cfa9320bc3c5e62fbf272e79", size = 365750, upload-time = "2025-09-04T14:34:20.226Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/ab/b3226f0bd7cdcf710fbede2b3548584366da3b19b5021e74f5bde2a8fa3f/pytest-9.0.2-py3-none-any.whl", hash = "sha256:711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b", size = 374801, upload-time = "2025-12-06T21:30:49.154Z" },
 ]
 
 [[package]]
@@ -4135,15 +4135,16 @@ wheels = [
 
 [[package]]
 name = "sphinxcontrib-mermaid"
-version = "1.2.3"
+version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "jinja2" },
     { name = "pyyaml" },
     { name = "sphinx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f5/49/c6ddfe709a4ab76ac6e5a00e696f73626b2c189dc1e1965a361ec102e6cc/sphinxcontrib_mermaid-1.2.3.tar.gz", hash = "sha256:358699d0ec924ef679b41873d9edd97d0773446daf9760c75e18dc0adfd91371", size = 18885, upload-time = "2025-11-26T04:18:32.43Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/a5/65a5c439cc14ba80483b9891e9350f11efb80cd3bdccb222f0c738068c78/sphinxcontrib_mermaid-2.0.0.tar.gz", hash = "sha256:cf4f7d453d001132eaba5d1fdf53d42049f02e913213cf8337427483bfca26f4", size = 18194, upload-time = "2026-01-13T17:13:42.563Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/39/8b54299ffa00e597d3b0b4d042241a0a0b22cb429ad007ccfb9c1745b4d1/sphinxcontrib_mermaid-1.2.3-py3-none-any.whl", hash = "sha256:5be782b27026bef97bfb15ccb2f7868b674a1afc0982b54cb149702cfc25aa02", size = 13413, upload-time = "2025-11-26T04:18:31.269Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/de/bd96c69b62e967bffd02c6d89dfca9471b04e761c466725fc39746abf41d/sphinxcontrib_mermaid-2.0.0-py3-none-any.whl", hash = "sha256:59a73249bbee2c74b1a4db036f8e8899ade65982bdda6712cf22b4f4e9874bb5", size = 14055, upload-time = "2026-01-13T17:13:41.481Z" },
 ]
 
 [[package]]

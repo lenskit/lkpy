@@ -47,7 +47,7 @@ dependencies = [
 
 [dependency-groups]
 test = [
-  "pytest ~=8.2",
+  "pytest >=8.2,<10",
   "pytest-doctestplus >=1.2.1,<2",
   "pytest-cov >=2.12",
   "pytest-benchmark ~=5.1",
@@ -63,7 +63,7 @@ doc = [
   "pydata-sphinx-theme ~=0.16.0",
   "myst-nb >=0.13",
   "sphinx-togglebutton >=0.3.2,<0.4",
-  "sphinxcontrib-mermaid >=1.0.0,<2",
+  "sphinxcontrib-mermaid ~=2.0",
   "sphinx-copybutton>=0.5.2",
   "sphinx-new-tab-link>=0.8.0",
 ]
