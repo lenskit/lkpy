@@ -149,9 +149,6 @@ profile = "release"
 python-source = "src"
 module-name = "lenskit._accel"
 
-[tool.cibuildwheel]
-skip = ["*-musllinux_i686"]
-
 # configure UV sources
 [tool.uv]
 conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
