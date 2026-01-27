@@ -15,7 +15,7 @@ from pytest import approx, fixture, mark, raises
 from lenskit.basic import PopScorer
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.metrics import NDCG, Recall
-from lenskit.metrics._base import DecomposedMetric, GlobalMetric, ListMetric, Metric
+from lenskit.metrics._base import GlobalMetric, ListMetric, Metric
 from lenskit.metrics._collect import MeasurementCollector, MetricWrapper
 from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
@@ -270,28 +270,6 @@ def test_none_extract_metric():
 # metricWrapper properties and summarization
 
 
-def test_metricwrapper_is_decomposed_property():
-    class DummyDecomposed(DecomposedMetric):
-        label = "dummy_decomp"
-
-        def compute_list_data(self, recs, test):
-            return {"a": 1.0}
-
-        def global_aggregate(self, values):
-            return {"mean": 1.0}
-
-        def measure_list(self, recs, test):
-            return {"a": 1.0}
-
-        def summarize(self, values):
-            return {"mean": 1.0}
-
-    wrapper = MetricWrapper(DummyDecomposed(), "decomp")
-    assert wrapper.is_decomposed
-    wrapper_non = MetricWrapper(ListLength(), "len")
-    assert not wrapper_non.is_decomposed
-
-
 def test_measure_metric_with_none_summarize():
     """Test metric that returns None from summarize."""
 
@@ -347,25 +325,6 @@ def test_full_workflow_integration_improved(ml_ds):
                 assert 0 <= value <= 1
 
 
-# test that global metric raises errors for unsupported operations
-
-
-def test_global_metric_unsupported():
-    class AnotherGlobalMetric(GlobalMetric):
-        label = "global"
-
-        def measure_run(self, run, test):
-            return 1.0
-
-    metric = AnotherGlobalMetric()
-
-    with raises(NotImplementedError, match="Global metrics don't support per-list measurement"):
-        metric.measure_list(ItemList([1, 2]), ItemList([1]))
-
-    with raises(NotImplementedError, match="Global metrics should implement measure_run instead"):
-        metric.summarize([1, 2, 3])
-
-
 # test edge cases in Metric.summarize
 
 
@@ -388,19 +347,6 @@ def test_list_metric_summarize_edge_cases():
     assert result["mean"] == 2.0
     assert result["median"] == 2.0
     assert result["std"] == 1.0
-
-
-def test_decomposed_metric_numeric_return():
-    class TestDecomposedMetric(DecomposedMetric):
-        def compute_list_data(self, output, test):
-            return len(output)
-
-        def global_aggregate(self, values):
-            return 5.0
-
-    metric = TestDecomposedMetric()
-    result = metric.summarize([1, 2, 3])
-    assert result == {"value": 5.0}
 
 
 def test_empty_intermediate_values():

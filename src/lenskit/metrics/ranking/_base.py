@@ -8,9 +8,9 @@ import warnings
 
 from lenskit.data import ItemList
 
-from .._base import DecomposedMetric, GlobalMetric, ListMetric, Metric
+from .._base import ListMetric, Metric
 
-__all__ = ["Metric", "ListMetric", "GlobalMetric", "DecomposedMetric", "RankingMetricBase"]
+__all__ = ["Metric", "ListMetric", "RankingMetricBase"]
 
 
 class RankingMetricBase(Metric):

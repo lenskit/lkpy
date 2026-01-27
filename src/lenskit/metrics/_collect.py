@@ -16,7 +16,7 @@ import pyarrow as pa
 
 from lenskit.data import ItemList, ItemListCollection
 
-from ._base import DecomposedMetric, GlobalMetric, ListMetric, Metric, MetricFunction
+from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
 K1 = TypeVar("K1", bound=tuple)
@@ -45,11 +45,6 @@ class MetricWrapper:
     def is_global(self) -> bool:
         "Check if this metric is global."
         return isinstance(self.metric, GlobalMetric)
-
-    @property
-    def is_decomposed(self) -> bool:
-        "Check if this metric is decomposed."
-        return isinstance(self.metric, DecomposedMetric)
 
     def measure_list(self, list: ItemList, test: ItemList) -> Any:
         """Get intermediate measurement data from the metric."""

@@ -154,7 +154,7 @@ class ListMetric(Metric):
         }
 
 
-class GlobalMetric(Metric):
+class GlobalMetric:
     """
     Base class for metrics that measure entire runs at a time.
 
@@ -170,73 +170,5 @@ class GlobalMetric(Metric):
         Compute a metric value for an entire run.
 
         Individual metric classes need to implement this method.
-        """
-        raise NotImplementedError()  # pragma: no cover
-
-    def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
-        raise NotImplementedError("Global metrics don't support per-list measurement")
-
-    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> float:
-        raise NotImplementedError("Global metrics should implement measure_run instead")
-
-
-class DecomposedMetric(Metric):
-    """
-    Deprecated base class for decomposed metrics.
-
-    .. deprecated:: 2025.4
-        This class is deprecated and its functionality has been moved to :class:`Metric`.
-        It is scheduled for removal in 2026.
-
-    Base class for metrics that measure entire runs through flexible
-    aggregations of per-list intermediate measurements.  They can optionally
-    extract individual-list metrics from the per-list measurements.
-
-    Stability:
-        Full
-    """
-
-    def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
-        return self.compute_list_data(output, test)
-
-    def extract_list_metrics(self, data: Any, /) -> float | None:
-        return self.extract_list_metric(data)
-
-    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> dict[str, float]:
-        if isinstance(values, (pa.Array, pa.ChunkedArray)):
-            values = values.to_pylist()
-        result = self.global_aggregate(values)
-        if isinstance(result, (float, int, np.floating, np.integer)):
-            return {"value": float(result)}
-        return result
-
-    @abstractmethod
-    def compute_list_data(self, output: ItemList, test: ItemList, /) -> Any:
-        """
-        Compute measurements for a single list.
-
-        Use `measure_list` in `Metric` for new implementations.
-        """
-        raise NotImplementedError()  # pragma: no cover
-
-    def extract_list_metric(self, data: Any, /) -> float | None:
-        """
-        Extract a single-list metric from the per-list measurement result (if
-        applicable).
-
-        Returns:
-            The per-list metric, or ``None`` if this metric does not compute
-            per-list metrics.
-
-        Implement :meth:`Metric.extract_list_metrics` in new implementations.
-        """
-        return None
-
-    @abstractmethod
-    def global_aggregate(self, values: list[Any], /) -> float | dict[str, float]:
-        """
-        Aggregate list metrics to compute a global value.
-
-        Implement :meth:`Metric.summarize` in new implementations.
         """
         raise NotImplementedError()  # pragma: no cover
