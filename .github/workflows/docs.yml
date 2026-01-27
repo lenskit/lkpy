@@ -94,8 +94,12 @@ jobs:
           git config user.name 'LensKit Doc Bot'
           git config user.email 'docbot@lenskit.org'
           git add .
-          git commit -m 'rebuild documentation'
-          git push
+          if git status --porcelain |grep '^.'; then
+            git commit -m 'rebuild documentation'
+            git push
+          else
+            echo "no changes to documentation"
+          fi
 
       - name: "🏷️ Tag release documentation"
         if: github.event_name == 'release'
