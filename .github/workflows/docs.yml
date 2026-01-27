@@ -34,8 +34,7 @@ jobs:
           python-version: "3.12"
           activate-environment: true
 
-      - name: 📦 Set up Python dependencies (Unix)
-        if: runner.os != 'Windows'
+      - name: 📦 Set up Python dependencies
         run: |
           uv sync --all-extras --no-default-groups --group doc
 
