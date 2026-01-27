@@ -89,6 +89,9 @@ jobs:
       - name: "🛻 Copy documentation content"
         run: |
           rsync -av --delete --exclude=.git/ --exclude=.buildinfo --exclude=.doctrees build/doc/ doc-site/
+
+      - name: "🧳 Commit updated documentation content"
+        run: |
           cd doc-site
           git config user.name 'LensKit Doc Bot'
           git config user.email 'docbot@lenskit.org'
