@@ -1866,7 +1866,7 @@ dev = [
     { name = "sphinx-autobuild", specifier = ">=2021" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-new-tab-link", specifier = ">=0.8.0" },
-    { name = "sphinx-togglebutton", specifier = ">=0.3.2,<0.4" },
+    { name = "sphinx-togglebutton", specifier = "~=0.4" },
     { name = "sphinxcontrib-bibtex", specifier = ">=2.0" },
     { name = "sphinxcontrib-mermaid", specifier = "~=2.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
@@ -1881,7 +1881,7 @@ doc = [
     { name = "sphinx", specifier = ">=4.2" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-new-tab-link", specifier = ">=0.8.0" },
-    { name = "sphinx-togglebutton", specifier = ">=0.3.2,<0.4" },
+    { name = "sphinx-togglebutton", specifier = "~=0.4" },
     { name = "sphinxcontrib-bibtex", specifier = ">=2.0" },
     { name = "sphinxcontrib-mermaid", specifier = "~=2.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
@@ -4057,7 +4057,7 @@ wheels = [
 
 [[package]]
 name = "sphinx-togglebutton"
-version = "0.3.2"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docutils" },
@@ -4065,9 +4065,9 @@ dependencies = [
     { name = "sphinx" },
     { name = "wheel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/df/d151dfbbe588116e450ca7e898750cb218dca6b2e557ced8de6f9bd7242b/sphinx-togglebutton-0.3.2.tar.gz", hash = "sha256:ab0c8b366427b01e4c89802d5d078472c427fa6e9d12d521c34fa0442559dc7a", size = 8324, upload-time = "2022-07-15T12:08:50.286Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/89/6b/19def5241b45a7ae90fd91052bb91fa7b8fbcc0606a0cf65ac4ea70fb93b/sphinx_togglebutton-0.4.4.tar.gz", hash = "sha256:04c332692fd5f5363ad02a001e693369767d6c1f0e58279770a2aeb571b472a1", size = 17883, upload-time = "2026-01-14T14:33:11.599Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/18/267ce39f29d26cdc7177231428ba823fe5ca94db8c56d1bed69033b364c8/sphinx_togglebutton-0.3.2-py3-none-any.whl", hash = "sha256:9647ba7874b7d1e2d43413d8497153a85edc6ac95a3fea9a75ef9c1e08aaae2b", size = 8249, upload-time = "2022-07-15T12:08:48.8Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/cb/9f6ceb4308ebfe5f393a271ee6206e17883edee0662a9b5c1a371878064b/sphinx_togglebutton-0.4.4-py3-none-any.whl", hash = "sha256:820658cd4c4c34c2ee7a21105e638b2f65a9e1d43ee991090715eb7fd9683cdf", size = 44892, upload-time = "2026-01-14T14:33:10.674Z" },
 ]
 
 [[package]]
