@@ -1860,17 +1860,17 @@ dev = [
     { name = "pytest-retry", specifier = "~=1.7" },
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "ruff", specifier = ">=0.2" },
-    { name = "scipy-stubs", specifier = ">=1.14.1.6,<2" },
+    { name = "scipy-stubs", specifier = ">=1.14.1.6" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14" },
     { name = "sphinx", specifier = ">=4.2" },
     { name = "sphinx-autobuild", specifier = ">=2021" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-new-tab-link", specifier = ">=0.8.0" },
-    { name = "sphinx-togglebutton", specifier = "~=0.4" },
+    { name = "sphinx-togglebutton", specifier = ">=0.4" },
     { name = "sphinxcontrib-bibtex", specifier = ">=2.0" },
     { name = "sphinxcontrib-mermaid", specifier = "~=2.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
-    { name = "tomlkit", specifier = "~=0.13.2" },
+    { name = "tomlkit", specifier = "~=0.14.0" },
     { name = "unbeheader", specifier = "~=1.3" },
     { name = "zstandard", specifier = ">=0.23.0" },
 ]
@@ -1881,7 +1881,7 @@ doc = [
     { name = "sphinx", specifier = ">=4.2" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-new-tab-link", specifier = ">=0.8.0" },
-    { name = "sphinx-togglebutton", specifier = "~=0.4" },
+    { name = "sphinx-togglebutton", specifier = ">=0.4" },
     { name = "sphinxcontrib-bibtex", specifier = ">=2.0" },
     { name = "sphinxcontrib-mermaid", specifier = "~=2.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
@@ -1898,7 +1898,7 @@ scripting = [
     { name = "lazy-loader", specifier = ">=0.4" },
     { name = "maturin", specifier = "~=1.0" },
     { name = "packaging", specifier = ">=25.0" },
-    { name = "tomlkit", specifier = "~=0.13.2" },
+    { name = "tomlkit", specifier = "~=0.14.0" },
 ]
 test = [
     { name = "hypothesis", specifier = ">=6.16" },
@@ -4327,11 +4327,11 @@ wheels = [
 
 [[package]]
 name = "tomlkit"
-version = "0.13.3"
+version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cc/18/0bbf3884e9eaa38819ebe46a7bd25dcd56b67434402b66a58c4b8e552575/tomlkit-0.13.3.tar.gz", hash = "sha256:430cf247ee57df2b94ee3fbe588e71d362a941ebb545dec29b53961d61add2a1", size = 185207, upload-time = "2025-06-05T07:13:44.947Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/af/14b24e41977adb296d6bd1fb59402cf7d60ce364f90c890bd2ec65c43b5a/tomlkit-0.14.0.tar.gz", hash = "sha256:cf00efca415dbd57575befb1f6634c4f42d2d87dbba376128adb42c121b87064", size = 187167, upload-time = "2026-01-13T01:14:53.304Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/75/8539d011f6be8e29f339c42e633aae3cb73bffa95dd0f9adec09b9c58e85/tomlkit-0.13.3-py3-none-any.whl", hash = "sha256:c89c649d79ee40629a9fda55f8ace8c6a1b42deb912b2a8fd8d942ddadb606b0", size = 38901, upload-time = "2025-06-05T07:13:43.546Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/11/87d6d29fb5d237229d67973a6c9e06e048f01cf4994dee194ab0ea841814/tomlkit-0.14.0-py3-none-any.whl", hash = "sha256:592064ed85b40fa213469f81ac584f67a4f2992509a7c3ea2d632208623a3680", size = 39310, upload-time = "2026-01-13T01:14:51.965Z" },
 ]
 
 [[package]]

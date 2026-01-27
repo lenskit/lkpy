@@ -62,7 +62,7 @@ doc = [
   "sphinxcontrib-bibtex >=2.0",
   "pydata-sphinx-theme ~=0.16.0",
   "myst-nb >=0.13",
-  "sphinx-togglebutton ~=0.4",
+  "sphinx-togglebutton >=0.4",
   "sphinxcontrib-mermaid ~=2.0",
   "sphinx-copybutton>=0.5.2",
   "sphinx-new-tab-link>=0.8.0",
@@ -83,7 +83,7 @@ package = [
 ]
 scripting = [
   "docopt-ng >=0.9.0",
-  "tomlkit ~=0.13.2",
+  "tomlkit ~=0.14.0",
   { include-group = "package" },
 ]
 dev = [
@@ -98,7 +98,7 @@ dev = [
   # stub files
   "pandas-stubs >=1.5,<3",
   "pyarrow-stubs >=11",
-  "scipy-stubs >=1.14.1.6,<2",
+  "scipy-stubs >=1.14.1.6",
   { include-group = "test" },
   { include-group = "doc" },
   { include-group = "demo" },
