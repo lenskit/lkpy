@@ -265,9 +265,7 @@ class DatasetBuilder:
             duplicates:
                 How to handle duplicate entity IDs.
         """
-        if isinstance(source, pd.DataFrame):  # pragma: nocover
-            raise NotImplementedError()
-        if isinstance(source, pa.Table):  # pragma: nocover
+        if isinstance(source, (pd.DataFrame, pa.Table, dict)):  # pragma: nocover
             raise NotImplementedError()
 
         self._validate_entity_name(cls)
