@@ -289,7 +289,7 @@ class DatasetBuilder:
                 table = table.cast(schema)
         elif pa.types.is_integer(ids.type):
             self.schema.entities[cls].id_type = "int"
-        elif pa.types.is_string(ids.type):
+        elif pa.types.is_string(ids.type) or pa.types.is_large_string(ids.type):
             self.schema.entities[cls].id_type = "str"
         else:
             raise TypeError(f"invalid ID type {ids.type}")
