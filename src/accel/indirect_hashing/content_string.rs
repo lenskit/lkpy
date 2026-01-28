@@ -7,8 +7,8 @@
 use std::hash::{Hash, Hasher};
 
 use arrow::array::{
-    make_array, Array, ArrayData, AsArray, GenericStringArray, OffsetSizeTrait, StringArray,
-    StringBuilder, StringViewArray,
+    make_array, Array, ArrayData, AsArray, GenericStringArray, OffsetSizeTrait, StringBuilder,
+    StringViewArray,
 };
 use arrow::pyarrow::PyArrowType;
 use arrow_schema::DataType;
@@ -25,23 +25,23 @@ trait StringAccess {
 }
 
 /// ID array implementation for string IDs.
-pub struct StringContentArray {
-    array: StringArray,
+pub struct StringContentArray<OS: OffsetSizeTrait> {
+    array: GenericStringArray<OS>,
 }
 
-pub struct StringSearch<'a> {
-    this: &'a StringArray,
+pub struct StringSearch<'a, OS: OffsetSizeTrait> {
+    this: &'a GenericStringArray<OS>,
     other: Box<dyn StringAccess>,
 }
 
-impl StringContentArray {
-    pub fn new(array: StringArray) -> Self {
+impl<OS: OffsetSizeTrait> StringContentArray<OS> {
+    pub fn new(array: GenericStringArray<OS>) -> Self {
         StringContentArray { array }
     }
 }
 
-impl IndirectHashContent for StringContentArray {
-    type Searcher<'a> = StringSearch<'a>;
+impl<OS: OffsetSizeTrait> IndirectHashContent for StringContentArray<OS> {
+    type Searcher<'a> = StringSearch<'a, OS>;
 
     fn hash_entry(&self, idx: u32) -> u64 {
         hash_array_idx(&self.array, idx as usize)
@@ -59,7 +59,7 @@ impl IndirectHashContent for StringContentArray {
         &'a self,
         _py: pyo3::Python<'py>,
         val: pyo3::Bound<'py, pyo3::PyAny>,
-    ) -> pyo3::PyResult<StringSearch<'a>> {
+    ) -> pyo3::PyResult<StringSearch<'a, OS>> {
         let arr: Box<dyn StringAccess> = if let Ok(val) = val.extract::<&str>() {
             let mut ab = StringBuilder::with_capacity(1, val.len() + 1);
             ab.append_value(val);
@@ -91,7 +91,7 @@ impl IndirectHashContent for StringContentArray {
     }
 }
 
-impl<'a> IndirectSearcher<'a> for StringSearch<'a> {
+impl<'a, OS: OffsetSizeTrait> IndirectSearcher<'a> for StringSearch<'a, OS> {
     fn len(&self) -> usize {
         self.other.len()
     }
@@ -117,8 +117,8 @@ fn hash_array_idx(arr: &dyn StringAccess, idx: usize) -> u64 {
     h.finish()
 }
 
-fn compare_array_idx(
-    arr1: &StringArray,
+fn compare_array_idx<OS: OffsetSizeTrait>(
+    arr1: &GenericStringArray<OS>,
     idx1: usize,
     arr2: &dyn StringAccess,
     idx2: usize,

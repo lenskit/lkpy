@@ -70,9 +70,12 @@ impl IDIndex {
             DataType::Int64 => prim_tbl::<Int64Type>(&ids)?,
             DataType::UInt64 => prim_tbl::<UInt64Type>(&ids)?,
             DataType::Utf8 => Box::new(IndirectHashTable::from_unique(StringContentArray::new(
-                ids.as_string().clone(),
+                ids.as_string::<i32>().clone(),
             ))?),
-            // TODO: add support for large strings, views, and binaries
+            DataType::LargeUtf8 => Box::new(IndirectHashTable::from_unique(
+                StringContentArray::new(ids.as_string::<i64>().clone()),
+            )?),
+            // TODO: add support for views and binaries
             _ => {
                 return Err(PyTypeError::new_err(format!(
                     "unsupported ID type {}",
