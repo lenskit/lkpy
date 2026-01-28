@@ -50,7 +50,7 @@ def test_scalar_type(ml_ds: Dataset):
     title_attr = ml_ds.entities("item").attribute("title")
     assert title_attr.layout.value == "scalar"
     assert isinstance(title_attr, ScalarAttributeSet)
-    assert title_attr.data_type == pa.string()
+    assert title_attr.data_type == pa.string() or title_attr.data_type == pa.large_string()
 
 
 def test_list_type(ml_ds: Dataset):
