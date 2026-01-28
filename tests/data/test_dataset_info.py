@@ -36,7 +36,9 @@ def test_attribute_qname(ml_ds: Dataset):
 
 def test_attribute_str(ml_ds: Dataset):
     title_attr = ml_ds.entities("item").attribute("title")
-    assert re.match(r"^<ScalarAttributeSet item\.title: string \(\d+ entities\)>", str(title_attr))
+    assert re.match(
+        r"^<ScalarAttributeSet item\.title: (?:large_)?string \(\d+ entities\)>", str(title_attr)
+    )
 
 
 def test_attribute_repr(ml_ds: Dataset):
