@@ -63,8 +63,8 @@ def test_binarize_error(ml_ds: Dataset) -> None:
     with raises(ValueError, match="method must be 'zero' or 'remove'"):
         dsb.binarize_ratings("rating", min_pos_rating=3.5, method="unknown")
 
-    with raises(ValueError, match="min_pos_rating 6.0 is not in the range of ratings \[.*\]"):
+    with raises(ValueError, match=r"min_pos_rating 6.0 is not in the range of ratings \[.*\]"):
         dsb.binarize_ratings("rating", min_pos_rating=6.0, method="zero")
 
-    with raises(ValueError, match="min_pos_rating -1.0 is not in the range of ratings \[.*\]"):
+    with raises(ValueError, match=r"min_pos_rating -1.0 is not in the range of ratings \[.*\]"):
         dsb.binarize_ratings("rating", min_pos_rating=-1.0, method="zero")
