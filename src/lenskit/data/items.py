@@ -314,8 +314,8 @@ class ItemList:
         elif len(item_ids) > 0:
             try:
                 self._ids = pa.array(item_ids)  # type: ignore
-            except pa.ArrowInvalid:  # pragma: nocover
-                raise TypeError("invalid item ID type or dimension")
+            except pa.ArrowInvalid as e:  # pragma: nocover
+                raise TypeError("invalid item ID type or dimension") from e
             if isinstance(item_ids, np.ndarray):
                 self._ids_numpy = item_ids
         else:

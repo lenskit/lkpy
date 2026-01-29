@@ -116,4 +116,4 @@ def project_key(key: tuple, target: type[K]) -> K:
     try:
         return target._make(getattr(key, f) for f in target._fields)  # type: ignore
     except AttributeError as e:
-        raise TypeError(f"source key is missing field {e.name}")
+        raise TypeError(f"source key is missing field {e.name}") from e

@@ -187,7 +187,7 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "Q"]
+select = ["E", "F", "I", "W", "Q", "B904"]
 unfixable = ["F401"]
 exclude = [".git", "__pycache__", "build", "dist"]
 

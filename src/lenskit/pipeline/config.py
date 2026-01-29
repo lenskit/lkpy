@@ -119,7 +119,7 @@ class PipelineConfig(BaseModel):
             try:
                 comp = pipe.components[name]
             except KeyError:
-                raise PipelineError(f"unknown component {name}")
+                raise PipelineError(f"unknown component {name}")  # noqa: B904
 
             comp.config = always_merger.merge(comp.config or {}, cfg)
 

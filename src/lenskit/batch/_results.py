@@ -68,4 +68,4 @@ class BatchResults:
         try:
             self._data[name].add(result, *key)
         except TypeError as e:
-            raise TypeError(f"invalid key {key} (for type {self._data[name].key_type})", e)
+            raise TypeError(f"invalid key {key} (for type {self._data[name].key_type})") from e
