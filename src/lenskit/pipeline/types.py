@@ -127,6 +127,7 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
             if issubclass(typ, target):
                 return True
         except TypeError:
+            # failing to check instance is fine, continue other checks
             pass
 
         if isinstance(target, (GenericAlias, _GenericAlias)):
@@ -176,6 +177,7 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
             if isinstance(obj, target):
                 return True
         except TypeError:
+            # failing to check instance is fine, continue other checks
             pass
 
         origin = get_origin(target)

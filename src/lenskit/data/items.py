@@ -255,11 +255,13 @@ class ItemList:
         try:
             self._ids = array.field("item_id")
         except KeyError:
+            # ignore missing field
             pass
 
         try:
             numbers = array.field("item_num")
         except KeyError:
+            # ignore missing field
             pass
         else:
             self._numbers = MTArray(numbers.cast(pa.int32()))
