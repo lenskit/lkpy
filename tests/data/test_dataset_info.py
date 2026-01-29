@@ -73,3 +73,4 @@ def test_sparse_dtype(ml_ds: Dataset):
     assert attr.layout.value == "sparse"
     assert isinstance(attr, SparseAttributeSet)
     assert pa.types.is_integer(attr.data_type)
+    # expected value for the dataset info structure
