@@ -42,7 +42,7 @@ def test_unrated_selector_many(rng: np.random.Generator, ml_ds: Dataset):
     sel.train(ml_ds)
 
     for u in rng.choice(ml_ds.users.ids(), 200):
-        row = ml_ds.user_row(100)
+        row = ml_ds.user_row(u)
         assert row is not None
         cands = sel(query=row)
 
