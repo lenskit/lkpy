@@ -8,6 +8,7 @@ import os
 import platform
 import re
 import sys
+import sysconfig
 from dataclasses import dataclass
 from importlib.metadata import distributions, version
 from pathlib import Path
@@ -104,6 +105,13 @@ def inspect_platform():
     yield kvp("Python version", platform.python_version())
     yield kvp("Platform", platform.platform(), level=2)
     yield kvp("Location", sys.executable, level=2)
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
+        if sys._is_gil_enabled():
+            yield "  [bold][yellow]Python is free-threaded but cannot disable GIL[/yellow][/bold]"
+        else:
+            yield "  [bold][cyan]Free-threading enabled[/cyan][/bold]"
+    else:
+        yield "  [yellow]Python GIL enabled[/yellow]"
 
 
 @group()
