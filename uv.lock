@@ -1850,8 +1850,7 @@ dev = [
     { name = "lazy-loader", specifier = ">=0.4" },
     { name = "line-profiler" },
     { name = "matplotlib", specifier = "~=3.4" },
-    { name = "maturin", specifier = "~=1.0" },
-    { name = "maturin", specifier = ">=1.8.3" },
+    { name = "maturin", specifier = "~=1.10" },
     { name = "myst-nb", specifier = ">=0.13" },
     { name = "nbformat", specifier = ">=5.2" },
     { name = "nbval", specifier = ">=0.9" },
@@ -1901,14 +1900,14 @@ doc = [
 gpu = [{ name = "torch", specifier = "~=2.4", index = "https://download.pytorch.org/whl/cu128/", conflict = { package = "lenskit", group = "gpu" } }]
 package = [
     { name = "lazy-loader", specifier = ">=0.4" },
-    { name = "maturin", specifier = "~=1.0" },
+    { name = "maturin", specifier = "~=1.10" },
     { name = "packaging", specifier = ">=25.0" },
 ]
 reporting = [{ name = "coverage", specifier = ">=5" }]
 scripting = [
     { name = "docopt-ng", specifier = ">=0.9.0" },
     { name = "lazy-loader", specifier = ">=0.4" },
-    { name = "maturin", specifier = "~=1.0" },
+    { name = "maturin", specifier = "~=1.10" },
     { name = "packaging", specifier = ">=25.0" },
     { name = "tomlkit", specifier = "~=0.14.0" },
 ]

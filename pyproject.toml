@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.10,<2.0"]
 build-backend = "maturin"
 
 [project]
@@ -77,7 +77,7 @@ demo = [
 ]
 reporting = ["coverage >=5"]
 package = [
-  "maturin ~=1.0",
+  "maturin ~=1.10",
   "lazy-loader >=0.4",
   "packaging >=25.0",
 ]
@@ -106,7 +106,6 @@ dev = [
   { include-group = "package" },
   { include-group = "scripting" },
   "zstandard>=0.23.0",
-  "maturin>=1.8.3",
   "py-spy>=0.4.1",
   "nox>=2025.5.1",
 ]
@@ -146,6 +145,7 @@ lenskit-profile = "lenskit.cli.profile:profile"
 # configure build tools
 [tool.maturin]
 profile = "release"
+editable-profile = "dev"
 python-source = "src"
 module-name = "lenskit._accel"
 
