@@ -21,7 +21,7 @@ mod progress;
 mod sparse;
 
 /// Entry point for LensKit accelerator module.
-#[pymodule]
+#[pymodule(gil_used = false)]
 fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
     knn::register_knn(m)?;
