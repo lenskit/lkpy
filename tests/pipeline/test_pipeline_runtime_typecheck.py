@@ -22,6 +22,10 @@ def proc_exclaim(msg: str) -> str:
     return msg + "!"
 
 
+def proc_dft(msg: str = "unspecified") -> str:
+    return f"msg:{msg}"
+
+
 def lazy_exclaim(msg: Lazy[str], other: Lazy[int]) -> str:
     return msg.get() + "!"
 
@@ -62,3 +66,42 @@ def test_raise_lazy_input():
 
     with raises(TypeError, match="found.*, expected"):
         pipe.run(excl, x=5)
+
+
+def test_accept_default_input():
+    build = PipelineBuilder()
+    msg = build.create_input("msg", str)
+    dft = build.add_component("label", proc_dft, msg=msg)
+
+    pipe = build.build()
+    out = pipe.run(dft, msg="FOOBIE BLETCH")
+    assert out == "msg:FOOBIE BLETCH"
+
+
+def test_accept_default_no_input():
+    build = PipelineBuilder()
+    msg = build.create_input("msg", str)
+    dft = build.add_component("label", proc_dft, msg=msg)
+
+    pipe = build.build()
+    out = pipe.run(dft)
+    assert out == "msg:unspecified"
+
+
+def test_accept_default_unwired_input():
+    build = PipelineBuilder()
+    dft = build.add_component("label", proc_dft)
+
+    pipe = build.build()
+    out = pipe.run(dft)
+    assert out == "msg:unspecified"
+
+
+def test_reject_default_bad_input():
+    build = PipelineBuilder()
+    msg = build.create_input("msg", str)
+    dft = build.add_component("label", proc_dft, msg=msg)
+
+    pipe = build.build()
+    with raises(TypeError, match="invalid data for input"):
+        pipe.run(dft, msg=5)
