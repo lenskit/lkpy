@@ -17,6 +17,7 @@ from typing_extensions import Generic, TypeVar
 from .components import (
     Component,
     ComponentConstructor,
+    ComponentInput,
     PipelineFunction,
     component_inputs,
     component_return_type,
@@ -107,7 +108,7 @@ class ComponentNode(Node[ND], Generic[ND]):
 
     @property
     @abstractmethod
-    def inputs(self) -> dict[str, type | None]:  # pragma: nocover
+    def inputs(self) -> dict[str, ComponentInput]:  # pragma: nocover
         raise NotImplementedError()
 
 

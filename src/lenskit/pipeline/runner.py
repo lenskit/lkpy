@@ -120,12 +120,13 @@ class PipelineRunner:
         trace(log, "processing inputs")
         inputs = component_inputs(node.component, warn_on_missing=False)
         wiring = self.pipe.node_input_connections(node.name)
-        for iname, itype in inputs.items():
-            ilog = log.bind(input_name=iname, input_type=itype)
+        for cin in inputs.values():
+            itype = cin.type
+            ilog = log.bind(input_name=cin.name, input_type=itype)
             trace(ilog, "resolving input")
             # look up the input wiring for this parameter input
             snode = None
-            if src := wiring.get(iname, None):
+            if src := wiring.get(cin.name, None):
                 trace(ilog, "resolving from wiring")
                 snode = self.pipe.node(src)
 
@@ -140,7 +141,7 @@ class PipelineRunner:
             if lazy:
                 trace(ilog, "deferring input run")
                 ival = DeferredRun(
-                    self, iname, node.name, snode, node, required=ireq, data_type=itype
+                    self, cin.name, node.name, snode, node, required=ireq, data_type=itype
                 )
             elif snode is None:
                 trace(ilog, "input has no source node")
@@ -151,11 +152,11 @@ class PipelineRunner:
 
             if not lazy:
                 try:
-                    ival = self._run_input_hooks(node, iname, itype, ival, required=ireq)
+                    ival = self._run_input_hooks(node, cin.name, itype, ival, required=ireq)
                 except SkipComponent:
                     return None
 
-            in_data[iname] = ival
+            in_data[cin.name] = ival
 
         trace(log, "running component", component=node.component)
         try:

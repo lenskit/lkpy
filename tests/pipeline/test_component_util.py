@@ -41,19 +41,19 @@ def test_single_function_input():
 
     inputs = component_inputs(func)
     assert len(inputs) == 1
-    assert inputs["x"] is int
+    assert inputs["x"].type is int
 
 
 def test_component_class_input():
     inputs = component_inputs(XComp)
     assert len(inputs) == 1
-    assert inputs["msg"] is str
+    assert inputs["msg"].type is str
 
 
 def test_component_object_input():
     inputs = component_inputs(XComp())
     assert len(inputs) == 1
-    assert inputs["msg"] is str
+    assert inputs["msg"].type is str
 
 
 def test_component_unknown_input():
@@ -62,19 +62,19 @@ def test_component_unknown_input():
 
     inputs = component_inputs(func)  # type: ignore
     assert len(inputs) == 1
-    assert inputs["x"] is None
+    assert inputs["x"].type is None
 
 
 def test_callable_object_input():
     inputs = component_inputs(CallObj())
     assert len(inputs) == 1
-    assert inputs["q"] is str
+    assert inputs["q"].type is str
 
 
 def test_callable_class_input():
     inputs = component_inputs(CallObj)
     assert len(inputs) == 1
-    assert inputs["q"] is str
+    assert inputs["q"].type is str
 
 
 def test_function_return():

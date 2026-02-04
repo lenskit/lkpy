@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from inspect import isabstract, signature
 from types import FunctionType, NoneType
 
@@ -51,6 +52,17 @@ PipelineFunction: TypeAlias = Callable[..., COut]
 """
 Pure-function interface for pipeline functions.
 """
+
+
+@dataclass
+class ComponentInput:
+    """
+    Representation of a component input slot.
+    """
+
+    name: str
+    type: type | None = None
+    has_default: bool = False
 
 
 @runtime_checkable
@@ -227,7 +239,7 @@ def component_inputs(
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
     *,
     warn_on_missing: bool = True,
-) -> dict[str, type | None]:
+) -> dict[str, ComponentInput]:
     if isinstance(component, FunctionType):
         function = component
     elif hasattr(component, "__call__"):
@@ -238,21 +250,22 @@ def component_inputs(
     types = get_type_hints(function)
     sig = signature(function)
 
-    inputs: dict[str, type | None] = {}
+    inputs: dict[str, ComponentInput] = {}
     for param in sig.parameters.values():
+        ci = ComponentInput(param.name)
         if param.name == "self":
             continue
 
+        inputs[param.name] = ci
+
         if pt := types.get(param.name, None):
-            inputs[param.name] = pt
-        else:
-            if warn_on_missing:
-                warnings.warn(
-                    f"parameter {param.name} of component {component} has no type annotation",
-                    TypecheckWarning,
-                    2,
-                )
-            inputs[param.name] = None
+            ci.type = pt
+        elif warn_on_missing:
+            warnings.warn(
+                f"parameter {param.name} of component {component} has no type annotation",
+                TypecheckWarning,
+                2,
+            )
 
     return inputs
 
