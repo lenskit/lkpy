@@ -48,6 +48,9 @@ class ComponentInputHook(Protocol):
     at the appropriate stage of the input.
 
     Component input hooks are installed under the name ``component-input``.
+
+    Stability:
+        Experimental
     """
 
     def __call__(
