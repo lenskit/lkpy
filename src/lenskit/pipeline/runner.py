@@ -178,8 +178,12 @@ class PipelineRunner:
             try:
                 value = hook.function(node, input, value, required=required)
             except SkipComponent as e:
-                trace(log, "hook requested skip", hook=hook.function, exc_info=e)
+                trace(log, "hook requested SkipComponent", hook=hook.function, exc_info=e)
                 assert not required
+                raise e
+            except SkipInput as e:
+                trace(log, "hook requested SkipInput", hook=hook.function, exc_info=e)
+                assert input.accepts_none or input.has_default
                 raise e
         return value
 
