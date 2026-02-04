@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
+from typing import get_args
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
@@ -31,7 +32,7 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning
+from .types import Lazy, TypecheckWarning, is_compatible_data
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -62,6 +63,8 @@ class ComponentInput:
 
     name: str
     type: type | None = None
+    is_lazy: bool = False
+    accepts_none: bool = False
     has_default: bool = False
 
 
@@ -259,13 +262,20 @@ def component_inputs(
         inputs[param.name] = ci
 
         if pt := types.get(param.name, None):
-            ci.type = pt
+            if get_origin(pt) == Lazy:
+                ci.is_lazy = True
+                (ci.type,) = get_args(pt)
+            else:
+                ci.type = pt
         elif warn_on_missing:
             warnings.warn(
                 f"parameter {param.name} of component {component} has no type annotation",
                 TypecheckWarning,
                 2,
             )
+
+        if ci.type is None or is_compatible_data(None, ci.type):
+            ci.accepts_none = True
 
         if param.default is not Parameter.empty:
             ci.has_default = True
