@@ -130,12 +130,7 @@ class PipelineRunner:
                 trace(ilog, "resolving from wiring")
                 snode = self.pipe.node(src)
 
-            ireq = (
-                required
-                and itype is not None
-                and not is_compatible_data(None, itype)
-                and not cin.has_default
-            )
+            ireq = required and not cin.accepts_none and not cin.has_default
 
             if cin.is_lazy:
                 trace(ilog, "deferring input run")
