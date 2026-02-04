@@ -34,7 +34,7 @@ def typecheck_input_data(
         msg = f"found {bad_type}, expected ❬{input.type}❭"
         if value is None and input.has_default:
             err = SkipInput(msg)
-        if value is None and not required:
+        elif value is None and not required:
             err = SkipComponent(msg)
         else:
             err = TypeError(msg)
