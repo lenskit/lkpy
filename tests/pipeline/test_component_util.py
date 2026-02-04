@@ -27,6 +27,10 @@ class CallObj:
         return q.encode()
 
 
+def comp_with_dft(q: str = "hello") -> str:
+    return q + " world"
+
+
 def test_empty_input():
     def func() -> int:
         return 9
@@ -48,12 +52,14 @@ def test_component_class_input():
     inputs = component_inputs(XComp)
     assert len(inputs) == 1
     assert inputs["msg"].type is str
+    assert not inputs["msg"].has_default
 
 
 def test_component_object_input():
     inputs = component_inputs(XComp())
     assert len(inputs) == 1
     assert inputs["msg"].type is str
+    assert not inputs["msg"].has_default
 
 
 def test_component_unknown_input():
@@ -63,18 +69,28 @@ def test_component_unknown_input():
     inputs = component_inputs(func)  # type: ignore
     assert len(inputs) == 1
     assert inputs["x"].type is None
+    assert not inputs["x"].has_default
 
 
 def test_callable_object_input():
     inputs = component_inputs(CallObj())
     assert len(inputs) == 1
     assert inputs["q"].type is str
+    assert not inputs["q"].has_default
 
 
 def test_callable_class_input():
     inputs = component_inputs(CallObj)
     assert len(inputs) == 1
     assert inputs["q"].type is str
+    assert not inputs["q"].has_default
+
+
+def test_callable_default_input():
+    inputs = component_inputs(comp_with_dft)
+    assert len(inputs) == 1
+    assert inputs["q"].type is str
+    assert inputs["q"].has_default
 
 
 def test_function_return():

@@ -13,7 +13,7 @@ import json
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from inspect import isabstract, signature
+from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
@@ -266,6 +266,9 @@ def component_inputs(
                 TypecheckWarning,
                 2,
             )
+
+        if param.default is not Parameter.empty:
+            ci.has_default = True
 
     return inputs
 
