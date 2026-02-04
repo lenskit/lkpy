@@ -58,6 +58,12 @@ class SkipComponent(Exception):
     pass
 
 
+class SkipInput(Exception):
+    "Internal exception used to skip an optional component input."
+
+    pass
+
+
 class Lazy(Protocol, Generic[T]):
     """
     Type for accepting lazy inputs from the pipeline runner.  If your function

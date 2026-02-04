@@ -12,7 +12,7 @@ from typing import Any
 
 from ..components import ComponentInput
 from ..nodes import ComponentInstanceNode
-from ..types import SkipComponent, is_compatible_data
+from ..types import SkipComponent, SkipInput, is_compatible_data
 
 
 def typecheck_input_data(
@@ -32,6 +32,8 @@ def typecheck_input_data(
         else:
             bad_type = type(value)
         msg = f"found {bad_type}, expected ❬{input.type}❭"
+        if value is None and input.has_default:
+            err = SkipInput(msg)
         if value is None and not required:
             err = SkipComponent(msg)
         else:

@@ -22,7 +22,7 @@ from ._impl import Pipeline
 from ._profiling import RunProfiler
 from .components import ComponentInput, component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
-from .types import SkipComponent, is_compatible_data
+from .types import SkipComponent, SkipInput, is_compatible_data
 
 _log = get_logger(__name__)
 T = TypeVar("T")
@@ -150,6 +150,8 @@ class PipelineRunner:
             if not cin.is_lazy:
                 try:
                     ival = self._run_input_hooks(node, cin, ival, required=ireq)
+                except SkipInput:
+                    continue
                 except SkipComponent:
                     return None
 
