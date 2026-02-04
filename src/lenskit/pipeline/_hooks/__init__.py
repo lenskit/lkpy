@@ -22,9 +22,8 @@ from typing_extensions import (
     TypeVar,
 )
 
-from ..components import Component, PipelineFunction
+from ..components import Component, ComponentInput, PipelineFunction
 from ..nodes import ComponentInstanceNode
-from ..types import TypeExpr
 
 ComponentObject: TypeAlias = Component | PipelineFunction
 
@@ -56,8 +55,7 @@ class ComponentInputHook(Protocol):
     def __call__(
         self,
         node: ComponentInstanceNode[Any],
-        input_name: str,
-        input_type: TypeExpr | None,
+        input: ComponentInput,
         value: object,
         **context: Any,
     ) -> Any:
