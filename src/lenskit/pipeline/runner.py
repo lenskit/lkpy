@@ -84,7 +84,7 @@ class PipelineRunner:
             return self.state[node.name]
         except KeyError as e:
             if required:
-                raise e
+                raise PipelineError(f"no result for pipeline node {node.name}") from e
             else:
                 return None
 
@@ -136,7 +136,12 @@ class PipelineRunner:
                 lazy = True
                 (itype,) = get_args(itype)
 
-            ireq = required and itype is not None and not is_compatible_data(None, itype)
+            ireq = (
+                required
+                and itype is not None
+                and not is_compatible_data(None, itype)
+                and not cin.has_default
+            )
 
             if lazy:
                 trace(ilog, "deferring input run")
