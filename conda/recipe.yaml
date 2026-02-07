@@ -214,6 +214,7 @@ outputs:
             - pyproject.toml
         requirements:
           run:
+            - python ${{ python_min }}.*
             - pytest >=8.2,<9
             - pytest-benchmark =4
             - pytest-doctestplus >=1.2.1,<2
