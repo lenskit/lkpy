@@ -23,7 +23,10 @@ pytestmark = mark.skipif(
 
 # The LensKit versions we want to test backwards compatibility with,
 # along with the appropriate Python versions.
-LK_VERSIONS = {"2025.1.1": "3.11"}
+LK_VERSIONS = {
+    "2025.1.1": "3.11",
+    "2025.6.*": "3.14",
+}
 
 _log = get_logger(__name__)
 _ml_path = Path("data/ml-20m.zip")
