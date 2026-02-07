@@ -33,3 +33,5 @@ Minor Changes
 - Pipeline type-checking for `ArrayLike` component inputs no longer works, due to
   a breaking change in NumPy 2.4.  No LensKit components used `ArrayLike` as an
   input or output data type.
+- Pipeline component inputs with default values can now have missing inputs
+  (:issue:`1000`, :pr:`1001`).
