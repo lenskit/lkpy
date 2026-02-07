@@ -240,4 +240,5 @@ markers = [
   "eval: mark the test as running the evaluator over custom data",
   "slow: mark the test as taking a larger-than-usual amount of time",
   "realdata: mark the test as using a real data set like ML-20M",
+  "compat: mark the test as testing compatibility with old LensKit versions",
 ]
