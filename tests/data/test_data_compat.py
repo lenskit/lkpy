@@ -4,8 +4,8 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import platform
 import subprocess as sp
-import sys
 from os import environ, fspath
 from pathlib import Path
 
@@ -16,9 +16,17 @@ from lenskit.data.matrix import SparseRowArray
 from lenskit.logging import get_logger
 from lenskit.testing import ml_test_dir
 
+pytestmark = mark.skipif(
+    "CI" in environ and platform.system() != "Linux",
+    reason="tests in CI but not Linux, skipping to save time",
+)
+
 # The LensKit versions we want to test backwards compatibility with,
 # along with the appropriate Python versions.
-LK_VERSIONS = {"2025.1.1": "3.11"}
+LK_VERSIONS = {
+    "2025.1.1": "3.11",
+    "2025.6.*": "3.14",
+}
 
 _log = get_logger(__name__)
 _ml_path = Path("data/ml-20m.zip")
