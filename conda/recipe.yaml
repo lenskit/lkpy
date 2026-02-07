@@ -51,7 +51,7 @@ outputs:
         - py-cpuinfo >=9.0
         - pydantic ~=2.7
         - pydantic-settings ~=2.8
-        - humanize ~=2.4
+        - humanize ~=4.2
         - prettytable ~=3.14
         - xopen ~=2.0
         - lazy-loader >=0.4
