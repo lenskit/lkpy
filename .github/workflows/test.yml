@@ -47,7 +47,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           activate-environment: true
-          cache-suffix: vanilla-1
+          cache-suffix: vanilla-2
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
@@ -57,11 +57,17 @@ jobs:
             uv_extra="--no-extra ray --no-extra tune"
           fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
+        env:
+          # disable MARCH for hpfrec wheels
+          DONT_SET_MARCH: 1
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           uv sync --no-default-groups --group test
+        env:
+          # disable MARCH for hpfrec wheels
+          DONT_SET_MARCH: 1
 
       - name: 🔍 Inspect environment
         run: |
