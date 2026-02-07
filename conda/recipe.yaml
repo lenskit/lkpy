@@ -32,30 +32,31 @@ outputs:
       host:
         - python ${{ python_min }}.*
         - pip
-        - maturin >=1,<2
+        - maturin ~=1.10
       run:
         - python >=${{ python_min }}
-        - typing-extensions >=4.12,<5
+        - typing-extensions ~=4.12
         - pyarrow >=20
-        - pandas >=2.0,<3
-        - numpy >=1.25,<3
-        - scipy >=1.11,<2
+        - pandas >=2.0,<4
+        - numpy >=2.0,<3
+        - scipy >=1.13,<2
         - pytorch >=2.4,<3
         - threadpoolctl >=3.0
         - structlog >=23.2
-        - rich >=13.5,<14
-        - pyzmq >=24
-        - click >=8.1,<9
-        - requests >=2.28,<3
+        - rich >=13.5
+        - pyzmq >=26
+        - click ~=8.1
+        - requests ~=2.28
         - psutil >=6
         - py-cpuinfo >=9.0
-        - pydantic >=2.7,<3
-        - pydantic-settings >=2.8,<3
-        - humanize >=4.2,<5
-        - prettytable >=3.14,<4
-        - xopen >=2.0,<3
+        - pydantic ~=2.7
+        - pydantic-settings ~=2.8
+        - humanize ~=2.4
+        - prettytable ~=3.14
+        - xopen ~=2.0
         - lazy-loader >=0.4
-        - deepmerge >=2.0,<3
+        - setuptools >=80
+        - deepmerge >=2.0
 
     tests:
       - python:
@@ -78,8 +79,8 @@ outputs:
             - pyproject.toml
         requirements:
           run:
-            - pytest >=8.2,<9
-            - pytest-benchmark =4
+            - pytest >=8.2,<10
+            - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
@@ -96,7 +97,7 @@ outputs:
       run:
         - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
-        - scikit-learn >=1.2,<2
+        - scikit-learn ~=1.5
     tests:
       - python:
           imports:
@@ -112,8 +113,8 @@ outputs:
             - pyproject.toml
         requirements:
           run:
-            - pytest >=8.2,<9
-            - pytest-benchmark =4
+            - pytest >=8.2,<10
+            - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
@@ -146,8 +147,8 @@ outputs:
             - pyproject.toml
         requirements:
           run:
-            - pytest >=8.2,<9
-            - pytest-benchmark =4
+            - pytest >=8.2,<10
+            - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
@@ -164,7 +165,7 @@ outputs:
       run:
         - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
-        - hpfrec =0.2
+        - hpfrec ~=0.2.12
     tests:
       - python:
           imports:
@@ -180,8 +181,8 @@ outputs:
             - pyproject.toml
         requirements:
           run:
-            - pytest >=8.2,<9
-            - pytest-benchmark =4
+            - pytest >=8.2,<10
+            - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
@@ -198,7 +199,7 @@ outputs:
       run:
         - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
-        - torch-geometric >=2.6,<3
+        - torch-geometric ~=2.6
     tests:
       - python:
           imports:
@@ -215,8 +216,8 @@ outputs:
         requirements:
           run:
             - python ${{ python_min }}.*
-            - pytest >=8.2,<9
-            - pytest-benchmark =4
+            - pytest >=8.2,<10
+            - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
@@ -233,7 +234,7 @@ outputs:
       run:
         - python >=${{ python_min }}
         - ${{ pin_subpackage('lenskit') }}
-        - ray-tune >=2.42,<3
+        - ray-tune ~=2.42
     tests:
       - script:
           - lenskit tune --help
