@@ -9,6 +9,7 @@ from typing import Any
 
 from lenskit.logging import get_logger
 from lenskit.pipeline import PipelineBuilder
+from lenskit.pipeline.components import ComponentInput
 from lenskit.pipeline.nodes import ComponentInstanceNode
 from lenskit.pipeline.types import Lazy, T
 
@@ -29,11 +30,11 @@ def lazy_prefix(msg: Lazy[str], prefix: str, extra: Lazy[str]) -> str:
 
 
 def _input_hook(
-    node: ComponentInstanceNode[Any], input_name: str, input_type: Any, value: Any, **context
+    node: ComponentInstanceNode[Any], input: ComponentInput, value: Any, **context
 ) -> Any:
     cs = hook_calls.get()
     _log.debug("input hook called", n=len(cs), msg=value)
-    cs.append((node.name, input_name))
+    cs.append((node.name, input.name))
     return value
 
 

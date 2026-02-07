@@ -10,14 +10,14 @@ Input type checking hook.
 
 from typing import Any
 
+from ..components import ComponentInput
 from ..nodes import ComponentInstanceNode
-from ..types import SkipComponent, TypeExpr, is_compatible_data
+from ..types import SkipComponent, SkipInput, is_compatible_data
 
 
 def typecheck_input_data(
     node: ComponentInstanceNode[Any],
-    input_name: str,
-    input_type: TypeExpr | None,
+    input: ComponentInput,
     value: Any,
     *,
     required: bool = True,
@@ -26,17 +26,19 @@ def typecheck_input_data(
     """
     Hook to check that input data matches the component's declared input type.
     """
-    if input_type and not is_compatible_data(value, input_type):
+    if input.type and not is_compatible_data(value, input.type):
         if value is None:
             bad_type = None
         else:
             bad_type = type(value)
-        msg = f"found {bad_type}, expected ❬{input_type}❭"
-        if value is None and not required:
+        msg = f"found {bad_type}, expected ❬{input.type}❭"
+        if value is None and input.has_default:
+            err = SkipInput(msg)
+        elif value is None and not required:
             err = SkipComponent(msg)
         else:
             err = TypeError(msg)
-        err.add_note(f"Error encountered on input ❬{input_name}❭ to component ❬{node.name}❭")
+        err.add_note(f"Error encountered on input ❬{input.name}❭ to component ❬{node.name}❭")
         raise err
 
     return value

@@ -12,8 +12,10 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
-from inspect import isabstract, signature
+from dataclasses import dataclass
+from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
+from typing import get_args
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
@@ -30,7 +32,7 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning
+from .types import Lazy, TypecheckWarning, is_compatible_data
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -51,6 +53,19 @@ PipelineFunction: TypeAlias = Callable[..., COut]
 """
 Pure-function interface for pipeline functions.
 """
+
+
+@dataclass
+class ComponentInput:
+    """
+    Representation of a component input slot.
+    """
+
+    name: str
+    type: type | None = None
+    is_lazy: bool = False
+    accepts_none: bool = False
+    has_default: bool = False
 
 
 @runtime_checkable
@@ -227,7 +242,7 @@ def component_inputs(
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
     *,
     warn_on_missing: bool = True,
-) -> dict[str, type | None]:
+) -> dict[str, ComponentInput]:
     if isinstance(component, FunctionType):
         function = component
     elif hasattr(component, "__call__"):
@@ -238,21 +253,32 @@ def component_inputs(
     types = get_type_hints(function)
     sig = signature(function)
 
-    inputs: dict[str, type | None] = {}
+    inputs: dict[str, ComponentInput] = {}
     for param in sig.parameters.values():
+        ci = ComponentInput(param.name)
         if param.name == "self":
             continue
 
+        inputs[param.name] = ci
+
         if pt := types.get(param.name, None):
-            inputs[param.name] = pt
-        else:
-            if warn_on_missing:
-                warnings.warn(
-                    f"parameter {param.name} of component {component} has no type annotation",
-                    TypecheckWarning,
-                    2,
-                )
-            inputs[param.name] = None
+            if get_origin(pt) == Lazy:
+                ci.is_lazy = True
+                (ci.type,) = get_args(pt)
+            else:
+                ci.type = pt
+        elif warn_on_missing:
+            warnings.warn(
+                f"parameter {param.name} of component {component} has no type annotation",
+                TypecheckWarning,
+                2,
+            )
+
+        if ci.type is None or is_compatible_data(None, ci.type):
+            ci.accepts_none = True
+
+        if param.default is not Parameter.empty:
+            ci.has_default = True
 
     return inputs
 

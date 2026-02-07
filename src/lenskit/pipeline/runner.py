@@ -11,7 +11,7 @@ Pipeline runner logic.
 # pyright: strict
 # pyright: reportPrivateUsage=false
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeAlias, TypeVar, get_args, get_origin
+from typing import Any, Generic, Literal, TypeAlias, TypeVar
 
 import structlog
 
@@ -20,9 +20,9 @@ from lenskit.logging import get_logger, trace
 
 from ._impl import Pipeline
 from ._profiling import RunProfiler
-from .components import component_inputs
+from .components import ComponentInput, component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
-from .types import Lazy, SkipComponent, TypeExpr, is_compatible_data
+from .types import SkipComponent, SkipInput, is_compatible_data
 
 _log = get_logger(__name__)
 T = TypeVar("T")
@@ -84,7 +84,7 @@ class PipelineRunner:
             return self.state[node.name]
         except KeyError as e:
             if required:
-                raise e
+                raise PipelineError(f"no result for pipeline node {node.name}") from e
             else:
                 return None
 
@@ -120,28 +120,21 @@ class PipelineRunner:
         trace(log, "processing inputs")
         inputs = component_inputs(node.component, warn_on_missing=False)
         wiring = self.pipe.node_input_connections(node.name)
-        for iname, itype in inputs.items():
-            ilog = log.bind(input_name=iname, input_type=itype)
+        for cin in inputs.values():
+            itype = cin.type
+            ilog = log.bind(input_name=cin.name, input_type=itype)
             trace(ilog, "resolving input")
             # look up the input wiring for this parameter input
             snode = None
-            if src := wiring.get(iname, None):
+            if src := wiring.get(cin.name, None):
                 trace(ilog, "resolving from wiring")
                 snode = self.pipe.node(src)
 
-            # check if this is a lazy node
-            lazy = False
-            if itype is not None and get_origin(itype) == Lazy:
-                lazy = True
-                (itype,) = get_args(itype)
+            ireq = required and not cin.accepts_none and not cin.has_default
 
-            ireq = required and itype is not None and not is_compatible_data(None, itype)
-
-            if lazy:
+            if cin.is_lazy:
                 trace(ilog, "deferring input run")
-                ival = DeferredRun(
-                    self, iname, node.name, snode, node, required=ireq, data_type=itype
-                )
+                ival = DeferredRun(self, cin, node.name, snode, node, required=ireq)
             elif snode is None:
                 trace(ilog, "input has no source node")
                 ival = None
@@ -149,13 +142,15 @@ class PipelineRunner:
                 trace(ilog, "running input node")
                 ival = self.run(snode, required=ireq)
 
-            if not lazy:
+            if not cin.is_lazy:
                 try:
-                    ival = self._run_input_hooks(node, iname, itype, ival, required=ireq)
+                    ival = self._run_input_hooks(node, cin, ival, required=ireq)
+                except SkipInput:
+                    continue
                 except SkipComponent:
                     return None
 
-            in_data[iname] = ival
+            in_data[cin.name] = ival
 
         trace(log, "running component", component=node.component)
         try:
@@ -172,19 +167,23 @@ class PipelineRunner:
     def _run_input_hooks(
         self,
         node: ComponentInstanceNode[Any],
-        input_name: str,
-        input_type: TypeExpr | None,
+        input: ComponentInput,
         value: Any,
+        *,
         required: bool,
     ) -> Any:
-        log = self.log.bind(node=node.name, input_name=input_name, input_type=input_type)
+        log = self.log.bind(node=node.name, input_name=input.name, input_type=input.type)
         for hook in self.pipe._run_hooks.get("component-input", []):
             trace(log, "running hook", hook=hook.function, required=required)
             try:
-                value = hook.function(node, input_name, input_type, value, required=required)
+                value = hook.function(node, input, value, required=required)
             except SkipComponent as e:
-                trace(log, "hook requested skip", hook=hook.function, exc_info=e)
+                trace(log, "hook requested SkipComponent", hook=hook.function, exc_info=e)
                 assert not required
+                raise e
+            except SkipInput as e:
+                trace(log, "hook requested SkipInput", hook=hook.function, exc_info=e)
+                assert input.accepts_none or input.has_default
                 raise e
         return value
 
@@ -199,12 +198,11 @@ class DeferredRun(Generic[T]):
     """
 
     runner: PipelineRunner
-    iname: str
+    input: ComponentInput
     cname: str
     node: Node[T] | None
     recv_node: ComponentInstanceNode[T]
     required: bool
-    data_type: TypeExpr | None
 
     def get(self) -> T:
         if self.node is None:
@@ -212,8 +210,6 @@ class DeferredRun(Generic[T]):
         else:
             val = self.runner.run(self.node, required=self.required)
 
-        val = self.runner._run_input_hooks(
-            self.recv_node, self.iname, self.data_type, val, required=self.required
-        )
+        val = self.runner._run_input_hooks(self.recv_node, self.input, val, required=self.required)
 
         return val
