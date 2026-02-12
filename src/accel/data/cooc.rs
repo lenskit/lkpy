@@ -9,13 +9,16 @@
 use std::{collections::HashMap, sync::Arc};
 
 use arrow::{
-    array::{make_array, ArrayData, Int32Array, RecordBatch},
+    array::{make_array, Array, ArrayData, Int32Array, RecordBatch},
     datatypes::Int32Type,
     pyarrow::PyArrowType,
 };
 use arrow_schema::{DataType, Field, SchemaBuilder};
 use log::*;
-use pyo3::{exceptions::PyRuntimeError, prelude::*};
+use pyo3::{
+    exceptions::{PyRuntimeError, PyValueError},
+    prelude::*,
+};
 use rustc_hash::FxBuildHasher;
 
 use crate::{
@@ -27,7 +30,8 @@ use crate::{
 /// Count co-occurrances.
 #[pyfunction]
 pub fn count_cooc<'py>(
-    _py: Python<'py>,
+    py: Python<'py>,
+    n_groups: usize,
     n_items: usize,
     groups: PyArrowType<ArrayData>,
     items: PyArrowType<ArrayData>,
@@ -35,43 +39,27 @@ pub fn count_cooc<'py>(
     progress: Bound<'py, PyAny>,
 ) -> PyResult<PyArrowType<RecordBatch>> {
     let groups = make_array(groups.0);
-    let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
     let items = make_array(items.0);
-    let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
-
-    // TODO: parallelize this logic
-    let mut counts = PairCountAccumulator::create(n_items);
-    let mut cur_group = -1;
-    let mut cur_items = Vec::new();
-
-    let pb = ProgressHandle::from_input(progress);
-    for (g, i) in groups.iter().zip(items) {
-        if let (Some(g), Some(i)) = (g, i) {
-            assert!(g >= 0);
-            if g != cur_group {
-                count_items(&mut counts, &cur_items);
-                cur_group = g;
-                cur_items.clear();
-            }
-            cur_items.push(i);
-            pb.tick();
-        }
+    let nrows = groups.len();
+    if items.len() != nrows {
+        return Err(PyValueError::new_err("array length mismatch"));
     }
 
-    // final count
-    count_items(&mut counts, &cur_items);
+    let pb = ProgressHandle::from_input(progress);
 
-    // assemble the result
-    debug!(
-        "assembling arrays for {} co-occurrence counts",
-        counts.total
-    );
-
-    let out = if ordered {
-        counts.finish_ordered()
-    } else {
-        counts.finish_symmetric()
-    };
+    let out = py.detach(move || {
+        let counts = really_count_cooc(&pb, groups, items, n_groups, n_items)?;
+        // assemble the result
+        debug!(
+            "assembling arrays for {} co-occurrence counts",
+            counts.total
+        );
+        if ordered {
+            PyResult::Ok(counts.finish_ordered())
+        } else {
+            Ok(counts.finish_symmetric())
+        }
+    })?;
 
     let mut schema = SchemaBuilder::new();
     schema.push(Field::new("row", DataType::Int32, false));
@@ -85,6 +73,53 @@ pub fn count_cooc<'py>(
     .map_err(|e| PyRuntimeError::new_err(format!("error assembling result array: {}", e)))?;
 
     Ok(batch.into())
+}
+
+fn really_count_cooc(
+    pb: &ProgressHandle,
+    groups: Arc<dyn Array>,
+    items: Arc<dyn Array>,
+    n_groups: usize,
+    n_items: usize,
+) -> PyResult<PairCountAccumulator> {
+    let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
+    let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
+    let gvals = groups.values();
+    let ivals = items.values();
+
+    // compute group sizes for CSR (input is sorted by group)
+    debug!("pass 1: counting group sizes");
+    let mut group_sizes = vec![0; n_groups];
+    let mut last = None;
+    for g in gvals {
+        if let Some(lg) = last {
+            assert!(*g >= lg)
+        };
+        last = Some(*g);
+        group_sizes[*g as usize] += 1;
+    }
+
+    // convert to row pointers
+    debug!("pass 1.5: converting group sizes to pointers");
+    let mut g_ptrs = Vec::with_capacity(n_groups + 1);
+    g_ptrs.push(0);
+    for i in 0..n_groups {
+        g_ptrs.push(g_ptrs[i] + group_sizes[i]);
+    }
+    drop(group_sizes);
+
+    // TODO: parallelize this logic
+    debug!("pass 2: counting groups");
+    let mut counts = PairCountAccumulator::create(n_items);
+    for i in 0..n_groups {
+        let start = g_ptrs[i];
+        let end = g_ptrs[i + 1];
+        let items = &ivals[start..end];
+        count_items(&mut counts, items);
+        pb.advance(items.len());
+    }
+
+    Ok(counts)
 }
 
 fn count_items(counts: &mut PairCountAccumulator, items: &[i32]) {

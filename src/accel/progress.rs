@@ -52,7 +52,11 @@ impl ProgressHandle {
     }
 
     pub fn tick(&self) {
-        let count = self.count.fetch_add(1, Ordering::Relaxed) + 1;
+        self.advance(1);
+    }
+
+    pub fn advance(&self, n: usize) {
+        let count = self.count.fetch_add(n, Ordering::Relaxed) + n;
 
         let last_update = {
             let lock = self.last_update.read().expect("poisoned lock");
