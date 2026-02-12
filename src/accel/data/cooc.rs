@@ -88,6 +88,23 @@ fn really_count_cooc(
     let ivals = items.values();
 
     // compute group sizes for CSR (input is sorted by group)
+    let g_ptrs = compute_group_pointers(n_groups, gvals)?;
+
+    // TODO: parallelize this logic
+    debug!("pass 2: counting groups");
+    let mut counts = PairCountAccumulator::create(n_items);
+    for i in 0..n_groups {
+        let start = g_ptrs[i];
+        let end = g_ptrs[i + 1];
+        let items = &ivals[start..end];
+        count_items(&mut counts, items);
+        pb.advance(items.len());
+    }
+
+    Ok(counts)
+}
+
+fn compute_group_pointers(n_groups: usize, gvals: &[i32]) -> PyResult<Vec<usize>> {
     debug!("pass 1: counting group sizes");
     let mut group_sizes = vec![0; n_groups];
     let mut last = None;
@@ -106,20 +123,7 @@ fn really_count_cooc(
     for i in 0..n_groups {
         g_ptrs.push(g_ptrs[i] + group_sizes[i]);
     }
-    drop(group_sizes);
-
-    // TODO: parallelize this logic
-    debug!("pass 2: counting groups");
-    let mut counts = PairCountAccumulator::create(n_items);
-    for i in 0..n_groups {
-        let start = g_ptrs[i];
-        let end = g_ptrs[i + 1];
-        let items = &ivals[start..end];
-        count_items(&mut counts, items);
-        pb.advance(items.len());
-    }
-
-    Ok(counts)
+    Ok(g_ptrs)
 }
 
 fn count_items(counts: &mut PairCountAccumulator, items: &[i32]) {
