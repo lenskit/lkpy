@@ -9,7 +9,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use arrow::{
-    array::{make_array, ArrayData, Int32Array, Int32Builder, RecordBatch},
+    array::{make_array, ArrayData, Int32Array, RecordBatch},
+    datatypes::Int32Type,
     pyarrow::PyArrowType,
 };
 use arrow_schema::{DataType, Field, SchemaBuilder};
@@ -17,12 +18,17 @@ use log::*;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use rustc_hash::FxBuildHasher;
 
-use crate::{arrow::checked_array_ref, progress::ProgressHandle};
+use crate::{
+    arrow::checked_array_ref,
+    progress::ProgressHandle,
+    sparse::{COOMatrix, COOMatrixBuilder},
+};
 
 /// Count co-occurrances.
 #[pyfunction]
 pub fn count_cooc<'py>(
     _py: Python<'py>,
+    n_items: usize,
     groups: PyArrowType<ArrayData>,
     items: PyArrowType<ArrayData>,
     ordered: bool,
@@ -34,7 +40,7 @@ pub fn count_cooc<'py>(
     let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
 
     // TODO: parallelize this logic
-    let mut counts = HashMap::with_hasher(FxBuildHasher);
+    let mut counts = PairCountAccumulator::create(n_items);
     let mut cur_group = -1;
     let mut cur_items = Vec::new();
 
@@ -43,7 +49,7 @@ pub fn count_cooc<'py>(
         if let (Some(g), Some(i)) = (g, i) {
             assert!(g >= 0);
             if g != cur_group {
-                count_items(&mut counts, &cur_items, ordered);
+                count_items(&mut counts, &cur_items);
                 cur_group = g;
                 cur_items.clear();
             }
@@ -53,22 +59,19 @@ pub fn count_cooc<'py>(
     }
 
     // final count
-    count_items(&mut counts, &cur_items, ordered);
+    count_items(&mut counts, &cur_items);
 
     // assemble the result
     debug!(
         "assembling arrays for {} co-occurrence counts",
-        counts.len()
+        counts.total
     );
-    let mut out_rows = Int32Builder::with_capacity(counts.len());
-    let mut out_cols = Int32Builder::with_capacity(counts.len());
-    let mut out_counts = Int32Builder::with_capacity(counts.len());
 
-    for ((i1, i2), c) in counts.into_iter() {
-        out_rows.append_value(i1);
-        out_cols.append_value(i2);
-        out_counts.append_value(c);
-    }
+    let out = if ordered {
+        counts.finish_ordered()
+    } else {
+        counts.finish_symmetric()
+    };
 
     let mut schema = SchemaBuilder::new();
     schema.push(Field::new("row", DataType::Int32, false));
@@ -77,29 +80,69 @@ pub fn count_cooc<'py>(
     let schema = schema.finish();
     let batch = RecordBatch::try_new(
         Arc::new(schema),
-        vec![
-            Arc::new(out_rows.finish()),
-            Arc::new(out_cols.finish()),
-            Arc::new(out_counts.finish()),
-        ],
+        vec![Arc::new(out.row), Arc::new(out.col), Arc::new(out.val)],
     )
     .map_err(|e| PyRuntimeError::new_err(format!("error assembling result array: {}", e)))?;
 
     Ok(batch.into())
 }
 
-fn count_items(counts: &mut HashMap<(i32, i32), i32, FxBuildHasher>, items: &[i32], ordered: bool) {
+fn count_items(counts: &mut PairCountAccumulator, items: &[i32]) {
     let n = items.len();
     for i in 0..n {
-        let start = if ordered { i + 1 } else { 0 };
-        if start < n {
-            for j in start..n {
-                if i != j {
-                    let ri = items[i as usize];
-                    let ci = items[j as usize];
-                    *counts.entry((ri, ci)).or_default() += 1;
-                }
+        let ri = items[i as usize];
+        for j in (i + 1)..n {
+            if i != j {
+                let ci = items[j as usize];
+                counts.record(ri, ci);
             }
         }
+    }
+}
+
+/// Accumulator for counts.
+struct PairCountAccumulator {
+    rows: Vec<HashMap<i32, i32, FxBuildHasher>>,
+    total: usize,
+}
+
+impl PairCountAccumulator {
+    fn create(n: usize) -> PairCountAccumulator {
+        PairCountAccumulator {
+            rows: vec![HashMap::with_hasher(FxBuildHasher); n],
+            total: 0,
+        }
+    }
+
+    fn record(&mut self, row: i32, col: i32) {
+        if row < 0 {
+            panic!("negative row index")
+        }
+        let row = &mut self.rows[row as usize];
+        *row.entry(col).or_default() += 1;
+        self.total += 1;
+    }
+
+    fn finish_ordered(self) -> COOMatrix<Int32Type, Int32Type> {
+        let mut bld = COOMatrixBuilder::with_capacity(self.total);
+        for (i, row) in self.rows.into_iter().enumerate() {
+            let ri = i as i32;
+            for (ci, count) in row.into_iter() {
+                bld.add_entry(ri, ci, count);
+            }
+        }
+        bld.finish()
+    }
+
+    fn finish_symmetric(self) -> COOMatrix<Int32Type, Int32Type> {
+        let mut bld = COOMatrixBuilder::with_capacity(self.total * 2);
+        for (i, row) in self.rows.into_iter().enumerate() {
+            let ri = i as i32;
+            for (ci, count) in row.into_iter() {
+                bld.add_entry(ri, ci, count);
+                bld.add_entry(ci, ri, count);
+            }
+        }
+        bld.finish()
     }
 }
