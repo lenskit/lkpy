@@ -206,6 +206,7 @@ class RelationshipSet:
         _log.debug("counting co-occurrences")
         with item_progress("co-occurrences", tbl.num_rows) as pb:
             result = _accel_data.count_cooc(
+                len(self._vocabularies[entity]),
                 tbl.column(gc).combine_chunks(),
                 tbl.column(ec).combine_chunks(),
                 order is not None,
