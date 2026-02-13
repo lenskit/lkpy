@@ -43,7 +43,10 @@ impl PairCounter for SymmetricPairCounter {
 
     fn finish(self) -> COOMatrix<Int32Type, Int32Type> {
         let nnz = self.nnz();
-        debug!("creating matrix with {} co-occurrance counts", nnz);
+        debug!(
+            "creating matrix with {} symmetric co-occurrance counts",
+            nnz
+        );
         let mut bld = COOMatrixBuilder::with_capacity(nnz * 2);
         let mut idx = 0;
         // SAFETY: i32 and AtomicI32 have identical layouts

@@ -97,6 +97,7 @@ fn count_cooc_sequential<PC: PairCounter>(
         count_items(&mut counts, items);
         pb.advance(items.len());
     }
+    pb.flush();
 
     // assemble the result
     Ok(counts.finish())
@@ -137,6 +138,7 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
             lpb.advance(items.len());
         },
     );
+    pb.flush();
 
     // assemble the result
     Ok(counts.finish())
