@@ -48,17 +48,14 @@ pub fn count_cooc<'py>(
     let pb = ProgressHandle::from_input(progress);
 
     let out = py.detach(move || {
-        let counts = really_count_cooc(&pb, groups, items, n_groups, n_items)?;
+        let mut counts = PairCountAccumulator::create(n_items, ordered);
+        really_count_cooc(&mut counts, &pb, groups, items, n_groups)?;
         // assemble the result
         debug!(
             "assembling arrays for {} co-occurrence counts",
             counts.total
         );
-        if ordered {
-            PyResult::Ok(counts.finish_ordered())
-        } else {
-            Ok(counts.finish_symmetric())
-        }
+        PyResult::Ok(counts.finish())
     })?;
 
     let mut schema = SchemaBuilder::new();
@@ -76,12 +73,12 @@ pub fn count_cooc<'py>(
 }
 
 fn really_count_cooc(
+    counts: &mut PairCountAccumulator,
     pb: &ProgressHandle,
     groups: Arc<dyn Array>,
     items: Arc<dyn Array>,
     n_groups: usize,
-    n_items: usize,
-) -> PyResult<PairCountAccumulator> {
+) -> PyResult<()> {
     let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
     let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
     let gvals = groups.values();
@@ -92,16 +89,15 @@ fn really_count_cooc(
 
     // TODO: parallelize this logic
     debug!("pass 2: counting groups");
-    let mut counts = PairCountAccumulator::create(n_items);
     for i in 0..n_groups {
         let start = g_ptrs[i];
         let end = g_ptrs[i + 1];
         let items = &ivals[start..end];
-        count_items(&mut counts, items);
+        count_items(counts, items);
         pb.advance(items.len());
     }
 
-    Ok(counts)
+    Ok(())
 }
 
 fn compute_group_pointers(n_groups: usize, gvals: &[i32]) -> PyResult<Vec<usize>> {
@@ -142,13 +138,15 @@ fn count_items(counts: &mut PairCountAccumulator, items: &[i32]) {
 /// Accumulator for counts.
 struct PairCountAccumulator {
     rows: Vec<HashMap<i32, i32, FxBuildHasher>>,
+    ordered: bool,
     total: usize,
 }
 
 impl PairCountAccumulator {
-    fn create(n: usize) -> PairCountAccumulator {
+    fn create(n: usize, ordered: bool) -> PairCountAccumulator {
         PairCountAccumulator {
             rows: vec![HashMap::with_hasher(FxBuildHasher); n],
+            ordered,
             total: 0,
         }
     }
@@ -157,29 +155,36 @@ impl PairCountAccumulator {
         if row < 0 {
             panic!("negative row index")
         }
+        if col < 0 {
+            panic!("negative column index")
+        }
+        if self.ordered || row <= col {
+            self._record_entry(row, col);
+        } else {
+            self._record_entry(col, row);
+        }
+    }
+
+    fn _record_entry(&mut self, row: i32, col: i32) {
         let row = &mut self.rows[row as usize];
         *row.entry(col).or_default() += 1;
         self.total += 1;
     }
 
-    fn finish_ordered(self) -> COOMatrix<Int32Type, Int32Type> {
-        let mut bld = COOMatrixBuilder::with_capacity(self.total);
+    fn finish(self) -> COOMatrix<Int32Type, Int32Type> {
+        let size = if self.ordered {
+            self.total
+        } else {
+            self.total * 2
+        };
+        let mut bld = COOMatrixBuilder::with_capacity(size);
         for (i, row) in self.rows.into_iter().enumerate() {
             let ri = i as i32;
             for (ci, count) in row.into_iter() {
                 bld.add_entry(ri, ci, count);
-            }
-        }
-        bld.finish()
-    }
-
-    fn finish_symmetric(self) -> COOMatrix<Int32Type, Int32Type> {
-        let mut bld = COOMatrixBuilder::with_capacity(self.total * 2);
-        for (i, row) in self.rows.into_iter().enumerate() {
-            let ri = i as i32;
-            for (ci, count) in row.into_iter() {
-                bld.add_entry(ri, ci, count);
-                bld.add_entry(ci, ri, count);
+                if !self.ordered {
+                    bld.add_entry(ci, ri, count);
+                }
             }
         }
         bld.finish()
