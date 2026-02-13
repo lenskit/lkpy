@@ -32,6 +32,13 @@ pub(crate) struct ProgressHandle {
     last_update: RwLock<Option<UpdateState>>,
 }
 
+pub(crate) struct ThreadLocalProgressHandle<'parent> {
+    parent: &'parent ProgressHandle,
+    last_sync: Instant,
+    since_last_sync: usize,
+    rate: f64,
+}
+
 impl ProgressHandle {
     pub fn from_input<'py>(maybe_pb: Bound<'py, PyAny>) -> Self {
         let pb = if maybe_pb.is_none() {
@@ -51,8 +58,17 @@ impl ProgressHandle {
         }
     }
 
+    pub fn thread_local(&self) -> ThreadLocalProgressHandle<'_> {
+        ThreadLocalProgressHandle {
+            parent: self,
+            last_sync: Instant::now(),
+            since_last_sync: 0,
+            rate: 1000.0,
+        }
+    }
+
     pub fn tick(&self) {
-        self.advance(1);
+        self.advance(1)
     }
 
     pub fn advance(&self, n: usize) {
@@ -103,5 +119,28 @@ impl ProgressHandle {
             Ok::<(), PyErr>(())
         })
         .expect("progress update failed")
+    }
+}
+
+impl<'a> ThreadLocalProgressHandle<'a> {
+    #[allow(dead_code)]
+    pub fn tick(&mut self) {
+        self.advance(1)
+    }
+
+    pub fn advance(&mut self, n: usize) {
+        self.since_last_sync += n;
+
+        // check rate for fast bail
+        if self.since_last_sync as f64 / self.rate >= UPDATE_SECS * 0.95 {
+            let now = Instant::now();
+            let secs = now.saturating_duration_since(self.last_sync).as_secs_f64();
+            self.rate = self.since_last_sync as f64 / secs;
+            if secs >= UPDATE_SECS {
+                self.parent.advance(self.since_last_sync);
+                self.since_last_sync = 0;
+                self.last_sync = now;
+            }
+        }
     }
 }
