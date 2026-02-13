@@ -27,3 +27,8 @@ pub(super) trait PairCounter {
     /// Finish the counting into a matrix.
     fn finish(self) -> COOMatrix<Int32Type, Int32Type>;
 }
+
+/// Trait for pair counters that allow concurrent updates.
+pub(super) trait ConcurrentPairCounter: PairCounter + Sync {
+    fn crecord(&self, row: i32, col: i32);
+}
