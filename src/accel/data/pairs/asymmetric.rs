@@ -49,7 +49,10 @@ impl PairCounter for AsymmetricPairCounter {
     fn finish(self) -> COOMatrix<Int32Type, Int32Type> {
         // compute the # of rows
         let size = self.nnz();
-        debug!("creating matrix with {} co-occurrance counts", size);
+        debug!(
+            "creating matrix with {} asymmetric co-occurrance counts",
+            size
+        );
         let mut bld = COOMatrixBuilder::with_capacity(size);
         for (i, row) in self.rows.into_iter().enumerate() {
             let ri = i as i32;
