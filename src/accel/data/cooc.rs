@@ -172,11 +172,10 @@ impl PairCountAccumulator {
     }
 
     fn finish(self) -> COOMatrix<Int32Type, Int32Type> {
-        let size = if self.ordered {
-            self.total
-        } else {
-            self.total * 2
-        };
+        // compute the # of rows
+        let size = self.rows.iter().map(|r| r.len()).sum();
+        let size = if self.ordered { size } else { size * 2 };
+        debug!("creating matrix with {} co-occurrance counts", size);
         let mut bld = COOMatrixBuilder::with_capacity(size);
         for (i, row) in self.rows.into_iter().enumerate() {
             let ri = i as i32;
