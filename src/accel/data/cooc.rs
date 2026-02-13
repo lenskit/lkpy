@@ -6,7 +6,7 @@
 
 //! Support for counting co-occurrences.
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use arrow::{
     array::{make_array, Array, ArrayData, Int32Array, RecordBatch},
@@ -18,15 +18,13 @@ use log::*;
 use pyo3::{
     exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
-    PyClassGuardMut,
 };
-use rustc_hash::FxBuildHasher;
 
 use crate::{
     arrow::checked_array_ref,
     data::pairs::{AsymmetricPairCounter, PairCounter, SymmetricPairCounter},
     progress::ProgressHandle,
-    sparse::{COOMatrix, COOMatrixBuilder},
+    sparse::COOMatrix,
 };
 
 /// Count co-occurrances.
