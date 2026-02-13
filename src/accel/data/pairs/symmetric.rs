@@ -4,19 +4,22 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
+use std::sync::atomic::{AtomicI32, AtomicUsize};
+use std::{mem::transmute, sync::atomic::Ordering};
+
 use arrow::datatypes::Int32Type;
 use log::*;
 
 use crate::{
-    data::pairs::PairCounter,
+    data::pairs::{ConcurrentPairCounter, PairCounter},
     sparse::{COOMatrix, COOMatrixBuilder},
 };
 
 /// Accumulate symmetric pair counts.
 pub struct SymmetricPairCounter {
     n_items: usize,
-    data: Vec<i32>,
-    nnz: usize,
+    data: Vec<AtomicI32>,
+    nnz: AtomicUsize,
 }
 
 impl PairCounter for SymmetricPairCounter {
@@ -24,34 +27,32 @@ impl PairCounter for SymmetricPairCounter {
         let cap = arith_tot(n);
         SymmetricPairCounter {
             n_items: n,
-            data: vec![0; cap],
-            nnz: 0,
+            // SAFETY: i32 and AtomicI32 have the same layout
+            data: unsafe { transmute(vec![0i32; cap]) },
+            nnz: AtomicUsize::new(0),
         }
     }
 
     fn record(&mut self, row: i32, col: i32) {
-        let (row, col) = order_coords(row, col);
-        let idx = self.compute_index(row, col);
-        let val = &mut self.data[idx];
-        if *val == 0 {
-            self.nnz += 1;
-        }
-        *val += 1;
+        self.crecord(row, col)
     }
 
     fn nnz(&self) -> usize {
-        self.nnz
+        self.nnz.load(Ordering::Relaxed)
     }
 
     fn finish(self) -> COOMatrix<Int32Type, Int32Type> {
-        debug!("creating matrix with {} co-occurrance counts", self.nnz);
-        let mut bld = COOMatrixBuilder::with_capacity(self.nnz * 2);
+        let nnz = self.nnz();
+        debug!("creating matrix with {} co-occurrance counts", nnz);
+        let mut bld = COOMatrixBuilder::with_capacity(nnz * 2);
         let mut idx = 0;
+        // SAFETY: i32 and AtomicI32 have identical layouts
+        let data: Vec<i32> = unsafe { transmute(self.data) };
         for i in 0..self.n_items {
             let row = i as i32;
             for j in i..self.n_items {
                 let col = j as i32;
-                let val = self.data[idx];
+                let val = data[idx];
                 if val > 0 {
                     bld.add_entry(row, col, val);
                     bld.add_entry(col, row, val);
@@ -60,6 +61,17 @@ impl PairCounter for SymmetricPairCounter {
             }
         }
         bld.finish()
+    }
+}
+
+impl ConcurrentPairCounter for SymmetricPairCounter {
+    fn crecord(&self, row: i32, col: i32) {
+        let (row, col) = order_coords(row, col);
+        let idx = self.compute_index(row, col);
+        let old = self.data[idx].fetch_add(1, Ordering::Relaxed);
+        if old == 0 {
+            self.nnz.fetch_add(1, Ordering::Relaxed);
+        }
     }
 }
 

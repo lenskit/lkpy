@@ -19,10 +19,13 @@ use pyo3::{
     exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
 };
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     arrow::checked_array_ref,
-    data::pairs::{AsymmetricPairCounter, PairCounter, SymmetricPairCounter},
+    data::pairs::{
+        AsymmetricPairCounter, ConcurrentPairCounter, PairCounter, SymmetricPairCounter,
+    },
     progress::ProgressHandle,
     sparse::COOMatrix,
 };
@@ -48,10 +51,13 @@ pub fn count_cooc<'py>(
     let pb = ProgressHandle::from_input(progress);
 
     let out = py.detach(move || {
+        let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
+        let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
+
         if ordered {
-            make_cooc_matrix::<AsymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
+            count_cooc_sequential::<AsymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
         } else {
-            make_cooc_matrix::<SymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
+            count_cooc_parallel::<SymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
         }
     })?;
 
@@ -69,19 +75,16 @@ pub fn count_cooc<'py>(
     Ok(batch.into())
 }
 
-fn make_cooc_matrix<PC: PairCounter>(
+fn count_cooc_sequential<PC: PairCounter>(
     pb: &ProgressHandle,
-    groups: Arc<dyn Array>,
-    items: Arc<dyn Array>,
+    groups: &Int32Array,
+    items: &Int32Array,
     n_groups: usize,
     n_items: usize,
 ) -> PyResult<COOMatrix<Int32Type, Int32Type>> {
-    let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
-    let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
     let gvals = groups.values();
     let ivals = items.values();
 
-    // compute group sizes for CSR (input is sorted by group)
     let g_ptrs = compute_group_pointers(n_groups, gvals)?;
 
     // TODO: parallelize this logic
@@ -94,6 +97,46 @@ fn make_cooc_matrix<PC: PairCounter>(
         count_items(&mut counts, items);
         pb.advance(items.len());
     }
+
+    // assemble the result
+    Ok(counts.finish())
+}
+
+fn count_cooc_parallel<PC: ConcurrentPairCounter>(
+    pb: &ProgressHandle,
+    groups: &Int32Array,
+    items: &Int32Array,
+    n_groups: usize,
+    n_items: usize,
+) -> PyResult<COOMatrix<Int32Type, Int32Type>> {
+    let gvals = groups.values();
+    let ivals = items.values();
+
+    let g_ptrs = compute_group_pointers(n_groups, gvals)?;
+
+    debug!("pass 2: counting groups");
+    let counts = PC::create(n_items);
+    (0..n_groups).into_par_iter().for_each_init(
+        || pb.thread_local(),
+        |lpb, i| {
+            let start = g_ptrs[i];
+            let end = g_ptrs[i + 1];
+            let items = &ivals[start..end];
+            let n = items.len();
+
+            for i in 0..n {
+                let ri = items[i as usize];
+                for j in (i + 1)..n {
+                    if i != j {
+                        let ci = items[j as usize];
+                        counts.crecord(ri, ci);
+                    }
+                }
+            }
+
+            lpb.advance(items.len());
+        },
+    );
 
     // assemble the result
     Ok(counts.finish())
