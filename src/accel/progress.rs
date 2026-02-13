@@ -97,6 +97,22 @@ impl ProgressHandle {
             return;
         }
 
+        self.update(count, time);
+    }
+
+    /// Force an update of the progress bar.
+    pub fn flush(&self) {
+        let count = self.count.load(Ordering::Relaxed);
+        let sent = (*self.last_update.read().expect("poisoned lock"))
+            .map(|s| s.count)
+            .unwrap_or_default();
+        if count > sent {
+            let time = self.start.elapsed().as_secs_f64();
+            self.update(self.count.load(Ordering::Relaxed), time);
+        }
+    }
+
+    fn update(&self, count: usize, time: f64) {
         // we're ready to set the time! if someone else is writing, do nothing, they've handled it
         if let Ok(mut lock) = self.last_update.try_write() {
             *lock = Some(UpdateState {
@@ -122,6 +138,12 @@ impl ProgressHandle {
     }
 }
 
+impl Drop for ProgressHandle {
+    fn drop(&mut self) {
+        self.flush();
+    }
+}
+
 impl<'a> ThreadLocalProgressHandle<'a> {
     #[allow(dead_code)]
     pub fn tick(&mut self) {
@@ -141,6 +163,14 @@ impl<'a> ThreadLocalProgressHandle<'a> {
                 self.since_last_sync = 0;
                 self.last_sync = now;
             }
+        }
+    }
+}
+
+impl<'a> Drop for ThreadLocalProgressHandle<'a> {
+    fn drop(&mut self) {
+        if self.since_last_sync > 0 {
+            self.parent.advance(self.since_last_sync);
         }
     }
 }
