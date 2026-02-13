@@ -18,11 +18,13 @@ use log::*;
 use pyo3::{
     exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
+    PyClassGuardMut,
 };
 use rustc_hash::FxBuildHasher;
 
 use crate::{
     arrow::checked_array_ref,
+    data::pairs::{AsymmetricPairCounter, PairCounter, SymmetricPairCounter},
     progress::ProgressHandle,
     sparse::{COOMatrix, COOMatrixBuilder},
 };
@@ -48,14 +50,11 @@ pub fn count_cooc<'py>(
     let pb = ProgressHandle::from_input(progress);
 
     let out = py.detach(move || {
-        let mut counts = PairCountAccumulator::create(n_items, ordered);
-        really_count_cooc(&mut counts, &pb, groups, items, n_groups)?;
-        // assemble the result
-        debug!(
-            "assembling arrays for {} co-occurrence counts",
-            counts.total
-        );
-        PyResult::Ok(counts.finish())
+        if ordered {
+            make_cooc_matrix::<AsymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
+        } else {
+            make_cooc_matrix::<SymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
+        }
     })?;
 
     let mut schema = SchemaBuilder::new();
@@ -72,13 +71,13 @@ pub fn count_cooc<'py>(
     Ok(batch.into())
 }
 
-fn really_count_cooc(
-    counts: &mut PairCountAccumulator,
+fn make_cooc_matrix<PC: PairCounter>(
     pb: &ProgressHandle,
     groups: Arc<dyn Array>,
     items: Arc<dyn Array>,
     n_groups: usize,
-) -> PyResult<()> {
+    n_items: usize,
+) -> PyResult<COOMatrix<Int32Type, Int32Type>> {
     let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
     let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
     let gvals = groups.values();
@@ -89,15 +88,17 @@ fn really_count_cooc(
 
     // TODO: parallelize this logic
     debug!("pass 2: counting groups");
+    let mut counts = PC::create(n_items);
     for i in 0..n_groups {
         let start = g_ptrs[i];
         let end = g_ptrs[i + 1];
         let items = &ivals[start..end];
-        count_items(counts, items);
+        count_items(&mut counts, items);
         pb.advance(items.len());
     }
 
-    Ok(())
+    // assemble the result
+    Ok(counts.finish())
 }
 
 fn compute_group_pointers(n_groups: usize, gvals: &[i32]) -> PyResult<Vec<usize>> {
@@ -122,7 +123,7 @@ fn compute_group_pointers(n_groups: usize, gvals: &[i32]) -> PyResult<Vec<usize>
     Ok(g_ptrs)
 }
 
-fn count_items(counts: &mut PairCountAccumulator, items: &[i32]) {
+fn count_items<PC: PairCounter>(counts: &mut PC, items: &[i32]) {
     let n = items.len();
     for i in 0..n {
         let ri = items[i as usize];
@@ -132,60 +133,5 @@ fn count_items(counts: &mut PairCountAccumulator, items: &[i32]) {
                 counts.record(ri, ci);
             }
         }
-    }
-}
-
-/// Accumulator for counts.
-struct PairCountAccumulator {
-    rows: Vec<HashMap<i32, i32, FxBuildHasher>>,
-    ordered: bool,
-    total: usize,
-}
-
-impl PairCountAccumulator {
-    fn create(n: usize, ordered: bool) -> PairCountAccumulator {
-        PairCountAccumulator {
-            rows: vec![HashMap::with_hasher(FxBuildHasher); n],
-            ordered,
-            total: 0,
-        }
-    }
-
-    fn record(&mut self, row: i32, col: i32) {
-        if row < 0 {
-            panic!("negative row index")
-        }
-        if col < 0 {
-            panic!("negative column index")
-        }
-        if self.ordered || row <= col {
-            self._record_entry(row, col);
-        } else {
-            self._record_entry(col, row);
-        }
-    }
-
-    fn _record_entry(&mut self, row: i32, col: i32) {
-        let row = &mut self.rows[row as usize];
-        *row.entry(col).or_default() += 1;
-        self.total += 1;
-    }
-
-    fn finish(self) -> COOMatrix<Int32Type, Int32Type> {
-        // compute the # of rows
-        let size = self.rows.iter().map(|r| r.len()).sum();
-        let size = if self.ordered { size } else { size * 2 };
-        debug!("creating matrix with {} co-occurrance counts", size);
-        let mut bld = COOMatrixBuilder::with_capacity(size);
-        for (i, row) in self.rows.into_iter().enumerate() {
-            let ri = i as i32;
-            for (ci, count) in row.into_iter() {
-                bld.add_entry(ri, ci, count);
-                if !self.ordered {
-                    bld.add_entry(ci, ri, count);
-                }
-            }
-        }
-        bld.finish()
     }
 }
