@@ -41,13 +41,13 @@ impl PairCounter for SymmetricPairCounter {
         self.nnz.load(Ordering::Relaxed)
     }
 
-    fn finish(self) -> COOMatrix<Int32Type, Int32Type> {
+    fn finish(self) -> Vec<COOMatrix<Int32Type, Int32Type>> {
         let nnz = self.nnz();
         debug!(
             "creating matrix with {} symmetric co-occurrance counts",
             nnz
         );
-        let mut bld = COOMatrixBuilder::with_capacity(nnz * 2);
+        let mut bld = COOMatrixBuilder::with_capacity(nnz);
         let mut idx = 0;
         // SAFETY: i32 and AtomicI32 have identical layouts
         let data: Vec<i32> = unsafe { transmute(self.data) };
@@ -58,12 +58,13 @@ impl PairCounter for SymmetricPairCounter {
                 let val = data[idx];
                 if val > 0 {
                     bld.add_entry(row, col, val);
-                    bld.add_entry(col, row, val);
                 }
                 idx += 1;
             }
         }
-        bld.finish()
+        let coo = bld.finish();
+        let coo2 = coo.transpose();
+        vec![coo, coo2]
     }
 }
 

@@ -37,7 +37,7 @@ pub fn count_cooc<'py>(
     items: PyArrowType<ArrayData>,
     ordered: bool,
     progress: Bound<'py, PyAny>,
-) -> PyResult<PyArrowType<RecordBatch>> {
+) -> PyResult<Vec<PyArrowType<RecordBatch>>> {
     let groups = make_array(groups.0);
     let items = make_array(items.0);
     let nrows = groups.len();
@@ -59,13 +59,23 @@ pub fn count_cooc<'py>(
     });
     pb.shutdown(py)?;
     let out = out?;
-    debug!("finished counting {} co-occurrances", out.col.len());
+    debug!(
+        "finished counting {} co-occurrances",
+        out.iter().map(|m| m.nnz()).sum::<usize>()
+    );
 
-    let batch = out
-        .record_batch("count")
-        .map_err(|e| PyRuntimeError::new_err(format!("error assembling result array: {}", e)))?;
+    let mut batches = Vec::with_capacity(out.len());
+    for coo in out {
+        batches.push(
+            coo.record_batch("count")
+                .map_err(|e| {
+                    PyRuntimeError::new_err(format!("error assembling result array: {}", e))
+                })?
+                .into(),
+        );
+    }
 
-    Ok(batch.into())
+    Ok(batches)
 }
 
 fn count_cooc_sequential<PC: PairCounter>(
@@ -74,7 +84,7 @@ fn count_cooc_sequential<PC: PairCounter>(
     items: &Int32Array,
     n_groups: usize,
     n_items: usize,
-) -> PyResult<COOMatrix<Int32Type, Int32Type>> {
+) -> PyResult<Vec<COOMatrix<Int32Type, Int32Type>>> {
     let gvals = groups.values();
     let ivals = items.values();
 
@@ -102,7 +112,7 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
     items: &Int32Array,
     n_groups: usize,
     n_items: usize,
-) -> PyResult<COOMatrix<Int32Type, Int32Type>> {
+) -> PyResult<Vec<COOMatrix<Int32Type, Int32Type>>> {
     let gvals = groups.values();
     let ivals = items.values();
 

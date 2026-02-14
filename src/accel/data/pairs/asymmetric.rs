@@ -46,7 +46,7 @@ impl PairCounter for AsymmetricPairCounter {
         self.rows.iter().map(|r| r.len()).sum()
     }
 
-    fn finish(self) -> COOMatrix<Int32Type, Int32Type> {
+    fn finish(self) -> Vec<COOMatrix<Int32Type, Int32Type>> {
         // compute the # of rows
         let size = self.nnz();
         debug!(
@@ -60,6 +60,6 @@ impl PairCounter for AsymmetricPairCounter {
                 bld.add_entry(ri, ci, count);
             }
         }
-        bld.finish()
+        vec![bld.finish()]
     }
 }
