@@ -135,13 +135,14 @@ impl ProgressData {
                 drop(state);
 
                 // send update to Python
-                Python::attach(|py| {
+                Python::try_attach(|py| {
                     let kwargs = PyDict::new(py);
                     kwargs.set_item(intern!(py, "completed"), count)?;
                     self.pb
                         .call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
                     Ok::<(), PyErr>(())
                 })
+                .unwrap_or(Ok(()))
                 .expect("progress update failed");
 
                 // re-acquire lock, update last count, and loop.
