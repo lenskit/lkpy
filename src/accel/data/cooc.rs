@@ -59,9 +59,10 @@ pub fn count_cooc<'py>(
         } else {
             count_cooc_parallel::<SymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
         }
-    })?;
-    debug!("finished counting {} co-occurrnaces", out.col.len());
+    });
     pb.shutdown()?;
+    let out = out?;
+    debug!("finished counting {} co-occurrnaces", out.col.len());
 
     let mut schema = SchemaBuilder::new();
     schema.push(Field::new("row", DataType::Int32, false));

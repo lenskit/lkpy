@@ -43,7 +43,7 @@ pub(super) fn train_implicit_matrix<'py>(
     let otor_py = otor.readonly();
     let otor = otor_py.as_array();
 
-    let progress = ProgressHandle::from_input(progress);
+    let mut progress = ProgressHandle::from_input(progress);
     debug!(
         "beginning implicit ALS training half with {} rows",
         other.nrows()
@@ -59,6 +59,7 @@ pub(super) fn train_implicit_matrix<'py>(
             })
             .sum()
     });
+    progress.shutdown()?;
 
     Ok(frob.sqrt())
 }
