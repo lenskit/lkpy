@@ -15,6 +15,7 @@ use arrow::{
 use arrow_schema::{ArrowError, DataType, Field, SchemaBuilder};
 
 /// Representation of coordinate sparse matrices.
+#[derive(Clone)]
 pub struct COOMatrix<V, Ix = Int32Type>
 where
     V: ArrowPrimitiveType,
@@ -44,6 +45,10 @@ where
     Ix: ArrowPrimitiveType,
     Ix::Native: OffsetSizeTrait,
 {
+    pub fn nnz(&self) -> usize {
+        self.row.len()
+    }
+
     /// Transpose this matrix (swap rows and columns).
     pub fn transpose(&self) -> COOMatrix<V, Ix> {
         COOMatrix {

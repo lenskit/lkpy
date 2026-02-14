@@ -203,7 +203,8 @@ class RelationshipSet:
             sorts.append((order, "ascending"))
         _log.debug("sorting table by %s", sorts)
         tbl = self._table.sort_by(sorts)
-        _log.debug("counting co-occurrences")
+        n = len(self._vocabularies[entity])
+        _log.debug("counting co-occurrences", items=n)
         with item_progress("co-occurrences", tbl.num_rows) as pb:
             result = _accel_data.count_cooc(
                 len(self._vocabularies[group[0]]),
@@ -213,18 +214,20 @@ class RelationshipSet:
                 order is not None,
                 pb,
             )
-        n = len(self._vocabularies[entity])
 
+        tbl = pa.Table.from_batches(result)
+
+        _log.debug("assembling co-occurrence matrix", items=n, nnz=tbl.num_rows)
         indices = np.stack(
             [
-                result.column("row").to_numpy(zero_copy_only=False),
-                result.column("col").to_numpy(zero_copy_only=False),
+                tbl.column("row").to_numpy(zero_copy_only=False),
+                tbl.column("col").to_numpy(zero_copy_only=False),
             ],
             axis=0,
         )
 
         return sps.coo_array(
-            (result.column("count").to_numpy(zero_copy_only=False), indices),
+            (tbl.column("count").to_numpy(zero_copy_only=False), indices),
             shape=(n, n),
         )
 

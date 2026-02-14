@@ -25,7 +25,7 @@ pub(super) trait PairCounter {
     fn nnz(&self) -> usize;
 
     /// Finish the counting into a matrix.
-    fn finish(self) -> COOMatrix<Int32Type, Int32Type>;
+    fn finish(self) -> Vec<COOMatrix<Int32Type, Int32Type>>;
 }
 
 /// Trait for pair counters that allow concurrent updates.
