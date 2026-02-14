@@ -60,7 +60,7 @@ pub fn compute_similarities<'py>(
         Ok(chunks.iter().map(|a| a.into_data().into()).collect())
     });
 
-    progress.shutdown()?;
+    progress.shutdown(py)?;
 
     res
 }

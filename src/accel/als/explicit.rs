@@ -57,7 +57,7 @@ pub(super) fn train_explicit_matrix<'py>(
             })
             .sum()
     });
-    progress.shutdown()?;
+    progress.shutdown(py)?;
 
     Ok(frob.sqrt())
 }

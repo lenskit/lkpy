@@ -45,7 +45,7 @@ impl ProgressHandle {
         Self::new(pb)
     }
 
-    pub fn new(pb: Option<Py<PyAny>>) -> Self {
+    fn new(pb: Option<Py<PyAny>>) -> Self {
         pb.map(|pb| {
             let data = Arc::new(ProgressData {
                 pb,
@@ -90,13 +90,15 @@ impl ProgressHandle {
         }
     }
 
-    pub fn shutdown(&mut self) -> PyResult<()> {
+    pub fn shutdown<'py>(&mut self, py: Python<'py>) -> PyResult<()> {
         if let Some(data) = self.data.take() {
             data.shutdown();
         }
         if let Some(h) = self.handle.take() {
-            h.join()
-                .map_err(|_e| PyRuntimeError::new_err(format!("progress thread panicked")))
+            py.detach(|| {
+                h.join()
+                    .map_err(|_e| PyRuntimeError::new_err(format!("progress thread panicked")))
+            })
         } else {
             Ok(())
         }
@@ -114,7 +116,9 @@ impl Clone for ProgressHandle {
 
 impl Drop for ProgressHandle {
     fn drop(&mut self) {
-        self.shutdown().expect("backend panicked")
+        if let Some(data) = self.data.take() {
+            data.shutdown();
+        }
     }
 }
 

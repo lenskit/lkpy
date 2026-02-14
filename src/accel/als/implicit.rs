@@ -59,7 +59,7 @@ pub(super) fn train_implicit_matrix<'py>(
             })
             .sum()
     });
-    progress.shutdown()?;
+    progress.shutdown(py)?;
 
     Ok(frob.sqrt())
 }

@@ -60,7 +60,7 @@ pub fn count_cooc<'py>(
             count_cooc_parallel::<SymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
         }
     });
-    pb.shutdown()?;
+    pb.shutdown(py)?;
     let out = out?;
     debug!("finished counting {} co-occurrances", out.col.len());
 
