@@ -62,7 +62,7 @@ pub fn count_cooc<'py>(
     });
     pb.shutdown(py)?;
     let out = out?;
-    debug!("finished counting {} co-occurrnaces", out.col.len());
+    debug!("finished counting {} co-occurrances", out.col.len());
 
     let mut schema = SchemaBuilder::new();
     schema.push(Field::new("row", DataType::Int32, false));
