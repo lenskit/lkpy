@@ -5,14 +5,14 @@
 // SPDX-License-Identifier: MIT
 
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread::{spawn, JoinHandle};
 use std::time::Duration;
 
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::{intern, prelude::*, types::PyDict};
 
-const UPDATE_MS: u64 = 200;
+const UPDTATE_TIMEOUT: Duration = Duration::from_millis(200);
 
 struct ProgressThreadState {
     running: bool,
@@ -124,17 +124,17 @@ impl Drop for ProgressHandle {
 
 impl ProgressData {
     fn background_update(&self) {
-        let timeout = Duration::from_millis(UPDATE_MS);
-        let mut state = self.state.lock().expect("poisoned lock");
+        let mut state = self.acquire_state();
         while state.running {
-            // wait to be notified, or for timeout
-            let (lock, _res) = self
-                .condition
-                .wait_timeout(state, timeout)
-                .expect("poisoned lock");
-            state = lock;
+            state = self.wait(state);
+
             let count = self.count.load(Ordering::Relaxed);
+
             if count > state.last_count {
+                // drop lock so we don't deadlock with the Python GIL
+                drop(state);
+
+                // send update to Python
                 Python::attach(|py| {
                     let kwargs = PyDict::new(py);
                     kwargs.set_item(intern!(py, "completed"), count)?;
@@ -142,16 +142,38 @@ impl ProgressData {
                         .call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
                     Ok::<(), PyErr>(())
                 })
-                .expect("progress update failed")
+                .expect("progress update failed");
+
+                // re-acquire lock, update last count, and loop.
+                // updating the last count is safe because we are the only thread that does so.
+                state = self.acquire_state();
+                state.last_count = count;
             }
-            state.last_count = count;
         }
     }
 
+    /// Acquire the state lock.
+    fn acquire_state<'a>(&'a self) -> MutexGuard<'a, ProgressThreadState> {
+        self.state.lock().expect("poisoned lock")
+    }
+
+    /// Wait for a wakeup
+    fn wait<'a>(
+        &'a self,
+        state: MutexGuard<'a, ProgressThreadState>,
+    ) -> MutexGuard<'a, ProgressThreadState> {
+        // wait to be notified, or for timeout
+        let (s2, _res) = self
+            .condition
+            .wait_timeout(state, UPDTATE_TIMEOUT)
+            .expect("poisoned lock");
+        s2
+    }
+
     fn shutdown(&self) {
-        let mut state = self.state.lock().expect("poisoned lock");
+        let mut state = self.acquire_state();
         state.running = false;
-        self.condition.notify_all();
+        self.ping();
     }
 
     fn ping(&self) {
