@@ -97,12 +97,9 @@ impl SymmetricPairCounter {
 }
 
 fn order_coords(row: i32, col: i32) -> (i32, i32) {
-    if row < 0 {
-        panic!("negative row index");
-    }
-    if col < 0 {
-        panic!("negative column index");
-    }
+    assert!(row >= 0, "negative row index {}", row);
+    assert!(col >= 0, "negative column index {}", col);
+
     if row <= col {
         (row, col)
     } else {
