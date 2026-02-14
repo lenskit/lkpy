@@ -70,7 +70,7 @@ impl PairCounter for SymmetricPairCounter {
 
 impl ConcurrentPairCounter for SymmetricPairCounter {
     fn crecord(&self, row: i32, col: i32) {
-        let (row, col) = order_coords(row, col);
+        let (row, col) = self.order_coords(row, col);
         let idx = self.compute_index(row, col);
         let old = self.data[idx].fetch_add(1, Ordering::Relaxed);
         if old == 0 {
@@ -94,16 +94,30 @@ impl SymmetricPairCounter {
         let base = total - remaining;
         base + col - row
     }
-}
 
-fn order_coords(row: i32, col: i32) -> (i32, i32) {
-    assert!(row >= 0, "negative row index {}", row);
-    assert!(col >= 0, "negative column index {}", col);
+    /// Validate and order coordinates. Guarantees the smaller coordinate is
+    /// first, and that the coordinates are in-bounds.
+    fn order_coords(&self, row: i32, col: i32) -> (i32, i32) {
+        assert!(row >= 0, "negative row index {}", row);
+        assert!(col >= 0, "negative column index {}", col);
+        assert!(
+            (row as usize) < self.n_items,
+            "row index {} exceeds size {}",
+            row,
+            self.n_items
+        );
+        assert!(
+            (col as usize) < self.n_items,
+            "column index {} exceeds size {}",
+            col,
+            self.n_items
+        );
 
-    if row <= col {
-        (row, col)
-    } else {
-        (col, row)
+        if row <= col {
+            (row, col)
+        } else {
+            (col, row)
+        }
     }
 }
 
