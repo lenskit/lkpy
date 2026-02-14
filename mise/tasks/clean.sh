@@ -10,5 +10,5 @@ fi
 
 set -x
 rm -rf build dist output target
-rm -f *.lprof *.profraw *.prof *.profdata .coverage-prof lcov.info coverage.* .coverage *.log
+rm -rf *.lprof *.profraw *.prof *.profdata .coverage-prof lcov.info coverage.* .coverage *.log
 git clean -xf docs src
