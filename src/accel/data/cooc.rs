@@ -6,14 +6,11 @@
 
 //! Support for counting co-occurrences.
 
-use std::sync::Arc;
-
 use arrow::{
     array::{make_array, Array, ArrayData, Int32Array, RecordBatch},
     datatypes::Int32Type,
     pyarrow::PyArrowType,
 };
-use arrow_schema::{DataType, Field, SchemaBuilder};
 use log::*;
 use pyo3::{
     exceptions::{PyRuntimeError, PyValueError},
@@ -64,16 +61,9 @@ pub fn count_cooc<'py>(
     let out = out?;
     debug!("finished counting {} co-occurrances", out.col.len());
 
-    let mut schema = SchemaBuilder::new();
-    schema.push(Field::new("row", DataType::Int32, false));
-    schema.push(Field::new("col", DataType::Int32, false));
-    schema.push(Field::new("count", DataType::Int32, false));
-    let schema = schema.finish();
-    let batch = RecordBatch::try_new(
-        Arc::new(schema),
-        vec![Arc::new(out.row), Arc::new(out.col), Arc::new(out.val)],
-    )
-    .map_err(|e| PyRuntimeError::new_err(format!("error assembling result array: {}", e)))?;
+    let batch = out
+        .record_batch("count")
+        .map_err(|e| PyRuntimeError::new_err(format!("error assembling result array: {}", e)))?;
 
     Ok(batch.into())
 }
