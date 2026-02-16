@@ -19,6 +19,7 @@ use sha1::{Digest, Sha1};
 mod cooc;
 mod coordinates;
 mod index;
+mod pairs;
 mod sampling;
 mod scatter;
 mod selection;
