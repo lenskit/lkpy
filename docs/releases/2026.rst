@@ -27,6 +27,13 @@ Breaking Changes
   (:pr:`983`)
 - ``GlobalMetric`` no longer inherits from ``Metric``, and may be removed in a future release.
 
+Performance Changes
+-------------------
+
+- :meth:`lenskit.data.RelationshipSet.co_occurrances` is much faster and uses
+  parallel computation, at the expense of increased memory use in the symmetric
+  (non-ordered) case (:issue:`970`, :pr:`1007`).
+
 Minor Changes
 -------------
 
@@ -35,3 +42,5 @@ Minor Changes
   input or output data type.
 - Pipeline component inputs with default values can now have missing inputs
   (:issue:`1000`, :pr:`1001`).
+- Rust progress updates now use a background thread to simplify logic and keep
+  locks out of the work path (:pr:`1008`).
