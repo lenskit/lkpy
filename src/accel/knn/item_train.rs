@@ -33,7 +33,7 @@ pub fn compute_similarities<'py>(
     let (nu, ni) = shape;
     let mut progress = ProgressHandle::from_input(progress);
 
-    let res = py.detach(|| {
+    let res = py.allow_threads(|| {
         // extract the data
         debug!("preparing {}x{} training", nu, ni);
         debug!(

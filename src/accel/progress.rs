@@ -95,7 +95,7 @@ impl ProgressHandle {
             data.shutdown();
         }
         if let Some(h) = self.handle.take() {
-            py.detach(|| {
+            py.allow_threads(|| {
                 h.join()
                     .map_err(|_e| PyRuntimeError::new_err(format!("progress thread panicked")))
             })
@@ -135,14 +135,13 @@ impl ProgressData {
                 drop(state);
 
                 // send update to Python
-                Python::try_attach(|py| {
+                Python::with_gil(|py| {
                     let kwargs = PyDict::new(py);
                     kwargs.set_item(intern!(py, "completed"), count)?;
                     self.pb
                         .call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
                     Ok::<(), PyErr>(())
                 })
-                .unwrap_or(Ok(()))
                 .expect("progress update failed");
 
                 // re-acquire lock, update last count, and loop.
