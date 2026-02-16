@@ -1,23 +1,29 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::{
-    ptr,
-    sync::atomic::{AtomicPtr, AtomicUsize, Ordering},
-    time::Instant,
-};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::thread::{spawn, JoinHandle};
+use std::time::Duration;
 
+use pyo3::exceptions::PyRuntimeError;
 use pyo3::{intern, prelude::*, types::PyDict};
 
-const UPDATE_SECS: f64 = 0.2;
+const UPDTATE_TIMEOUT: Duration = Duration::from_millis(200);
 
-struct UpdateState {
-    count: usize,
-    time: f64,
-    rate: f64,
+struct ProgressThreadState {
+    running: bool,
+    last_count: usize,
+}
+
+struct ProgressData {
+    pb: Py<PyAny>,
+    count: AtomicUsize,
+    state: Mutex<ProgressThreadState>,
+    condition: Condvar,
 }
 
 /// Thin Rust wrapper around a LensKit progress bar.
@@ -25,10 +31,8 @@ struct UpdateState {
 /// This method applies internal throttling to reduce the number of calls
 /// to the Python progress bar.
 pub(crate) struct ProgressHandle {
-    pb: Option<Py<PyAny>>,
-    start: Instant,
-    count: AtomicUsize,
-    last_update: AtomicPtr<UpdateState>,
+    data: Option<Arc<ProgressData>>,
+    handle: Option<JoinHandle<()>>,
 }
 
 impl ProgressHandle {
@@ -41,81 +45,139 @@ impl ProgressHandle {
         Self::new(pb)
     }
 
-    pub fn new(pb: Option<Py<PyAny>>) -> Self {
+    fn new(pb: Option<Py<PyAny>>) -> Self {
+        pb.map(|pb| {
+            let data = Arc::new(ProgressData {
+                pb,
+                count: AtomicUsize::new(0),
+                state: Mutex::new(ProgressThreadState {
+                    running: true,
+                    last_count: 0,
+                }),
+                condition: Condvar::new(),
+            });
+            let d2 = data.clone();
+            let handle = spawn(move || d2.background_update());
+            ProgressHandle {
+                data: Some(data),
+                handle: Some(handle),
+            }
+        })
+        .unwrap_or_else(Self::null)
+    }
+
+    pub fn null() -> Self {
         ProgressHandle {
-            pb,
-            count: AtomicUsize::new(0),
-            start: Instant::now(),
-            last_update: AtomicPtr::new(ptr::null_mut()),
+            data: None,
+            handle: None,
         }
     }
 
     pub fn tick(&self) {
-        let count = self.count.fetch_add(1, Ordering::Relaxed) + 1;
+        self.advance(1);
+    }
 
-        let lu_ptr = self.last_update.load(Ordering::Relaxed);
-
-        let last_update = if lu_ptr.is_null() {
-            None
-        } else {
-            unsafe { Some(&*lu_ptr) }
-        };
-
-        let thresh = if let Some(lu) = last_update {
-            // bail early if the rate estimate says we don't need to update
-            let n = (count - lu.count) as f64;
-            if n / lu.rate < UPDATE_SECS * 0.95 {
-                return;
-            }
-
-            lu.time
-        } else {
-            0.0
-        };
-
-        let time = self.start.elapsed().as_secs_f64();
-        // bail if we haven't been running long enough
-        if time < thresh + UPDATE_SECS {
-            return;
+    pub fn advance(&self, n: usize) {
+        if let Some(data) = &self.data {
+            data.count.fetch_add(n, Ordering::Relaxed);
         }
+    }
 
-        // we're ready to set the time!
-        let update = UpdateState {
-            count,
-            time,
-            rate: count as f64 / time,
-        };
-        let update_ptr = Box::leak(Box::new(update));
-        match self.last_update.compare_exchange_weak(
-            lu_ptr,
-            update_ptr,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
-            Ok(_) => {
-                self.refresh(count);
-                // free the old state if needed
-                if !lu_ptr.is_null() {
-                    let _ = unsafe { Box::from_raw(lu_ptr) };
-                }
-            }
-            Err(_) => {
-                // someone else beat us to the update, free our state and go on
-                let _ = unsafe { Box::from_raw(update_ptr) };
+    /// Force an update of the progress bar.
+    pub fn flush(&self) {
+        if let Some(data) = &self.data {
+            data.ping();
+        }
+    }
+
+    pub fn shutdown<'py>(&mut self, py: Python<'py>) -> PyResult<()> {
+        if let Some(data) = self.data.take() {
+            data.shutdown();
+        }
+        if let Some(h) = self.handle.take() {
+            py.detach(|| {
+                h.join()
+                    .map_err(|_e| PyRuntimeError::new_err(format!("progress thread panicked")))
+            })
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Clone for ProgressHandle {
+    fn clone(&self) -> Self {
+        ProgressHandle {
+            data: self.data.clone(),
+            handle: None,
+        }
+    }
+}
+
+impl Drop for ProgressHandle {
+    fn drop(&mut self) {
+        if let Some(data) = self.data.take() {
+            data.shutdown();
+        }
+    }
+}
+
+impl ProgressData {
+    fn background_update(&self) {
+        let mut state = self.acquire_state();
+        while state.running {
+            state = self.wait(state);
+
+            let count = self.count.load(Ordering::Relaxed);
+
+            if count > state.last_count {
+                // drop lock so we don't deadlock with the Python GIL
+                drop(state);
+
+                // send update to Python
+                Python::try_attach(|py| {
+                    let kwargs = PyDict::new(py);
+                    kwargs.set_item(intern!(py, "completed"), count)?;
+                    self.pb
+                        .call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
+                    Ok::<(), PyErr>(())
+                })
+                .unwrap_or(Ok(()))
+                .expect("progress update failed");
+
+                // re-acquire lock, update last count, and loop.
+                // updating the last count is safe because we are the only thread that does so.
+                state = self.acquire_state();
+                state.last_count = count;
             }
         }
     }
 
-    fn refresh(&self, count: usize) {
-        Python::with_gil(|py| {
-            py.check_signals()?;
-            if let Some(pb) = &self.pb {
-                let kwargs = PyDict::new(py);
-                kwargs.set_item(intern!(py, "completed"), count)?;
-                pb.call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
-            }
-            Ok::<(), PyErr>(())
-        })
-        .expect("progress update failed")
+    /// Acquire the state lock.
+    fn acquire_state<'a>(&'a self) -> MutexGuard<'a, ProgressThreadState> {
+        self.state.lock().expect("poisoned lock")
+    }
+
+    /// Wait for a wakeup
+    fn wait<'a>(
+        &'a self,
+        state: MutexGuard<'a, ProgressThreadState>,
+    ) -> MutexGuard<'a, ProgressThreadState> {
+        // wait to be notified, or for timeout
+        let (s2, _res) = self
+            .condition
+            .wait_timeout(state, UPDTATE_TIMEOUT)
+            .expect("poisoned lock");
+        s2
+    }
+
+    fn shutdown(&self) {
+        let mut state = self.acquire_state();
+        state.running = false;
+        self.ping();
+    }
+
+    fn ping(&self) {
+        self.condition.notify_all();
     }
 }
