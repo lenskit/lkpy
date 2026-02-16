@@ -15,7 +15,10 @@ use ordered_float::NotNan;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 
-use crate::sparse::{ArrowCSRConsumer, CSRMatrix, CSR};
+use crate::{
+    progress::ProgressHandle,
+    sparse::{ArrowCSRConsumer, CSRMatrix, CSR},
+};
 
 #[pyfunction]
 pub fn compute_similarities<'py>(
@@ -28,13 +31,9 @@ pub fn compute_similarities<'py>(
     progress: Bound<'py, PyAny>,
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
     let (nu, ni) = shape;
-    let progress = if progress.is_none() {
-        None
-    } else {
-        Some(progress.unbind())
-    };
+    let mut progress = ProgressHandle::from_input(progress);
 
-    py.detach(|| {
+    let res = py.detach(|| {
         // extract the data
         debug!("preparing {}x{} training", nu, ni);
         debug!(
@@ -52,18 +51,18 @@ pub fn compute_similarities<'py>(
         // let's compute!
         let range = 0..ni;
         debug!("computing similarity rows");
-        let collector = if let Some(pb) = progress {
-            ArrowCSRConsumer::with_progress(ni, pb)
-        } else {
-            ArrowCSRConsumer::new(ni)
-        };
+        let collector = ArrowCSRConsumer::with_progress(ni, &progress);
         let chunks = range
             .into_par_iter()
             .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim, save_nbrs))
             .drive(collector);
 
         Ok(chunks.iter().map(|a| a.into_data().into()).collect())
-    })
+    });
+
+    progress.shutdown()?;
+
+    res
 }
 
 fn sim_row(

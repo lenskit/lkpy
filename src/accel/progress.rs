@@ -46,7 +46,7 @@ impl ProgressHandle {
     }
 
     pub fn new(pb: Option<Py<PyAny>>) -> Self {
-        if let Some(pb) = pb {
+        pb.map(|pb| {
             let data = Arc::new(ProgressData {
                 pb,
                 count: AtomicUsize::new(0),
@@ -62,11 +62,14 @@ impl ProgressHandle {
                 data: Some(data),
                 handle: Some(handle),
             }
-        } else {
-            ProgressHandle {
-                data: None,
-                handle: None,
-            }
+        })
+        .unwrap_or_else(Self::null)
+    }
+
+    pub fn null() -> Self {
+        ProgressHandle {
+            data: None,
+            handle: None,
         }
     }
 
@@ -96,6 +99,15 @@ impl ProgressHandle {
                 .map_err(|_e| PyRuntimeError::new_err(format!("progress thread panicked")))
         } else {
             Ok(())
+        }
+    }
+}
+
+impl Clone for ProgressHandle {
+    fn clone(&self) -> Self {
+        ProgressHandle {
+            data: self.data.clone(),
+            handle: None,
         }
     }
 }

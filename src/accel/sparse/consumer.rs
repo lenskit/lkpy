@@ -11,7 +11,6 @@ use arrow::{
     buffer::OffsetBuffer,
 };
 use arrow_schema::{DataType, Field, Fields};
-use pyo3::prelude::*;
 use rayon::iter::plumbing::{Consumer, Folder, Reducer};
 
 use crate::progress::ProgressHandle;
@@ -37,10 +36,10 @@ struct CSRState {
 }
 
 impl CSRState {
-    fn new(dim: usize, progress: Option<Py<PyAny>>) -> Self {
+    fn new(dim: usize, progress: ProgressHandle) -> Self {
         CSRState {
             dimension: dim,
-            progress: ProgressHandle::new(progress),
+            progress: progress,
         }
     }
 }
@@ -58,12 +57,14 @@ impl ArrowCSRConsumer {
             val_bld: Float32Builder::new(),
         }
     }
+
+    #[allow(dead_code)]
     pub(crate) fn new(dim: usize) -> Self {
-        Self::from_state(CSRState::new(dim, None))
+        Self::from_state(CSRState::new(dim, ProgressHandle::null()))
     }
 
-    pub(crate) fn with_progress(dim: usize, progress: Py<PyAny>) -> Self {
-        Self::from_state(CSRState::new(dim, Some(progress)))
+    pub(crate) fn with_progress(dim: usize, progress: &ProgressHandle) -> Self {
+        Self::from_state(CSRState::new(dim, progress.clone()))
     }
 }
 
