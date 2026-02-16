@@ -4,21 +4,26 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::sync::RwLock;
-use std::{
-    sync::atomic::{AtomicUsize, Ordering},
-    time::Instant,
-};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Condvar, Mutex};
+use std::thread::{spawn, JoinHandle};
+use std::time::Duration;
 
+use pyo3::exceptions::PyRuntimeError;
 use pyo3::{intern, prelude::*, types::PyDict};
 
-const UPDATE_SECS: f64 = 0.2;
+const UPDATE_MS: u64 = 200;
 
-#[derive(Clone, Copy)]
-struct UpdateState {
-    count: usize,
-    time: f64,
-    rate: f64,
+struct ProgressThreadState {
+    running: bool,
+    last_count: usize,
+}
+
+struct ProgressData {
+    pb: Py<PyAny>,
+    count: AtomicUsize,
+    state: Mutex<ProgressThreadState>,
+    condition: Condvar,
 }
 
 /// Thin Rust wrapper around a LensKit progress bar.
@@ -26,10 +31,8 @@ struct UpdateState {
 /// This method applies internal throttling to reduce the number of calls
 /// to the Python progress bar.
 pub(crate) struct ProgressHandle {
-    pb: Option<Py<PyAny>>,
-    start: Instant,
-    count: AtomicUsize,
-    last_update: RwLock<Option<UpdateState>>,
+    data: Option<Arc<ProgressData>>,
+    handle: Option<JoinHandle<()>>,
 }
 
 impl ProgressHandle {
@@ -43,11 +46,27 @@ impl ProgressHandle {
     }
 
     pub fn new(pb: Option<Py<PyAny>>) -> Self {
-        ProgressHandle {
-            pb,
-            count: AtomicUsize::new(0),
-            start: Instant::now(),
-            last_update: RwLock::new(None),
+        if let Some(pb) = pb {
+            let data = Arc::new(ProgressData {
+                pb,
+                count: AtomicUsize::new(0),
+                state: Mutex::new(ProgressThreadState {
+                    running: true,
+                    last_count: 0,
+                }),
+                condition: Condvar::new(),
+            });
+            let d2 = data.clone();
+            let handle = spawn(move || d2.background_update());
+            ProgressHandle {
+                data: Some(data),
+                handle: Some(handle),
+            }
+        } else {
+            ProgressHandle {
+                data: None,
+                handle: None,
+            }
         }
     }
 
@@ -56,52 +75,70 @@ impl ProgressHandle {
     }
 
     pub fn advance(&self, n: usize) {
-        let count = self.count.fetch_add(n, Ordering::Relaxed) + n;
-
-        let last_update = {
-            let lock = self.last_update.read().expect("poisoned lock");
-            *lock
-        };
-
-        let thresh = if let Some(lu) = last_update {
-            // bail early if the rate estimate says we don't need to update
-            let n = (count - lu.count) as f64;
-            if n / lu.rate < UPDATE_SECS * 0.95 {
-                return;
-            }
-
-            lu.time
-        } else {
-            0.0
-        };
-
-        let time = self.start.elapsed().as_secs_f64();
-        // bail if we haven't been running long enough
-        if time < thresh + UPDATE_SECS {
-            return;
-        }
-
-        // we're ready to set the time! if someone else is writing, do nothing, they've handled it
-        if let Ok(mut lock) = self.last_update.try_write() {
-            *lock = Some(UpdateState {
-                count,
-                time,
-                rate: count as f64 / time,
-            });
-            self.refresh(count);
+        if let Some(data) = &self.data {
+            data.count.fetch_add(n, Ordering::Relaxed);
         }
     }
 
-    fn refresh(&self, count: usize) {
-        Python::attach(|py| {
-            py.check_signals()?;
-            if let Some(pb) = &self.pb {
-                let kwargs = PyDict::new(py);
-                kwargs.set_item(intern!(py, "completed"), count)?;
-                pb.call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
+    /// Force an update of the progress bar.
+    pub fn flush(&self) {
+        if let Some(data) = &self.data {
+            data.ping();
+        }
+    }
+
+    pub fn shutdown(&mut self) -> PyResult<()> {
+        if let Some(data) = self.data.take() {
+            data.shutdown();
+        }
+        if let Some(h) = self.handle.take() {
+            h.join()
+                .map_err(|_e| PyRuntimeError::new_err(format!("progress thread panicked")))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Drop for ProgressHandle {
+    fn drop(&mut self) {
+        self.shutdown().expect("backend panicked")
+    }
+}
+
+impl ProgressData {
+    fn background_update(&self) {
+        let timeout = Duration::from_millis(UPDATE_MS);
+        let mut state = self.state.lock().expect("poisoned lock");
+        while state.running {
+            // wait to be notified, or for timeout
+            let (lock, _res) = self
+                .condition
+                .wait_timeout(state, timeout)
+                .expect("poisoned lock");
+            state = lock;
+            let count = self.count.load(Ordering::Relaxed);
+            if count > state.last_count {
+                Python::attach(|py| {
+                    let kwargs = PyDict::new(py);
+                    kwargs.set_item(intern!(py, "completed"), count)?;
+                    self.pb
+                        .call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
+                    Ok::<(), PyErr>(())
+                })
+                .expect("progress update failed")
             }
-            Ok::<(), PyErr>(())
-        })
-        .expect("progress update failed")
+            state.last_count = count;
+        }
+    }
+
+    fn shutdown(&self) {
+        let mut state = self.state.lock().expect("poisoned lock");
+        state.running = false;
+        self.condition.notify_all();
+    }
+
+    fn ping(&self) {
+        self.condition.notify_all();
     }
 }
