@@ -48,9 +48,9 @@ pub fn count_cooc<'py>(
         return Err(PyValueError::new_err("array length mismatch"));
     }
 
-    let pb = ProgressHandle::from_input(progress);
+    let mut pb = ProgressHandle::from_input(progress);
 
-    let out = py.detach(move || {
+    let out = py.detach(|| {
         let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
         let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
 
@@ -59,7 +59,10 @@ pub fn count_cooc<'py>(
         } else {
             count_cooc_parallel::<SymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
         }
-    })?;
+    });
+    pb.shutdown(py)?;
+    let out = out?;
+    debug!("finished counting {} co-occurrnaces", out.col.len());
 
     let mut schema = SchemaBuilder::new();
     schema.push(Field::new("row", DataType::Int32, false));
@@ -117,27 +120,24 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
 
     debug!("pass 2: counting groups");
     let counts = PC::create(n_items);
-    (0..n_groups).into_par_iter().for_each_init(
-        || pb.thread_local(),
-        |lpb, i| {
-            let start = g_ptrs[i];
-            let end = g_ptrs[i + 1];
-            let items = &ivals[start..end];
-            let n = items.len();
+    (0..n_groups).into_par_iter().for_each(|i| {
+        let start = g_ptrs[i];
+        let end = g_ptrs[i + 1];
+        let items = &ivals[start..end];
+        let n = items.len();
 
-            for i in 0..n {
-                let ri = items[i as usize];
-                for j in (i + 1)..n {
-                    if i != j {
-                        let ci = items[j as usize];
-                        counts.crecord(ri, ci);
-                    }
+        for i in 0..n {
+            let ri = items[i as usize];
+            for j in (i + 1)..n {
+                if i != j {
+                    let ci = items[j as usize];
+                    counts.crecord(ri, ci);
                 }
             }
+        }
 
-            lpb.advance(items.len());
-        },
-    );
+        pb.advance(items.len());
+    });
     pb.flush();
 
     // assemble the result
