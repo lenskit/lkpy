@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -47,7 +47,7 @@ pub fn count_cooc<'py>(
 
     let mut pb = ProgressHandle::from_input(progress);
 
-    let out = py.detach(|| {
+    let out = py.allow_threads(|| {
         let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
         let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
 
