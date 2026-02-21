@@ -117,4 +117,31 @@ class EASEScorer(Component[ItemList], Trainable):
         self.weights = mat
 
     def __call__(self, query: RecQuery, items: ItemList):
-        pass
+        log = _log.bind(user=query.user_id)
+
+        q_items = query.query_items
+        if q_items is None:
+            log.debug("no history items, cannot score")
+            return ItemList(items, score=np.nan)
+
+        q_inos = q_items.numbers(vocabulary=self.items, missing="negative")
+        q_ok = q_inos >= 0
+        if not np.any(q_ok):
+            log.debug("no usable history items, cannot score")
+            return ItemList(items, score=np.nan)
+        q_good = q_inos[q_ok]
+
+        t_inos = items.numbers(vocabulary=self.items, missing="negative")
+        t_ok = t_inos >= 0
+        t_good = t_inos[t_ok]
+
+        N = len(self.items)
+        q_vec = np.zeros(N, dtype=np.float32)
+        q_vec[q_good] = 1.0
+
+        _log.debug("multiplying matrix for %d items", np.sum(q_ok))
+        scores = self.weights @ q_vec
+        assert scores.shape == (N,)
+
+        scored = ItemList(item_nums=t_good, scores=scores[t_good], vocabulary=self.items)
+        return items.update(scored)
