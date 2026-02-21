@@ -17,6 +17,7 @@ from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.matrix import COOStructure, fast_col_cooc
 from lenskit.data.types import NPMatrix
 from lenskit.logging import Stopwatch, get_logger, item_progress
+from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
@@ -60,6 +61,8 @@ class EASEScorer(Component[ItemList], Trainable):
 
         if hasattr(self, "weights") and not options.retrain:
             return
+
+        ensure_parallel_init()
 
         n_items = data.item_count
         n_users = data.user_count
