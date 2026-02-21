@@ -35,7 +35,7 @@ simple_ratings = pd.DataFrame.from_records(
 simple_ds = from_interactions_df(simple_ratings)
 
 
-class TestItemKNN(BasicComponentTests, ScorerTests):
+class TestEASE(BasicComponentTests, ScorerTests):
     can_score = "some"
     component = EASEScorer
 
