@@ -39,6 +39,8 @@ class TestItemKNN(BasicComponentTests, ScorerTests):
     can_score = "some"
     component = EASEScorer
 
+    expected_ndcg = 0.01
+
 
 def test_ease_train():
     algo = EASEScorer()
