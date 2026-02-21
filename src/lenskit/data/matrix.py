@@ -24,6 +24,9 @@ from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import csr_array
 
 from lenskit._accel import data as _data_accel
+from lenskit.logging import Progress
+
+from .types import NPVector
 
 t = torch
 M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, sps.spmatrix, t.Tensor)
@@ -57,6 +60,13 @@ class CSRStructure(NamedTuple):
     @property
     def nnz(self):
         return self.rowptrs[self.nrows]
+
+    @property
+    def row_nnzs(self) -> NPVector[np.int32]:
+        """
+        Array of row sizes (number of nonzeros in each row).
+        """
+        return np.diff(self.rowptrs)
 
     def extent(self, row: int) -> tuple[int, int]:
         return self.rowptrs[row], self.rowptrs[row + 1]
@@ -543,6 +553,31 @@ def _check_index_type(index_type: pa.DataType, dimension: int | None) -> int:
 pa.register_extension_type(SparseIndexType(0))  # type: ignore
 pa.register_extension_type(SparseIndexListType(0))  # type: ignore
 pa.register_extension_type(SparseRowType(0))  # type: ignore
+
+
+def fast_col_cooc(matrix: COOStructure, *, progress: Progress | None = None) -> sps.coo_array:
+    r"""
+    Compute column co-occurrances (:math:`M^{\mathrm{T}}M`) efficiently.
+    """
+
+    m, n = matrix.shape
+    groups = pa.array(matrix.row_numbers)
+    items = pa.array(matrix.col_numbers)
+
+    batches = _data_accel.count_cooc(m, n, groups, items, ordered=False, progress=progress)
+    tbl = pa.Table.from_batches(batches)
+    indices = np.stack(
+        [
+            tbl.column("row").to_numpy(zero_copy_only=False),
+            tbl.column("col").to_numpy(zero_copy_only=False),
+        ],
+        axis=0,
+    )
+
+    return sps.coo_array(
+        (tbl.column("count").to_numpy(zero_copy_only=False), indices),
+        shape=(n, n),
+    )
 
 
 def normalize_matrix(
