@@ -145,7 +145,7 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
 }
 
 fn compute_group_pointers(n_groups: usize, gvals: &[i32]) -> PyResult<Vec<usize>> {
-    debug!("pass 1: counting group sizes");
+    debug!("pass 1: counting sizes for {} groups", n_groups);
     let mut group_sizes = vec![0; n_groups];
     let mut last = None;
     for g in gvals {
