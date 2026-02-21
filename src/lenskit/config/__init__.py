@@ -258,6 +258,9 @@ def configure(
         _settings = settings
         if settings.random.seed is not None:
             init_global_rng(settings.random.seed)
+        from lenskit.parallel import initialize
+
+        initialize()
 
     return settings
 
