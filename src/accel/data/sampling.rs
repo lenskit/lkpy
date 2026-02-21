@@ -8,7 +8,7 @@
 use ndarray::Array2;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use rand_pcg::Pcg64;
 
 use crate::data::CoordinateTable;
