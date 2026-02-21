@@ -98,7 +98,7 @@ class EASEScorer(Component[ItemList], Trainable):
 
         log.debug("adding regularization term")
         di = np.diag_indices(n_ok)
-        cooc[di] += self.config.regularization
+        cooc[di] = item_nnz[ok_items] + self.config.regularization
 
         log.debug("inverting Gram-matrix")
         timer = Stopwatch()
