@@ -5,8 +5,10 @@
 // SPDX-License-Identifier: MIT
 
 use std::sync::atomic::{AtomicI32, AtomicUsize};
+use std::sync::Arc;
 use std::{mem::transmute, sync::atomic::Ordering};
 
+use arrow::array::Int32Array;
 use arrow::datatypes::Int32Type;
 use log::*;
 
@@ -18,8 +20,8 @@ use crate::{
 /// Accumulate symmetric pair counts.
 pub struct SymmetricPairCounter {
     n_items: usize,
-    diagonal: bool,
     data: Vec<AtomicI32>,
+    diag: Option<Vec<AtomicI32>>,
     nnz: AtomicUsize,
 }
 
@@ -28,9 +30,13 @@ impl SymmetricPairCounter {
         let cap = arith_tot(n);
         SymmetricPairCounter {
             n_items: n,
-            diagonal,
             // SAFETY: i32 and AtomicI32 have the same layout
             data: unsafe { transmute(vec![0i32; cap]) },
+            diag: if diagonal {
+                unsafe { transmute(vec![0i32; n]) }
+            } else {
+                None
+            },
             nnz: AtomicUsize::new(0),
         }
     }
@@ -49,7 +55,7 @@ impl PairCounter for SymmetricPairCounter {
         self.nnz.load(Ordering::Relaxed)
     }
 
-    fn finish(self) -> Vec<COOMatrix<Int32Type, Int32Type>> {
+    fn finish(mut self) -> Vec<COOMatrix<Int32Type, Int32Type>> {
         let nnz = self.nnz();
         debug!(
             "creating matrix with {} symmetric co-occurrance counts",
@@ -72,13 +78,31 @@ impl PairCounter for SymmetricPairCounter {
         }
         let coo = bld.finish();
         let coo2 = coo.transpose();
-        vec![coo, coo2]
+        if let Some(diag) = self.diag.take() {
+            // SAFETY: i32 and AtomicI32 have the same layout
+            let diag: Vec<i32> = unsafe { transmute(diag) };
+            let n = self.n_items as i32;
+            let ptr = Int32Array::from_iter_values(0..n);
+            let ptr = Arc::new(ptr);
+            let cood = COOMatrix {
+                row: ptr.clone(),
+                col: ptr,
+                val: Arc::new(diag.into()),
+            };
+            vec![cood, coo, coo2]
+        } else {
+            vec![coo, coo2]
+        }
     }
 }
 
 impl ConcurrentPairCounter for SymmetricPairCounter {
     fn crecord(&self, row: i32, col: i32) {
-        if self.diagonal || row != col {
+        if row == col {
+            if let Some(diag) = &self.diag {
+                diag[row as usize].fetch_add(1, Ordering::Relaxed);
+            }
+        } else {
             let (row, col) = self.order_coords(row, col);
             let idx = self.compute_index(row, col);
             let old = self.data[idx].fetch_add(1, Ordering::Relaxed);

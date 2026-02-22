@@ -131,10 +131,8 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
         for i in 0..n {
             let ri = items[i as usize];
             for j in i..n {
-                if i != j {
-                    let ci = items[j as usize];
-                    counts.crecord(ri, ci);
-                }
+                let ci = items[j as usize];
+                counts.crecord(ri, ci);
             }
         }
 
