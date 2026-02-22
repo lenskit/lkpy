@@ -29,6 +29,7 @@ use crate::{
 
 /// Count co-occurrances.
 #[pyfunction]
+#[pyo3(signature=(n_groups, n_items, groups, items, *, ordered=false, progress=None))]
 pub fn count_cooc<'py>(
     py: Python<'py>,
     n_groups: usize,
@@ -36,7 +37,7 @@ pub fn count_cooc<'py>(
     groups: PyArrowType<ArrayData>,
     items: PyArrowType<ArrayData>,
     ordered: bool,
-    progress: Bound<'py, PyAny>,
+    progress: Option<Py<PyAny>>,
 ) -> PyResult<Vec<PyArrowType<RecordBatch>>> {
     let groups = make_array(groups.0);
     let items = make_array(items.0);
@@ -45,7 +46,7 @@ pub fn count_cooc<'py>(
         return Err(PyValueError::new_err("array length mismatch"));
     }
 
-    let mut pb = ProgressHandle::from_input(progress);
+    let mut pb = ProgressHandle::new(progress);
 
     let out = py.detach(|| {
         let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;

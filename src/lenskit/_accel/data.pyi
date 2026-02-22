@@ -26,6 +26,7 @@ def count_cooc(
     n_items: int,
     groups: pa.Int32Array,
     cols: pa.Int32Array,
+    *,
     ordered: bool,
     progress: Progress | None,
 ) -> list[pa.RecordBatch]: ...

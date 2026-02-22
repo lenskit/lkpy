@@ -211,8 +211,8 @@ class RelationshipSet:
                 len(self._vocabularies[entity]),
                 tbl.column(gc).combine_chunks(),
                 tbl.column(ec).combine_chunks(),
-                order is not None,
-                pb,
+                ordered=order is not None,
+                progress=pb,
             )
 
         tbl = pa.Table.from_batches(result)
