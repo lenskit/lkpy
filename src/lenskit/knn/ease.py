@@ -10,7 +10,7 @@ EASE scoring model.
 
 import numpy as np
 import scipy.linalg as spla
-from humanize import metric, naturalsize
+from humanize import naturalsize
 from pydantic import BaseModel, PositiveFloat
 
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
@@ -92,17 +92,13 @@ class EASEScorer(Component[ItemList], Trainable):
         log.debug("computing co-occurrance matrix")
         timer = Stopwatch()
         with item_progress("Counting co-occurrances", len(kept_inos)) as pb:
-            cooc = fast_col_cooc(kept_coo, progress=pb)
+            cooc = fast_col_cooc(kept_coo, dense=True, progress=pb)
 
-        log.info("computed %s co-occurances in %s", metric(cooc.nnz), timer)
-
-        log.debug("converting and densifying matrix")
-        cooc = cooc.astype(np.float32).toarray()
-        log.debug("made %s dense matrix", naturalsize(cooc.nbytes))
+        log.info("computed co-occurances in %s (%s)", timer, naturalsize(cooc.nbytes))
 
         log.debug("adding regularization term")
         di = np.diag_indices(n_ok)
-        cooc[di] = item_nnz[ok_items] + self.config.regularization
+        cooc[di] += self.config.regularization
 
         log.debug("inverting Gram-matrix")
         timer = Stopwatch()
