@@ -18,19 +18,27 @@ use crate::{
 /// Accumulate symmetric pair counts.
 pub struct SymmetricPairCounter {
     n_items: usize,
+    diagonal: bool,
     data: Vec<AtomicI32>,
     nnz: AtomicUsize,
 }
 
-impl PairCounter for SymmetricPairCounter {
-    fn create(n: usize) -> SymmetricPairCounter {
+impl SymmetricPairCounter {
+    pub fn with_diagonal(n: usize, diagonal: bool) -> Self {
         let cap = arith_tot(n);
         SymmetricPairCounter {
             n_items: n,
+            diagonal,
             // SAFETY: i32 and AtomicI32 have the same layout
             data: unsafe { transmute(vec![0i32; cap]) },
             nnz: AtomicUsize::new(0),
         }
+    }
+}
+
+impl PairCounter for SymmetricPairCounter {
+    fn create(n: usize) -> SymmetricPairCounter {
+        Self::with_diagonal(n, false)
     }
 
     fn record(&mut self, row: i32, col: i32) {
@@ -70,11 +78,13 @@ impl PairCounter for SymmetricPairCounter {
 
 impl ConcurrentPairCounter for SymmetricPairCounter {
     fn crecord(&self, row: i32, col: i32) {
-        let (row, col) = self.order_coords(row, col);
-        let idx = self.compute_index(row, col);
-        let old = self.data[idx].fetch_add(1, Ordering::Relaxed);
-        if old == 0 {
-            self.nnz.fetch_add(1, Ordering::Relaxed);
+        if self.diagonal || row != col {
+            let (row, col) = self.order_coords(row, col);
+            let idx = self.compute_index(row, col);
+            let old = self.data[idx].fetch_add(1, Ordering::Relaxed);
+            if old == 0 {
+                self.nnz.fetch_add(1, Ordering::Relaxed);
+            }
         }
     }
 }

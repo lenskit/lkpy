@@ -212,6 +212,7 @@ class RelationshipSet:
                 tbl.column(gc).combine_chunks(),
                 tbl.column(ec).combine_chunks(),
                 ordered=order is not None,
+                diagonal=False,
                 progress=pb,
             )
 

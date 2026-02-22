@@ -27,7 +27,8 @@ def count_cooc(
     groups: pa.Int32Array,
     cols: pa.Int32Array,
     *,
-    ordered: bool,
+    ordered: bool = False,
+    diagonal: bool = True,
     progress: Progress | None,
 ) -> list[pa.RecordBatch]: ...
 def scatter_array(dst: A, idx: pa.Array, src: A) -> A: ...

@@ -29,7 +29,7 @@ use crate::{
 
 /// Count co-occurrances.
 #[pyfunction]
-#[pyo3(signature=(n_groups, n_items, groups, items, *, ordered=false, progress=None))]
+#[pyo3(signature=(n_groups, n_items, groups, items, *, ordered=false, diagonal=true, progress=None))]
 pub fn count_cooc<'py>(
     py: Python<'py>,
     n_groups: usize,
@@ -37,6 +37,7 @@ pub fn count_cooc<'py>(
     groups: PyArrowType<ArrayData>,
     items: PyArrowType<ArrayData>,
     ordered: bool,
+    diagonal: bool,
     progress: Option<Py<PyAny>>,
 ) -> PyResult<Vec<PyArrowType<RecordBatch>>> {
     let groups = make_array(groups.0);
@@ -55,7 +56,8 @@ pub fn count_cooc<'py>(
         if ordered {
             count_cooc_sequential::<AsymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
         } else {
-            count_cooc_parallel::<SymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
+            let ctr = SymmetricPairCounter::with_diagonal(n_items, diagonal);
+            count_cooc_parallel(ctr, groups, items, n_groups, &pb)
         }
     });
     pb.shutdown(py)?;
@@ -108,11 +110,11 @@ fn count_cooc_sequential<PC: PairCounter>(
 }
 
 fn count_cooc_parallel<PC: ConcurrentPairCounter>(
-    pb: &ProgressHandle,
+    counts: PC,
     groups: &Int32Array,
     items: &Int32Array,
     n_groups: usize,
-    n_items: usize,
+    pb: &ProgressHandle,
 ) -> PyResult<Vec<COOMatrix<Int32Type, Int32Type>>> {
     let gvals = groups.values();
     let ivals = items.values();
@@ -120,7 +122,6 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
     let g_ptrs = compute_group_pointers(n_groups, gvals)?;
 
     debug!("pass 2: counting groups");
-    let counts = PC::create(n_items);
     (0..n_groups).into_par_iter().for_each(|i| {
         let start = g_ptrs[i];
         let end = g_ptrs[i + 1];
@@ -129,7 +130,7 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
 
         for i in 0..n {
             let ri = items[i as usize];
-            for j in (i + 1)..n {
+            for j in i..n {
                 if i != j {
                     let ci = items[j as usize];
                     counts.crecord(ri, ci);
