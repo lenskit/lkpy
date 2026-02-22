@@ -29,7 +29,7 @@ class EASEConfig(BaseModel):
     Configuration for :class:`EASEScorer`.
     """
 
-    regularization: PositiveFloat = 0.1
+    regularization: PositiveFloat = 1
     """
     Regularization term for EASE.
     """
