@@ -116,7 +116,7 @@ class EASEScorer(Component[ItemList], Trainable):
         log.info("finished training EASE for %d items", len(self.items))
         self.weights = mat
 
-    def __call__(self, query: RecQuery, items: ItemList):
+    def __call__(self, query: RecQuery, items: ItemList) -> ItemList:
         log = _log.bind(user=query.user_id)
 
         q_items = query.query_items
