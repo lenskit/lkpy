@@ -211,8 +211,9 @@ class RelationshipSet:
                 len(self._vocabularies[entity]),
                 tbl.column(gc).combine_chunks(),
                 tbl.column(ec).combine_chunks(),
-                order is not None,
-                pb,
+                ordered=order is not None,
+                diagonal=False,
+                progress=pb,
             )
 
         tbl = pa.Table.from_batches(result)
@@ -505,13 +506,26 @@ class MatrixRelationshipSet(RelationshipSet):
         row_entity: str | None = None,
         col_entity: str | None = None,
     ) -> MatrixRelationshipSet:
-        if row_entity is not None and row_entity != self.entities[0]:  # pragma: nocover
-            raise ValueError(f"row {row_entity} does not match matrix row {self.entities[0]}")
-        if col_entity is not None and col_entity != self.entities[1]:  # pragma: nocover
-            raise ValueError(f"column {col_entity} does not match matrix row {self.entities[1]}")
+        c_row, c_col = self.entities
+        row_matches = row_entity is None or row_entity == self.entities[0]
+        col_matches = col_entity is None or col_entity == self.entities[1]
+        if row_matches and col_matches:
+            return self
 
-        # already a matrix relationship set
-        return self
+        # we don't want ourselves, so make sure we're requesting the transpose
+        if row_entity is None and col_entity != c_row:  # pragma: nocover
+            raise ValueError(
+                f"unknown column entity {col_entity} (expected “{c_row}” or “{c_col}”)"
+            )
+        if col_entity is None and row_entity != c_col:  # pragma: nocover
+            raise ValueError(f"unknown row entity {row_entity} (expected “{c_col}” or “{c_row}”)")
+
+        schema = self.schema.model_copy(deep=True)
+        schema.entities = {
+            c_col: self.schema.entities[c_row],
+            c_row: self.schema.entities[c_col],
+        }
+        return MatrixRelationshipSet(self.name, self._vocabularies, schema, self._table)
 
     @overload
     def csr_structure(self, *, format: Literal["numpy"] = "numpy") -> CSRStructure: ...

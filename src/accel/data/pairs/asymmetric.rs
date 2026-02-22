@@ -22,6 +22,8 @@ pub struct AsymmetricPairCounter {
 }
 
 impl PairCounter for AsymmetricPairCounter {
+    type Output = Vec<COOMatrix<Int32Type, Int32Type>>;
+
     fn create(n: usize) -> AsymmetricPairCounter {
         AsymmetricPairCounter {
             rows: vec![HashMap::with_hasher(FxBuildHasher); n],

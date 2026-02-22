@@ -45,7 +45,7 @@ impl ProgressHandle {
         Self::new(pb)
     }
 
-    fn new(pb: Option<Py<PyAny>>) -> Self {
+    pub fn new(pb: Option<Py<PyAny>>) -> Self {
         pb.map(|pb| {
             let data = Arc::new(ProgressData {
                 pb,
