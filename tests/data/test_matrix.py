@@ -156,11 +156,30 @@ def test_fast_cooc(mat: coo_array):
     mat.data = np.ones((mat.nnz,))
     cooc = mat.T @ mat
     cooc = cooc.toarray()
-    cooc[np.diag_indices(nc)] = 0
 
     coo = COOStructure(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape)
     res = fast_col_cooc(coo)
     assert isinstance(res, coo_array)
     assert res.shape == (nc, nc)
+    res = res.toarray()
 
-    assert np.all(res.toarray() == cooc)
+    assert np.all(np.diag(res) == np.diag(cooc))
+    assert np.all(res == cooc)
+
+
+@given(sparse_arrays(layout="coo"))
+def test_fast_cooc_no_diagonal(mat: coo_array):
+    nr, nc = mat.shape
+    mat.data = np.ones((mat.nnz,))
+    cooc = mat.T @ mat
+    cooc = cooc.toarray()
+    cooc[np.diag_indices(nc)] = 0
+
+    coo = COOStructure(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape)
+    res = fast_col_cooc(coo, include_diagonal=False)
+    assert isinstance(res, coo_array)
+    assert res.shape == (nc, nc)
+    res = res.toarray()
+
+    assert np.all(np.diag(res) == np.diag(cooc))
+    assert np.all(res == cooc)

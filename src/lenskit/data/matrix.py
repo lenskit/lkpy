@@ -555,7 +555,9 @@ pa.register_extension_type(SparseIndexListType(0))  # type: ignore
 pa.register_extension_type(SparseRowType(0))  # type: ignore
 
 
-def fast_col_cooc(matrix: COOStructure, *, progress: Progress | None = None) -> sps.coo_array:
+def fast_col_cooc(
+    matrix: COOStructure, *, progress: Progress | None = None, include_diagonal: bool = True
+) -> sps.coo_array:
     r"""
     Compute column co-occurrances (:math:`M^{\mathrm{T}}M`) efficiently.
     """
@@ -564,7 +566,9 @@ def fast_col_cooc(matrix: COOStructure, *, progress: Progress | None = None) -> 
     groups = pa.array(matrix.row_numbers)
     items = pa.array(matrix.col_numbers)
 
-    batches = _data_accel.count_cooc(m, n, groups, items, ordered=False, progress=progress)
+    batches = _data_accel.count_cooc(
+        m, n, groups, items, progress=progress, diagonal=include_diagonal
+    )
     tbl = pa.Table.from_batches(batches)
     indices = np.stack(
         [
