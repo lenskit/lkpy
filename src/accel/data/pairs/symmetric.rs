@@ -43,6 +43,8 @@ impl SymmetricPairCounter {
 }
 
 impl PairCounter for SymmetricPairCounter {
+    type Output = Vec<COOMatrix<Int32Type, Int32Type>>;
+
     fn create(n: usize) -> SymmetricPairCounter {
         Self::with_diagonal(n, false)
     }

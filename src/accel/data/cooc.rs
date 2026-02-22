@@ -8,10 +8,10 @@
 
 use arrow::{
     array::{make_array, Array, ArrayData, Int32Array, RecordBatch},
-    datatypes::Int32Type,
     pyarrow::PyArrowType,
 };
 use log::*;
+use numpy::{PyArray2, ToPyArray};
 use pyo3::{
     exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
@@ -21,10 +21,10 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use crate::{
     arrow::checked_array_ref,
     data::pairs::{
-        AsymmetricPairCounter, ConcurrentPairCounter, PairCounter, SymmetricPairCounter,
+        AsymmetricPairCounter, ConcurrentPairCounter, DensePairCounter, PairCounter,
+        SymmetricPairCounter,
     },
     progress::ProgressHandle,
-    sparse::COOMatrix,
 };
 
 /// Count co-occurrances.
@@ -81,13 +81,47 @@ pub fn count_cooc<'py>(
     Ok(batches)
 }
 
+#[pyfunction]
+#[pyo3(signature=(n_groups, n_items, groups, items, *, diagonal=true, progress=None))]
+pub fn dense_cooc<'py>(
+    py: Python<'py>,
+    n_groups: usize,
+    n_items: usize,
+    groups: PyArrowType<ArrayData>,
+    items: PyArrowType<ArrayData>,
+    diagonal: bool,
+    progress: Option<Py<PyAny>>,
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let groups = make_array(groups.0);
+    let items = make_array(items.0);
+    let nrows = groups.len();
+    if items.len() != nrows {
+        return Err(PyValueError::new_err("array length mismatch"));
+    }
+
+    let mut pb = ProgressHandle::new(progress);
+
+    let out = py.detach(|| {
+        let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
+        let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
+
+        let ctr = DensePairCounter::with_diagonal(n_items, diagonal);
+        count_cooc_parallel(ctr, groups, items, n_groups, &pb)
+    });
+    pb.shutdown(py)?;
+    let out = out?;
+    debug!("finished counting co-occurrances");
+
+    Ok(out.to_pyarray(py))
+}
+
 fn count_cooc_sequential<PC: PairCounter>(
     pb: &ProgressHandle,
     groups: &Int32Array,
     items: &Int32Array,
     n_groups: usize,
     n_items: usize,
-) -> PyResult<Vec<COOMatrix<Int32Type, Int32Type>>> {
+) -> PyResult<PC::Output> {
     let gvals = groups.values();
     let ivals = items.values();
 
@@ -115,7 +149,7 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
     items: &Int32Array,
     n_groups: usize,
     pb: &ProgressHandle,
-) -> PyResult<Vec<COOMatrix<Int32Type, Int32Type>>> {
+) -> PyResult<PC::Output> {
     let gvals = groups.values();
     let ivals = items.values();
 

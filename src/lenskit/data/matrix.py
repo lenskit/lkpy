@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import warnings
-from typing import Any, Literal, NamedTuple, TypeVar, cast
+from typing import Any, Literal, NamedTuple, TypeVar, cast, overload
 
 import numpy as np
 import pyarrow as pa
@@ -555,9 +555,29 @@ pa.register_extension_type(SparseIndexListType(0))  # type: ignore
 pa.register_extension_type(SparseRowType(0))  # type: ignore
 
 
+@overload
 def fast_col_cooc(
-    matrix: COOStructure, *, progress: Progress | None = None, include_diagonal: bool = True
-) -> sps.coo_array:
+    matrix: COOStructure,
+    *,
+    progress: Progress | None = None,
+    include_diagonal: bool = True,
+    dense: Literal[True],
+) -> np.ndarray[tuple[int, int], np.dtype[np.float32]]: ...
+@overload
+def fast_col_cooc(
+    matrix: COOStructure,
+    *,
+    progress: Progress | None = None,
+    include_diagonal: bool = True,
+    dense: Literal[False] = False,
+) -> sps.coo_array: ...
+def fast_col_cooc(
+    matrix: COOStructure,
+    *,
+    progress: Progress | None = None,
+    include_diagonal: bool = True,
+    dense: bool = False,
+) -> Any:
     r"""
     Compute column co-occurrances (:math:`M^{\mathrm{T}}M`) efficiently.
     """
@@ -566,22 +586,27 @@ def fast_col_cooc(
     groups = pa.array(matrix.row_numbers)
     items = pa.array(matrix.col_numbers)
 
-    batches = _data_accel.count_cooc(
-        m, n, groups, items, progress=progress, diagonal=include_diagonal
-    )
-    tbl = pa.Table.from_batches(batches)
-    indices = np.stack(
-        [
-            tbl.column("row").to_numpy(zero_copy_only=False),
-            tbl.column("col").to_numpy(zero_copy_only=False),
-        ],
-        axis=0,
-    )
+    if dense:
+        return _data_accel.dense_cooc(
+            m, n, groups, items, progress=progress, diagonal=include_diagonal
+        )
+    else:
+        batches = _data_accel.count_cooc(
+            m, n, groups, items, progress=progress, diagonal=include_diagonal
+        )
+        tbl = pa.Table.from_batches(batches)
+        indices = np.stack(
+            [
+                tbl.column("row").to_numpy(zero_copy_only=False),
+                tbl.column("col").to_numpy(zero_copy_only=False),
+            ],
+            axis=0,
+        )
 
-    return sps.coo_array(
-        (tbl.column("count").to_numpy(zero_copy_only=False), indices),
-        shape=(n, n),
-    )
+        return sps.coo_array(
+            (tbl.column("count").to_numpy(zero_copy_only=False), indices),
+            shape=(n, n),
+        )
 
 
 def normalize_matrix(
