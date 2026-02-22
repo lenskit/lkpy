@@ -105,7 +105,7 @@ class EASEScorer(Component[ItemList], Trainable):
         mat = spla.inv(cooc, assume_a="pos")
         log.info("inverted co-occurrance matrix in %s", timer)
 
-        mat /= np.diag(mat)
+        mat /= -np.diag(mat)
         mat[di] = 0
 
         log.debug("assembling trained item vocabulary")
