@@ -172,7 +172,7 @@ class PipelineTuner:
         if res is None:
             raise ValueError("best result has no metrics")
 
-        if "training_iteration" in res:
+        if self.iterative:
             res["config"] = res["config"] | {"epochs": res["training_iteration"]}
 
         return res
