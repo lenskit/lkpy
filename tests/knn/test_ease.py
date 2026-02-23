@@ -13,10 +13,6 @@ from lenskit.knn.ease import EASEConfig, EASEScorer
 from lenskit.logging import get_logger
 from lenskit.testing import BasicComponentTests, ScorerTests
 
-pytestmark = pytest.mark.skipif(
-    not EASEScorer.is_available(), reason="SciPy requirements not satisfied"
-)
-
 _log = get_logger(__name__)
 
 simple_ratings = pd.DataFrame.from_records(

@@ -73,17 +73,7 @@ class EASEScorer(Component[ItemList], Trainable):
     Item interpolation weight matrix.
     """
 
-    @staticmethod
-    def is_available() -> bool:
-        return Version(scipy.__version__) >= MIN_SCIPY_VERSION
-
     def train(self, data: Dataset, options: TrainingOptions | None = None):
-        if not self.is_available():
-            _log.error(
-                "scipy version %s installed, EASE requires %s", scipy.__version__, MIN_SCIPY_VERSION
-            )
-            raise RuntimeError(f"EASE requires SciPy {MIN_SCIPY_VERSION} or later")
-
         if options is None:
             options = TrainingOptions()
 
@@ -142,6 +132,8 @@ class EASEScorer(Component[ItemList], Trainable):
             case "torch":
                 mat = _chol_invert_torch(cooc, device=options.configured_device(gpu_default=True))
             case "scipy":
+                if Version(scipy.__version__) < MIN_SCIPY_VERSION:
+                    raise RuntimeError("SciPy solver requires SciPy 1.17 or later")
                 mat = _chol_invert_scipy(cooc)
         log.info("inverted co-occurrance matrix in %s", timer)
 
