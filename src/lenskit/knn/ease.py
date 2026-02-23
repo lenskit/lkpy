@@ -41,7 +41,18 @@ class EASEConfig(BaseModel):
 
 class EASEScorer(Component[ItemList], Trainable):
     """
-    Embarrassingly shallow autoencoder :cite:p:`steckEmbarrassinglyShallowAutoencoders2019`.
+    Embarrassingly shallow autoencoder
+    :cite:p:`steckEmbarrassinglyShallowAutoencoders2019`.
+
+    In addition to its configuation, this component also uses a training
+    environment variable:
+
+    .. envvar:: LK_EASE_SOLVER
+
+        Specify the solver to use to invert the Gram-matrix for EASE.  The
+        default is ``"torch"``, which uses the GPU when available.  This can be
+        changed to ``"scipy"`` to use SciPy's :func:`scipy.linalg.inv` instead,
+        which is slower and CPU-only but may take less memory.
 
     .. note::
         This component requires SciPy 1.17 or later.
@@ -81,6 +92,10 @@ class EASEScorer(Component[ItemList], Trainable):
 
         ensure_parallel_init()
 
+        solver = options.envvar("LK_EASE_SOLVER", "torch")
+        if solver not in ("torch", "scipy"):
+            raise ValueError(f"unsupported option: LK_EASE_SOLVER={solver}")
+
         n_items = data.item_count
         n_users = data.user_count
         rates = data.interactions().matrix(row_entity="item", col_entity="user")
@@ -119,7 +134,11 @@ class EASEScorer(Component[ItemList], Trainable):
 
         log.debug("inverting Gram-matrix")
         timer = Stopwatch()
-        mat = _chol_invert_torch(cooc, device=options.configured_device())
+        match solver:
+            case "torch":
+                mat = _chol_invert_torch(cooc, device=options.configured_device(gpu_default=True))
+            case "scipy":
+                mat = _chol_invert_scipy(cooc)
         log.info("inverted co-occurrance matrix in %s", timer)
 
         # divide cells by column's diagonal entry
