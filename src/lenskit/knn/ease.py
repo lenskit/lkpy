@@ -132,6 +132,10 @@ class EASEScorer(Component[ItemList], Trainable):
         di = np.diag_indices(n_ok)
         cooc[di] += self.config.regularization
 
+        # this is a silly trick to *transfer* ownership of the object to another
+        # function, allowing for earlier freeing of the matrix memory.
+        cooc = [cooc]
+
         log.debug("inverting Gram-matrix")
         timer = Stopwatch()
         match solver:
@@ -184,20 +188,20 @@ class EASEScorer(Component[ItemList], Trainable):
         return items.update(scored)
 
 
-def _chol_invert_scipy(cooc: NPMatrix[np.float32]) -> NPMatrix[np.float32]:
+def _chol_invert_scipy(cooc: list[NPMatrix[np.float32]]) -> NPMatrix[np.float32]:
     """
     Invert the co-occurrance matrix using SciPy.
     """
-    return spla.inv(cooc, assume_a="pos", overwrite_a=True)
+    return spla.inv(cooc.pop(), assume_a="pos", overwrite_a=True)
 
 
-def _chol_invert_torch(cooc: NPMatrix[np.float32], device: str) -> NPMatrix[np.float32]:
+def _chol_invert_torch(cooc: list[NPMatrix[np.float32]], device: str) -> NPMatrix[np.float32]:
     """
     Invert the co-occurrance matrix using SciPy.
     """
     import torch
 
-    cooc_t = torch.from_numpy(cooc).to(device)
+    cooc_t = torch.from_numpy(cooc.pop()).to(device)
     del cooc
     decomp, info = torch.linalg.cholesky_ex(cooc_t)
     if info.item():
