@@ -119,7 +119,7 @@ class EASEScorer(Component[ItemList], Trainable):
 
         log.debug("inverting Gram-matrix")
         timer = Stopwatch()
-        mat = spla.inv(cooc, assume_a="pos", overwrite_a=True)
+        mat = _chol_invert_torch(cooc, device=options.configured_device())
         log.info("inverted co-occurrance matrix in %s", timer)
 
         # divide cells by column's diagonal entry
@@ -163,3 +163,25 @@ class EASEScorer(Component[ItemList], Trainable):
 
         scored = ItemList(item_nums=t_good, scores=scores[t_good], vocabulary=self.items)
         return items.update(scored)
+
+
+def _chol_invert_scipy(cooc: NPMatrix[np.float32]) -> NPMatrix[np.float32]:
+    """
+    Invert the co-occurrance matrix using SciPy.
+    """
+    return spla.inv(cooc, assume_a="pos", overwrite_a=True)
+
+
+def _chol_invert_torch(cooc: NPMatrix[np.float32], device: str) -> NPMatrix[np.float32]:
+    """
+    Invert the co-occurrance matrix using SciPy.
+    """
+    import torch
+
+    cooc = torch.from_numpy(cooc).to(device)
+    decomp, info = torch.linalg.cholesky_ex(cooc)
+    if info.item():
+        raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
+
+    inv = torch.cholesky_inverse(decomp, out=cooc)
+    return inv.cpu().numpy()
