@@ -9,8 +9,10 @@ EASE scoring model.
 """
 
 import numpy as np
+import scipy
 import scipy.linalg as spla
 from humanize import naturalsize
+from packaging.version import Version
 from pydantic import BaseModel, PositiveFloat
 
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
@@ -22,6 +24,8 @@ from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
+
+MIN_SCIPY_VERSION = Version("1.17")
 
 
 class EASEConfig(BaseModel):
@@ -55,7 +59,17 @@ class EASEScorer(Component[ItemList], Trainable):
     Item interpolation weight matrix.
     """
 
+    @staticmethod
+    def is_available() -> bool:
+        return Version(scipy.__version__) >= MIN_SCIPY_VERSION
+
     def train(self, data: Dataset, options: TrainingOptions | None = None):
+        if not self.is_available():
+            _log.error(
+                "scipy version %s installed, EASE requires %s", scipy.__version__, MIN_SCIPY_VERSION
+            )
+            raise RuntimeError(f"EASE requires SciPy {MIN_SCIPY_VERSION} or later")
+
         if options is None:
             options = TrainingOptions()
 
