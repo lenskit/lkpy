@@ -119,7 +119,7 @@ class EASEScorer(Component[ItemList], Trainable):
 
         log.debug("inverting Gram-matrix")
         timer = Stopwatch()
-        mat = spla.inv(cooc, assume_a="pos")
+        mat = spla.inv(cooc, assume_a="pos", overwrite_a=True)
         log.info("inverted co-occurrance matrix in %s", timer)
 
         # divide cells by column's diagonal entry
