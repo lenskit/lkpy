@@ -41,7 +41,10 @@ class EASEConfig(BaseModel):
 
 class EASEScorer(Component[ItemList], Trainable):
     """
-    Score items using EASE :citep:`steckEmbarrassinglyShallowAutoencoders2019`.
+    Embarrassingly shallow autoencoder :cite:p:`steckEmbarrassinglyShallowAutoencoders2019`.
+
+    .. note::
+        This component requires SciPy 1.17 or later.
     """
 
     config: EASEConfig
