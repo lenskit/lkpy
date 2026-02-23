@@ -45,6 +45,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     data.add_function(wrap_pyfunction!(scatter::scatter_array, &data)?)?;
     data.add_function(wrap_pyfunction!(scatter::scatter_array_empty, &data)?)?;
     data.add_function(wrap_pyfunction!(cooc::count_cooc, &data)?)?;
+    data.add_function(wrap_pyfunction!(cooc::dense_cooc, &data)?)?;
     data.add_function(wrap_pyfunction!(hash_array, &data)?)?;
 
     Ok(())

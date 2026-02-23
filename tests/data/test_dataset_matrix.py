@@ -362,12 +362,30 @@ def test_count_synthetic(ml_ds: Dataset):
     assert np.all(matrix.data == 1.0)
 
 
+def test_matrix_transpose(ml_ds: Dataset):
+    matrix = ml_ds.interactions().matrix()
+    transpose = matrix.matrix(row_entity="item")
+    assert transpose.n_rows == matrix.n_cols
+    assert transpose.n_cols == matrix.n_rows
+
+    istats = ml_ds.item_stats()
+    csr = transpose.csr_structure()
+    nnz = csr.row_nnzs
+
+    assert np.all(nnz == istats["count"].values)
+
+
 def test_matrix_csr_structure(ml_ds: Dataset):
     matrix = ml_ds.interactions().matrix()
     csr = matrix.csr_structure()
     assert csr.nrows == ml_ds.user_count
     assert csr.ncols == ml_ds.item_count
     assert csr.nnz == ml_ds.interaction_count
+
+    row_nnzs = csr.row_nnzs
+    assert len(row_nnzs) == csr.nrows
+    assert np.sum(row_nnzs) == csr.nnz
+    assert np.all(row_nnzs >= 0)
 
 
 def test_matrix_csr_structure_arrow(ml_ds: Dataset):

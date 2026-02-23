@@ -8,7 +8,14 @@
 k-NN recommender models.
 """
 
-from .item import ItemKNNConfig, ItemKNNScorer
-from .user import UserKNNConfig, UserKNNScorer
+import lazy_loader as lazy
 
-__all__ = ["ItemKNNScorer", "ItemKNNConfig", "UserKNNScorer", "UserKNNConfig"]
+__getattr__, __dir__, __all__ = lazy.attach(
+    __name__,
+    submodules=["item", "user", "ease"],
+    submod_attrs={
+        "item": ["ItemKNNScorer", "ItemKNNConfig"],
+        "user": ["UserKNNScorer", "UserKNNConfig"],
+        "ease": ["EASEScorer", "EASEConfig"],
+    },
+)

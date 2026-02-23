@@ -27,6 +27,13 @@ Breaking Changes
   (:pr:`983`)
 - ``GlobalMetric`` no longer inherits from ``Metric``, and may be removed in a future release.
 
+New Features
+------------
+
+- Added :class:`~lenskit.knn.EASEScorer` implementing EASE
+  :cite:p:`steckEmbarrassinglyShallowAutoencoders2019` (:issue:`942`,
+  :pr:`1012`).
+
 Performance Changes
 -------------------
 
