@@ -78,7 +78,7 @@ class PipelineTuner:
         rng: RNGInput = None,
     ):
         cfg = lenskit_config()
-        self.settings = cfg.tune
+        self.settings = cfg.tuning
         if out_dir is None:
             out_dir = Path("lenskit-tune")
         self.out_dir = out_dir
@@ -216,11 +216,6 @@ class PipelineTuner:
 
         paracfg = get_parallel_config()
 
-        self.log.info(
-            "setting up parallel tuner",
-            cpus=paracfg.total_threads,
-        )
-
         match self.spec.search.num_cpus:
             case "threads":
                 tune_cpus = paracfg.threads
@@ -231,9 +226,12 @@ class PipelineTuner:
             case _:
                 raise ValueError(f"invalid CPU count {self.spec.search.num_cpus}")
 
-        self.harness = ray.tune.with_resources(
-            harness, {"CPU": tune_cpus, "GPU": self.spec.search.num_gpus * self.settings.gpu_mult}
-        )
+        self.log.info("setting up parallel tuner", cpus=tune_cpus)
+
+        resources: dict[str, float | int] = {"CPU": tune_cpus}
+        if self.spec.search.num_gpus:
+            resources["GPU"] = self.spec.search.num_gpus * self.settings.gpu_mult
+        self.harness = ray.tune.with_resources(harness, resources)
 
     @property
     def metric(self):
