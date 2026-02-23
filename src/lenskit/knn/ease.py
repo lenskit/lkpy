@@ -105,7 +105,8 @@ class EASEScorer(Component[ItemList], Trainable):
         mat = spla.inv(cooc, assume_a="pos")
         log.info("inverted co-occurrance matrix in %s", timer)
 
-        mat /= -np.diag(mat)
+        # divide cells by column's diagonal entry
+        mat /= -np.diag(mat).reshape(1, -1)
         mat[di] = 0
 
         log.debug("assembling trained item vocabulary")
@@ -140,7 +141,7 @@ class EASEScorer(Component[ItemList], Trainable):
         q_vec[q_good] = 1.0
 
         _log.debug("multiplying matrix for %d items", np.sum(q_ok))
-        scores = self.weights @ q_vec
+        scores = q_vec @ self.weights
         assert scores.shape == (N,)
 
         scored = ItemList(item_nums=t_good, scores=scores[t_good], vocabulary=self.items)
