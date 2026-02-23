@@ -4,18 +4,18 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use arrow::datatypes::Int32Type;
-
-use crate::sparse::COOMatrix;
-
 mod asymmetric;
+mod dense;
 mod symmetric;
 
 pub(super) use asymmetric::AsymmetricPairCounter;
+pub(super) use dense::DensePairCounter;
 pub(super) use symmetric::SymmetricPairCounter;
 
 /// Trait for accmulating counts of item pairs.
 pub(super) trait PairCounter {
+    type Output;
+
     fn create(n_items: usize) -> Self;
 
     /// Record an instance of an item pair.
@@ -25,7 +25,7 @@ pub(super) trait PairCounter {
     fn nnz(&self) -> usize;
 
     /// Finish the counting into a matrix.
-    fn finish(self) -> Vec<COOMatrix<Int32Type, Int32Type>>;
+    fn finish(self) -> Self::Output;
 }
 
 /// Trait for pair counters that allow concurrent updates.
