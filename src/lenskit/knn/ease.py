@@ -197,10 +197,11 @@ def _chol_invert_torch(cooc: NPMatrix[np.float32], device: str) -> NPMatrix[np.f
     """
     import torch
 
-    cooc = torch.from_numpy(cooc).to(device)
-    decomp, info = torch.linalg.cholesky_ex(cooc)
+    cooc_t = torch.from_numpy(cooc).to(device)
+    del cooc
+    decomp, info = torch.linalg.cholesky_ex(cooc_t)
     if info.item():
         raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
 
-    inv = torch.cholesky_inverse(decomp, out=cooc)
+    inv = torch.cholesky_inverse(decomp, out=cooc_t)
     return inv.cpu().numpy()
