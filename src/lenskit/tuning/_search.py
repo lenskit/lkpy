@@ -300,7 +300,7 @@ class PipelineTuner:
                 checkpoint_at_end=False,
             )
 
-        nsamp = self.spec.search.max_points
+        nsamp = self.spec.search.num_search_points()
         space = self.search_space()
         self.log.info("creating tuner for %d samples", nsamp, space=space)
         self.tuner = ray.tune.Tuner(
