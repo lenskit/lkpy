@@ -27,9 +27,9 @@ from lenskit.logging import get_logger, item_progress
 from lenskit.random import random_generator
 
 from .items import ItemList
-from .matrix import COOStructure, CSRStructure, SparseRowArray
+from .matrix import COOStructure, CSRStructure, SparseRowArray, fast_col_cooc
 from .schema import RelationshipSchema, id_col_name, num_col_name
-from .types import ID, LAYOUT
+from .types import ID, LAYOUT, NPMatrix
 from .vocab import Vocabulary
 
 if TYPE_CHECKING:
@@ -141,9 +141,35 @@ class RelationshipSet:
 
         return self._table.num_rows
 
+    @overload
     def co_occurrences(
-        self, entity: str, *, group: str | list[str] | None = None, order: str | None = None
-    ) -> sps.coo_array:
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: Literal[True],
+    ) -> NPMatrix[np.float32]: ...
+    @overload
+    def co_occurrences(
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: Literal[False] = False,
+    ) -> sps.coo_array: ...
+    def co_occurrences(
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: bool = False,
+    ) -> sps.coo_array | NPMatrix[np.float32]:
         """
         Count co-occurrences of the specified entity.  This is useful for
         counting item co-occurrences for association rules and probabilties, but
@@ -179,6 +205,11 @@ class RelationshipSet:
             order:
                 The name of an attribute to use for ordering interactions to
                 compute sequential co-occurrences.
+            include_self:
+                Include self co-occurrences (interaction counts on the diagonal
+                of the co-occurrence matrix).
+            dense:
+                Pass ``True`` to return a dense co-occurrence matrix.
 
         Returns:
             A sparse matrix with the co-occurrence counts.
@@ -203,34 +234,19 @@ class RelationshipSet:
             sorts.append((order, "ascending"))
         _log.debug("sorting table by %s", sorts)
         tbl = self._table.sort_by(sorts)
+        m = len(self._vocabularies[group[0]])
         n = len(self._vocabularies[entity])
         _log.debug("counting co-occurrences", items=n)
-        with item_progress("co-occurrences", tbl.num_rows) as pb:
-            result = _accel_data.count_cooc(
-                len(self._vocabularies[group[0]]),
-                len(self._vocabularies[entity]),
+        with item_progress("Counting co-occurrences", tbl.num_rows) as pb:
+            return fast_col_cooc(
                 tbl.column(gc).combine_chunks(),
                 tbl.column(ec).combine_chunks(),
+                (m, n),
+                include_diagonal=include_self,
                 ordered=order is not None,
-                diagonal=False,
+                dense=dense,
                 progress=pb,
             )
-
-        tbl = pa.Table.from_batches(result)
-
-        _log.debug("assembling co-occurrence matrix", items=n, nnz=tbl.num_rows)
-        indices = np.stack(
-            [
-                tbl.column("row").to_numpy(zero_copy_only=False),
-                tbl.column("col").to_numpy(zero_copy_only=False),
-            ],
-            axis=0,
-        )
-
-        return sps.coo_array(
-            (tbl.column("count").to_numpy(zero_copy_only=False), indices),
-            shape=(n, n),
-        )
 
     def arrow(self, *, attributes: str | list[str] | None = None, ids=False) -> pa.Table:
         """
