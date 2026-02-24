@@ -11,6 +11,7 @@ EASE scoring model.
 import numpy as np
 import scipy
 import scipy.linalg as spla
+import torch
 from humanize import naturalsize
 from packaging.version import Version
 from pydantic import BaseModel, PositiveFloat
@@ -119,7 +120,8 @@ class EASEScorer(Component[ItemList], Trainable):
         with item_progress("Counting co-occurrances", len(kept_inos)) as pb:
             cooc = fast_col_cooc(kept_coo, dense=True, progress=pb)
 
-        log.info("computed co-occurances in %s (%s)", timer, naturalsize(cooc.nbytes))
+        nbytes = cooc.nbytes
+        log.info("computed co-occurances in %s (%s)", timer, naturalsize(nbytes))
 
         log.debug("adding regularization term")
         di = np.diag_indices(n_ok)
@@ -136,12 +138,19 @@ class EASEScorer(Component[ItemList], Trainable):
         if solver != "scipy":
             dev = options.configured_device(gpu_default=True)
             log.info("trying to solve with PyTorch on %s", dev)
-            mat = _chol_invert_torch(
-                cooc,
-                device=options.configured_device(gpu_default=True),
-                # re-raise OOM if Torch is explicitly requested
-                raise_oom=solver == "torch",
-            )
+            try:
+                mat = _chol_invert_torch(
+                    cooc,
+                    device=options.configured_device(gpu_default=True),
+                )
+            except torch.OutOfMemoryError as e:
+                if solver:
+                    raise e
+                else:
+                    _log.warn(
+                        "failed to allocate PyTorch memory to solve, falling back to SciPy",
+                        exc_info=e,
+                    )
         # fall back to SciPy
         if mat is None:
             if Version(scipy.__version__) < MIN_SCIPY_VERSION:
@@ -206,29 +215,12 @@ def _chol_invert_torch(
     """
     Invert the co-occurrance matrix using SciPy.
     """
-    import torch
-
-    nbytes = cooc[0].nbytes
 
     with torch.inference_mode():
-        try:
-            cooc_t = torch.from_numpy(cooc.pop()).to(device)
-            del cooc
-            # pre-allocate the decomposition tensor so we fail fast when out of memory
-            decomp = torch.zeros_like(cooc_t)
-        except torch.OutOfMemoryError as e:  # pragma: nocover
-            if raise_oom:
-                _log.error("failed to allocate Torch memory for Cholesky solve", exc_info=e)
-                raise e
-            else:
-                _log.warn(
-                    "Insufficient Torch memory (need 2x%s), falling back to SciPy solver",
-                    naturalsize(nbytes),
-                )
-                return None
+        cooc_t = torch.from_numpy(cooc.pop()).to(device)
+        del cooc
 
-        info = torch.tensor(0, dtype=torch.int32, device=device)
-        decomp, info = torch.linalg.cholesky_ex(cooc_t, out=(decomp, info))
+        decomp, info = torch.linalg.cholesky_ex(cooc_t)
         if info.item():
             raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
 
