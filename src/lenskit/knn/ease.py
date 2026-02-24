@@ -207,25 +207,26 @@ def _chol_invert_torch(
 
     nbytes = cooc[0].nbytes
 
-    try:
-        cooc_t = torch.from_numpy(cooc.pop()).to(device)
-        del cooc
-        # pre-allocate the decomposition tensor so we fail fast when out of memory
-        decomp = torch.zeros_like(cooc_t)
-    except torch.OutOfMemoryError as e:  # pragma: nocover
-        if raise_oom:
-            _log.error("failed to allocate Torch memory for Cholesky solve", exc_info=e)
-            raise e
-        else:
-            _log.warn(
-                "Insufficient Torch memory (need 2x%s), falling back to SciPy solver",
-                naturalsize(nbytes),
-            )
-            return None
+    with torch.inference_mode():
+        try:
+            cooc_t = torch.from_numpy(cooc.pop()).to(device)
+            del cooc
+            # pre-allocate the decomposition tensor so we fail fast when out of memory
+            decomp = torch.zeros_like(cooc_t)
+        except torch.OutOfMemoryError as e:  # pragma: nocover
+            if raise_oom:
+                _log.error("failed to allocate Torch memory for Cholesky solve", exc_info=e)
+                raise e
+            else:
+                _log.warn(
+                    "Insufficient Torch memory (need 2x%s), falling back to SciPy solver",
+                    naturalsize(nbytes),
+                )
+                return None
 
-    decomp, info = torch.linalg.cholesky_ex(cooc_t, out=decomp)
-    if info.item():
-        raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
+        decomp, info = torch.linalg.cholesky_ex(cooc_t, out=decomp)
+        if info.item():
+            raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
 
-    inv = torch.cholesky_inverse(decomp, out=cooc_t)
-    return inv.cpu().numpy()
+        inv = torch.cholesky_inverse(decomp, out=cooc_t)
+        return inv.cpu().numpy()
