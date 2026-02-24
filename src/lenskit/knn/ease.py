@@ -49,10 +49,13 @@ class EASEScorer(Component[ItemList], Trainable):
 
     .. envvar:: LK_EASE_SOLVER
 
-        Specify the solver to use to invert the Gram-matrix for EASE.  The
-        default is ``"torch"``, which uses the GPU when available.  This can be
-        changed to ``"scipy"`` to use SciPy's :func:`scipy.linalg.inv` instead,
-        which is slower and CPU-only but may take less memory.
+        Specify the solver to use to invert the Gram-matrix for EASE.  Can be
+        either ``"torch"`` (works on both CPU and CUDA, and is faster on CPU
+        than SciPy) or ``"scipy"`` (uses LAPACK, and may take less memory).
+
+        The default behavior is to first try to allocate enough memory to train
+        with PyTorch, and to fall back to SciPy with in-place solving if the
+        Torch allocation fails.
 
     .. note::
         This component requires SciPy 1.17 or later.
@@ -82,8 +85,8 @@ class EASEScorer(Component[ItemList], Trainable):
 
         ensure_parallel_init()
 
-        solver = options.envvar("LK_EASE_SOLVER", "torch")
-        if solver not in ("torch", "scipy"):
+        solver = options.envvar("LK_EASE_SOLVER", None)
+        if solver and solver not in ("torch", "scipy"):
             raise ValueError(f"unsupported option: LK_EASE_SOLVER={solver}")
 
         n_items = data.item_count
@@ -128,13 +131,20 @@ class EASEScorer(Component[ItemList], Trainable):
 
         log.debug("inverting Gram-matrix")
         timer = Stopwatch()
-        match solver:
-            case "torch":
-                mat = _chol_invert_torch(cooc, device=options.configured_device(gpu_default=True))
-            case "scipy":
-                if Version(scipy.__version__) < MIN_SCIPY_VERSION:
-                    raise RuntimeError("SciPy solver requires SciPy 1.17 or later")
-                mat = _chol_invert_scipy(cooc)
+        mat = None
+        # first try Torch solver, unless SciPy is requested
+        if solver != "scipy":
+            mat = _chol_invert_torch(
+                cooc,
+                device=options.configured_device(gpu_default=True),
+                # re-raise OOM if Torch is explicitly requested
+                raise_oom=solver == "torch",
+            )
+        # fall back to SciPy
+        if mat is None:
+            if Version(scipy.__version__) < MIN_SCIPY_VERSION:
+                raise RuntimeError("SciPy solver requires SciPy 1.17 or later")
+            mat = _chol_invert_scipy(cooc)
         log.info("inverted co-occurrance matrix in %s", timer)
 
         # divide cells by column's diagonal entry
@@ -187,15 +197,33 @@ def _chol_invert_scipy(cooc: list[NPMatrix[np.float32]]) -> NPMatrix[np.float32]
     return spla.inv(cooc.pop(), assume_a="pos", overwrite_a=True)
 
 
-def _chol_invert_torch(cooc: list[NPMatrix[np.float32]], device: str) -> NPMatrix[np.float32]:
+def _chol_invert_torch(
+    cooc: list[NPMatrix[np.float32]], device: str, *, raise_oom: bool = False
+) -> NPMatrix[np.float32] | None:
     """
     Invert the co-occurrance matrix using SciPy.
     """
     import torch
 
-    cooc_t = torch.from_numpy(cooc.pop()).to(device)
-    del cooc
-    decomp, info = torch.linalg.cholesky_ex(cooc_t)
+    nbytes = cooc[0].nbytes
+
+    try:
+        cooc_t = torch.from_numpy(cooc.pop()).to(device)
+        del cooc
+        # pre-allocate the decomposition tensor so we fail fast when out of memory
+        decomp = torch.zeros_like(cooc_t)
+    except torch.OutOfMemoryError as e:  # pragma: nocover
+        if raise_oom:
+            _log.error("failed to allocate Torch memory for Cholesky solve", exc_info=e)
+            raise e
+        else:
+            _log.warn(
+                "Insufficient Torch memory (need 2x%s), falling back to SciPy solver",
+                naturalsize(nbytes),
+            )
+            return None
+
+    decomp, info = torch.linalg.cholesky_ex(cooc_t, out=decomp)
     if info.item():
         raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
 
