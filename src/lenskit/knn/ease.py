@@ -134,6 +134,8 @@ class EASEScorer(Component[ItemList], Trainable):
         mat = None
         # first try Torch solver, unless SciPy is requested
         if solver != "scipy":
+            dev = options.configured_device(gpu_default=True)
+            log.info("trying to solve with PyTorch on %s", dev)
             mat = _chol_invert_torch(
                 cooc,
                 device=options.configured_device(gpu_default=True),
@@ -144,6 +146,7 @@ class EASEScorer(Component[ItemList], Trainable):
         if mat is None:
             if Version(scipy.__version__) < MIN_SCIPY_VERSION:
                 raise RuntimeError("SciPy solver requires SciPy 1.17 or later")
+            log.info("trying to solve with SciPy")
             mat = _chol_invert_scipy(cooc)
         log.info("inverted co-occurrance matrix in %s", timer)
 
@@ -224,7 +227,8 @@ def _chol_invert_torch(
                 )
                 return None
 
-        decomp, info = torch.linalg.cholesky_ex(cooc_t, out=decomp)
+        info = torch.tensor(0, dtype=torch.int32, device=device)
+        decomp, info = torch.linalg.cholesky_ex(cooc_t, out=(decomp, info))
         if info.item():
             raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
 
