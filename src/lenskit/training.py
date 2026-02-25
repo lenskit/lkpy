@@ -120,7 +120,7 @@ class TrainingOptions:
         :attr:`environment`, then in :attr:`os.environ`.
         """
         if name in self.environment:
-            return name
+            return self.environment[name]
         else:
             return os.environ.get(name, default)
 
