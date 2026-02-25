@@ -157,8 +157,7 @@ def test_fast_cooc(mat: coo_array):
     cooc = mat.T @ mat
     cooc = cooc.toarray()
 
-    coo = COOStructure(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape)
-    res = fast_col_cooc(coo)
+    res = fast_col_cooc(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape)
     assert isinstance(res, coo_array)
     assert res.shape == (nc, nc)
     res = res.toarray()
@@ -175,8 +174,9 @@ def test_fast_cooc_no_diagonal(mat: coo_array):
     cooc = cooc.toarray()
     cooc[np.diag_indices(nc)] = 0
 
-    coo = COOStructure(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape)
-    res = fast_col_cooc(coo, include_diagonal=False)
+    res = fast_col_cooc(
+        mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape, include_diagonal=False
+    )
     assert isinstance(res, coo_array)
     assert res.shape == (nc, nc)
     res = res.toarray()
@@ -192,8 +192,7 @@ def test_fast_cooc_dense(mat: coo_array):
     cooc = mat.T @ mat
     cooc = cooc.toarray()
 
-    coo = COOStructure(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape)
-    res = fast_col_cooc(coo, dense=True)
+    res = fast_col_cooc(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape, dense=True)
     assert isinstance(res, np.ndarray)
     assert res.shape == (nc, nc)
 
