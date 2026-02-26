@@ -17,9 +17,8 @@ from packaging.version import Version
 from pydantic import BaseModel, PositiveFloat
 
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
-from lenskit.data.matrix import COOStructure, fast_col_cooc
 from lenskit.data.types import NPMatrix
-from lenskit.logging import Stopwatch, get_logger, item_progress
+from lenskit.logging import Stopwatch, get_logger
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
@@ -91,40 +90,19 @@ class EASEScorer(Component[ItemList], Trainable):
             raise ValueError(f"unsupported option: LK_EASE_SOLVER={solver}")
 
         n_items = data.item_count
-        n_users = data.user_count
-        rates = data.interactions().matrix(row_entity="item", col_entity="user")
+        rates = data.interactions()
         log = _log.bind(n_items=n_items)
         log.info("training EASE model")
 
-        # trim out single-user items
-        log.debug("finding recommendable items")
-        rate_csr = rates.csr_structure()
-        item_nnz = rate_csr.row_nnzs
-        ok_items = item_nnz > 1
-        n_ok = int(np.sum(ok_items))
-        log.debug("keeping %d items", n_ok)
-        iid_map = np.zeros(n_items, dtype=np.int32)
-        iid_map[ok_items] = np.arange(n_ok, dtype=np.int32)
-
-        log.debug("filtering interaction matrix")
-        rate_coo = rates.coo_structure()
-
-        kept_ents = ok_items[rate_coo.row_numbers]
-        kept_inos = rate_coo.row_numbers[kept_ents]
-        kept_unos = rate_coo.col_numbers[kept_ents]
-        kept_coo = COOStructure(kept_unos, iid_map[kept_inos], shape=(n_users, n_ok))
-        del kept_ents, rate_csr, rate_coo, rates
-
         log.debug("computing co-occurrance matrix")
         timer = Stopwatch()
-        with item_progress("Counting co-occurrances", len(kept_inos)) as pb:
-            cooc = fast_col_cooc(kept_coo, dense=True, progress=pb)
+        cooc = rates.co_occurrences("item", include_self=True, dense=True)
 
         nbytes = cooc.nbytes
         log.info("computed co-occurances in %s (%s)", timer, naturalsize(nbytes))
 
         log.debug("adding regularization term")
-        di = np.diag_indices(n_ok)
+        di = np.diag_indices(n_items)
         cooc[di] += self.config.regularization
 
         log.debug("inverting Gram-matrix")
@@ -159,12 +137,8 @@ class EASEScorer(Component[ItemList], Trainable):
         mat /= -np.diag(mat).reshape(1, -1)
         mat[di] = 0
 
-        log.debug("assembling trained item vocabulary")
-        items = data.items.id_array()
-        items = items.filter(ok_items)
-        self.items = Vocabulary(items, name="item", reorder=False)
-
-        log.info("finished training EASE for %d items", len(self.items))
+        log.info("finished training EASE for %d items", n_items)
+        self.items = data.items
         self.weights = mat
 
     def __call__(self, query: RecQuery, items: ItemList) -> ItemList:
