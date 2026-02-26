@@ -93,4 +93,4 @@ jobs:
       - name: Upload release package
         if: github.event_name == 'release'
         run: |
-          rattler-build upload prefix --channel lenskit-dev dist/conda/*/*.conda
+          rattler-build upload prefix --channel lenskit dist/conda/*/*.conda
