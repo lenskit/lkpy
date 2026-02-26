@@ -98,9 +98,8 @@ def sample_records(
     rng: RNGInput = None,
 ) -> TTSplit | Iterator[TTSplit]:
     """
-    Sample train-test a frame of ratings into train-test partitions.  This
-    function does not care what kind of data is in `data`, so long as it is a
-    Pandas DataFrame (or equivalent).
+    Create a train-test split of data by randomly sampling individual
+    interactions.
 
     We can loop over a sequence of train-test pairs::
 
