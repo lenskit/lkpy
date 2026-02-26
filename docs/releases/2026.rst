@@ -30,9 +30,9 @@ Breaking Changes
 New Features
 ------------
 
-- Added :class:`~lenskit.knn.EASEScorer` implementing EASE
-  :cite:p:`steckEmbarrassinglyShallowAutoencoders2019` (:issue:`942`,
-  :pr:`1012`).
+- Added environment variables to :class:`~lenskit.training.TrainingOptions`, along with the
+  :meth:`~lenskit.training.TrainingOptions.envvar` method to query them.  This allows for
+  open-ended configuration of training processes.
 
 Performance Changes
 -------------------
