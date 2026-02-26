@@ -118,6 +118,17 @@ class TrainingOptions:
         """
         Fetch a training environment variable.  Variables are first looked up in
         :attr:`environment`, then in :attr:`os.environ`.
+
+        .. seealso::
+            :attr:`environment`, :ref:`training-config`
+
+        Args:
+            name:
+                The full name of the environment variable.
+            default:
+                Default value to return if the environment varible is not specified.
+        Returns:
+            The environment variable's value, or ``default``.
         """
         if name in self.environment:
             return self.environment[name]
