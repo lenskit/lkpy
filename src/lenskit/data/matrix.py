@@ -557,42 +557,66 @@ pa.register_extension_type(SparseRowType(0))  # type: ignore
 
 @overload
 def fast_col_cooc(
-    matrix: COOStructure,
+    rows: NPVector[np.int32] | pa.Int32Array,
+    cols: NPVector[np.int32] | pa.Int32Array,
+    shape: tuple[int, int],
     *,
     progress: Progress | None = None,
     include_diagonal: bool = True,
+    ordered: bool = False,
     dense: Literal[True],
 ) -> np.ndarray[tuple[int, int], np.dtype[np.float32]]: ...
 @overload
 def fast_col_cooc(
-    matrix: COOStructure,
+    rows: NPVector[np.int32] | pa.Int32Array,
+    cols: NPVector[np.int32] | pa.Int32Array,
+    shape: tuple[int, int],
     *,
     progress: Progress | None = None,
     include_diagonal: bool = True,
+    ordered: bool = False,
     dense: Literal[False] = False,
 ) -> sps.coo_array: ...
+@overload
 def fast_col_cooc(
-    matrix: COOStructure,
+    rows: NPVector[np.int32] | pa.Int32Array,
+    cols: NPVector[np.int32] | pa.Int32Array,
+    shape: tuple[int, int],
     *,
     progress: Progress | None = None,
     include_diagonal: bool = True,
+    ordered: bool = False,
+    dense: bool = False,
+) -> Any: ...
+def fast_col_cooc(
+    rows: NPVector[np.int32] | pa.Int32Array,
+    cols: NPVector[np.int32] | pa.Int32Array,
+    shape: tuple[int, int],
+    *,
+    progress: Progress | None = None,
+    include_diagonal: bool = True,
+    ordered: bool = False,
     dense: bool = False,
 ) -> Any:
     r"""
     Compute column co-occurrances (:math:`M^{\mathrm{T}}M`) efficiently.
     """
 
-    m, n = matrix.shape
-    groups = pa.array(matrix.row_numbers)
-    items = pa.array(matrix.col_numbers)
+    m, n = shape
+    if not isinstance(rows, pa.Int32Array):
+        rows = cast(pa.Int32Array, pa.array(rows))
+    if not isinstance(cols, pa.Int32Array):
+        cols = cast(pa.Int32Array, pa.array(cols))
 
     if dense:
+        if ordered:
+            raise NotImplementedError("dense ordered co-occurrences not supported")
         return _data_accel.dense_cooc(
-            m, n, groups, items, progress=progress, diagonal=include_diagonal
+            m, n, rows, cols, progress=progress, diagonal=include_diagonal
         )
     else:
         batches = _data_accel.count_cooc(
-            m, n, groups, items, progress=progress, diagonal=include_diagonal
+            m, n, rows, cols, progress=progress, diagonal=include_diagonal, ordered=ordered
         )
         tbl = pa.Table.from_batches(batches)
         indices = np.stack(
