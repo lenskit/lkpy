@@ -90,7 +90,7 @@ jobs:
         run: |
           rattler-build upload prefix --channel lenskit-dev dist/conda/*/*.conda
 
-      - name: Upload prerelease package
-        if: github.event_name == 'release' && github.event.release.prerelease
+      - name: Upload release package
+        if: github.event_name == 'release'
         run: |
           rattler-build upload prefix --channel lenskit-dev dist/conda/*/*.conda
