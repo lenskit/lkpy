@@ -82,8 +82,7 @@ def tune(
 
     spec = TuningSpec.load(search_spec)
     # override settings from command line
-    if max_points is not None:
-        spec.search.max_points = max_points
+    spec.search.update_max_points(max_points)
     if metric is not None:
         spec.search.metric = metric
     if method is not None:

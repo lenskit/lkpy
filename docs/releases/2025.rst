@@ -9,6 +9,15 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.7.0:
+
+2025.7.0
+~~~~~~~~
+
+- Add EASE (:class:`~lenskit.knn.EASEScorer`) (:issue:`942`, :pr:`1011`, backported in :pr:`1015`).
+- Fix hyperparameter tuning for non-iterative scorers, and simplify configuration (:pr:`1014`, backported in :pr:`1015`).
+- Improve performance of :meth:`~lenskit.data.RelationshipSet.co_occurrences` (:pr:`1008`, :pr:`1010`).
+
 .. _2025.6.3:
 
 2025.6.3
