@@ -7,6 +7,8 @@ on:
       - future/*
       - series/*
   pull_request:
+  release:
+    types: [published]
 
 concurrency:
   group: conda-test-${{github.ref}}
@@ -63,6 +65,7 @@ jobs:
     name: "Upload to prefix.dev"
     needs: conda-build
     runs-on: ubuntu-latest
+    environment: prefix-dev
     permissions:
       id-token: write
 
@@ -82,7 +85,12 @@ jobs:
         with:
           repo: prefix-dev/rattler-build
 
-      - name: Upload packages
+      - name: Upload dev package
         if: github.event_name == 'push'
+        run: |
+          rattler-build upload prefix --channel lenskit-dev dist/conda/*/*.conda
+
+      - name: Upload prerelease package
+        if: github.event_name == 'release' && github.event.release.prerelease
         run: |
           rattler-build upload prefix --channel lenskit-dev dist/conda/*/*.conda
