@@ -26,6 +26,11 @@ Breaking Changes
   results should directly extend from ``Metric`` or :class:`~lenskit.metrics.ListMetric`.
   (:pr:`983`)
 - ``GlobalMetric`` no longer inherits from ``Metric``, and may be removed in a future release.
+- Stopped providing wheels for macOS on Intel.  Users who still need to run
+  LensKit on Intel-based Macs should use the Conda packages (available in conda-forge and
+  `prefix.dev`_).
+
+.. _prefix.dev: https://prefix.dev/channels/lenskit/
 
 New Features
 ------------
