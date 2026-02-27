@@ -66,6 +66,7 @@ jobs:
     needs: conda-build
     runs-on: ubuntu-latest
     environment: prefix-dev
+    if: github.event_name == 'push' || github.event_name == 'release'
     permissions:
       id-token: write
 
