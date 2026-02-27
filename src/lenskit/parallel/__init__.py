@@ -10,7 +10,13 @@ LensKit parallel computation support.
 
 from __future__ import annotations
 
-from .config import effective_cpu_count, ensure_parallel_init, get_parallel_config, initialize
+from .config import (
+    effective_cpu_count,
+    ensure_parallel_init,
+    get_parallel_config,
+    initialize,
+    is_free_threaded,
+)
 from .invoker import ModelOpInvoker, invoker
 from .pool import multiprocess_executor
 
@@ -19,6 +25,7 @@ __all__ = [
     "get_parallel_config",
     "effective_cpu_count",
     "ensure_parallel_init",
+    "is_free_threaded",
     "invoker",
     "ModelOpInvoker",
     "multiprocess_executor",

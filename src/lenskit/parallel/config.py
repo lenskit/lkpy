@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
+import sysconfig
 import warnings
 from typing import Optional
 
@@ -215,6 +217,25 @@ def get_parallel_config() -> ParallelConfig:
     ensure_parallel_init()
     assert _config is not None
     return _config
+
+
+def is_free_threaded(*, require_active: bool = False) -> bool:
+    """
+    Query whether this Python supports free-threading.
+
+    Args:
+        require_active:
+            Require that the GIL is actually disabled (i.e., no modules have
+            re-enabled the GIL) in order to return ``True``.
+    Returns:
+        Whether or not this Python supports free-threading.
+    """
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
+        if require_active and sys._is_gil_enabled():
+            return False
+        return True
+    else:
+        return False
 
 
 def subprocess_config(

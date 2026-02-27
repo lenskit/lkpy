@@ -8,7 +8,6 @@ import os
 import platform
 import re
 import sys
-import sysconfig
 from dataclasses import dataclass
 from importlib.metadata import distributions, version
 from pathlib import Path
@@ -29,6 +28,7 @@ from lenskit.parallel.config import (
     ParallelConfig,
     effective_cpu_count,
     get_parallel_config,
+    is_free_threaded,
     subprocess_config,
 )
 from lenskit.parallel.ray import ray_available
@@ -105,11 +105,10 @@ def inspect_platform():
     yield kvp("Python version", platform.python_version())
     yield kvp("Platform", platform.platform(), level=2)
     yield kvp("Location", sys.executable, level=2)
-    if sysconfig.get_config_var("Py_GIL_DISABLED"):
-        if sys._is_gil_enabled():
-            yield "  [bold][yellow]Python is free-threaded but cannot disable GIL[/yellow][/bold]"
-        else:
-            yield "  [bold][cyan]Free-threading enabled[/cyan][/bold]"
+    if is_free_threaded(require_active=True):
+        yield "  [bold][green]Free-threading available[/green][/bold]"
+    elif is_free_threaded():
+        yield "  [bold][yellow]Python is free-threaded but cannot disable GIL[/yellow][/bold]"
     else:
         yield "  [yellow]Python GIL enabled[/yellow]"
 
