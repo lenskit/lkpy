@@ -112,6 +112,7 @@ jobs:
 
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
+        if: matrix.plat.host != 'windows-latest'
         with:
           args: --release --out dist -i 3.14t
           target: ${{ matrix.plat.target }}

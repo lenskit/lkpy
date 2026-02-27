@@ -39,7 +39,7 @@ New Features
   :meth:`~lenskit.training.TrainingOptions.envvar` method to query them.  This allows for
   open-ended configuration of training processes.
 - Added support for free-threaded Python, including binary distributions for
-  Python 3.14t (:issue:`916`, :pr:`1022`).
+  Python 3.14t on Linux and macOS (:issue:`916`, :pr:`1022`).
 
 Performance Changes
 -------------------
