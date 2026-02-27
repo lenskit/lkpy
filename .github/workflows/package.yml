@@ -35,7 +35,7 @@ jobs:
           activate-environment: true
 
       - name: Install dependencies
-        run: uv sync --group=scripting
+        run: uv sync --only-group=scripting
         env:
           UV_LOCKED: 1
 
