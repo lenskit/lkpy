@@ -110,6 +110,13 @@ jobs:
           target: ${{ matrix.plat.target }}
           manylinux: ${{ matrix.plat.manylinux }}
 
+      - name: Build free-threaded wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          args: --release --out dist -i 3.14t
+          target: ${{ matrix.plat.target }}
+          manylinux: ${{ matrix.plat.manylinux }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: pypi-dist-wheels-${{ matrix.plat.host }}-${{ matrix.plat.target }}
