@@ -8,8 +8,9 @@ cargo-binstall = "latest"
 usage = "latest"
 
 [settings]
-experimental = true
 idiomatic_version_file_enable_tools = ["rust"]
+github.github_attestations = false
+aqua.github_attestations = false
 
 [settings.python]
 uv_venv_auto = true
