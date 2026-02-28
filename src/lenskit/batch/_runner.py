@@ -7,8 +7,11 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Iterable, Iterator, Sized
+from collections.abc import Generator, Iterable, Iterator, Sequence, Sized
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Literal, Mapping, NamedTuple, TypeAlias, overload
 
 import pandas as pd
@@ -23,7 +26,7 @@ from lenskit.data import (
     UserIDKey,
 )
 from lenskit.logging import Stopwatch, get_logger, item_progress
-from lenskit.parallel import invoker
+from lenskit.parallel import get_parallel_config, invoker, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler
 from lenskit.pipeline._profiling import ProfileSink
 
@@ -35,6 +38,8 @@ ItemSource: TypeAlias = None | Literal["test-items"]
 """
 Types of items that can be returned.
 """
+
+type BatchResultRow = tuple[GenericKey, dict[str, object]]
 
 
 class BatchRequest(NamedTuple):
@@ -74,11 +79,15 @@ class BatchPipelineRunner:
         pipeline:
             The pipeline to evaluate.
         n_jobs:
-            The number of parallel processes to use, or ``None`` for the
-            default (defined by :func:`lenskit.parallel.config.initialize`).
+            The number of parallel threads to use, or ``None`` for default
+            defined by LensKit configuration and environment variables (see
+            :ref:`parallel-config`).
+        batch_size:
+            The batch size for multiprocess execution.
     """
 
-    n_jobs: int | Literal["ray"] | None
+    n_jobs: int | Literal["ray"]
+    batch_size: int
     profiler: PipelineProfiler | None
     invocations: list[InvocationSpec]
 
@@ -87,8 +96,13 @@ class BatchPipelineRunner:
         *,
         n_jobs: int | Literal["ray"] | None = None,
         profiler: PipelineProfiler | None = None,
+        batch_size: int = 200,
     ):
+        if n_jobs is None:
+            n_jobs = get_parallel_config().batch_jobs
         self.n_jobs = n_jobs
+        self.batch_size = batch_size
+
         self.profiler = profiler
         self.invocations = []
 
@@ -179,6 +193,11 @@ class BatchPipelineRunner:
         """
         Run the pipeline and return its results.
 
+        .. note::
+
+            The runner does **not** guarantee that results are in the same order
+            as the original inputs.
+
         Args:
             pipeline:
                 The pipeline to run.
@@ -208,30 +227,65 @@ class BatchPipelineRunner:
         key_type, q_iter, nq = _normalize_query_input(queries)
 
         log = _log.bind(name=pipeline.name, n_queries=nq, n_jobs=self.n_jobs)
+
         log.info("beginning batch run")
 
-        with (
-            invoker(
-                (pipeline, self.invocations, prof), _run_pipeline, n_jobs=self.n_jobs
-            ) as worker,
-            item_progress("Inference", nq) as progress,
-        ):
-            # release our reference, will sometimes free the pipeline memory in this process
-            del pipeline
-            results = BatchResults(key_type)
-            timer = Stopwatch()
-            n = 0
-            for key, outs in worker.map(q_iter):
-                n += 1
-                for cn, cr in outs.items():
-                    results.add_result(cn, key, cr)
-                progress.update()
-            timer.stop()
+        with closing(self._run_results(pipeline, prof, q_iter)) as tasks:
+            with item_progress("Inference", nq) as progress:
+                # release our reference, will sometimes free the pipeline memory in this process
+                del pipeline
+                results = BatchResults(key_type)
+                timer = Stopwatch()
+                n = 0
+                for key, outs in tasks:
+                    n += 1
+                    for cn, cr in outs.items():
+                        results.add_result(cn, key, cr)
+                    progress.update()
+                timer.stop()
 
-            rate_ms = timer.elapsed() / n * 1000
-            log.info("finished running in %s", timer, time_per_query="{:.1f}ms".format(rate_ms))
+                rate_ms = timer.elapsed() / n * 1000
+                log.info("finished running in %s", timer, time_per_query="{:.1f}ms".format(rate_ms))
 
         return results
+
+    def _run_results(
+        self, pipeline: Pipeline, profiler: ProfileSink | None, queries: Iterable[BatchRequest]
+    ) -> Generator[BatchResultRow]:
+        if is_free_threaded() and isinstance(self.n_jobs, int) and self.n_jobs > 1:
+            return self._threaded_results(pipeline, profiler, queries)
+        else:
+            return self._invoker_results(pipeline, profiler, queries)
+
+    def _invoker_results(
+        self,
+        pipeline: Pipeline,
+        profiler: ProfileSink | None,
+        queries: Iterable[BatchRequest],
+    ) -> Generator[BatchResultRow]:
+        with invoker(
+            (pipeline, self.invocations, profiler), _run_pipeline, n_jobs=self.n_jobs
+        ) as worker:
+            yield from worker.map(queries)
+
+    def _threaded_results(
+        self,
+        pipeline: Pipeline,
+        profiler: ProfileSink | None,
+        queries: Iterable[BatchRequest],
+    ) -> Generator[BatchResultRow]:
+        assert isinstance(self.n_jobs, int)
+        func = partial(_run_pipeline, (pipeline, self.invocations, profiler))
+        _log.info("using thread pool with %d threads", self.n_jobs)
+        if not is_free_threaded(require_active=True):
+            _log.warn("using thread pool but Python GIL is enabled, throughput will suffer")
+        with ThreadPoolExecutor(self.n_jobs, "lk-batch") as pool:
+            yield from pool.map(
+                func,
+                queries,
+                chunksize=self.batch_size,
+                buffersize=self.n_jobs * self.batch_size * 1,
+            )
 
 
 def _normalize_query_input(
@@ -241,7 +295,7 @@ def _normalize_query_input(
     | ItemListCollection[GenericKey]
     | Mapping[ID, ItemList]
     | pd.DataFrame,
-) -> tuple[type[Any], Iterable[tuple[RecQuery, ItemList | None]], int | None]:
+) -> tuple[type[Any], Iterable[BatchRequest], int | None]:
     if isinstance(queries, pd.DataFrame):
         warnings.warn(
             "use an item list collection instead of a DataFrame (LKW-BATCHIN)",
@@ -331,10 +385,16 @@ def _ensure_key(key: ID | tuple[ID, ...]):
         return UserIDKey(key)
 
 
+def _run_batch(
+    ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None], requests: Sequence[BatchRequest]
+) -> list[BatchResultRow]:
+    return [_run_pipeline(ctx, req) for req in requests]
+
+
 def _run_pipeline(
     ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None],
     req: BatchRequest,
-) -> tuple[GenericKey, dict[str, object]]:
+) -> BatchResultRow:
     pipeline, invocations, profiler = ctx
     query, test_items = req
     if query.query_id is not None:

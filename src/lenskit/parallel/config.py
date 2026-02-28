@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
+import sysconfig
 import warnings
 from typing import Optional
 
@@ -27,16 +29,29 @@ class ParallelConfig:
     Parallel processing configuration.
     """
 
+    _batch_jobs: int
     _processes: list[int]
     _threads: list[int]
     _backend_threads: list[int]
 
     def __init__(
-        self, processes: int | list[int], threads: int | list[int], backend_threads: int | list[int]
+        self,
+        batch_jobs: int,
+        processes: int | list[int],
+        threads: int | list[int],
+        backend_threads: int | list[int],
     ):
+        self._batch_jobs = batch_jobs
         self._processes = _ensure_numlist(processes)
         self._threads = _ensure_numlist(threads)
         self._backend_threads = _ensure_numlist(backend_threads)
+
+    @property
+    def batch_jobs(self) -> int:
+        """
+        Get the number of concurrent batch inference jobs to run.
+        """
+        return self._batch_jobs
 
     @property
     def processes(self) -> int:
@@ -73,6 +88,7 @@ class ParallelConfig:
         set also includes ``OMP_NUM_THREADS`` to configure OMP early.
         """
         evs = {
+            "LK_NUM_BATCH_JOBS": str(self.batch_jobs),
             "LK_NUM_PROCS": str(self.processes),
             "LK_NUM_THREADS": str(self.threads),
             "LK_NUM_BACKEND_THREADS": str(self.backend_threads),
@@ -117,7 +133,9 @@ class ParallelConfig:
                 allowed = min(ncpus // np, 4)
                 backend_threads = min(allowed, self.backend_threads)
 
-        return ParallelConfig(processes=processes, threads=threads, backend_threads=backend_threads)
+        return ParallelConfig(
+            batch_jobs=1, processes=processes, threads=threads, backend_threads=backend_threads
+        )
 
     def __str__(self):
         obj = json.dumps(
@@ -217,6 +235,25 @@ def get_parallel_config() -> ParallelConfig:
     return _config
 
 
+def is_free_threaded(*, require_active: bool = False) -> bool:
+    """
+    Query whether this Python supports free-threading.
+
+    Args:
+        require_active:
+            Require that the GIL is actually disabled (i.e., no modules have
+            re-enabled the GIL) in order to return ``True``.
+    Returns:
+        Whether or not this Python supports free-threading.
+    """
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
+        if require_active and sys._is_gil_enabled():
+            return False
+        return True
+    else:
+        return False
+
+
 def subprocess_config(
     processes: int | list[int] | None = None,
     threads: int | list[int] | None = None,
@@ -257,6 +294,7 @@ def _resolve_parallel_config(
     backend_threads: int | list[int] | None = None,
     child_threads: int | None = None,
 ) -> ParallelConfig:
+    njobs = os.environ.get("LK_NUM_BATCH_JOBS", None)
     nprocs = os.environ.get("LK_NUM_PROCS", None)
     nthreads = os.environ.get("LK_NUM_THREADS", None)
     nbthreads = os.environ.get("LK_NUM_BACKEND_THREADS", None)
@@ -287,6 +325,15 @@ def _resolve_parallel_config(
     if processes is None:
         processes = min(ncpus, 4)
 
+    if njobs:
+        batch_jobs = int(njobs)
+    elif not is_free_threaded():
+        batch_jobs = 1
+    elif isinstance(processes, list):
+        batch_jobs = processes[0]
+    else:
+        batch_jobs = processes
+
     if threads is None:
         threads = min(ncpus, 8)
 
@@ -301,7 +348,7 @@ def _resolve_parallel_config(
     if child_threads is not None:
         backend_threads.append(child_threads)
 
-    return ParallelConfig(processes, threads, backend_threads)
+    return ParallelConfig(batch_jobs, processes, threads, backend_threads)
 
 
 def _unparse_numlist(nums: list[int]) -> str:
