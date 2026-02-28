@@ -252,7 +252,7 @@ class BatchPipelineRunner:
     def _run_results(
         self, pipeline: Pipeline, profiler: ProfileSink | None, queries: Iterable[BatchRequest]
     ) -> Generator[BatchResultRow]:
-        if isinstance(self.n_jobs, int) and self.n_jobs > 1:
+        if is_free_threaded() and isinstance(self.n_jobs, int) and self.n_jobs > 1:
             return self._threaded_results(pipeline, profiler, queries)
         else:
             return self._invoker_results(pipeline, profiler, queries)
