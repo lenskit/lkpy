@@ -8,6 +8,7 @@ from lenskit import batch
 from lenskit.als import BiasedMFScorer
 from lenskit.data import Dataset
 from lenskit.logging.tasks import Task, TaskStatus
+from lenskit.parallel import is_free_threaded
 from lenskit.pipeline import topn_pipeline
 
 
@@ -32,5 +33,9 @@ def test_train_task(ml_ds: Dataset):
     print(task.model_dump_json(indent=2))
 
     assert task.status == TaskStatus.FINISHED
-    assert len(task.subtasks) == 2
-    assert all(st.subprocess for st in task.subtasks)
+    if is_free_threaded():
+        assert len(task.subtasks) == 0
+    else:
+        # TODO: will no longer be valid after subprocesses are gone
+        assert len(task.subtasks) == 2
+        assert all(st.subprocess for st in task.subtasks)
