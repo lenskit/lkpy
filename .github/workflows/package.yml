@@ -35,7 +35,7 @@ jobs:
           activate-environment: true
 
       - name: Install dependencies
-        run: uv sync --group=scripting
+        run: uv sync --only-group=scripting
         env:
           UV_LOCKED: 1
 
@@ -107,6 +107,14 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           args: --release --out dist
+          target: ${{ matrix.plat.target }}
+          manylinux: ${{ matrix.plat.manylinux }}
+
+      - name: Build free-threaded wheels
+        uses: PyO3/maturin-action@v1
+        if: matrix.plat.host != 'windows-latest'
+        with:
+          args: --release --out dist -i 3.14t
           target: ${{ matrix.plat.target }}
           manylinux: ${{ matrix.plat.manylinux }}
 

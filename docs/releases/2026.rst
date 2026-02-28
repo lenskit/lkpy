@@ -38,6 +38,8 @@ New Features
 - Added environment variables to :class:`~lenskit.training.TrainingOptions`, along with the
   :meth:`~lenskit.training.TrainingOptions.envvar` method to query them.  This allows for
   open-ended configuration of training processes.
+- Added support for free-threaded Python, including binary distributions for
+  Python 3.14t on Linux and macOS (:issue:`916`, :pr:`1022`).
 
 Performance Changes
 -------------------
