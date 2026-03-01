@@ -98,6 +98,13 @@ class TrainingTests:
         assert isinstance(model, self.component)
         yield model
 
+    @fixture(scope="function" if retrain else "class")
+    def trained_topn_pipeline(self, ml_ds: Dataset):
+        model = self.component(self.config)
+        pipe = topn_pipeline(model)
+        pipe.train(ml_ds)
+        yield pipe
+
     def test_skip_retrain(self, ml_ds: Dataset):
         model = self.component(self.config)
         if not isinstance(model, Trainable):
@@ -319,27 +326,27 @@ class ScorerTests(TrainingTests):
             assert scores is not None
 
     @mark.slow
-    def test_train_recommend(self, ml_ds: Dataset):
+    def test_train_recommend(
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_topn_pipeline: Pipeline
+    ):
         """
         Test that a full train-recommend pipeline works.
         """
-        split = split_temporal_fraction(ml_ds, 0.2)
-        model = self.component(self.config)
-        pipe = topn_pipeline(model)
-        pipe.train(split.train)
+        N_USERS = 100
+        users = rng.choice(ml_ds.users.ids(), N_USERS)
 
-        recs = batch.recommend(pipe, split.test)
-        assert len(recs) == len(split.test)
+        recs = batch.recommend(trained_topn_pipeline, users)
+        assert len(recs) == N_USERS
 
     @mark.slow
     @mark.skipif(not ray_available(), reason="skip Ray tests when Ray is not available")
     def test_ray_recommend(
-        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_topn_pipeline: Pipeline
     ):
         "Ensure pipeline can be used via Ray."
         N_USERS = 100
         users = rng.choice(ml_ds.users.ids(), N_USERS)
-        recs = batch.recommend(trained_pipeline, users, n=100, n_jobs="ray")
+        recs = batch.recommend(trained_topn_pipeline, users, n=100, n_jobs="ray")
         assert len(recs) == N_USERS
 
     @mark.slow
