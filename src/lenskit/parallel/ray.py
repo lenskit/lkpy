@@ -221,6 +221,8 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         import ray
         import torch
 
+        ensure_cluster()
+
         if isinstance(model, ray.ObjectRef):
             self.model_ref = model
         else:
