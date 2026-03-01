@@ -19,6 +19,7 @@ from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.builder import DatasetBuilder
 from lenskit.logging import get_logger
 from lenskit.metrics import quick_measure_model
+from lenskit.parallel.ray import ray_available
 from lenskit.pipeline import Component, Pipeline, predict_pipeline, topn_pipeline
 from lenskit.pipeline.builder import PipelineBuilder
 from lenskit.splitting import split_temporal_fraction
@@ -329,6 +330,17 @@ class ScorerTests(TrainingTests):
 
         recs = batch.recommend(pipe, split.test)
         assert len(recs) == len(split.test)
+
+    @mark.slow
+    @mark.skipif(not ray_available(), reason="skip Ray tests when Ray is not available")
+    def test_ray_recommend(
+        self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
+    ):
+        "Ensure pipeline can be used via Ray."
+        N_USERS = 100
+        users = rng.choice(ml_ds.users.ids(), N_USERS)
+        recs = batch.recommend(trained_pipeline, users, n=100, n_jobs="ray")
+        assert len(recs) == N_USERS
 
     @mark.slow
     def test_run_with_doubles(self, ml_ratings: pd.DataFrame):
