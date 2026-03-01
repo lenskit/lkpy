@@ -287,6 +287,25 @@ class TaskLimiter:
         """
         return len(self._tasks)
 
+    def throttle[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]], *, ordered: bool = True
+    ) -> Generator[Elt, None, int]:
+        """
+        Throttle a generator of Ray tasks, only requesting new tasks from the
+        generator as the limit has space.
+
+        Args:
+            tasks:
+                A generator of tasks (usually the result of calling a Ray remote
+                function).
+        Returns:
+            A generator of the results (already awaited with :func:`ray.get`).
+        """
+        if ordered:
+            return self._throttle_ordered(tasks)
+        else:
+            return self._throttle_unordered(tasks)
+
     def imap(
         self,
         function: RemoteFunction | Callable[[A], R],
@@ -294,30 +313,32 @@ class TaskLimiter:
         *,
         ordered: bool = True,
     ) -> Generator[R, None, int]:
-        if ordered:
-            return self._imap_ordered(function, items)
-        else:
-            return self._imap_unordered(function, items)
-
-    def _imap_ordered(
-        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
-    ) -> Generator[Any, None, int]:
-        n = 0
-        queued = deque()
-        ready = set()
-
         # make a callable from a Ray remote function
         if hasattr(function, "remote"):
             function = function.remote  # type: ignore
 
-        for arg in items:
+        tasks = (function(e) for e in items)
+        return self.throttle(tasks)  # type: ignore
+
+    def _throttle_ordered[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]]
+    ) -> Generator[Elt, None, int]:
+        n = 0
+        queued = deque()
+        ready = set()
+
+        while True:
             for res in self.results_until_limit():
                 ready.add(res)
                 n += 1
 
             yield from _drain_queue(queued, ready)
 
-            task: Any = function(arg)
+            # now we invoke the next task
+            try:
+                task = next(tasks)
+            except StopIteration:
+                break
             self.add_task(task)
             queued.append(task)
 
@@ -332,20 +353,21 @@ class TaskLimiter:
 
         return n
 
-    def _imap_unordered(
-        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
-    ) -> Generator[Any, None, int]:
+    def _throttle_unordered[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]]
+    ) -> Generator[Elt, None, int]:
         n = 0
 
-        # make a callable from a Ray remote function
-        if hasattr(function, "remote"):
-            function = function.remote  # type: ignore
-
-        for arg in items:
+        while True:
             for res in self.results_until_limit():
                 yield ray.get(res)
                 n += 1
-            task: Any = function(arg)
+
+            # now we invoke the next task
+            try:
+                task = next(tasks)
+            except StopIteration:
+                break
             self.add_task(task)
 
         for res in self.drain_results():

@@ -9,7 +9,6 @@ Support for batch inference on Ray.
 """
 
 from collections.abc import Generator, Iterable, Sequence
-from functools import partial
 from itertools import batched
 
 import ray
@@ -41,13 +40,14 @@ def ray_results(
     if profiler is not None:
         profiler = profiler.multiprocess()
 
-    pipe = ray.put(pipeline)
+    pipe_h = ray.put(pipeline)
 
-    worker = partial(_run_batch, pipe, invocations, profiler)
-    worker = ray.remote(num_cpus=inference_worker_cpus())(worker)
+    worker = ray.remote(_run_batch).options(num_cpus=inference_worker_cpus())
+    tasks = (worker.remote(pipe_h, invocations, profiler, batch) for batch in batches)
 
-    for res in limit.imap(worker, batches):
-        yield from ray.get(res)
+    _log.info("running inference queries on Ray")
+    for res in limit.throttle(tasks):
+        yield from res
 
 
 def _run_batch(
