@@ -242,8 +242,14 @@ class BatchPipelineRunner:
     def _run_results(
         self, pipeline: Pipeline, profiler: ProfileSink | None, queries: Iterable[BatchRequest]
     ) -> Generator[BatchResultRow]:
-        if is_free_threaded() and isinstance(self.n_jobs, int) and self.n_jobs > 1:
+        if self.n_jobs == "ray":
+            from ._ray import ray_results
+
+            return ray_results(pipeline, profiler, self.invocations, queries, self.batch_size)
+
+        elif is_free_threaded() and self.n_jobs > 1:
             return self._threaded_results(pipeline, profiler, queries)
+
         else:
             return self._invoker_results(pipeline, profiler, queries)
 
