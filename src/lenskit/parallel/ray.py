@@ -20,6 +20,8 @@ from functools import partial
 from platform import python_version_tuple
 from typing import Any, Generic, TypeVar
 
+import torch
+
 from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
@@ -34,6 +36,7 @@ from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
 try:
     import ray
+    import ray.util
     from ray.remote_function import RemoteFunction
 
     _ray_imported = True
@@ -45,6 +48,7 @@ T = TypeVar("T")
 
 BATCH_SIZE = 200
 _worker_parallel: ParallelConfig
+_serializers_registered = False
 _log = get_logger(__name__)
 
 
@@ -63,6 +67,8 @@ def ensure_cluster():
                 ray.init()
             else:
                 raise e
+
+    init_serializers()
 
 
 def init_cluster(
@@ -132,6 +138,21 @@ def init_cluster(
 
     _log.info("starting Ray cluster")
     ray.init(num_cpus=num_cpus, resources=resources, runtime_env=runtime, **kwargs)
+
+
+def init_serializers():
+    global _serializers_registered
+    if _serializers_registered:
+        return
+
+    from torch.multiprocessing.reductions import reduce_tensor
+
+    _log.debug("registering Pytorch serializer")
+    ray.util.register_serializer(
+        torch.Tensor, serializer=reduce_tensor, deserializer=torch.as_tensor
+    )
+
+    _serializers_registered = True
 
 
 def inference_worker_cpus() -> int:
