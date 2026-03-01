@@ -145,11 +145,9 @@ def init_serializers():
     if _serializers_registered:
         return
 
-    from torch.multiprocessing.reductions import reduce_tensor
-
     _log.debug("registering Pytorch serializer")
     ray.util.register_serializer(
-        torch.Tensor, serializer=reduce_tensor, deserializer=torch.as_tensor
+        torch.Tensor, serializer=_SharedTensor, deserializer=torch.as_tensor
     )
 
     _serializers_registered = True
@@ -469,3 +467,15 @@ def init_worker(*, autostart: bool = True) -> WorkerContext:
 
     ensure_parallel_init()
     return context
+
+
+class _SharedTensor:
+    tensor: torch.Tensor
+
+    def __init__(self, tensor: torch.Tensor):
+        self.tensor = tensor
+
+    def __reduce__(self):
+        from torch.multiprocessing.reductions import reduce_tensor
+
+        return reduce_tensor(self.tensor)
