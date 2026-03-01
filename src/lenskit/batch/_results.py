@@ -10,6 +10,8 @@ from typing import Sequence
 
 from lenskit.data import GenericKey, ItemListCollection
 
+type BatchResultRow = tuple[GenericKey, dict[str, object]]
+
 
 class BatchResults:
     """
