@@ -538,7 +538,7 @@ class Dataset:
         )
         return s
 
-    def __repr__(self) -> str:  # pragma: nocover
+    def __repr__(self) -> str:
         out = io.StringIO()
         out.write("<Dataset")
         if self.name is not None:

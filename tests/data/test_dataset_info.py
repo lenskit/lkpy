@@ -28,6 +28,18 @@ from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 from ..movielens.test_ml20m import ml20m
 
 
+def test_dataset_str(ml_ds: Dataset):
+    ds_str = str(ml_ds)
+    assert ds_str.startswith("<Dataset ml-latest-small")
+
+
+def test_dataset_repr(ml_ds: Dataset):
+    ds_str = repr(ml_ds)
+    assert ds_str.startswith("<Dataset ml-latest-small")
+    assert "item:" in ds_str
+    assert "user:" in ds_str
+
+
 def test_attribute_qname(ml_ds: Dataset):
     title_attr = ml_ds.entities("item").attribute("title")
     assert title_attr.name == "title"
