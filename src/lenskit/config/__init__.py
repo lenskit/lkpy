@@ -10,13 +10,9 @@ LensKit general configuration
 
 from __future__ import annotations
 
-import json
-import tomllib
 import warnings
-from os import PathLike
 from pathlib import Path
 
-from pydantic import BaseModel, JsonValue
 from pydantic_settings import TomlConfigSettingsSource
 from typing_extensions import Any, TypeVar, overload
 
@@ -24,6 +20,7 @@ from lenskit.diagnostics import ConfigWarning
 from lenskit.logging import get_logger
 from lenskit.random import init_global_rng
 
+from ._load import load_config_data, locate_configuration_root
 from ._schema import (
     LenskitSettings,
     MachineSettings,
@@ -36,6 +33,8 @@ from ._schema import (
 
 __all__ = [
     "lenskit_config",
+    "load_config_data",
+    "locate_configuration_root",
     "configure",
     "LenskitSettings",
     "RandomSettings",
@@ -46,8 +45,6 @@ __all__ = [
     "TuneSettings",
 ]
 
-M = TypeVar("M", bound=BaseModel)
-"Model class for general configuration loading."
 SettingsClass = TypeVar("SettingsClass", bound="LenskitSettings", default="LenskitSettings")
 _log = get_logger(__name__)
 _settings: LenskitSettings | None = None
@@ -73,8 +70,13 @@ def configure(cfg_dir: Path | None = None) -> LenskitSettings: ...
 def configure(
     cfg_dir: Path | None = None, *, settings_cls: type[SettingsClass]
 ) -> SettingsClass: ...
+@overload
+def configure(settings: LenskitSettings, /) -> LenskitSettings: ...
 def configure(
-    cfg_dir: Path | None = None, *, settings_cls=LenskitSettings, _set_global: bool = True
+    cfg_dir: Path | LenskitSettings | None = None,
+    *,
+    settings_cls=LenskitSettings,
+    _set_global: bool = True,
 ) -> Any:
     """
     Initialize LensKit configuration.
@@ -101,6 +103,10 @@ def configure(
 
     if _settings is not None and _set_global:
         warnings.warn("LensKit already configured, overwriting configuration", ConfigWarning)
+
+    if isinstance(cfg_dir, LenskitSettings):
+        _settings = cfg_dir
+        return
 
     # define a subclass so we can specify the configuration location
     toml_files = ["lenskit.toml", "lenskit.local.toml"]
@@ -137,82 +143,3 @@ def configure(
         initialize()
 
     return settings
-
-
-def locate_configuration_root(
-    *,
-    cwd: Path | str | PathLike[str] | None = None,
-    abort_at_pyproject: bool = True,
-    abort_at_gitroot: bool = True,
-) -> Path | None:
-    """
-    Search for a configuration root containing a ``lenskit.toml`` file.
-
-    This searches for a ``lenskit.toml`` file, beginning in the current working
-    directory (or the alternate ``cwd`` if provided), and searching upward until
-    one is found.  Search stops if a ``pyproject.toml`` file or ``.git``
-    directory is found without encountering ``lenskit.toml``.
-    """
-
-    if cwd is None:
-        cwd = Path()
-    elif not isinstance(cwd, Path):
-        cwd = Path(cwd)
-    cwd = cwd.resolve()
-
-    log = _log.bind(cwd=str(cwd))
-    log.debug("searching for lenskit.toml")
-    while cwd is not None:
-        log.debug("checking if lenskit.toml exists", dir=str(cwd))
-        if (cwd / "lenskit.toml").exists():
-            return cwd
-
-        if abort_at_pyproject and (cwd / "pyproject.toml").exists():
-            break
-
-        if abort_at_gitroot and (cwd / ".git").exists():
-            break
-
-        if cwd.parent == cwd:
-            break
-        else:
-            cwd = cwd.parent
-
-
-@overload
-def load_config_data(path: Path | PathLike[str], model: None = None) -> JsonValue: ...
-@overload
-def load_config_data(path: Path | PathLike[str], model: type[M]) -> M: ...
-def load_config_data(path: Path | PathLike[str], model: type[M] | None = None):
-    """
-    General-purpose function to automatically load configuration data and
-    optionally validate with a model.
-
-    Args:
-        path:
-            The path to the configuration file.
-        model:
-            The Pydantic model class to validate.
-    """
-    path = Path(path)
-    text = path.read_text()
-
-    match path.suffix:
-        case ".json" if model is not None:
-            return model.model_validate_json(text)
-        case ".json":
-            data = json.loads(text)
-        case ".toml":
-            data = tomllib.loads(text)
-        case ".yaml" | ".yml":
-            import yaml
-
-            data = yaml.load(text, yaml.SafeLoader)
-
-        case _:
-            raise ValueError(f"unsupported configuration type for {path}")
-
-    if model is None:
-        return data
-    else:
-        return model.model_validate(data)
