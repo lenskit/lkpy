@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, Iterable, Iterator, Literal, TypeAlias, TypeVar
 
-from .config import ParallelConfig, ensure_parallel_init, get_parallel_config
+from .config import ParallelSettings, ensure_parallel_init, get_parallel_config
 
 M = TypeVar("M")
 A = TypeVar("A")
@@ -23,7 +23,7 @@ def invoker(
     func: InvokeOp[M, A, R],
     n_jobs: int | None | Literal["ray"] = None,
     *,
-    worker_parallel: ParallelConfig | None = None,
+    worker_parallel: ParallelSettings | None = None,
 ) -> ModelOpInvoker[A, R]:
     """
     Get an appropriate invoker for performing operations on ``model``.
@@ -50,7 +50,7 @@ def invoker(
     """
     ensure_parallel_init()
     if n_jobs is None:
-        n_jobs = get_parallel_config().processes
+        n_jobs = get_parallel_config().num_batch_jobs
 
     if n_jobs == "ray":
         from .ray import RayOpInvoker, ensure_cluster, ray_supported

@@ -14,14 +14,14 @@ from .config import (
     effective_cpu_count,
     ensure_parallel_init,
     get_parallel_config,
-    initialize,
+    init_threading,
     is_free_threaded,
 )
 from .invoker import ModelOpInvoker, invoker
 from .pool import multiprocess_executor
 
 __all__ = [
-    "initialize",
+    "init_threading",
     "get_parallel_config",
     "effective_cpu_count",
     "ensure_parallel_init",

@@ -10,7 +10,7 @@ import os
 from typing import Annotated, TypedDict
 
 from annotated_types import Gt, Le
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -95,12 +95,6 @@ class TuneSettings(BaseModel):
     """
 
 
-def _cpu_count():
-    from lenskit.parallel import effective_cpu_count
-
-    return effective_cpu_count()
-
-
 class ParallelSettings(BaseSettings):
     """
     Configuration for LensKit's parallel processing.  These settings are in the
@@ -112,7 +106,7 @@ class ParallelSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="LK_")
 
-    num_cpus: int = Field(default_factory=_cpu_count)
+    num_cpus: PositiveInt | None = None
     """
     The number of CPUs LensKit should consider using.  This is auto-detected
     from the system environment, and should only be configured manually if you
@@ -159,14 +153,27 @@ class ParallelSettings(BaseSettings):
             return nt * nbt
 
     @property
+    def usable_cpus(self) -> int:
+        """
+        Get the number of available CPUs, from :attr:`num_cpus` or the system.
+        """
+        from lenskit.parallel import effective_cpu_count
+
+        if self.num_cpus is None:
+            return effective_cpu_count()
+        else:
+            return self.num_cpus
+
+    @property
     def resolved_num_threads(self) -> int:
         """
         Get the number of compute threads to use, resolving defaults.
         """
+        ncpu = self.usable_cpus
         if self.num_threads is None:
-            return min(self.num_cpus, 8)
+            return min(ncpu, 8)
         elif self.num_threads <= 0:
-            return self.num_cpus
+            return ncpu
         else:
             return self.num_threads
 
@@ -180,7 +187,7 @@ class ParallelSettings(BaseSettings):
             unconfigured.
         """
         if self.num_backend_threads is None:
-            return max(min(self.num_cpus // self.resolved_num_threads, 4), 1)
+            return max(min(self.usable_cpus // self.resolved_num_threads, 4), 1)
         elif self.num_backend_threads <= 0:
             return None
         else:
@@ -196,7 +203,7 @@ class ParallelSettings(BaseSettings):
             else:
                 return 1
         elif self.num_batch_jobs <= 0:
-            return self.num_cpus
+            return self.usable_cpus
         else:
             return self.num_batch_jobs
 

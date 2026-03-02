@@ -92,7 +92,7 @@ class BatchPipelineRunner:
         batch_size: int | None = None,
     ):
         if n_jobs is None:
-            n_jobs = get_parallel_config().batch_jobs
+            n_jobs = get_parallel_config().resolved_num_batch_jobs
         self.n_jobs = n_jobs
         self.batch_size = batch_size
 

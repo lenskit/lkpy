@@ -26,11 +26,9 @@ from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
 from .config import (
-    ParallelConfig,
     effective_cpu_count,
     ensure_parallel_init,
     get_parallel_config,
-    subprocess_config,
 )
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
@@ -47,7 +45,6 @@ except ImportError:
 T = TypeVar("T")
 
 BATCH_SIZE = 200
-_worker_parallel: ParallelConfig
 _serializers_registered = False
 _log = get_logger(__name__)
 
@@ -76,7 +73,6 @@ def init_cluster(
     num_cpus: int | None = None,
     proc_slots: int | None = None,
     resources: dict[str, float] | None = None,
-    worker_parallel: ParallelConfig | None = None,
     global_logging: bool = False,
     **kwargs,
 ):
@@ -119,17 +115,11 @@ def init_cluster(
         resources = resources.copy()
 
     cfg = get_parallel_config()
-    if proc_slots is None:
-        proc_slots = cfg.processes
 
     if num_cpus is None:
         num_cpus = effective_cpu_count()
 
-    if worker_parallel is None:
-        worker_parallel = subprocess_config()
-    _worker_parallel = worker_parallel
-
-    env = worker_parallel.env_vars().copy()
+    env = cfg.env_vars().copy()
     wc = WorkerLogConfig.current()
     env["LK_LOG_CONFIG"] = base64.encodebytes(pickle.dumps(wc)).decode()
 
@@ -151,14 +141,6 @@ def init_serializers():
     )
 
     _serializers_registered = True
-
-
-def inference_worker_cpus() -> int:
-    return _worker_parallel.backend_threads
-
-
-def training_worker_cpus() -> int:
-    return _worker_parallel.total_threads
 
 
 def ray_supported() -> bool:
@@ -220,6 +202,7 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         import torch
 
         ensure_cluster()
+        pc = get_parallel_config()
 
         if isinstance(model, ray.ObjectRef):
             self.model_ref = model
@@ -235,7 +218,8 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
             n_gpus = 0.1
         else:
             n_gpus = None
-        self.action = worker.options(num_cpus=inference_worker_cpus(), num_gpus=n_gpus)  # type: ignore
+
+        self.action = worker.options(num_cpus=pc.resolved_num_backend_threads or 1, num_gpus=n_gpus)  # type: ignore
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
         limit = TaskLimiter(self.limit)
@@ -272,7 +256,7 @@ class TaskLimiter:
 
     def __init__(self, limit: int | None = None):
         if limit is None or limit <= 0:
-            self.limit = get_parallel_config().processes
+            self.limit = get_parallel_config().resolved_num_batch_jobs
         else:
             self.limit = limit
         self.finished = 0

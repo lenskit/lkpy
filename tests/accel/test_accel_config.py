@@ -13,4 +13,4 @@ def test_thread_count():
     pc = get_parallel_config()
 
     tc = _accel.thread_count()
-    assert tc == pc.threads
+    assert tc == pc.resolved_num_threads

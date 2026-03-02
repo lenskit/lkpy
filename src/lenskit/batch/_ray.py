@@ -34,7 +34,7 @@ def ray_results(
 ) -> Generator[BatchResultRow]:
     ensure_cluster()
     pc = get_parallel_config()
-    limit = TaskLimiter(pc.batch_jobs)
+    limit = TaskLimiter(pc.resolved_num_batch_jobs)
     batches = batched(queries, batch_size)
 
     if profiler is not None:

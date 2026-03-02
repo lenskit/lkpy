@@ -17,9 +17,11 @@ from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
 from . import worker
-from .config import ParallelConfig, ensure_parallel_init, get_parallel_config, initialize
+from .config import ensure_parallel_init, get_parallel_config, init_threading
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 from .serialize import shm_serialize
+
+type ParallelConfig = dict[str, str]
 
 _log = get_logger(__name__)
 
@@ -102,7 +104,7 @@ class LensKitProcess(SpawnProcess):
     @override
     def run(self):
         with WorkerContext(self._log_config) as ctx:
-            initialize(self._parallel_config)
+            init_threading(self._parallel_config)
             log = _log.bind(pid=self.pid, pname=self.name)
             log.info("multiprocessing worker started")
             task = None

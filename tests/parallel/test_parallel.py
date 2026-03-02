@@ -14,9 +14,7 @@ import torch
 from pytest import approx, mark, skip
 
 from lenskit.parallel import invoker
-from lenskit.parallel.config import _resolve_parallel_config
 from lenskit.parallel.ray import ray_supported
-from lenskit.testing import set_env_var
 
 _log = logging.getLogger(__name__)
 
@@ -41,23 +39,3 @@ def test_invoke_matrix(pkg, n_jobs, rng: np.random.Generator):
         for rv, v in zip(mults, vectors):
             act_rv = matrix @ v
             assert act_rv == approx(rv, abs=1.0e-6)
-
-
-def test_proc_count_default():
-    with set_env_var("LK_NUM_PROCS", None):
-        cfg = _resolve_parallel_config()
-        assert cfg.processes == min(mp.cpu_count(), 4)
-
-
-def test_proc_count_env():
-    with set_env_var("LK_NUM_PROCS", "17"):
-        cfg = _resolve_parallel_config()
-        assert cfg.processes == 17
-        assert cfg.subprocess().processes == 1
-
-
-def test_thread_ev_list():
-    with set_env_var("LK_NUM_THREADS", "4,2"):
-        cfg = _resolve_parallel_config()
-        assert cfg.threads == 4
-        assert cfg.subprocess().threads == 2
