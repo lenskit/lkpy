@@ -7,12 +7,12 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Generator, Iterable, Iterator, Sequence, Sized
+from collections.abc import Generator, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Any, Literal, Mapping, NamedTuple, TypeAlias, overload
+from typing import Any, Literal, Mapping, TypeAlias, overload
 
 import pandas as pd
 
@@ -30,7 +30,8 @@ from lenskit.parallel import get_parallel_config, invoker, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler
 from lenskit.pipeline._profiling import ProfileSink
 
-from ._results import BatchResults
+from ._queries import BatchRequest, normalize_query_input
+from ._results import BatchResultRow, BatchResults
 
 _log = get_logger(__name__)
 
@@ -38,17 +39,6 @@ ItemSource: TypeAlias = None | Literal["test-items"]
 """
 Types of items that can be returned.
 """
-
-type BatchResultRow = tuple[GenericKey, dict[str, object]]
-
-
-class BatchRequest(NamedTuple):
-    """
-    A single request for the batch inference runner.
-    """
-
-    query: RecQuery
-    items: ItemList | None = None
 
 
 @dataclass
@@ -224,7 +214,7 @@ class BatchPipelineRunner:
         if prof is not None:
             prof = prof.multiprocess()
 
-        key_type, q_iter, nq = _normalize_query_input(queries)
+        key_type, q_iter, nq = normalize_query_input(queries)
 
         log = _log.bind(name=pipeline.name, n_queries=nq, n_jobs=self.n_jobs)
 
@@ -252,8 +242,14 @@ class BatchPipelineRunner:
     def _run_results(
         self, pipeline: Pipeline, profiler: ProfileSink | None, queries: Iterable[BatchRequest]
     ) -> Generator[BatchResultRow]:
-        if is_free_threaded() and isinstance(self.n_jobs, int) and self.n_jobs > 1:
+        if self.n_jobs == "ray":
+            from ._ray import ray_results
+
+            return ray_results(pipeline, profiler, self.invocations, queries, self.batch_size)
+
+        elif is_free_threaded() and self.n_jobs > 1:
             return self._threaded_results(pipeline, profiler, queries)
+
         else:
             return self._invoker_results(pipeline, profiler, queries)
 
@@ -264,7 +260,7 @@ class BatchPipelineRunner:
         queries: Iterable[BatchRequest],
     ) -> Generator[BatchResultRow]:
         with invoker(
-            (pipeline, self.invocations, profiler), _run_pipeline, n_jobs=self.n_jobs
+            (pipeline, self.invocations, profiler), run_pipeline, n_jobs=self.n_jobs
         ) as worker:
             yield from worker.map(queries)
 
@@ -275,7 +271,7 @@ class BatchPipelineRunner:
         queries: Iterable[BatchRequest],
     ) -> Generator[BatchResultRow]:
         assert isinstance(self.n_jobs, int)
-        func = partial(_run_pipeline, (pipeline, self.invocations, profiler))
+        func = partial(run_pipeline, (pipeline, self.invocations, profiler))
         _log.info("using thread pool with %d threads", self.n_jobs)
         if not is_free_threaded(require_active=True):
             _log.warn("using thread pool but Python GIL is enabled, throughput will suffer")
@@ -288,110 +284,7 @@ class BatchPipelineRunner:
             )
 
 
-def _normalize_query_input(
-    queries: Iterable[RecQuery]
-    | Iterable[tuple[RecQuery, ItemList]]
-    | Iterable[ID | GenericKey]
-    | ItemListCollection[GenericKey]
-    | Mapping[ID, ItemList]
-    | pd.DataFrame,
-) -> tuple[type[Any], Iterable[BatchRequest], int | None]:
-    if isinstance(queries, pd.DataFrame):
-        warnings.warn(
-            "use an item list collection instead of a DataFrame (LKW-BATCHIN)",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        queries = ItemListCollection.from_df(queries)
-
-    elif isinstance(queries, Mapping):
-        warnings.warn(
-            "query mappings are ambiguous and deprecated, use query lists (LKW-BATCHIN)",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        queries = ItemListCollection.from_dict(queries, "user_id")  # type: ignore
-
-    if isinstance(queries, ItemListCollection):
-        return queries.key_type, _ilc_queries(queries), len(queries)
-
-    n = None
-    if isinstance(queries, Sized):
-        n = len(queries)
-
-    q_iter = iter(queries)
-    try:
-        q_first = next(q_iter)
-    except StopIteration:
-        return tuple, [], 0
-
-    fbr = _make_br(q_first)
-    if fbr.query.query_id is not None:
-        kt = QueryIDKey
-    elif fbr.query.user_id is not None:
-        kt = UserIDKey
-    else:
-        raise ValueError("query must have one of query_id, user_id")
-
-    return kt, _iter_queries(q_first, q_iter), n
-
-
-def _ilc_queries(queries: ItemListCollection):
-    for q, items in queries.items():
-        query = RecQuery(
-            user_id=getattr(q, "user_id", None),
-            query_id=getattr(q, "query_id", None),
-        )
-        yield BatchRequest(query, items)
-
-
-def _iter_queries(
-    first: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey,
-    rest: Iterator[RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey],
-) -> Iterable[BatchRequest]:
-    yield _make_br(first)
-    for item in rest:
-        yield _make_br(item)
-
-
-def _make_br(q: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey) -> BatchRequest:
-    if isinstance(q, RecQuery):
-        return BatchRequest(q)
-    elif isinstance(q, tuple):
-        if isinstance(q[0], RecQuery):
-            q, items = q
-            return BatchRequest(q, items)  # type: ignore
-        elif hasattr(q, "user_id"):
-            # we have a named tuple with user IDs
-            q = RecQuery(user_id=getattr(q, "user_id"))
-            return BatchRequest(q)
-        else:
-            warnings.warn(
-                "bare tuples are ambiguous and will be unsupported in 2026 (LKW-BATCHIN)",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-            q = RecQuery(user_id=q)  # type: ignore
-            return BatchRequest(q)
-    else:
-        q = RecQuery(user_id=q)
-        return BatchRequest(q)
-
-
-def _ensure_key(key: ID | tuple[ID, ...]):
-    if isinstance(key, tuple):
-        return key
-    else:
-        return UserIDKey(key)
-
-
-def _run_batch(
-    ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None], requests: Sequence[BatchRequest]
-) -> list[BatchResultRow]:
-    return [_run_pipeline(ctx, req) for req in requests]
-
-
-def _run_pipeline(
+def run_pipeline(
     ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None],
     req: BatchRequest,
 ) -> BatchResultRow:

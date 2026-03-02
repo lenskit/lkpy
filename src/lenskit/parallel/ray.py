@@ -20,6 +20,8 @@ from functools import partial
 from platform import python_version_tuple
 from typing import Any, Generic, TypeVar
 
+import torch
+
 from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
@@ -34,6 +36,7 @@ from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
 try:
     import ray
+    import ray.util
     from ray.remote_function import RemoteFunction
 
     _ray_imported = True
@@ -45,6 +48,7 @@ T = TypeVar("T")
 
 BATCH_SIZE = 200
 _worker_parallel: ParallelConfig
+_serializers_registered = False
 _log = get_logger(__name__)
 
 
@@ -63,6 +67,8 @@ def ensure_cluster():
                 ray.init()
             else:
                 raise e
+
+    init_serializers()
 
 
 def init_cluster(
@@ -134,6 +140,19 @@ def init_cluster(
     ray.init(num_cpus=num_cpus, resources=resources, runtime_env=runtime, **kwargs)
 
 
+def init_serializers():
+    global _serializers_registered
+    if _serializers_registered:
+        return
+
+    _log.debug("registering Pytorch serializer")
+    ray.util.register_serializer(
+        torch.Tensor, serializer=_SharedTensor, deserializer=torch.as_tensor
+    )
+
+    _serializers_registered = True
+
+
 def inference_worker_cpus() -> int:
     return _worker_parallel.backend_threads
 
@@ -200,6 +219,8 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         import ray
         import torch
 
+        ensure_cluster()
+
         if isinstance(model, ray.ObjectRef):
             self.model_ref = model
         else:
@@ -264,6 +285,25 @@ class TaskLimiter:
         """
         return len(self._tasks)
 
+    def throttle[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]], *, ordered: bool = True
+    ) -> Generator[Elt, None, int]:
+        """
+        Throttle a generator of Ray tasks, only requesting new tasks from the
+        generator as the limit has space.
+
+        Args:
+            tasks:
+                A generator of tasks (usually the result of calling a Ray remote
+                function).
+        Returns:
+            A generator of the results (already awaited with :func:`ray.get`).
+        """
+        if ordered:
+            return self._throttle_ordered(tasks)
+        else:
+            return self._throttle_unordered(tasks)
+
     def imap(
         self,
         function: RemoteFunction | Callable[[A], R],
@@ -271,30 +311,32 @@ class TaskLimiter:
         *,
         ordered: bool = True,
     ) -> Generator[R, None, int]:
-        if ordered:
-            return self._imap_ordered(function, items)
-        else:
-            return self._imap_unordered(function, items)
-
-    def _imap_ordered(
-        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
-    ) -> Generator[Any, None, int]:
-        n = 0
-        queued = deque()
-        ready = set()
-
         # make a callable from a Ray remote function
         if hasattr(function, "remote"):
             function = function.remote  # type: ignore
 
-        for arg in items:
+        tasks = (function(e) for e in items)
+        return self.throttle(tasks)  # type: ignore
+
+    def _throttle_ordered[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]]
+    ) -> Generator[Elt, None, int]:
+        n = 0
+        queued = deque()
+        ready = set()
+
+        while True:
             for res in self.results_until_limit():
                 ready.add(res)
                 n += 1
 
             yield from _drain_queue(queued, ready)
 
-            task: Any = function(arg)
+            # now we invoke the next task
+            try:
+                task = next(tasks)
+            except StopIteration:
+                break
             self.add_task(task)
             queued.append(task)
 
@@ -309,20 +351,21 @@ class TaskLimiter:
 
         return n
 
-    def _imap_unordered(
-        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
-    ) -> Generator[Any, None, int]:
+    def _throttle_unordered[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]]
+    ) -> Generator[Elt, None, int]:
         n = 0
 
-        # make a callable from a Ray remote function
-        if hasattr(function, "remote"):
-            function = function.remote  # type: ignore
-
-        for arg in items:
+        while True:
             for res in self.results_until_limit():
                 yield ray.get(res)
                 n += 1
-            task: Any = function(arg)
+
+            # now we invoke the next task
+            try:
+                task = next(tasks)
+            except StopIteration:
+                break
             self.add_task(task)
 
         for res in self.drain_results():
@@ -424,3 +467,15 @@ def init_worker(*, autostart: bool = True) -> WorkerContext:
 
     ensure_parallel_init()
     return context
+
+
+class _SharedTensor:
+    tensor: torch.Tensor
+
+    def __init__(self, tensor: torch.Tensor):
+        self.tensor = tensor
+
+    def __reduce__(self):
+        from torch.multiprocessing.reductions import reduce_tensor
+
+        return reduce_tensor(self.tensor)
