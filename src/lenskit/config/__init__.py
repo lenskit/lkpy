@@ -105,9 +105,24 @@ def configure(
         warnings.warn("LensKit already configured, overwriting configuration", ConfigWarning)
 
     if isinstance(cfg_dir, LenskitSettings):
-        _settings = cfg_dir
-        return
+        settings = cfg_dir
+    else:
+        settings = _load_settings(cfg_dir, settings_cls)
 
+    if _set_global:
+        _settings = settings
+        if settings.random.seed is not None:
+            init_global_rng(settings.random.seed)
+        from lenskit.parallel import init_threading
+
+        init_threading(settings.parallel)
+
+    return settings
+
+
+def _load_settings[SettingsClass](
+    cfg_dir: Path | None, settings_cls: type[SettingsClass]
+) -> SettingsClass:
     # define a subclass so we can specify the configuration location
     toml_files = ["lenskit.toml", "lenskit.local.toml"]
     if cfg_dir is not None:
@@ -133,13 +148,4 @@ def configure(
                 ),
             )
 
-    settings = LenskitFileSettings()
-    if _set_global:
-        _settings = settings
-        if settings.random.seed is not None:
-            init_global_rng(settings.random.seed)
-        from lenskit.parallel import initialize
-
-        initialize()
-
-    return settings
+    return LenskitFileSettings()  # type: ignore
