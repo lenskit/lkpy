@@ -27,6 +27,7 @@ from lenskit.random import init_global_rng
 from ._schema import (
     LenskitSettings,
     MachineSettings,
+    ParallelSettings,
     PowerQueries,
     PrometheusSettings,
     RandomSettings,
@@ -39,6 +40,7 @@ __all__ = [
     "LenskitSettings",
     "RandomSettings",
     "MachineSettings",
+    "ParallelSettings",
     "PowerQueries",
     "PrometheusSettings",
     "TuneSettings",

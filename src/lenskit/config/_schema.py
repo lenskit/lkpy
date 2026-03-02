@@ -6,10 +6,11 @@
 
 from __future__ import annotations
 
+import os
 from typing import Annotated, TypedDict
 
 from annotated_types import Gt, Le
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -94,6 +95,131 @@ class TuneSettings(BaseModel):
     """
 
 
+def _cpu_count():
+    from lenskit.parallel import effective_cpu_count
+
+    return effective_cpu_count()
+
+
+class ParallelSettings(BaseSettings):
+    """
+    Configuration for LensKit's parallel processing.  These settings are in the
+    ``[parallel]`` table in ``lenskit.toml``.
+
+    .. seealso::
+        :ref:`parallel-config`
+    """
+
+    model_config = SettingsConfigDict(env_prefix="LK_")
+
+    num_cpus: int = Field(default_factory=_cpu_count)
+    """
+    The number of CPUs LensKit should consider using.  This is auto-detected
+    from the system environment, and should only be configured manually if you
+    want to override LensKit's CPU detection for some reason.  Note that the
+    auto-detected values *do* account for operating system scheduling affinities
+    and CPU limits.
+
+    This value is not used directly as a limit, but is used to derive the
+    default values for the other concurrency controls (threads, etc.).
+    """
+
+    num_batch_jobs: int | None = None
+    """
+    Number of batch inference jobs to run in parallel.  Can be overridden with
+    the :envvar:`LK_NUM_BATCH_JOBS` environment variable.
+    """
+
+    num_procs: int | None = None
+    """
+    Number of processes to use.
+    """
+
+    num_threads: int | None = None
+    """
+    Number of threads to use.  Can be overridden with the
+    :envvar:`LK_NUM_THREADS` environment variable.  Specify -1 to use all
+    available threads.
+    """
+
+    num_backend_threads: int | None = None
+    """
+    Number of threads for compute backends to use.  Can be overridden with the
+    :envvar:`LK_NUM_BACKEND_THREADS` environment variable.  Specify -1 to leave
+    threading limits unmodified.
+    """
+
+    @property
+    def total_threads(self):
+        nt = self.resolved_num_threads
+        nbt = self.resolved_num_backend_threads
+        if nbt is None:
+            return nt
+        else:
+            return nt * nbt
+
+    @property
+    def resolved_num_threads(self) -> int:
+        """
+        Get the number of compute threads to use, resolving defaults.
+        """
+        if self.num_threads is None:
+            return min(self.num_cpus, 8)
+        elif self.num_threads <= 0:
+            return self.num_cpus
+        else:
+            return self.num_threads
+
+    @property
+    def resolved_num_backend_threads(self) -> int | None:
+        """
+        Get the number of backend threads to use, resolving defaults.
+
+        Returns:
+            The number of backend threads, or ``None`` to leave backends
+            unconfigured.
+        """
+        if self.num_backend_threads is None:
+            return max(min(self.num_cpus // self.resolved_num_threads, 4), 1)
+        elif self.num_backend_threads <= 0:
+            return None
+        else:
+            return self.num_backend_threads
+
+    @property
+    def resolved_num_batch_jobs(self) -> int:
+        from lenskit.parallel import is_free_threaded
+
+        if self.num_batch_jobs is None:
+            if is_free_threaded():
+                return self.resolved_num_threads
+            else:
+                return 1
+        elif self.num_batch_jobs <= 0:
+            return self.num_cpus
+        else:
+            return self.num_batch_jobs
+
+    def env_vars(self) -> dict[str, str]:
+        """
+        Get the parallel configuration as a set of environment variables.  The
+        set also includes ``OMP_NUM_THREADS`` and related variables for BLAS and
+        MKL to configure OMP early.
+        """
+        evs = {
+            "LK_NUM_BATCH_JOBS": str(self.resolved_num_batch_jobs),
+            "LK_NUM_THREADS": str(self.resolved_num_threads),
+            "LK_NUM_BACKEND_THREADS": str(self.resolved_num_backend_threads or -1),
+        }
+        if "OMP_NUM_THREADS" not in os.environ:
+            evs["OMP_NUM_THREADS"] = evs["LK_NUM_BACKEND_THREADS"]
+        if "OPENBLAS_NUM_THREADS" not in os.environ:
+            evs["OPENBLAS_NUM_THREADS"] = evs["LK_NUM_BACKEND_THREADS"]
+        if "MKL_NUM_THREADS" not in os.environ:
+            evs["MKL_NUM_THREADS"] = evs["LK_NUM_BACKEND_THREADS"]
+        return evs
+
+
 class LenskitSettings(BaseSettings, extra="allow"):
     """
     Definition of LensKit settings.
@@ -114,6 +240,8 @@ class LenskitSettings(BaseSettings, extra="allow"):
     """
     Random number generator configuration.
     """
+
+    parallel: ParallelSettings = ParallelSettings()
 
     machine: str | None = None
     """
