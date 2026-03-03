@@ -26,7 +26,7 @@ from lenskit.data import (
     UserIDKey,
 )
 from lenskit.logging import Stopwatch, get_logger, item_progress
-from lenskit.parallel import get_parallel_config, invoker, is_free_threaded
+from lenskit.parallel import get_parallel_config, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler
 from lenskit.pipeline._profiling import ProfileSink
 
@@ -247,22 +247,20 @@ class BatchPipelineRunner:
 
             return ray_results(pipeline, profiler, self.invocations, queries, self.batch_size)
 
-        elif is_free_threaded() and self.n_jobs > 1:
+        elif self.n_jobs > 1:
             return self._threaded_results(pipeline, profiler, queries)
 
         else:
-            return self._invoker_results(pipeline, profiler, queries)
+            return self._sequential_results(pipeline, profiler, queries)
 
-    def _invoker_results(
+    def _sequential_results(
         self,
         pipeline: Pipeline,
         profiler: ProfileSink | None,
         queries: Iterable[BatchRequest],
     ) -> Generator[BatchResultRow]:
-        with invoker(
-            (pipeline, self.invocations, profiler), run_pipeline, n_jobs=self.n_jobs
-        ) as worker:
-            yield from worker.map(queries)
+        for query in queries:
+            yield run_pipeline(pipeline, self.invocations, profiler, query)
 
     def _threaded_results(
         self,
@@ -271,7 +269,7 @@ class BatchPipelineRunner:
         queries: Iterable[BatchRequest],
     ) -> Generator[BatchResultRow]:
         assert isinstance(self.n_jobs, int)
-        func = partial(run_pipeline, (pipeline, self.invocations, profiler))
+        func = partial(run_pipeline, pipeline, self.invocations, profiler)
         _log.info("using thread pool with %d threads", self.n_jobs)
         if not is_free_threaded(require_active=True):
             _log.warn("using thread pool but Python GIL is enabled, throughput will suffer")
@@ -285,10 +283,11 @@ class BatchPipelineRunner:
 
 
 def run_pipeline(
-    ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None],
+    pipeline: Pipeline,
+    invocations: list[InvocationSpec],
+    profiler: ProfileSink | None,
     req: BatchRequest,
 ) -> BatchResultRow:
-    pipeline, invocations, profiler = ctx
     query, test_items = req
     if query.query_id is not None:
         key = QueryIDKey(query.query_id)
