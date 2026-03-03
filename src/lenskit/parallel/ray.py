@@ -11,18 +11,16 @@ Support for parallelism with Ray.
 from __future__ import annotations
 
 import base64
-import itertools
 import os
 import pickle
 from collections import deque
-from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
-from functools import partial
+from collections.abc import Callable, Generator, Iterable, Iterator
 from platform import python_version_tuple
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar, overload
 
 import torch
 
-from lenskit.logging import Task, get_logger
+from lenskit.logging import get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
 from .config import (
@@ -30,7 +28,6 @@ from .config import (
     ensure_parallel_init,
     get_parallel_config,
 )
-from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
 try:
     import ray
@@ -190,47 +187,6 @@ def is_ray_worker() -> bool:
         return False
 
 
-class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
-    function: InvokeOp[M, A, R]
-    model_ref: Any
-    action: RemoteFunction
-    limit: int | None
-
-    def __init__(self, model: M, func: InvokeOp[M, A, R], *, limit: int | None = None):
-        _log.debug("persisting to Ray cluster")
-        import ray
-        import torch
-
-        ensure_cluster()
-        pc = get_parallel_config()
-
-        if isinstance(model, ray.ObjectRef):
-            self.model_ref = model
-        else:
-            self.model_ref = ray.put(model)
-        self.function = func
-
-        self.limit = limit
-
-        worker = ray.remote(_ray_invoke_worker)
-        # request a little GPU
-        if torch.cuda.is_available():
-            n_gpus = 0.1
-        else:
-            n_gpus = None
-
-        self.action = worker.options(num_cpus=pc.resolved_num_backend_threads or 1, num_gpus=n_gpus)  # type: ignore
-
-    def map(self, tasks: Iterable[A]) -> Iterator[R]:
-        limit = TaskLimiter(self.limit)
-        function = partial(self.action.remote, self.function, self.model_ref)
-        for bres in limit.imap(function, itertools.batched(tasks, BATCH_SIZE)):
-            yield from bres  # type: ignore
-
-    def shutdown(self):
-        del self.model_ref
-
-
 class TaskLimiter:
     """
     Limit task concurrency using :func:`ray.wait`.
@@ -288,7 +244,23 @@ class TaskLimiter:
         else:
             return self._throttle_unordered(tasks)
 
+    @overload
     def imap(
+        self,
+        function: RemoteFunction,
+        items: Iterable[Any],
+        *,
+        ordered: bool = True,
+    ) -> Generator[Any, None, int]: ...
+    @overload
+    def imap[A, R](
+        self,
+        function: Callable[[A], R],
+        items: Iterable[A],
+        *,
+        ordered: bool = True,
+    ) -> Generator[R, None, int]: ...
+    def imap[A, R](
         self,
         function: RemoteFunction | Callable[[A], R],
         items: Iterable[A],
@@ -416,17 +388,6 @@ def _drain_queue(queued: deque[ray.ObjectRef], ready: set[ray.ObjectRef]) -> Ite
         ref = queued.popleft()
         ready.remove(ref)
         yield ray.get(ref)
-
-
-def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: Sequence[A]) -> list[R]:
-    with init_worker(autostart=False) as ctx:
-        try:
-            with Task("cluster worker", subprocess=True) as task:
-                result = [func(model, arg) for arg in args]
-        finally:
-            ctx.send_task(task)
-
-    return result
 
 
 def _worker_setup():
