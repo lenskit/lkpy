@@ -346,7 +346,7 @@ class ScorerTests(TrainingTests):
         "Ensure pipeline can be used via Ray."
         N_USERS = 100
         users = rng.choice(ml_ds.users.ids(), N_USERS)
-        recs = batch.recommend(trained_topn_pipeline, users, n=100, n_jobs="ray")
+        recs = batch.recommend(trained_topn_pipeline, users, n=100, use_ray=True)
         assert len(recs) == N_USERS
 
     @mark.slow
