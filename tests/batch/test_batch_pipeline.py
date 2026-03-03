@@ -51,7 +51,7 @@ def ml_split(ml_100k: pd.DataFrame) -> Generator[TTSplit, None, None]:
 
 
 def test_predict_single(mlb: MLB):
-    res = predict(mlb.pipeline, {1: ItemList([31])}, n_jobs=1)
+    res = predict(mlb.pipeline, {1: ItemList([31])})
 
     assert len(res) == 1
     uid, result = next(iter(res))
@@ -66,7 +66,7 @@ def test_predict_single(mlb: MLB):
 
 
 def test_score_single(mlb: MLB):
-    res = score(mlb.pipeline, {1: ItemList([31])}, n_jobs=1)
+    res = score(mlb.pipeline, {1: ItemList([31])})
 
     assert len(res) == 1
     uid, result = next(iter(res))
@@ -83,7 +83,7 @@ def test_score_single(mlb: MLB):
 def test_recommend_user(mlb: MLB):
     user = 5
 
-    results = recommend(mlb.pipeline, [user], n=10, n_jobs=1)
+    results = recommend(mlb.pipeline, [user], n=10)
 
     assert len(results) == 1
 
