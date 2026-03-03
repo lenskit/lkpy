@@ -56,5 +56,4 @@ def _run_batch(
     profiler: ProfileSink | None,
     requests: Sequence[BatchRequest],
 ) -> list[BatchResultRow]:
-    ctx = (pipeline, invocations, profiler)
-    return [run_pipeline((ctx), req) for req in requests]
+    return [run_pipeline(pipeline, invocations, profiler, req) for req in requests]

@@ -6,8 +6,9 @@
 
 from __future__ import annotations
 
+import sys
 import warnings
-from collections.abc import Generator, Iterable
+from collections.abc import Generator, Iterable, Sized
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import dataclass, field
@@ -26,7 +27,7 @@ from lenskit.data import (
     UserIDKey,
 )
 from lenskit.logging import Stopwatch, get_logger, item_progress
-from lenskit.parallel import get_parallel_config, invoker, is_free_threaded
+from lenskit.parallel import get_parallel_config, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler
 from lenskit.pipeline._profiling import ProfileSink
 
@@ -73,11 +74,13 @@ class BatchPipelineRunner:
             defined by LensKit configuration and environment variables (see
             :ref:`parallel-config`).
         batch_size:
-            The batch size for multiprocess execution.
+            The batch size for multiprocess execution.  If ``None``, a batch
+            size based on the number of inputs is used, with a maximum batch
+            size of 1000.
     """
 
     n_jobs: int | Literal["ray"]
-    batch_size: int
+    batch_size: int | None = None
     profiler: PipelineProfiler | None
     invocations: list[InvocationSpec]
 
@@ -86,7 +89,7 @@ class BatchPipelineRunner:
         *,
         n_jobs: int | Literal["ray"] | None = None,
         profiler: PipelineProfiler | None = None,
-        batch_size: int = 200,
+        batch_size: int | None = None,
     ):
         if n_jobs is None:
             n_jobs = get_parallel_config().batch_jobs
@@ -245,24 +248,29 @@ class BatchPipelineRunner:
         if self.n_jobs == "ray":
             from ._ray import ray_results
 
-            return ray_results(pipeline, profiler, self.invocations, queries, self.batch_size)
+            bs = self.batch_size
+            if bs is None:
+                if isinstance(queries, Sized):
+                    bs = max(len(queries) // 20, 2000)
+                else:
+                    bs = 1000
 
-        elif is_free_threaded() and self.n_jobs > 1:
+            return ray_results(pipeline, profiler, self.invocations, queries, bs)
+
+        elif self.n_jobs > 1:
             return self._threaded_results(pipeline, profiler, queries)
 
         else:
-            return self._invoker_results(pipeline, profiler, queries)
+            return self._sequential_results(pipeline, profiler, queries)
 
-    def _invoker_results(
+    def _sequential_results(
         self,
         pipeline: Pipeline,
         profiler: ProfileSink | None,
         queries: Iterable[BatchRequest],
     ) -> Generator[BatchResultRow]:
-        with invoker(
-            (pipeline, self.invocations, profiler), run_pipeline, n_jobs=self.n_jobs
-        ) as worker:
-            yield from worker.map(queries)
+        for query in queries:
+            yield run_pipeline(pipeline, self.invocations, profiler, query)
 
     def _threaded_results(
         self,
@@ -271,24 +279,23 @@ class BatchPipelineRunner:
         queries: Iterable[BatchRequest],
     ) -> Generator[BatchResultRow]:
         assert isinstance(self.n_jobs, int)
-        func = partial(run_pipeline, (pipeline, self.invocations, profiler))
+        func = partial(run_pipeline, pipeline, self.invocations, profiler)
         _log.info("using thread pool with %d threads", self.n_jobs)
         if not is_free_threaded(require_active=True):
             _log.warn("using thread pool but Python GIL is enabled, throughput will suffer")
         with ThreadPoolExecutor(self.n_jobs, "lk-batch") as pool:
-            yield from pool.map(
-                func,
-                queries,
-                chunksize=self.batch_size,
-                buffersize=self.n_jobs * self.batch_size * 1,
-            )
+            options = {}
+            if sys.version_info >= (3, 14):
+                options["buffersize"] = self.n_jobs * 50 * 2
+            yield from pool.map(func, queries, chunksize=50, **options)
 
 
 def run_pipeline(
-    ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None],
+    pipeline: Pipeline,
+    invocations: list[InvocationSpec],
+    profiler: ProfileSink | None,
     req: BatchRequest,
 ) -> BatchResultRow:
-    pipeline, invocations, profiler = ctx
     query, test_items = req
     if query.query_id is not None:
         key = QueryIDKey(query.query_id)

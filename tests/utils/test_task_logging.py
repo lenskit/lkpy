@@ -33,9 +33,3 @@ def test_train_task(ml_ds: Dataset):
     print(task.model_dump_json(indent=2))
 
     assert task.status == TaskStatus.FINISHED
-    if is_free_threaded():
-        assert len(task.subtasks) == 0
-    else:
-        # TODO: will no longer be valid after subprocesses are gone
-        assert len(task.subtasks) == 2
-        assert all(st.subprocess for st in task.subtasks)
