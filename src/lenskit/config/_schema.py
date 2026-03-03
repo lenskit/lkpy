@@ -118,6 +118,11 @@ class ParallelSettings(BaseSettings):
     default values for the other concurrency controls (threads, etc.).
     """
 
+    use_ray: bool = False
+    """
+    Use Ray to parallelize batch operations, hyperparameter tuning, etc.
+    """
+
     num_batch_jobs: int | None = None
     """
     Number of batch inference jobs to run in parallel.  Can be overridden with
