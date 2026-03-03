@@ -68,7 +68,6 @@ def ensure_cluster():
 def init_cluster(
     *,
     num_cpus: int | None = None,
-    proc_slots: int | None = None,
     resources: dict[str, float] | None = None,
     global_logging: bool = False,
     **kwargs,
