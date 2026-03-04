@@ -36,7 +36,7 @@ def ray_results(
     ensure_cluster()
     pc = get_parallel_config()
     if n_jobs <= 0:
-        n_jobs = pc.usable_cpus
+        n_jobs = pc.num_cpus
 
     limit = TaskLimiter(n_jobs)
     batches = batched(queries, batch_size)
@@ -46,7 +46,7 @@ def ray_results(
 
     pipe_h = ray.put(pipeline)
 
-    worker = ray.remote(_run_batch).options(num_cpus=pc.resolved_num_backend_threads or 1)
+    worker = ray.remote(_run_batch).options(num_cpus=pc.num_backend_threads or 1)
     tasks = (worker.remote(pipe_h, invocations, profiler, batch) for batch in batches)
 
     _log.info("running inference queries on Ray")

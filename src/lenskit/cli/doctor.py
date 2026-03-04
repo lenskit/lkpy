@@ -151,10 +151,10 @@ def inspect_parallel_config():
 
 @group()
 def _inspect_pc(pc: ParallelSettings, *, level: int):
-    yield kvp("available CPUs", pc.usable_cpus, level=level)
-    yield kvp("batch jobs", pc.resolved_num_batch_jobs, level=level)
-    yield kvp("threads", pc.resolved_num_threads, level=level)
-    yield kvp("backend threads", pc.resolved_num_backend_threads, level=level)
+    yield kvp("available CPUs", pc.num_cpus, level=level)
+    yield kvp("batch jobs", pc.num_batch_jobs, level=level)
+    yield kvp("threads", pc.num_threads, level=level)
+    yield kvp("backend threads", pc.num_backend_threads, level=level)
 
 
 @group()

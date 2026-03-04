@@ -99,7 +99,7 @@ class BatchPipelineRunner:
     ):
         cfg = get_parallel_config()
         if n_jobs is None:
-            n_jobs = cfg.resolved_num_batch_jobs
+            n_jobs = cfg.num_batch_jobs
         if use_ray is None:
             use_ray = cfg.use_ray
 

@@ -146,7 +146,7 @@ class ALS(BaseRec):
         ensure_parallel_init()
         pcfg = get_parallel_config()
         return AlternatingLeastSquares(
-            num_threads=pcfg.resolved_num_threads,
+            num_threads=pcfg.num_threads,
             **self.config.__pydantic_extra__,  # type: ignore
         )
 
@@ -163,6 +163,6 @@ class BPR(BaseRec):
         ensure_parallel_init()
         pcfg = get_parallel_config()
         return BayesianPersonalizedRanking(
-            num_threads=pcfg.resolved_num_threads,
+            num_threads=pcfg.num_threads,
             **self.config.__pydantic_extra__,  # type: ignore
         )

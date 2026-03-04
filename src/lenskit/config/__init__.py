@@ -59,7 +59,9 @@ def lenskit_config() -> LenskitSettings:
     global _settings
 
     if _settings is None:
-        return LenskitSettings()
+        settings = LenskitSettings()
+        settings.finish_setup()
+        return settings
     else:
         return _settings
 
@@ -148,4 +150,6 @@ def _load_settings[SettingsClass](
                 ),
             )
 
-    return LenskitFileSettings()  # type: ignore
+    obj = LenskitFileSettings()
+    obj.finish_setup()  # type: ignore
+    return obj  # type: ignore

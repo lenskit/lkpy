@@ -195,7 +195,7 @@ class TaskLimiter:
 
     def __init__(self, limit: int | None = None):
         if limit is None or limit <= 0:
-            self.limit = get_parallel_config().resolved_num_batch_jobs
+            self.limit = get_parallel_config().num_batch_jobs
         else:
             self.limit = limit
         self.finished = 0

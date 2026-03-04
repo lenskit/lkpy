@@ -55,16 +55,18 @@ def init_threading(config: ParallelSettings | None = None):
     __settings = config
     _log.debug("configuring for parallelism: %s", __settings)
 
-    nbt = config.resolved_num_backend_threads
-    if nbt and "OPENBLAS_NUM_THREADS" not in os.environ and "MKL_NUM_THREADS" not in os.environ:
+    nbt = config.num_backend_threads
+    if nbt > 0 and "OPENBLAS_NUM_THREADS" not in os.environ and "MKL_NUM_THREADS" not in os.environ:
         threadpool_limits(nbt, "blas")
 
+    assert config.num_threads > 0
+
     try:
-        init_accel_pool(config.resolved_num_threads)
+        init_accel_pool(config.num_threads)
     except RuntimeError as e:
         _log.warning("failed to initialize Rayon backend: %s", e)
 
-    if nbt:
+    if nbt > 0:
         try:
             torch.set_num_threads(nbt)
         except RuntimeError as e:

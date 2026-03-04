@@ -10,7 +10,7 @@ import os
 from typing import Annotated, TypedDict
 
 from annotated_types import Gt, Le
-from pydantic import BaseModel, PositiveInt
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -106,7 +106,7 @@ class ParallelSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="LK_")
 
-    num_cpus: PositiveInt | None = None
+    num_cpus: int = 0
     """
     The number of CPUs LensKit should consider using.  This is auto-detected
     from the system environment, and should only be configured manually if you
@@ -123,25 +123,25 @@ class ParallelSettings(BaseSettings):
     Use Ray to parallelize batch operations, hyperparameter tuning, etc.
     """
 
-    num_batch_jobs: int | None = None
+    num_batch_jobs: int = 0
     """
     Number of batch inference jobs to run in parallel.  Can be overridden with
     the :envvar:`LK_NUM_BATCH_JOBS` environment variable.
     """
 
-    num_procs: int | None = None
+    num_procs: int = 0
     """
     Number of processes to use.
     """
 
-    num_threads: int | None = None
+    num_threads: int = 0
     """
     Number of threads to use.  Can be overridden with the
     :envvar:`LK_NUM_THREADS` environment variable.  Specify -1 to use all
     available threads.
     """
 
-    num_backend_threads: int | None = None
+    num_backend_threads: int = 0
     """
     Number of threads for compute backends to use.  Can be overridden with the
     :envvar:`LK_NUM_BACKEND_THREADS` environment variable.  Specify -1 to leave
@@ -150,67 +150,38 @@ class ParallelSettings(BaseSettings):
 
     @property
     def total_threads(self):
-        nt = self.resolved_num_threads
-        nbt = self.resolved_num_backend_threads
-        if nbt is None:
-            return nt
-        else:
+        nt = self.num_threads
+        nbt = self.num_backend_threads
+        if nbt > 0:
             return nt * nbt
-
-    @property
-    def usable_cpus(self) -> int:
-        """
-        Get the number of available CPUs, from :attr:`num_cpus` or the system.
-        """
-        from lenskit.parallel import effective_cpu_count
-
-        if self.num_cpus is None:
-            return effective_cpu_count()
         else:
-            return self.num_cpus
+            return nt
 
-    @property
-    def resolved_num_threads(self) -> int:
+    def resolve_defaults(self):
         """
-        Get the number of compute threads to use, resolving defaults.
+        Resolve default values for thread/process counts.
         """
-        ncpu = self.usable_cpus
-        if self.num_threads is None:
-            return min(ncpu, 8)
-        elif self.num_threads <= 0:
-            return ncpu
-        else:
-            return self.num_threads
+        from lenskit.parallel import effective_cpu_count, is_free_threaded
 
-    @property
-    def resolved_num_backend_threads(self) -> int | None:
-        """
-        Get the number of backend threads to use, resolving defaults.
+        ncpus = self.num_cpus
+        if ncpus <= 0:
+            self.num_cpus = ncpus = effective_cpu_count()
 
-        Returns:
-            The number of backend threads, or ``None`` to leave backends
-            unconfigured.
-        """
-        if self.num_backend_threads is None:
-            return max(min(self.usable_cpus // self.resolved_num_threads, 4), 1)
-        elif self.num_backend_threads <= 0:
-            return None
-        else:
-            return self.num_backend_threads
+        if self.num_threads == 0:
+            self.num_threads = min(ncpus, 8)
+        elif self.num_threads < 0:
+            self.num_threads = ncpus
 
-    @property
-    def resolved_num_batch_jobs(self) -> int:
-        from lenskit.parallel import is_free_threaded
+        if self.num_backend_threads == 0:
+            return max(min(self.num_cpus // self.num_threads, 4), 1)
 
-        if self.num_batch_jobs is None:
+        if self.num_batch_jobs == 0:
             if is_free_threaded():
-                return self.resolved_num_threads
+                self.num_batch_jobs = self.num_threads
             else:
-                return 1
-        elif self.num_batch_jobs <= 0:
-            return self.usable_cpus
-        else:
-            return self.num_batch_jobs
+                self.num_batch_jobs = 0
+        elif self.num_batch_jobs < 0:
+            self.num_batch_jobs = self.num_cpus
 
     def env_vars(self) -> dict[str, str]:
         """
@@ -219,9 +190,9 @@ class ParallelSettings(BaseSettings):
         MKL to configure OMP early.
         """
         evs = {
-            "LK_NUM_BATCH_JOBS": str(self.resolved_num_batch_jobs),
-            "LK_NUM_THREADS": str(self.resolved_num_threads),
-            "LK_NUM_BACKEND_THREADS": str(self.resolved_num_backend_threads or -1),
+            "LK_NUM_BATCH_JOBS": str(self.num_batch_jobs),
+            "LK_NUM_THREADS": str(self.num_threads),
+            "LK_NUM_BACKEND_THREADS": str(self.num_backend_threads or -1),
         }
         if "OMP_NUM_THREADS" not in os.environ:
             evs["OMP_NUM_THREADS"] = evs["LK_NUM_BACKEND_THREADS"]
@@ -293,3 +264,9 @@ class LenskitSettings(BaseSettings, extra="allow"):
             dotenv_settings,
             file_secret_settings,
         )
+
+    def finish_setup(self):
+        """
+        Finalize settings, resolving default values etc. as needed.
+        """
+        self.parallel.resolve_defaults()
