@@ -89,9 +89,6 @@ def init_cluster(
             the ``lk_process`` resource on the Ray cluster.
         resources:
             Additional custom resources to register in the Ray cluster.
-        worker_parallel:
-            Parallel processing configuration for worker processes.  If
-            ``None``, uses the default.
         global_logging:
             ``True`` to wire up logging in the workers at startup, instead of only
             connecting logs when a task is run.
@@ -101,7 +98,6 @@ def init_cluster(
     Stability:
         Experimental
     """
-    global _worker_parallel
     import ray
     import ray.runtime_env
 
