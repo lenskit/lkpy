@@ -15,7 +15,6 @@ import os
 import pickle
 from collections import deque
 from collections.abc import Callable, Generator, Iterable, Iterator
-from platform import python_version_tuple
 from typing import Any, TypeVar, overload
 
 import torch
@@ -133,17 +132,6 @@ def init_serializers():
     )
 
     _serializers_registered = True
-
-
-def ray_supported() -> bool:
-    """
-    Check if this Ray setup is supported by LensKit.
-    """
-    major, minor, patch = python_version_tuple()
-    if int(major) < 3 or int(minor) < 12:
-        return False
-    else:
-        return ray_available()
 
 
 def ray_available() -> bool:
