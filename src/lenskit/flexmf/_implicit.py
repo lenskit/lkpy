@@ -16,6 +16,7 @@ from pydantic import NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 from torch.nn import functional as F
 
 from lenskit.data import Dataset
+from lenskit.logging import get_logger
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
 from ._model import FlexMFModel
@@ -24,6 +25,8 @@ from ._training import FlexMFTrainerBase, FlexMFTrainingBatch, FlexMFTrainingDat
 MAX_TRIES = 200
 ImplicitLoss: TypeAlias = Literal["logistic", "pairwise", "warp"]
 NegativeStrategy: TypeAlias = Literal["uniform", "popular", "misranked"]
+
+_log = get_logger(__name__)
 
 
 class FlexMFImplicitConfig(FlexMFConfigBase):
@@ -149,6 +152,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         coo = matrix.coo_structure()
 
         if self.config.convolution_layers:
+            _log.debug("preparing convolution neighborhood matrix")
             mat = matrix.torch(layout="coo")
             unorms = mat.sum(1).to_dense().sqrt()
             inorms = mat.sum(0).to_dense().sqrt()
