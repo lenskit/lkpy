@@ -47,6 +47,18 @@ class TestFlexMFWARP(BasicComponentTests, ScorerTests):
         skip("FlexMF is fine with doubles")
 
 
+class TestFlexMFGCN(BasicComponentTests, ScorerTests):
+    expected_ndcg = (0.01, 0.25)
+    component = FlexMFImplicitScorer
+    config = FlexMFImplicitConfig(loss="pairwise", epochs=3, convolution_layers=2)
+
+    def test_skip_retrain(self, ml_ds):
+        skip("not needed")
+
+    def test_run_with_doubles(self, ml_ratings):
+        skip("FlexMF is fine with doubles")
+
+
 def test_config_defaults():
     cfg = FlexMFImplicitConfig()
     assert cfg.embedding_size == 64

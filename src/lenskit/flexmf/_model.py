@@ -4,6 +4,8 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from __future__ import annotations
+
 import torch
 from torch import Tensor, nn
 from torch.linalg import norm, vecdot
@@ -26,16 +28,23 @@ class FlexMFModel(nn.Module):
             Whether to learn a user bias term.
         item_bias:
             Whether to learn an item bias term.
+        layers:
+            The number of LightGCN layers to use (0 for no layers).
     """
 
     n_users: int
     n_items: int
     e_size: int
+    layers: int
+    _layer_scale: float
 
     u_bias: nn.Embedding | None = None
     i_bias: nn.Embedding | None = None
     u_embed: nn.Embedding
     i_embed: nn.Embedding
+
+    u_layers: torch.Tensor | None = None
+    i_layers: torch.Tensor | None = None
 
     def __init__(
         self,
@@ -47,11 +56,15 @@ class FlexMFModel(nn.Module):
         user_bias: bool = True,
         item_bias: bool = True,
         sparse: bool = False,
+        layers: int = 0,
     ):
         super().__init__()
         self.e_size = e_size
         self.n_users = n_users
         self.n_items = n_items
+        self.layers = layers
+        assert layers >= 0, "layers must be nonnegative"
+        self._layer_scale = 1.0 / (layers + 1)
 
         # user and item bias terms
         if user_bias:
@@ -62,6 +75,11 @@ class FlexMFModel(nn.Module):
         # user and item embeddings
         self.u_embed = nn.Embedding(n_users, e_size, sparse=sparse)
         self.i_embed = nn.Embedding(n_items, e_size, sparse=sparse)
+
+        # pre-allocate convluation layers
+        if layers:
+            self.u_layers = torch.empty((layers, n_users, e_size))
+            self.i_layers = torch.empty((layers, n_items, e_size))
 
         # initialize all values to a small normal
         if self.u_bias is not None:
@@ -102,6 +120,32 @@ class FlexMFModel(nn.Module):
 
         self.i_embed.weight.data[items, :] = 0
 
+    def update_convolution(self, matrix: Tensor):
+        """
+        Update the graph convolution layers.
+
+        Args:
+            matrix:
+                Normalized user-item matrix.
+        """
+        if not self.layers:
+            return
+
+        assert self.i_layers is not None
+        assert self.u_layers is not None
+        assert matrix.shape == (self.n_users, self.n_items)
+
+        for i in range(self.layers):
+            if i == 0:
+                i_src = self.i_embed.weight
+                u_src = self.u_embed.weight
+            else:
+                i_src = self.i_layers[i - 1, :, :]
+                u_src = self.u_layers[i - 1, :, :]
+
+            torch.mm(matrix, i_src, out=self.u_layers[i, :, :])
+            torch.mm(matrix.T, u_src, out=self.i_layers[i, :, :])
+
     def forward(self, user: Tensor, item: Tensor, *, return_norm: bool = False):
         """
         Matrix factorization forward pass.
@@ -129,15 +173,24 @@ class FlexMFModel(nn.Module):
         ub = self.u_bias(user).reshape(user.shape) if self.u_bias is not None else zero
         ib = self.i_bias(item).reshape(item.shape) if self.i_bias is not None else zero
 
-        uvec = self.u_embed(user)
-        ivec = self.i_embed(item)
+        uemb = self.u_embed(user)
+        iemb = self.i_embed(item)
+
+        if self.i_layers is not None:
+            ivec = (iemb + self.i_layers[:, item, :].sum(0)) * self._layer_scale
+        else:
+            ivec = iemb
+        if self.u_layers is not None:
+            uvec = (uemb + self.u_layers[:, user, :].sum(0)) * self._layer_scale
+        else:
+            uvec = uemb
 
         # compute the inner score
         ips = vecdot(uvec, ivec)
         score = ub + ib + ips
 
         if return_norm:
-            l2 = torch.square(ub) + torch.square(ib) + norm(uvec, dim=-1) + norm(ivec, dim=-1)
+            l2 = torch.square(ub) + torch.square(ib) + norm(uemb, dim=-1) + norm(iemb, dim=-1)
             assert l2.shape == score.shape
             return torch.stack((score, l2))
         else:

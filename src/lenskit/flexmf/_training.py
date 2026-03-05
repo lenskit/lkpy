@@ -297,6 +297,11 @@ class FlexMFTrainingData:
     The original relationship set we are training on.
     """
 
+    norm_adjmat: torch.Tensor | None = None
+    """
+    Normalized user-item adjacency matrix for convolutional layer updates.
+    """
+
     fields: dict[str, torch.Tensor] = field(default_factory=dict)
     "Additional per-sample data fields."
 
