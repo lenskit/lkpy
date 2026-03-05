@@ -15,7 +15,7 @@ import ray
 
 from lenskit.logging import get_logger
 from lenskit.parallel import get_parallel_config
-from lenskit.parallel.ray import TaskLimiter, ensure_cluster, inference_worker_cpus
+from lenskit.parallel.ray import TaskLimiter, ensure_cluster
 from lenskit.pipeline import Pipeline, ProfileSink
 
 from ._queries import BatchRequest
@@ -30,11 +30,15 @@ def ray_results(
     profiler: ProfileSink | None,
     invocations: list[InvocationSpec],
     queries: Iterable[BatchRequest],
+    n_jobs: int,
     batch_size: int,
 ) -> Generator[BatchResultRow]:
     ensure_cluster()
     pc = get_parallel_config()
-    limit = TaskLimiter(pc.batch_jobs)
+    if n_jobs <= 0:
+        n_jobs = pc.num_cpus
+
+    limit = TaskLimiter(n_jobs)
     batches = batched(queries, batch_size)
 
     if profiler is not None:
@@ -42,7 +46,7 @@ def ray_results(
 
     pipe_h = ray.put(pipeline)
 
-    worker = ray.remote(_run_batch).options(num_cpus=inference_worker_cpus())
+    worker = ray.remote(_run_batch).options(num_cpus=pc.num_backend_threads or 1)
     tasks = (worker.remote(pipe_h, invocations, profiler, batch) for batch in batches)
 
     _log.info("running inference queries on Ray")

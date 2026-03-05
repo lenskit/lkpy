@@ -73,13 +73,18 @@ class BatchPipelineRunner:
             The number of parallel threads to use, or ``None`` for default
             defined by LensKit configuration and environment variables (see
             :ref:`parallel-config`).
+        use_ray:
+            Use Ray instead of threads to parallelize batch inference,
+            overriding any option set in an environment variable or
+            :file:`lenskit.toml`.
         batch_size:
             The batch size for multiprocess execution.  If ``None``, a batch
             size based on the number of inputs is used, with a maximum batch
             size of 1000.
     """
 
-    n_jobs: int | Literal["ray"]
+    n_jobs: int
+    use_ray: bool
     batch_size: int | None = None
     profiler: PipelineProfiler | None
     invocations: list[InvocationSpec]
@@ -87,13 +92,19 @@ class BatchPipelineRunner:
     def __init__(
         self,
         *,
-        n_jobs: int | Literal["ray"] | None = None,
+        n_jobs: int | None = None,
+        use_ray: bool | None = None,
         profiler: PipelineProfiler | None = None,
         batch_size: int | None = None,
     ):
+        cfg = get_parallel_config()
         if n_jobs is None:
-            n_jobs = get_parallel_config().batch_jobs
+            n_jobs = cfg.num_batch_jobs
+        if use_ray is None:
+            use_ray = cfg.use_ray
+
         self.n_jobs = n_jobs
+        self.use_ray = use_ray
         self.batch_size = batch_size
 
         self.profiler = profiler
@@ -245,7 +256,7 @@ class BatchPipelineRunner:
     def _run_results(
         self, pipeline: Pipeline, profiler: ProfileSink | None, queries: Iterable[BatchRequest]
     ) -> Generator[BatchResultRow]:
-        if self.n_jobs == "ray":
+        if self.use_ray:
             from ._ray import ray_results
 
             bs = self.batch_size
@@ -255,7 +266,7 @@ class BatchPipelineRunner:
                 else:
                     bs = 1000
 
-            return ray_results(pipeline, profiler, self.invocations, queries, bs)
+            return ray_results(pipeline, profiler, self.invocations, queries, self.n_jobs, bs)
 
         elif self.n_jobs > 1:
             return self._threaded_results(pipeline, profiler, queries)
@@ -283,10 +294,11 @@ class BatchPipelineRunner:
         _log.info("using thread pool with %d threads", self.n_jobs)
         if not is_free_threaded(require_active=True):
             _log.warn("using thread pool but Python GIL is enabled, throughput will suffer")
-        with ThreadPoolExecutor(self.n_jobs, "lk-batch") as pool:
+        n_threads = self.n_jobs if self.n_jobs >= 1 else None
+        with ThreadPoolExecutor(n_threads, "lk-batch") as pool:
             options = {}
             if sys.version_info >= (3, 14):
-                options["buffersize"] = self.n_jobs * 50 * 2
+                options["buffersize"] = n_threads * 50 * 2
             yield from pool.map(func, queries, chunksize=50, **options)
 
 

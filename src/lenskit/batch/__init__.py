@@ -11,7 +11,7 @@ Batch-run recommendation pipelines for evaluation.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Literal, Mapping
+from typing import Mapping
 
 import pandas as pd
 
@@ -28,7 +28,8 @@ def predict(
     pipeline: Pipeline,
     test: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | pd.DataFrame,
     *,
-    n_jobs: int | Literal["ray"] | None = None,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
 ) -> ItemListCollection[GenericKey]:
     """
     Convenience function to batch-generate rating predictions (or other per-item
@@ -45,7 +46,7 @@ def predict(
         Caller
     """
 
-    runner = BatchPipelineRunner(n_jobs=n_jobs)
+    runner = BatchPipelineRunner(n_jobs=n_jobs, use_ray=use_ray)
     runner.predict()
     outs = runner.run(pipeline, test)
     return outs.output("predictions")  # type: ignore
@@ -58,7 +59,8 @@ def score(
     | Mapping[ID, ItemList]
     | pd.DataFrame,
     *,
-    n_jobs: int | Literal["ray"] | None = None,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
 ) -> ItemListCollection[GenericKey]:
     """
     Convenience function to batch-generate personalized scores from a pipeline.
@@ -74,7 +76,7 @@ def score(
         Caller
     """
 
-    runner = BatchPipelineRunner(n_jobs=n_jobs)
+    runner = BatchPipelineRunner(n_jobs=n_jobs, use_ray=use_ray)
     runner.score()
     outs = runner.run(pipeline, test)
     return outs.output("scores")  # type: ignore
@@ -90,7 +92,8 @@ def recommend(
     | pd.DataFrame,
     n: int | None = None,
     *,
-    n_jobs: int | Literal["ray"] | None = None,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
     profiler: PipelineProfiler | None = None,
     users=None,
 ) -> ItemListCollection[UserIDKey]:
@@ -117,7 +120,7 @@ def recommend(
             raise RuntimeError("cannot pass both queries= and users=")
         queries = users
 
-    runner = BatchPipelineRunner(n_jobs=n_jobs, profiler=profiler)
+    runner = BatchPipelineRunner(n_jobs=n_jobs, use_ray=use_ray, profiler=profiler)
     runner.recommend(n=n)
     outs = runner.run(pipeline, queries)
     return outs.output("recommendations")  # type: ignore
