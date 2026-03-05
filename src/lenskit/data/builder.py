@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -265,9 +265,7 @@ class DatasetBuilder:
             duplicates:
                 How to handle duplicate entity IDs.
         """
-        if isinstance(source, pd.DataFrame):  # pragma: nocover
-            raise NotImplementedError()
-        if isinstance(source, pa.Table):  # pragma: nocover
+        if isinstance(source, (pd.DataFrame, pa.Table, dict)):  # pragma: nocover
             raise NotImplementedError()
 
         self._validate_entity_name(cls)
@@ -291,7 +289,7 @@ class DatasetBuilder:
                 table = table.cast(schema)
         elif pa.types.is_integer(ids.type):
             self.schema.entities[cls].id_type = "int"
-        elif pa.types.is_string(ids.type):
+        elif pa.types.is_string(ids.type) or pa.types.is_large_string(ids.type):
             self.schema.entities[cls].id_type = "str"
         else:
             raise TypeError(f"invalid ID type {ids.type}")

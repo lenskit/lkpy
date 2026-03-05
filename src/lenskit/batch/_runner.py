@@ -1,15 +1,19 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import sys
 import warnings
-from collections.abc import Iterable, Iterator, Sized
+from collections.abc import Generator, Iterable, Sized
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from dataclasses import dataclass, field
-from typing import Any, Literal, Mapping, NamedTuple, TypeAlias, overload
+from functools import partial
+from typing import Any, Literal, Mapping, TypeAlias, overload
 
 import pandas as pd
 
@@ -23,11 +27,12 @@ from lenskit.data import (
     UserIDKey,
 )
 from lenskit.logging import Stopwatch, get_logger, item_progress
-from lenskit.parallel import invoker
+from lenskit.parallel import get_parallel_config, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler
 from lenskit.pipeline._profiling import ProfileSink
 
-from ._results import BatchResults
+from ._queries import BatchRequest, normalize_query_input
+from ._results import BatchResultRow, BatchResults
 
 _log = get_logger(__name__)
 
@@ -35,15 +40,6 @@ ItemSource: TypeAlias = None | Literal["test-items"]
 """
 Types of items that can be returned.
 """
-
-
-class BatchRequest(NamedTuple):
-    """
-    A single request for the batch inference runner.
-    """
-
-    query: RecQuery
-    items: ItemList | None = None
 
 
 @dataclass
@@ -74,21 +70,43 @@ class BatchPipelineRunner:
         pipeline:
             The pipeline to evaluate.
         n_jobs:
-            The number of parallel processes to use, or ``None`` for the
-            default (defined by :func:`lenskit.parallel.config.initialize`).
+            The number of parallel threads to use, or ``None`` for default
+            defined by LensKit configuration and environment variables (see
+            :ref:`parallel-config`).
+        use_ray:
+            Use Ray instead of threads to parallelize batch inference,
+            overriding any option set in an environment variable or
+            :file:`lenskit.toml`.
+        batch_size:
+            The batch size for multiprocess execution.  If ``None``, a batch
+            size based on the number of inputs is used, with a maximum batch
+            size of 1000.
     """
 
-    n_jobs: int | Literal["ray"] | None
+    n_jobs: int
+    use_ray: bool
+    batch_size: int | None = None
     profiler: PipelineProfiler | None
     invocations: list[InvocationSpec]
 
     def __init__(
         self,
         *,
-        n_jobs: int | Literal["ray"] | None = None,
+        n_jobs: int | None = None,
+        use_ray: bool | None = None,
         profiler: PipelineProfiler | None = None,
+        batch_size: int | None = None,
     ):
+        cfg = get_parallel_config()
+        if n_jobs is None:
+            n_jobs = cfg.num_batch_jobs
+        if use_ray is None:
+            use_ray = cfg.use_ray
+
         self.n_jobs = n_jobs
+        self.use_ray = use_ray
+        self.batch_size = batch_size
+
         self.profiler = profiler
         self.invocations = []
 
@@ -179,6 +197,11 @@ class BatchPipelineRunner:
         """
         Run the pipeline and return its results.
 
+        .. note::
+
+            The runner does **not** guarantee that results are in the same order
+            as the original inputs.
+
         Args:
             pipeline:
                 The pipeline to run.
@@ -205,137 +228,86 @@ class BatchPipelineRunner:
         if prof is not None:
             prof = prof.multiprocess()
 
-        key_type, q_iter, nq = _normalize_query_input(queries)
+        key_type, q_iter, nq = normalize_query_input(queries)
 
         log = _log.bind(name=pipeline.name, n_queries=nq, n_jobs=self.n_jobs)
+
         log.info("beginning batch run")
 
-        with (
-            invoker(
-                (pipeline, self.invocations, prof), _run_pipeline, n_jobs=self.n_jobs
-            ) as worker,
-            item_progress("Inference", nq) as progress,
-        ):
-            # release our reference, will sometimes free the pipeline memory in this process
-            del pipeline
-            results = BatchResults(key_type)
-            timer = Stopwatch()
-            n = 0
-            for key, outs in worker.map(q_iter):
-                n += 1
-                for cn, cr in outs.items():
-                    results.add_result(cn, key, cr)
-                progress.update()
-            timer.stop()
+        with closing(self._run_results(pipeline, prof, q_iter)) as tasks:
+            with item_progress("Inference", nq) as progress:
+                # release our reference, will sometimes free the pipeline memory in this process
+                del pipeline
+                results = BatchResults(key_type)
+                timer = Stopwatch()
+                n = 0
+                for key, outs in tasks:
+                    n += 1
+                    for cn, cr in outs.items():
+                        results.add_result(cn, key, cr)
+                    progress.update()
+                timer.stop()
 
-            rate_ms = timer.elapsed() / n * 1000
-            log.info("finished running in %s", timer, time_per_query="{:.1f}ms".format(rate_ms))
+                rate_ms = timer.elapsed() / n * 1000
+                log.info("finished running in %s", timer, time_per_query="{:.1f}ms".format(rate_ms))
 
         return results
 
+    def _run_results(
+        self, pipeline: Pipeline, profiler: ProfileSink | None, queries: Iterable[BatchRequest]
+    ) -> Generator[BatchResultRow]:
+        if self.use_ray:
+            from ._ray import ray_results
 
-def _normalize_query_input(
-    queries: Iterable[RecQuery]
-    | Iterable[tuple[RecQuery, ItemList]]
-    | Iterable[ID | GenericKey]
-    | ItemListCollection[GenericKey]
-    | Mapping[ID, ItemList]
-    | pd.DataFrame,
-) -> tuple[type[Any], Iterable[tuple[RecQuery, ItemList | None]], int | None]:
-    if isinstance(queries, pd.DataFrame):
-        warnings.warn(
-            "use an item list collection instead of a DataFrame (LKW-BATCHIN)",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        queries = ItemListCollection.from_df(queries)
+            bs = self.batch_size
+            if bs is None:
+                if isinstance(queries, Sized):
+                    bs = max(len(queries) // 20, 2000)
+                else:
+                    bs = 1000
 
-    elif isinstance(queries, Mapping):
-        warnings.warn(
-            "query mappings are ambiguous and deprecated, use query lists (LKW-BATCHIN)",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        queries = ItemListCollection.from_dict(queries, "user_id")  # type: ignore
+            return ray_results(pipeline, profiler, self.invocations, queries, self.n_jobs, bs)
 
-    if isinstance(queries, ItemListCollection):
-        return queries.key_type, _ilc_queries(queries), len(queries)
+        elif self.n_jobs > 1:
+            return self._threaded_results(pipeline, profiler, queries)
 
-    n = None
-    if isinstance(queries, Sized):
-        n = len(queries)
-
-    q_iter = iter(queries)
-    try:
-        q_first = next(q_iter)
-    except StopIteration:
-        return tuple, [], 0
-
-    fbr = _make_br(q_first)
-    if fbr.query.query_id is not None:
-        kt = QueryIDKey
-    elif fbr.query.user_id is not None:
-        kt = UserIDKey
-    else:
-        raise ValueError("query must have one of query_id, user_id")
-
-    return kt, _iter_queries(q_first, q_iter), n
-
-
-def _ilc_queries(queries: ItemListCollection):
-    for q, items in queries.items():
-        query = RecQuery(
-            user_id=getattr(q, "user_id", None),
-            query_id=getattr(q, "query_id", None),
-        )
-        yield BatchRequest(query, items)
-
-
-def _iter_queries(
-    first: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey,
-    rest: Iterator[RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey],
-) -> Iterable[BatchRequest]:
-    yield _make_br(first)
-    for item in rest:
-        yield _make_br(item)
-
-
-def _make_br(q: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey) -> BatchRequest:
-    if isinstance(q, RecQuery):
-        return BatchRequest(q)
-    elif isinstance(q, tuple):
-        if isinstance(q[0], RecQuery):
-            q, items = q
-            return BatchRequest(q, items)  # type: ignore
-        elif hasattr(q, "user_id"):
-            # we have a named tuple with user IDs
-            q = RecQuery(user_id=getattr(q, "user_id"))
-            return BatchRequest(q)
         else:
-            warnings.warn(
-                "bare tuples are ambiguous and will be unsupported in 2026 (LKW-BATCHIN)",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-            q = RecQuery(user_id=q)  # type: ignore
-            return BatchRequest(q)
-    else:
-        q = RecQuery(user_id=q)
-        return BatchRequest(q)
+            return self._sequential_results(pipeline, profiler, queries)
+
+    def _sequential_results(
+        self,
+        pipeline: Pipeline,
+        profiler: ProfileSink | None,
+        queries: Iterable[BatchRequest],
+    ) -> Generator[BatchResultRow]:
+        for query in queries:
+            yield run_pipeline(pipeline, self.invocations, profiler, query)
+
+    def _threaded_results(
+        self,
+        pipeline: Pipeline,
+        profiler: ProfileSink | None,
+        queries: Iterable[BatchRequest],
+    ) -> Generator[BatchResultRow]:
+        assert isinstance(self.n_jobs, int)
+        func = partial(run_pipeline, pipeline, self.invocations, profiler)
+        _log.info("using thread pool with %d threads", self.n_jobs)
+        if not is_free_threaded(require_active=True):
+            _log.warn("using thread pool but Python GIL is enabled, throughput will suffer")
+        n_threads = self.n_jobs if self.n_jobs >= 1 else None
+        with ThreadPoolExecutor(n_threads, "lk-batch") as pool:
+            options = {}
+            if sys.version_info >= (3, 14):
+                options["buffersize"] = n_threads * 50 * 2
+            yield from pool.map(func, queries, chunksize=50, **options)
 
 
-def _ensure_key(key: ID | tuple[ID, ...]):
-    if isinstance(key, tuple):
-        return key
-    else:
-        return UserIDKey(key)
-
-
-def _run_pipeline(
-    ctx: tuple[Pipeline, list[InvocationSpec], ProfileSink | None],
+def run_pipeline(
+    pipeline: Pipeline,
+    invocations: list[InvocationSpec],
+    profiler: ProfileSink | None,
     req: BatchRequest,
-) -> tuple[GenericKey, dict[str, object]]:
-    pipeline, invocations, profiler = ctx
+) -> BatchResultRow:
     query, test_items = req
     if query.query_id is not None:
         key = QueryIDKey(query.query_id)

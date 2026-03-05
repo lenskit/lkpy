@@ -21,17 +21,20 @@ Accessing Configuration
 Configuration Model
 -------------------
 
-.. autoclass:: LenskitSettings()
+.. autoclass:: LenskitSettings
     :exclude-members: model_config, settings_customize_sources
 
 .. autoclass:: RandomSettings
+    :exclude-members: model_config
+
+.. autoclass:: ParallelSettings
+    :exclude-members: model_config
+
+.. autoclass:: TuneSettings
     :exclude-members: model_config
 
 .. autoclass:: PrometheusSettings
     :exclude-members: model_config
 
 .. autoclass:: MachineSettings
-    :exclude-members: model_config
-
-.. autoclass:: TuneSettings
     :exclude-members: model_config

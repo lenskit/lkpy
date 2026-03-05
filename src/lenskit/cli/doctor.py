@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -22,13 +22,13 @@ from rich.padding import Padding
 from rich.table import Table
 
 from lenskit import __version__, _accel
+from lenskit.config import ParallelSettings
 from lenskit.logging import get_logger, stdout_console
 from lenskit.parallel import ensure_parallel_init
 from lenskit.parallel.config import (
-    ParallelConfig,
     effective_cpu_count,
     get_parallel_config,
-    subprocess_config,
+    is_free_threaded,
 )
 from lenskit.parallel.ray import ray_available
 
@@ -104,6 +104,12 @@ def inspect_platform():
     yield kvp("Python version", platform.python_version())
     yield kvp("Platform", platform.platform(), level=2)
     yield kvp("Location", sys.executable, level=2)
+    if is_free_threaded(require_active=True):
+        yield "  [bold][green]Free-threading available[/green][/bold]"
+    elif is_free_threaded():
+        yield "  [bold][yellow]Python is free-threaded but cannot disable GIL[/yellow][/bold]"
+    else:
+        yield "  [yellow]Python GIL enabled[/yellow]"
 
 
 @group()
@@ -139,19 +145,16 @@ def inspect_system():
 def inspect_parallel_config():
     yield ""
     yield "[bold]Parallel configuration[/bold]:"
-    yield "  [cyan]Main configuration[/cyan]:"
     pc = get_parallel_config()
-    yield _inspect_pc(pc, level=3)
-    pc = subprocess_config()
-    yield "  [blue]Default worker configuration[/blue]:"
-    yield _inspect_pc(pc, level=3)
+    yield _inspect_pc(pc, level=2)
 
 
 @group()
-def _inspect_pc(pc: ParallelConfig, *, level: int):
-    yield kvp("processes", pc.processes, level=level)
-    yield kvp("threads", pc.threads, level=level)
-    yield kvp("backend threads", pc.backend_threads, level=level)
+def _inspect_pc(pc: ParallelSettings, *, level: int):
+    yield kvp("available CPUs", pc.num_cpus, level=level)
+    yield kvp("batch jobs", pc.num_batch_jobs, level=level)
+    yield kvp("threads", pc.num_threads, level=level)
+    yield kvp("backend threads", pc.num_backend_threads, level=level)
 
 
 @group()

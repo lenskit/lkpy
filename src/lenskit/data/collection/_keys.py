@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -116,4 +116,4 @@ def project_key(key: tuple, target: type[K]) -> K:
     try:
         return target._make(getattr(key, f) for f in target._fields)  # type: ignore
     except AttributeError as e:
-        raise TypeError(f"source key is missing field {e.name}")
+        raise TypeError(f"source key is missing field {e.name}") from e

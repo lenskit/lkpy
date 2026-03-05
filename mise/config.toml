@@ -2,14 +2,15 @@
 rust = "stable"
 shfmt = "latest"
 uv = "latest"
-pre-commit = "4"
+"pipx:pre-commit" = "4"
 cargo-binstall = "latest"
 "cargo:cargo-binutils" = "0.3"
 usage = "latest"
 
 [settings]
-experimental = true
 idiomatic_version_file_enable_tools = ["rust"]
+github.github_attestations = false
+aqua.github_attestations = false
 
 [settings.python]
 uv_venv_auto = true

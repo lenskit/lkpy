@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -98,9 +98,8 @@ def sample_records(
     rng: RNGInput = None,
 ) -> TTSplit | Iterator[TTSplit]:
     """
-    Sample train-test a frame of ratings into train-test partitions.  This
-    function does not care what kind of data is in `data`, so long as it is a
-    Pandas DataFrame (or equivalent).
+    Create a train-test split of data by randomly sampling individual
+    interactions.
 
     We can loop over a sequence of train-test pairs::
 

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -9,6 +9,8 @@ from __future__ import annotations
 from typing import Sequence
 
 from lenskit.data import GenericKey, ItemListCollection
+
+type BatchResultRow = tuple[GenericKey, dict[str, object]]
 
 
 class BatchResults:
@@ -68,4 +70,4 @@ class BatchResults:
         try:
             self._data[name].add(result, *key)
         except TypeError as e:
-            raise TypeError(f"invalid key {key} (for type {self._data[name].key_type})", e)
+            raise TypeError(f"invalid key {key} (for type {self._data[name].key_type})") from e

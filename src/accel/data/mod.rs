@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -19,6 +19,7 @@ use sha1::{Digest, Sha1};
 mod cooc;
 mod coordinates;
 mod index;
+mod pairs;
 mod sampling;
 mod scatter;
 mod selection;
@@ -44,6 +45,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     data.add_function(wrap_pyfunction!(scatter::scatter_array, &data)?)?;
     data.add_function(wrap_pyfunction!(scatter::scatter_array_empty, &data)?)?;
     data.add_function(wrap_pyfunction!(cooc::count_cooc, &data)?)?;
+    data.add_function(wrap_pyfunction!(cooc::dense_cooc, &data)?)?;
     data.add_function(wrap_pyfunction!(hash_array, &data)?)?;
 
     Ok(())

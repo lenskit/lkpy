@@ -1,15 +1,17 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 import numpy as np
-from scipy.sparse import csr_array
+from scipy.sparse import coo_array, csr_array
 
 import pytest
+from hypothesis import given
 
-from lenskit.data.matrix import normalize_matrix
+from lenskit.data.matrix import COOStructure, fast_col_cooc, normalize_matrix
+from lenskit.testing import sparse_arrays
 
 
 def test_normalize_unit_sparse():
@@ -146,3 +148,53 @@ def test_normalize_none():
     dense = np.array([[1.0, 2.0]], dtype=np.float32)
     result = normalize_matrix(dense, normalize=None)
     assert result is dense
+
+
+@given(sparse_arrays(layout="coo"))
+def test_fast_cooc(mat: coo_array):
+    nr, nc = mat.shape
+    mat.data = np.ones((mat.nnz,))
+    cooc = mat.T @ mat
+    cooc = cooc.toarray()
+
+    res = fast_col_cooc(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape)
+    assert isinstance(res, coo_array)
+    assert res.shape == (nc, nc)
+    res = res.toarray()
+
+    assert np.all(np.diag(res) == np.diag(cooc))
+    assert np.all(res == cooc)
+
+
+@given(sparse_arrays(layout="coo"))
+def test_fast_cooc_no_diagonal(mat: coo_array):
+    nr, nc = mat.shape
+    mat.data = np.ones((mat.nnz,))
+    cooc = mat.T @ mat
+    cooc = cooc.toarray()
+    cooc[np.diag_indices(nc)] = 0
+
+    res = fast_col_cooc(
+        mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape, include_diagonal=False
+    )
+    assert isinstance(res, coo_array)
+    assert res.shape == (nc, nc)
+    res = res.toarray()
+
+    assert np.all(np.diag(res) == np.diag(cooc))
+    assert np.all(res == cooc)
+
+
+@given(sparse_arrays(layout="coo"))
+def test_fast_cooc_dense(mat: coo_array):
+    nr, nc = mat.shape
+    mat.data = np.ones((mat.nnz,))
+    cooc = mat.T @ mat
+    cooc = cooc.toarray()
+
+    res = fast_col_cooc(mat.row.astype(np.int32), mat.col.astype(np.int32), mat.shape, dense=True)
+    assert isinstance(res, np.ndarray)
+    assert res.shape == (nc, nc)
+
+    assert np.all(np.diag(res) == np.diag(cooc))
+    assert np.all(res == cooc)

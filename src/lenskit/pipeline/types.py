@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -54,6 +54,12 @@ class TypecheckWarning(UserWarning):
 
 class SkipComponent(Exception):
     "Internal exception used to skip an optional component."
+
+    pass
+
+
+class SkipInput(Exception):
+    "Internal exception used to skip an optional component input."
 
     pass
 
@@ -127,6 +133,7 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
             if issubclass(typ, target):
                 return True
         except TypeError:
+            # failing to check instance is fine, continue other checks
             pass
 
         if isinstance(target, (GenericAlias, _GenericAlias)):
@@ -176,6 +183,7 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
             if isinstance(obj, target):
                 return True
         except TypeError:
+            # failing to check instance is fine, continue other checks
             pass
 
         origin = get_origin(target)

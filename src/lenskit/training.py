@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -15,7 +15,7 @@ import os
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from time import perf_counter
 from typing import TYPE_CHECKING, Literal, Protocol, overload, runtime_checkable
 
@@ -56,6 +56,14 @@ class TrainingOptions:
     This option contains any `SPEC 7`_-compatible random number generator
     specification; the :func:`~lenskit.random.random_generator` will convert
     that into a NumPy :class:`~numpy.random.Generator`.
+    """
+
+    environment: dict[str, str] = field(default_factory=lambda: {})
+    """
+    Additional training environment variables to control training behavior.
+    Variables and their meanings are defined by individual components.
+    Variables in this option override system environment variables when fetched
+    with :meth:`envvar`.
     """
 
     @overload
@@ -101,6 +109,31 @@ class TrainingOptions:
             return "cuda"
         else:
             return "cpu"
+
+    @overload
+    def envvar(self, name: str, default: str) -> str: ...
+    @overload
+    def envvar(self, name: str, default: str | None = None) -> str | None: ...
+    def envvar(self, name: str, default: str | None = None) -> str | None:
+        """
+        Fetch a training environment variable.  Variables are first looked up in
+        :attr:`environment`, then in :attr:`os.environ`.
+
+        .. seealso::
+            :attr:`environment`, :ref:`training-config`
+
+        Args:
+            name:
+                The full name of the environment variable.
+            default:
+                Default value to return if the environment varible is not specified.
+        Returns:
+            The environment variable's value, or ``default``.
+        """
+        if name in self.environment:
+            return self.environment[name]
+        else:
+            return os.environ.get(name, default)
 
 
 @runtime_checkable

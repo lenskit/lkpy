@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -25,8 +25,21 @@ _log = get_logger(__name__)
 
 
 class ProfileSink(RecordSink[dict[str, float]], Protocol):
+    """
+    Interface for creating recording pipeline run profiling information.
+    """
+
+    def multiprocess(self) -> ProfileSink:
+        """
+        Obtain a version of this sink that can be shared across processes.
+        """
+        ...
+
     def run_profiler(self) -> RunProfiler:
-        return RunProfiler(self)
+        """
+        Get a profiler for a single run using this sink.
+        """
+        ...
 
 
 class PipelineProfiler:
@@ -85,6 +98,9 @@ class PipelineProfiler:
 @dataclass
 class WorkerProfileSink:
     sink_id: UUID
+
+    def multiprocess(self) -> ProfileSink:
+        return self
 
     def record(self, record: dict[str, float]):
         ctx = WorkerContext.active()

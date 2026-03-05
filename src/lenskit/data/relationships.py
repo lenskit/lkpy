@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -27,9 +27,9 @@ from lenskit.logging import get_logger, item_progress
 from lenskit.random import random_generator
 
 from .items import ItemList
-from .matrix import COOStructure, CSRStructure, SparseRowArray
+from .matrix import COOStructure, CSRStructure, SparseRowArray, fast_col_cooc
 from .schema import RelationshipSchema, id_col_name, num_col_name
-from .types import ID, LAYOUT
+from .types import ID, LAYOUT, NPMatrix
 from .vocab import Vocabulary
 
 if TYPE_CHECKING:
@@ -141,9 +141,35 @@ class RelationshipSet:
 
         return self._table.num_rows
 
+    @overload
     def co_occurrences(
-        self, entity: str, *, group: str | list[str] | None = None, order: str | None = None
-    ) -> sps.coo_array:
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: Literal[True],
+    ) -> NPMatrix[np.float32]: ...
+    @overload
+    def co_occurrences(
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: Literal[False] = False,
+    ) -> sps.coo_array: ...
+    def co_occurrences(
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: bool = False,
+    ) -> sps.coo_array | NPMatrix[np.float32]:
         """
         Count co-occurrences of the specified entity.  This is useful for
         counting item co-occurrences for association rules and probabilties, but
@@ -179,6 +205,11 @@ class RelationshipSet:
             order:
                 The name of an attribute to use for ordering interactions to
                 compute sequential co-occurrences.
+            include_self:
+                Include self co-occurrences (interaction counts on the diagonal
+                of the co-occurrence matrix).
+            dense:
+                Pass ``True`` to return a dense co-occurrence matrix.
 
         Returns:
             A sparse matrix with the co-occurrence counts.
@@ -203,28 +234,19 @@ class RelationshipSet:
             sorts.append((order, "ascending"))
         _log.debug("sorting table by %s", sorts)
         tbl = self._table.sort_by(sorts)
-        _log.debug("counting co-occurrences")
-        with item_progress("co-occurrences", tbl.num_rows) as pb:
-            result = _accel_data.count_cooc(
+        m = len(self._vocabularies[group[0]])
+        n = len(self._vocabularies[entity])
+        _log.debug("counting co-occurrences", items=n)
+        with item_progress("Counting co-occurrences", tbl.num_rows) as pb:
+            return fast_col_cooc(
                 tbl.column(gc).combine_chunks(),
                 tbl.column(ec).combine_chunks(),
-                order is not None,
-                pb,
+                (m, n),
+                include_diagonal=include_self,
+                ordered=order is not None,
+                dense=dense,
+                progress=pb,
             )
-        n = len(self._vocabularies[entity])
-
-        indices = np.stack(
-            [
-                result.column("row").to_numpy(zero_copy_only=False),
-                result.column("col").to_numpy(zero_copy_only=False),
-            ],
-            axis=0,
-        )
-
-        return sps.coo_array(
-            (result.column("count").to_numpy(zero_copy_only=False), indices),
-            shape=(n, n),
-        )
 
     def arrow(self, *, attributes: str | list[str] | None = None, ids=False) -> pa.Table:
         """
@@ -500,13 +522,26 @@ class MatrixRelationshipSet(RelationshipSet):
         row_entity: str | None = None,
         col_entity: str | None = None,
     ) -> MatrixRelationshipSet:
-        if row_entity is not None and row_entity != self.entities[0]:  # pragma: nocover
-            raise ValueError(f"row {row_entity} does not match matrix row {self.entities[0]}")
-        if col_entity is not None and col_entity != self.entities[1]:  # pragma: nocover
-            raise ValueError(f"column {col_entity} does not match matrix row {self.entities[1]}")
+        c_row, c_col = self.entities
+        row_matches = row_entity is None or row_entity == self.entities[0]
+        col_matches = col_entity is None or col_entity == self.entities[1]
+        if row_matches and col_matches:
+            return self
 
-        # already a matrix relationship set
-        return self
+        # we don't want ourselves, so make sure we're requesting the transpose
+        if row_entity is None and col_entity != c_row:  # pragma: nocover
+            raise ValueError(
+                f"unknown column entity {col_entity} (expected “{c_row}” or “{c_col}”)"
+            )
+        if col_entity is None and row_entity != c_col:  # pragma: nocover
+            raise ValueError(f"unknown row entity {row_entity} (expected “{c_col}” or “{c_row}”)")
+
+        schema = self.schema.model_copy(deep=True)
+        schema.entities = {
+            c_col: self.schema.entities[c_row],
+            c_row: self.schema.entities[c_col],
+        }
+        return MatrixRelationshipSet(self.name, self._vocabularies, schema, self._table)
 
     @overload
     def csr_structure(self, *, format: Literal["numpy"] = "numpy") -> CSRStructure: ...

@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -40,7 +40,7 @@ pub(super) fn train_explicit_matrix<'py>(
     let other_py = other.readonly();
     let other = other_py.as_array();
 
-    let progress = ProgressHandle::from_input(progress);
+    let mut progress = ProgressHandle::from_input(progress);
     debug!(
         "beginning explicit ALS training half with {} rows",
         other.nrows()
@@ -57,6 +57,7 @@ pub(super) fn train_explicit_matrix<'py>(
             })
             .sum()
     });
+    progress.shutdown(py)?;
 
     Ok(frob.sqrt())
 }

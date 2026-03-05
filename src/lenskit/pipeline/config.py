@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -119,7 +119,7 @@ class PipelineConfig(BaseModel):
             try:
                 comp = pipe.components[name]
             except KeyError:
-                raise PipelineError(f"unknown component {name}")
+                raise PipelineError(f"unknown component {name}")  # noqa: B904
 
             comp.config = always_merger.merge(comp.config or {}, cfg)
 

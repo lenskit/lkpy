@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -255,11 +255,13 @@ class ItemList:
         try:
             self._ids = array.field("item_id")
         except KeyError:
+            # ignore missing field
             pass
 
         try:
             numbers = array.field("item_num")
         except KeyError:
+            # ignore missing field
             pass
         else:
             self._numbers = MTArray(numbers.cast(pa.int32()))
@@ -314,8 +316,8 @@ class ItemList:
         elif len(item_ids) > 0:
             try:
                 self._ids = pa.array(item_ids)  # type: ignore
-            except pa.ArrowInvalid:  # pragma: nocover
-                raise TypeError("invalid item ID type or dimension")
+            except pa.ArrowInvalid as e:  # pragma: nocover
+                raise TypeError("invalid item ID type or dimension") from e
             if isinstance(item_ids, np.ndarray):
                 self._ids_numpy = item_ids
         else:

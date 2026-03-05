@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -146,7 +146,7 @@ class ALS(BaseRec):
         ensure_parallel_init()
         pcfg = get_parallel_config()
         return AlternatingLeastSquares(
-            num_threads=pcfg.threads,
+            num_threads=pcfg.num_threads,
             **self.config.__pydantic_extra__,  # type: ignore
         )
 
@@ -163,6 +163,6 @@ class BPR(BaseRec):
         ensure_parallel_init()
         pcfg = get_parallel_config()
         return BayesianPersonalizedRanking(
-            num_threads=pcfg.threads,
+            num_threads=pcfg.num_threads,
             **self.config.__pydantic_extra__,  # type: ignore
         )

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -42,7 +42,7 @@ def test_unrated_selector_many(rng: np.random.Generator, ml_ds: Dataset):
     sel.train(ml_ds)
 
     for u in rng.choice(ml_ds.users.ids(), 200):
-        row = ml_ds.user_row(100)
+        row = ml_ds.user_row(u)
         assert row is not None
         cands = sel(query=row)
 

@@ -32,6 +32,7 @@ Classical Collaborative Filters
 
     lenskit.knn.ItemKNNScorer
     lenskit.knn.UserKNNScorer
+    lenskit.knn.EASEScorer
     lenskit.als.BiasedMFScorer
     lenskit.als.ImplicitMFScorer
     lenskit.sklearn.svd.BiasedSVDScorer

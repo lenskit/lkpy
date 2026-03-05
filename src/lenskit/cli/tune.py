@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -21,7 +21,6 @@ from humanize import precisedelta
 from pydantic_core import to_json
 
 from lenskit.logging import Task, get_logger, stdout_console
-from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import init_cluster
 from lenskit.tuning import PipelineTuner, TuningSpec
 
@@ -82,8 +81,7 @@ def tune(
 
     spec = TuningSpec.load(search_spec)
     # override settings from command line
-    if max_points is not None:
-        spec.search.max_points = max_points
+    spec.search.update_max_points(max_points)
     if metric is not None:
         spec.search.metric = metric
     if method is not None:
@@ -96,7 +94,7 @@ def tune(
         _log.info("connected to existing Ray cluster")
     except ConnectionError:
         # use global parallel setup for tuning
-        init_cluster(global_logging=True, worker_parallel=get_parallel_config())
+        init_cluster(global_logging=True)
 
     # set up the tuning controller
     controller = PipelineTuner(spec, out)

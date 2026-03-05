@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -25,7 +25,7 @@ def test_basic_cooc(ml_ds: Dataset, rng: np.random.Generator):
     item_cooc = item_cooc.tocsr()
 
     item_tbl = ml_ds.interactions().pandas()
-    for i in rng.choice(ml_ds.item_count, 50):
+    for i in rng.choice(ml_ds.item_count, 100):
         l1 = item_tbl[item_tbl["item_num"] == i]
         lim = item_tbl[item_tbl["user_num"].isin(l1["user_num"])]
         lim = lim[lim["item_num"] != i]
@@ -47,7 +47,7 @@ def test_ordered_cooc(ml_ratings: pd.DataFrame, rng: np.random.Generator):
     item_cooc = item_cooc.tocsr()
 
     item_tbl = ml_ds.interactions().pandas()
-    for i in rng.choice(ml_ds.item_count, 50):
+    for i in rng.choice(ml_ds.item_count, 100):
         l1 = item_tbl[item_tbl["item_num"] == i]
         lim = pd.merge(item_tbl, l1, on="user_num", suffixes=[".t", ".u"])
         lim = lim[lim["timestamp.t"] > lim["timestamp.u"]]

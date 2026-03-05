@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -17,12 +17,14 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
 
 mod consumer;
+mod coo;
 mod csr;
 
 pub use crate::arrow::SparseIndexListType;
 pub use crate::arrow::SparseIndexType;
 pub use crate::arrow::SparseRowType;
 pub use consumer::ArrowCSRConsumer;
+pub use coo::{COOMatrix, COOMatrixBuilder};
 pub use csr::{csr_structure, CSRMatrix, CSRStructure, IxVar, CSR};
 
 /// Test function to make sure we can convert sparse rows.

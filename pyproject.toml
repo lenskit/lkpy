@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.10,<2.0"]
 build-backend = "maturin"
 
 [project]
@@ -21,7 +21,7 @@ license-files = ["LICENSE.md"]
 dynamic = ["version"]
 dependencies = [
   "typing-extensions ~=4.12",
-  "pandas ~=2.3",
+  "pandas >=2.3,<4",
   "pyarrow >=20,!=21.*",
   "numpy >=2.0",
   "scipy >=1.13",
@@ -32,6 +32,7 @@ dependencies = [
   "pyzmq >=26",
   "click ~=8.1",
   "requests ~=2.28",
+  "packaging >=23.0",
   "psutil >=6",
   "py-cpuinfo >=9.0",
   "pydantic ~=2.7",
@@ -47,7 +48,7 @@ dependencies = [
 
 [dependency-groups]
 test = [
-  "pytest ~=8.2",
+  "pytest >=8.2,<10",
   "pytest-doctestplus >=1.2.1,<2",
   "pytest-cov >=2.12",
   "pytest-benchmark ~=5.1",
@@ -62,8 +63,8 @@ doc = [
   "sphinxcontrib-bibtex >=2.0",
   "pydata-sphinx-theme ~=0.16.0",
   "myst-nb >=0.13",
-  "sphinx-togglebutton >=0.3.2,<0.4",
-  "sphinxcontrib-mermaid >=1.0.0,<2",
+  "sphinx-togglebutton >=0.4",
+  "sphinxcontrib-mermaid ~=2.0",
   "sphinx-copybutton>=0.5.2",
   "sphinx-new-tab-link>=0.8.0",
 ]
@@ -77,13 +78,13 @@ demo = [
 ]
 reporting = ["coverage >=5"]
 package = [
-  "maturin ~=1.0",
+  "maturin ~=1.10",
   "lazy-loader >=0.4",
   "packaging >=25.0",
 ]
 scripting = [
   "docopt-ng >=0.9.0",
-  "tomlkit ~=0.13.2",
+  "tomlkit ~=0.14.0",
   { include-group = "package" },
 ]
 dev = [
@@ -98,7 +99,7 @@ dev = [
   # stub files
   "pandas-stubs >=1.5,<3",
   "pyarrow-stubs >=11",
-  "scipy-stubs >=1.14.1.6,<2",
+  "scipy-stubs >=1.14.1.6",
   { include-group = "test" },
   { include-group = "doc" },
   { include-group = "demo" },
@@ -106,7 +107,6 @@ dev = [
   { include-group = "package" },
   { include-group = "scripting" },
   "zstandard>=0.23.0",
-  "maturin>=1.8.3",
   "py-spy>=0.4.1",
   "nox>=2025.5.1",
 ]
@@ -146,11 +146,9 @@ lenskit-profile = "lenskit.cli.profile:profile"
 # configure build tools
 [tool.maturin]
 profile = "release"
+editable-profile = "dev"
 python-source = "src"
 module-name = "lenskit._accel"
-
-[tool.cibuildwheel]
-skip = ["*-musllinux_i686"]
 
 # configure UV sources
 [tool.uv]
@@ -190,7 +188,7 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "W", "Q", "B904"]
 unfixable = ["F401"]
 exclude = [".git", "__pycache__", "build", "dist"]
 
@@ -243,4 +241,5 @@ markers = [
   "eval: mark the test as running the evaluator over custom data",
   "slow: mark the test as taking a larger-than-usual amount of time",
   "realdata: mark the test as using a real data set like ML-20M",
+  "compat: mark the test as testing compatibility with old LensKit versions",
 ]

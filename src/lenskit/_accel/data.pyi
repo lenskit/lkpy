@@ -22,8 +22,24 @@ def negative_mask(n: int, indices: pa.Int32Array) -> pa.BooleanArray:
     ...
 
 def count_cooc(
-    groups: pa.Int32Array, cols: pa.Int32Array, ordered: bool, progress: Progress | None
-) -> pa.RecordBatch: ...
+    n_groups: int,
+    n_items: int,
+    groups: pa.Int32Array,
+    cols: pa.Int32Array,
+    *,
+    ordered: bool = False,
+    diagonal: bool = True,
+    progress: Progress | None,
+) -> list[pa.RecordBatch]: ...
+def dense_cooc(
+    n_groups: int,
+    n_items: int,
+    groups: pa.Int32Array,
+    cols: pa.Int32Array,
+    *,
+    diagonal: bool = True,
+    progress: Progress | None,
+) -> np.ndarray[tuple[int, int], np.dtype[np.float32]]: ...
 def scatter_array(dst: A, idx: pa.Array, src: A) -> A: ...
 def scatter_array_empty(dst_size: int, idx: pa.Array, src: A) -> A: ...
 def sample_negatives(
