@@ -185,9 +185,9 @@ class ParallelSettings(BaseSettings):
 
     def env_vars(self) -> dict[str, str]:
         """
-        Get the parallel configuration as a set of environment variables.  The
-        set also includes ``OMP_NUM_THREADS`` and related variables for BLAS and
-        MKL to configure OMP early.
+        Get the parallel configuration as a set of environment variables to
+        configure a child process.  The set also includes ``OMP_NUM_THREADS``
+        and related variables for BLAS and MKL to configure OMP early.
         """
         evs = {
             "LK_NUM_BATCH_JOBS": str(self.num_batch_jobs),
