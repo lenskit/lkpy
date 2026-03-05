@@ -84,6 +84,9 @@ class RBP(ListMetric, RankingMetricBase):
     in the paper; however, RBP with high patience should be no worse than nDCG
     (and perhaps even better) in this regard.
 
+    This metric class supports relevance grades :math:`r_{ui} \\in \\[0, 1\\]`
+    via an optional ``grade_field``.
+
     In recommender evaluation, we usually have a small test set, so the maximum
     achievable RBP is significantly less than the theoretical maximum, and is a
     function of the number of test items.  With ``normalize=True``, the RBP
@@ -120,6 +123,8 @@ class RBP(ListMetric, RankingMetricBase):
     patience: float
     normalize: bool
     weight_field: str | None
+    grade_field: str | None
+    unknown_grade: float
 
     def __init__(
         self,
@@ -130,6 +135,8 @@ class RBP(ListMetric, RankingMetricBase):
         patience: float = 0.85,
         normalize: bool = False,
         weight_field: str | None = None,
+        grade_field: str | None = None,
+        unknown_grade: float = 0.25,
     ):
         super().__init__(n, k=k)
         self.patience = patience
@@ -138,13 +145,16 @@ class RBP(ListMetric, RankingMetricBase):
         self.weight = weight
         self.normalize = normalize
         self.weight_field = weight_field
+        self.grade_field = grade_field
+        self.unknown_grade = unknown_grade
 
     @property
     def label(self):
+        base = "RBP" if self.grade_field is None else "GradedRBP"
         if self.n is not None:
-            return f"RBP@{self.n}"
+            return f"{base}@{self.n}"
         else:
-            return "RBP"
+            return base
 
     @override
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
@@ -154,8 +164,6 @@ class RBP(ListMetric, RankingMetricBase):
         nrel = len(test)
         if nrel == 0:
             return np.nan
-
-        good = recs.isin(test)
 
         if self.weight_field is not None:
             # use custom weights from field
@@ -179,98 +187,17 @@ class RBP(ListMetric, RankingMetricBase):
             else:
                 normalization = np.sum(weights).item()
 
-        return rank_biased_precision(good, weights, normalization)
+        # Binary relevance
+        if self.grade_field is None:
+            good = recs.isin(test)
+            return rank_biased_precision(good, weights, normalization)
 
-
-class GradedRBP(RBP):
-    """
-    Rank-Biased Precision with graded relevance.
-
-    Extends RBP by allowing relevance grades :math:`r_{ui} \\in \\[0, 1\\]`.
-    Grades are read from a field in the test ItemList. If the item is
-    unknown, a default grade of `0.25` is assigned. If the grade field
-    is absent, this metric defaults to binary RBP.
-    """
-
-    grade_field: str
-    scale: bool
-    unknown_grade: float
-
-    def __init__(
-        self,
-        n: int | None = None,
-        *,
-        k: int | None = None,
-        weight: RankWeight | None = None,
-        patience: float = 0.85,
-        normalize: bool = False,
-        weight_field: str | None = None,
-        grade_field: str = "grade",
-        scale: bool = False,
-        unknown_grade: float = 0.25,
-    ):
-        super().__init__(
-            n,
-            k=k,
-            weight=weight,
-            patience=patience,
-            normalize=normalize,
-            weight_field=weight_field,
-        )
-
-        self.grade_field = grade_field
-        self.scale = scale
-        self.unknown_grade = unknown_grade
-
-    @property
-    def label(self):
-        if self.n is not None:
-            return f"GradedRBP@{self.n}"
-        else:
-            return "GradedRBP"
-
-    @override
-    def measure_list(self, recs: ItemList, test: ItemList) -> float:
-        recs = self.truncate(recs)
-        k = len(recs)
-
-        if len(test) == 0:
-            return np.nan
-
-        # fallback to binary RBP if grade field is missing
+        # Graded relevance
         if self.grade_field not in test._fields:
-            return super().measure_list(recs, test)
+            raise ValueError(f"Grade field '{self.grade_field}' not found in test ItemList")
 
-        # build grade lookup
         grades = test.field(self.grade_field)
-
-        if self.scale and len(grades) > 0:
-            max_grade = np.max(grades)
-            if max_grade > 0:
-                grades = grades / max_grade
-
-        # map item and grade
         grade_map = dict(zip(test.ids(), grades))
+        relevance = np.array([grade_map.get(item, self.unknown_grade) for item in recs.ids()])
 
-        rel = np.array([grade_map.get(item, self.unknown_grade) for item in recs.ids()])
-
-        if self.weight_field is not None:
-            weights = recs.field(self.weight_field)
-            normalization = np.sum(weights).item()
-
-        else:
-            ranks = recs.ranks()
-            assert ranks is not None
-
-            weights = self.weight.weight(ranks)
-
-            wmax = self.weight.series_sum()
-
-            if self.normalize:
-                normalization = np.sum(weights[: min(len(test), k)]).item()
-            elif wmax is not None:
-                normalization = wmax
-            else:
-                normalization = np.sum(weights).item()
-
-        return graded_rank_biased_precision(rel, weights, normalization)
+        return graded_rank_biased_precision(relevance, weights, normalization)
