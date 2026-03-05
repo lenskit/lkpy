@@ -10,6 +10,10 @@ import torch
 from torch import Tensor, nn
 from torch.linalg import norm, vecdot
 
+from lenskit.logging import get_logger
+
+_log = get_logger(__name__)
+
 
 class FlexMFModel(nn.Module):
     """
@@ -134,6 +138,8 @@ class FlexMFModel(nn.Module):
         assert self.i_layers is not None
         assert self.u_layers is not None
         assert matrix.shape == (self.n_users, self.n_items)
+
+        _log.debug("updating convlution layer")
 
         for i in range(self.layers):
             if i == 0:
