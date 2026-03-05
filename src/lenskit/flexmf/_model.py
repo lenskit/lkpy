@@ -80,11 +80,6 @@ class FlexMFModel(nn.Module):
         self.u_embed = nn.Embedding(n_users, e_size, sparse=sparse)
         self.i_embed = nn.Embedding(n_items, e_size, sparse=sparse)
 
-        # pre-allocate convluation layers
-        if layers:
-            self.u_layers = torch.empty((layers, n_users, e_size))
-            self.i_layers = torch.empty((layers, n_items, e_size))
-
         # initialize all values to a small normal
         if self.u_bias is not None:
             nn.init.normal_(self.u_bias.weight, std=init_scale, generator=rng)
@@ -135,22 +130,26 @@ class FlexMFModel(nn.Module):
         if not self.layers:
             return
 
-        assert self.i_layers is not None
-        assert self.u_layers is not None
         assert matrix.shape == (self.n_users, self.n_items)
 
         _log.debug("updating convlution layer")
 
-        for i in range(self.layers):
-            if i == 0:
-                i_src = self.i_embed.weight
-                u_src = self.u_embed.weight
-            else:
-                i_src = self.i_layers[i - 1, :, :]
-                u_src = self.u_layers[i - 1, :, :]
+        imat = self.i_embed.weight
+        umat = self.u_embed.weight
 
-            torch.mm(matrix, i_src, out=self.u_layers[i, :, :])
-            torch.mm(matrix.T, u_src, out=self.i_layers[i, :, :])
+        uls = []
+        ils = []
+
+        for i in range(self.layers):
+            um_next = torch.mm(matrix, imat)
+            im_next = torch.mm(matrix.T, umat)
+            uls.append(um_next)
+            ils.append(im_next)
+            umat = um_next
+            imat = im_next
+
+        self.u_layers = torch.stack(uls)
+        self.i_layers = torch.stack(ils)
 
     def forward(self, user: Tensor, item: Tensor, *, return_norm: bool = False):
         """
