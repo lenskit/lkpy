@@ -219,10 +219,9 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         return scores, norms
 
     def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
-        # for LightGCN, we have to update the convlution layers *every* batch
-        if self.config.convolution_layers:
-            adjmat = batch.data.norm_adjmat
-            assert adjmat is not None
+        # for LightGCN, we have to update the convolution layers *every* batch
+        adjmat = batch.data.norm_adjmat
+        if adjmat is not None:
             self.model.update_convolution(adjmat)
 
         users = torch.as_tensor(batch.users.reshape(-1, 1)).to(self.device, non_blocking=True)
