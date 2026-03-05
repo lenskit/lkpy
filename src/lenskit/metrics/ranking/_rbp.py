@@ -36,6 +36,27 @@ def rank_biased_precision(
     return rbp / normalization
 
 
+def graded_rank_biased_precision(
+    relevance: np.ndarray, weights: np.ndarray, normalization: float = 1.0
+) -> float:
+    """
+    Compute graded rank-biased precision.
+
+    Args:
+        relevance:
+            Float array of relevance/grade scores at each position
+        weights:
+            Weight for each item position (same length as relevance)
+        normalization:
+            Optional normalization factor, defaults to 1.0
+
+    Returns:
+        Graded RBP score
+    """
+    score = np.sum(weights * relevance).item()
+    return score / normalization
+
+
 class RBP(ListMetric, RankingMetricBase):
     """
     Evaluate recommendations with rank-biased precision :cite:p:`rbp`.
@@ -217,7 +238,7 @@ class GradedRBP(RBP):
             return np.nan
 
         # fallback to binary RBP if grade field is missing
-        if self.grade_field not in test.fields:
+        if self.grade_field not in test._fields:
             return super().measure_list(recs, test)
 
         # build grade lookup
@@ -252,4 +273,4 @@ class GradedRBP(RBP):
             else:
                 normalization = np.sum(weights).item()
 
-        return rank_biased_precision(rel, weights, normalization)
+        return graded_rank_biased_precision(rel, weights, normalization)
