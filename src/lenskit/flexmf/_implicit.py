@@ -203,6 +203,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             self.torch_rng,
             user_bias=user_bias,
             item_bias=self.config.item_bias,
+            layers=self.config.convolution_layers,
             sparse=self.config.reg_method != "AdamW",
         )
 
