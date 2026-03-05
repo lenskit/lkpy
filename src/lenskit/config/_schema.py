@@ -173,13 +173,13 @@ class ParallelSettings(BaseSettings):
             self.num_threads = ncpus
 
         if self.num_backend_threads == 0:
-            return max(min(self.num_cpus // self.num_threads, 4), 1)
+            self.num_backend_threads = max(min(self.num_cpus // self.num_threads, 4), 1)
 
         if self.num_batch_jobs == 0:
-            if is_free_threaded():
+            if is_free_threaded() or self.use_ray:
                 self.num_batch_jobs = self.num_threads
             else:
-                self.num_batch_jobs = 0
+                self.num_batch_jobs = 1
         elif self.num_batch_jobs < 0:
             self.num_batch_jobs = self.num_cpus
 

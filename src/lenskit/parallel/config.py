@@ -7,20 +7,19 @@
 # pyright: basic
 from __future__ import annotations
 
-import logging
 import os
 import sys
 import sysconfig
-import warnings
 
 import torch
 from threadpoolctl import threadpool_limits
 
 from lenskit._accel import init_accel_pool
 from lenskit.config import ParallelSettings, lenskit_config
+from lenskit.logging import get_logger
 
 __settings: ParallelSettings | None = None
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 def get_parallel_config() -> ParallelSettings:
@@ -43,7 +42,7 @@ def init_threading(config: ParallelSettings | None = None):
     .. seealso:: :ref:`parallel-config`
     """
     global __settings
-    if __settings:
+    if __settings:  # pragma: nocover
         _log.warning("parallelism already initialized")
         return
 
@@ -52,26 +51,29 @@ def init_threading(config: ParallelSettings | None = None):
 
     if config is None:
         config = lenskit_config().parallel
+
     __settings = config
-    _log.debug("configuring for parallelism: %s", __settings)
+    _log.debug("initializing parallelism", config=config)
 
     nbt = config.num_backend_threads
-    if nbt > 0 and "OPENBLAS_NUM_THREADS" not in os.environ and "MKL_NUM_THREADS" not in os.environ:
-        threadpool_limits(nbt, "blas")
+    if nbt > 0:
+        if "OPENBLAS_NUM_THREADS" not in os.environ and "MKL_NUM_THREADS" not in os.environ:
+            _log.debug("setting BLAS thread count", num_threads=nbt)
+            threadpool_limits(nbt, "blas")
+
+        _log.debug("setting Torch thread count", num_threads=nbt)
+        try:
+            torch.set_num_threads(nbt)
+        except RuntimeError as e:  # pragma: nocover
+            _log.warning("failed to configure Pytorch intra-op threads: %s", e)
 
     assert config.num_threads > 0
 
     try:
+        _log.debug("setting accelerator Rayon thread count", num_threads=config.num_threads)
         init_accel_pool(config.num_threads)
-    except RuntimeError as e:
+    except RuntimeError as e:  # pragma: nocover
         _log.warning("failed to initialize Rayon backend: %s", e)
-
-    if nbt > 0:
-        try:
-            torch.set_num_threads(nbt)
-        except RuntimeError as e:
-            _log.warning("failed to configure Pytorch intra-op threads: %s", e)
-            warnings.warn("failed to set intra-op threads", RuntimeWarning)
 
 
 def ensure_parallel_init():
