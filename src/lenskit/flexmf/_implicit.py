@@ -12,7 +12,7 @@ from typing import Literal, TypeAlias
 
 import numpy as np
 import torch
-from pydantic import PositiveFloat, PositiveInt, model_validator
+from pydantic import NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 from torch.nn import functional as F
 
 from lenskit.data import Dataset
@@ -71,6 +71,12 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
     item_bias: bool = True
     """
     Whether to learn an item bias term.
+    """
+
+    convolution_layers: NonNegativeInt = 0
+    """
+    The number of LightGCN convolution layers to use.  0 (the default)
+    configures for standard matrix factorization.
     """
 
     def selected_negative_strategy(self) -> NegativeStrategy:
@@ -142,6 +148,25 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         matrix = data.interactions().matrix()
         coo = matrix.coo_structure()
 
+        if self.config.convolution_layers:
+            mat = matrix.torch(layout="coo")
+            unorms = mat.sum(1).to_dense().sqrt()
+            inorms = mat.sum(0).to_dense().sqrt()
+            idx = mat.indices()
+            vals = mat.values()
+            nbr_mat = (
+                torch.sparse_coo_tensor(
+                    idx,
+                    vals / unorms[idx[0, :]] / inorms[idx[1, :]],
+                    mat.size(),
+                    requires_grad=False,
+                )
+                .coalesce()
+                .to(self.device)
+            )
+        else:
+            nbr_mat = None
+
         # save data we learned at this stage
         self.component.users = data.users
         self.component.items = data.items
@@ -153,6 +178,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             users=coo.row_numbers,
             items=coo.col_numbers,
             matrix=matrix,
+            norm_adjmat=nbr_mat,
         )
 
     def create_model(self) -> FlexMFModel:
@@ -189,6 +215,12 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         return scores, norms
 
     def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
+        # for LightGCN, we have to update the convlution layers *every* batch
+        if self.config.convolution_layers:
+            adjmat = batch.data.norm_adjmat
+            assert adjmat is not None
+            self.model.update_convolution(adjmat)
+
         users = torch.as_tensor(batch.users.reshape(-1, 1)).to(self.device, non_blocking=True)
         positives = torch.as_tensor(batch.items.reshape(-1, 1)).to(self.device, non_blocking=True)
 
