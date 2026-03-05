@@ -5,7 +5,8 @@ name = "lightgcn-bpr"
 base = "std:topn"
 
 [components.scorer]
-class = "lenskit.graphs.LightGCNScorer"
+class = "lenskit.flexmf.FlexMFImplicitScorer"
 
 [components.scorer.config]
 loss = "pairwise"
+convolution_layers = 2
