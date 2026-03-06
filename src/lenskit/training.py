@@ -12,6 +12,7 @@ Interfaces and support for model training.
 from __future__ import annotations
 
 import os
+import re
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
@@ -134,6 +135,26 @@ class TrainingOptions:
             return self.environment[name]
         else:
             return os.environ.get(name, default)
+
+    def env_flag(self, name: str, *, default: bool = False) -> bool:
+        """
+        Query a boolean flag from the environment.
+        """
+        val = self.env_var(name)
+        if val is None:
+            return default
+        elif isinstance(val, bool):
+            return val
+        elif isinstance(val, int):
+            return bool(val)
+        elif re.match(r"^\d+$", val):
+            return bool(int(val))
+        elif re.match(r"^(?:t(?:rue)?|y(?:es)?)$", val, re.IGNORECASE):
+            return True
+        elif re.match(r"^(?:f(?:alse)?|n(?:o)?)$", val, re.IGNORECASE):
+            return False
+        else:
+            raise ValueError(f"unrecognized boolean value {name}={val}")
 
 
 @runtime_checkable
