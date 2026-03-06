@@ -294,7 +294,7 @@ class FlexMFTrainingData:
     items: torch.Tensor | np.ndarray[tuple[int], np.dtype[np.int32]]
     "Item numbers for training samples."
 
-    matrix: MatrixRelationshipSet | None = None
+    interactions: MatrixRelationshipSet | None = None
     """
     The original relationship set we are training on.
     """
