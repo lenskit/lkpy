@@ -190,11 +190,12 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
                 blog.debug("training batch")
                 loss = self.train_batch(batch)
                 self.opt.zero_grad()
+                tot_loss += loss
 
                 if i % 20 == 0:
-                    avg_loss = tot_loss.item() / epoch_data.batch_count
+                    avg_loss = tot_loss.item() / (i + 1)
+
                 pb.update(loss=avg_loss)
-                tot_loss += loss
 
         avg_loss = tot_loss.item() / epoch_data.batch_count
         elog.debug("epoch complete", loss=avg_loss)
