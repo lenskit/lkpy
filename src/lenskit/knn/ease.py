@@ -85,7 +85,7 @@ class EASEScorer(Component[ItemList], Trainable):
 
         ensure_parallel_init()
 
-        solver = options.envvar("LK_EASE_SOLVER", None)
+        solver = options.env_var("LK_EASE_SOLVER", None)
         if solver and solver not in ("torch", "scipy"):
             raise ValueError(f"unsupported option: LK_EASE_SOLVER={solver}")
 

@@ -199,6 +199,26 @@ validation data (used by the hyperparameter tuner).
     will use the trainer directly to implement early stopping for tuning trials
     and dynamically find a good epoch count.
 
+.. _training-config:
+
+Configuring Training
+--------------------
+
+Most options for training, such as the number of epochs or the loss function,
+should be set through the component's configuration.
+
+Some components need options that don't affect the semantics of the model or
+training, and may be environment-specific.  For example, :class:`EASE
+<lenskit.knn.EASEScorer>` supports both PyTorch and SciPy matrix inversion
+routines.
+
+Such options can be exposed via *environment variables* (e.g.
+:envvar:`LK_EASE_SOLVER`). If your component has such options, access them
+through :class:`lenskit.trainer.TrainingOptions.env_var`.  This method will first
+look up the variable in the environment variable overrides specified in the
+training options, and then in the OS environment variables, allowing client code
+flexibility in how they configure your component.
+
 Further Reading
 ~~~~~~~~~~~~~~~
 
