@@ -19,7 +19,7 @@ from lenskit.data import Dataset
 from lenskit.logging import get_logger
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
-from ._model import FlexMFModel
+from ._model import FlexMFLightConvolution, FlexMFModel
 from ._training import FlexMFTrainerBase, FlexMFTrainingBatch, FlexMFTrainingData
 
 MAX_TRIES = 200
@@ -130,6 +130,7 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
 
 class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplicitConfig]):
     _loss: Callable[[torch.Tensor, torch.Tensor, float, torch.Tensor | None], torch.Tensor]
+    _conv: FlexMFLightConvolution | None = None
 
     def __init__(self, component, data, options):
         super().__init__(component, data, options)
@@ -168,8 +169,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
                 .coalesce()
                 .to(self.device)
             )
-        else:
-            nbr_mat = None
+            self._conv = FlexMFLightConvolution(nbr_mat, nbr_mat.T.detach())
 
         # save data we learned at this stage
         self.component.users = data.users
@@ -182,7 +182,6 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             users=coo.row_numbers,
             items=coo.col_numbers,
             matrix=matrix,
-            norm_adjmat=nbr_mat,
         )
 
     def create_model(self) -> FlexMFModel:
@@ -209,21 +208,20 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
     def score(self, users, items) -> tuple[torch.Tensor, torch.Tensor]:
         if self.explicit_norm:
-            result = self.model(users, items, return_norm=True)
+            result = self.model(users, items, return_norm=True, convolution=self._conv)
             scores = result[0, ...]
 
             norms = result[1, ...]
         else:
-            scores = self.call_model(users, items, return_norm=False)
+            scores = self.call_model(users, items, return_norm=False, convolution=self._conv)
             norms = torch.tensor(0.0)
 
         return scores, norms
 
     def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
         # for LightGCN, we have to update the convolution layers *every* batch
-        adjmat = batch.data.norm_adjmat
-        if adjmat is not None:
-            self.model.update_convolution(adjmat)
+        if self._conv is not None:
+            self._conv = self._conv.update(self.model)
 
         users = torch.as_tensor(batch.users.reshape(-1, 1)).to(self.device, non_blocking=True)
         positives = torch.as_tensor(batch.items.reshape(-1, 1)).to(self.device, non_blocking=True)
