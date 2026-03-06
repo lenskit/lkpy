@@ -181,7 +181,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             n_items=data.item_count,
             users=coo.row_numbers,
             items=coo.col_numbers,
-            matrix=matrix,
+            interactions=matrix,
         )
 
     def create_model(self) -> FlexMFModel:
@@ -243,10 +243,10 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
     def scored_negatives(
         self, batch: FlexMFTrainingBatch, users: torch.Tensor, pos_scores: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None]:
-        assert batch.data.matrix is not None
+        assert batch.data.interactions is not None
         assert isinstance(batch.users, np.ndarray)
         items = torch.as_tensor(
-            batch.data.matrix.sample_negatives(
+            batch.data.interactions.sample_negatives(
                 batch.users,
                 weighting=self.config.selected_negative_strategy(),
                 n=self.config.negative_count,
@@ -259,7 +259,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
 class FlexMFWARPTrainer(FlexMFImplicitTrainer):
     def scored_negatives(self, batch, users, pos_scores):
-        assert batch.data.matrix is not None
+        assert batch.data.interactions is not None
         assert isinstance(batch.users, np.ndarray)
 
         # start looking for misranked models
@@ -281,7 +281,7 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             n_users = batch.users[needed]
             if bi == 0:
                 neg_cand = torch.as_tensor(
-                    batch.data.matrix.sample_negatives(
+                    batch.data.interactions.sample_negatives(
                         n_users,
                         n=10,
                         weighting="uniform",
