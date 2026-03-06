@@ -111,10 +111,10 @@ class TrainingOptions:
             return "cpu"
 
     @overload
-    def envvar(self, name: str, default: str) -> str: ...
+    def env_var(self, name: str, default: str) -> str: ...
     @overload
-    def envvar(self, name: str, default: str | None = None) -> str | None: ...
-    def envvar(self, name: str, default: str | None = None) -> str | None:
+    def env_var(self, name: str, default: str | None = None) -> str | None: ...
+    def env_var(self, name: str, default: str | None = None) -> str | None:
         """
         Fetch a training environment variable.  Variables are first looked up in
         :attr:`environment`, then in :attr:`os.environ`.
