@@ -169,7 +169,8 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
                 .coalesce()
                 .to(self.device)
             )
-            iu_mat = ui_mat.T.detach()
+            iu_mat = ui_mat.T.to_sparse_csr().detach()
+            ui_mat = ui_mat.to_sparse_csr().detach()
 
         # save data we learned at this stage
         self.component.users = data.users
