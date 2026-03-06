@@ -213,7 +213,7 @@ routines.
 
 Such options can be exposed via *environment variables* (e.g.
 :envvar:`LK_EASE_SOLVER`). If your component has such options, access them
-through :class:`lenskit.trainer.TrainingOptions.envvar`.  This method will first
+through :class:`lenskit.trainer.TrainingOptions.env_var`.  This method will first
 look up the variable in the environment variable overrides specified in the
 training options, and then in the OS environment variables, allowing client code
 flexibility in how they configure your component.
