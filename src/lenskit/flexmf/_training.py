@@ -299,6 +299,15 @@ class FlexMFTrainingData:
     The original relationship set we are training on.
     """
 
+    ui_matrix: torch.Tensor | None = None
+    """
+    Normalized user-item adjacency matrix.
+    """
+    iu_matrix: torch.Tensor | None = None
+    """
+    Normalized item-user adjacency matrix.
+    """
+
     fields: dict[str, torch.Tensor] = field(default_factory=dict)
     "Additional per-sample data fields."
 
