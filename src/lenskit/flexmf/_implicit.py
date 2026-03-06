@@ -19,7 +19,7 @@ from lenskit.data import Dataset
 from lenskit.logging import get_logger
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
-from ._model import FlexMFLightConvolution, FlexMFModel
+from ._model import FlexMFModel
 from ._training import FlexMFTrainerBase, FlexMFTrainingBatch, FlexMFTrainingData
 
 MAX_TRIES = 200
@@ -130,7 +130,6 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
 
 class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplicitConfig]):
     _loss: Callable[[torch.Tensor, torch.Tensor, float, torch.Tensor | None], torch.Tensor]
-    _conv: FlexMFLightConvolution | None = None
 
     def __init__(self, component, data, options):
         super().__init__(component, data, options)
@@ -152,6 +151,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         matrix = data.interactions().matrix()
         coo = matrix.coo_structure()
 
+        ui_mat = iu_mat = None
         if self.config.convolution_layers:
             _log.debug("preparing convolution neighborhood matrix")
             mat = matrix.torch(layout="coo")
@@ -159,7 +159,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             inorms = mat.sum(0).to_dense().sqrt()
             idx = mat.indices()
             vals = mat.values()
-            nbr_mat = (
+            ui_mat = (
                 torch.sparse_coo_tensor(
                     idx,
                     vals / unorms[idx[0, :]] / inorms[idx[1, :]],
@@ -169,7 +169,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
                 .coalesce()
                 .to(self.device)
             )
-            self._conv = FlexMFLightConvolution(nbr_mat, nbr_mat.T.detach())
+            iu_mat = ui_mat.T.detach()
 
         # save data we learned at this stage
         self.component.users = data.users
@@ -182,6 +182,8 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             users=coo.row_numbers,
             items=coo.col_numbers,
             interactions=matrix,
+            ui_matrix=ui_mat,
+            iu_matrix=iu_mat,
         )
 
     def create_model(self) -> FlexMFModel:
@@ -208,20 +210,21 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
     def score(self, users, items) -> tuple[torch.Tensor, torch.Tensor]:
         if self.explicit_norm:
-            result = self.model(users, items, return_norm=True, convolution=self._conv)
+            result = self.model(users, items, return_norm=True)
             scores = result[0, ...]
 
             norms = result[1, ...]
         else:
-            scores = self.call_model(users, items, return_norm=False, convolution=self._conv)
+            scores = self.call_model(users, items, return_norm=False)
             norms = torch.tensor(0.0)
 
         return scores, norms
 
     def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
         # for LightGCN, we have to update the convolution layers *every* batch
-        if self._conv is not None:
-            self._conv = self._conv.update(self.model)
+        if batch.data.ui_matrix is not None:
+            assert batch.data.iu_matrix is not None
+            self.model.update_convolution(batch.data.ui_matrix, batch.data.iu_matrix)
 
         users = torch.as_tensor(batch.users.reshape(-1, 1)).to(self.device, non_blocking=True)
         positives = torch.as_tensor(batch.items.reshape(-1, 1)).to(self.device, non_blocking=True)

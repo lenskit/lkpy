@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
-
 import torch
 from torch import Tensor, nn
 from torch.linalg import norm, vecdot
@@ -121,14 +119,30 @@ class FlexMFModel(nn.Module):
 
         self.i_embed.weight.data[items, :] = 0
 
-    def forward(
-        self,
-        user: Tensor,
-        item: Tensor,
-        *,
-        return_norm: bool = False,
-        convolution: FlexMFLightConvolution | None = None,
-    ):
+    def update_convolution(self, ui_mat: Tensor, iu_mat: Tensor):
+        """
+        Update the convolution layers.
+        """
+        if not self.layers:
+            return
+
+        umat = self.u_embed.weight
+        imat = self.i_embed.weight
+        u_layers = [umat]
+        i_layers = [imat]
+
+        for _i in range(self.layers):
+            um_next = torch.mm(ui_mat, imat)
+            im_next = torch.mm(iu_mat, umat)
+            umat = um_next
+            u_layers.append(umat)
+            imat = im_next
+            i_layers.append(imat)
+
+        self.u_layers = torch.stack(u_layers)
+        self.i_layers = torch.stack(i_layers)
+
+    def forward(self, user: Tensor, item: Tensor, *, return_norm: bool = False):
         """
         Matrix factorization forward pass.
 
@@ -157,25 +171,17 @@ class FlexMFModel(nn.Module):
         ub = self.u_bias(user).reshape(user.shape) if self.u_bias is not None else zero
         ib = self.i_bias(item).reshape(item.shape) if self.i_bias is not None else zero
 
-        if self.i_layers is not None and convolution is None:
-            assert not return_norm
+        if self.i_layers is not None:
             ivec = self.i_layers[:, item, :].sum(0) * self._layer_scale
+            iemb = ivec[0, item, :]
         else:
             ivec = iemb = self.i_embed(item)
-            if convolution is not None:
-                for layer in convolution.layers:
-                    ivec = ivec + layer.item_matrix[item, :]
-                ivec *= self._layer_scale
 
-        if self.u_layers is not None and convolution is None:
-            assert not return_norm
+        if self.u_layers is not None:
             uvec = self.u_layers[:, user, :].sum(0) * self._layer_scale
+            uemb = uvec[0, item, :]
         else:
-            uvec = uemb = self.u_embed(item)
-            if convolution is not None:
-                for layer in convolution.layers:
-                    uvec = uvec + layer.user_matrix[user, :]
-                uvec *= self._layer_scale
+            uvec = uemb = self.u_embed(user)
 
         # compute the inner score
         ips = vecdot(uvec, ivec)
@@ -188,103 +194,3 @@ class FlexMFModel(nn.Module):
         else:
             # we're done
             return score
-
-
-@dataclass
-class FlexMFLightConvolution:
-    """
-    Data structure for the neighborhood matrix and intermediate convolution
-    layers for LightGCN.
-    """
-
-    ui_matrix: torch.Tensor
-    "User-item normalized adjacency matrix."
-    iu_matrix: torch.Tensor
-    "Item-user normalized adjacency matrix."
-
-    layers: list[FlexMFLightConvLayer] = field(default_factory=list)
-    """
-    Individual embedding convolution layers.
-    """
-
-    def update(self, model: FlexMFModel, *, update_model: bool = True) -> FlexMFLightConvolution:
-        """
-        Compute and return updated convolution matrices based on a model's
-        current parameters.
-
-        Args:
-            model:
-                The model to use.
-            update_model:
-                If ``True``, update the model's layer matrices with the new
-                layers.
-        Returns:
-            The updated convolution.
-        """
-
-        layers = []
-        umat = model.u_embed.weight
-        imat = model.i_embed.weight
-
-        for i in range(model.layers):
-            um_next = torch.mm(self.ui_matrix, imat)
-            im_next = torch.mm(self.iu_matrix, umat)
-            layers.append(FlexMFLightConvLayer(um_next, im_next))
-            umat = um_next
-            imat = im_next
-
-        if update_model:
-            model.u_layers = self.user_matrix(base=model.u_embed.weight).detach()
-            model.i_layers = self.item_matrix(base=model.i_embed.weight).detach()
-
-        return replace(self, layers=layers)
-
-    def user_matrix(self, *, base: torch.Tensor | None = None):
-        """
-        Return the L x U x k matrix of user embedding convolutions.
-
-        Args:
-            base:
-                The base embedding matrix.  If provided, it will be used as the
-                first layer, and the returned matrix will have L+1 convolution
-                layers.
-
-        Returns:
-            The full user convolution layer matrix.
-        """
-        layers = []
-        if base is not None:
-            layers.append(base)
-        layers.extend(x.user_matrix for x in self.layers)
-        return torch.stack(layers)
-
-    def item_matrix(self, *, base: torch.Tensor | None = None):
-        """
-        Return the L x I x k matrix of item embedding convolutions.
-
-        Args:
-            base:
-                The base embedding matrix.  If provided, it will be used as the
-                first layer, and the returned matrix will have L+1 convolution
-                layers.
-
-        Returns:
-            The full item convolution layer matrix.
-        """
-        layers = []
-        if base is not None:
-            layers.append(base)
-        layers.extend(x.item_matrix for x in self.layers)
-        return torch.stack(layers)
-
-
-@dataclass
-class FlexMFLightConvLayer:
-    """
-    Single layer of the LightGCN convolution network.
-    """
-
-    user_matrix: torch.Tensor
-    "User embedding convolution layer matrix."
-    item_matrix: torch.Tensor
-    "Item embedding convolution layer matrix."
