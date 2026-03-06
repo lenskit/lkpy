@@ -9,4 +9,5 @@ class = "lenskit.flexmf.FlexMFImplicitScorer"
 
 [components.scorer.config]
 loss = "pairwise"
+embedding_size = 32
 convolution_layers = 2

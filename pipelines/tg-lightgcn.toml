@@ -9,5 +9,5 @@ class = "lenskit.graphs.LightGCNScorer"
 
 [components.scorer.config]
 loss = "pairwise"
-# convolution_layers = 2
+embedding_size = 32
 batch_size = 8192
