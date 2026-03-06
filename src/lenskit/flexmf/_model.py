@@ -164,7 +164,7 @@ class FlexMFModel(nn.Module):
             ivec = iemb = self.i_embed(item)
             if convolution is not None:
                 for layer in convolution.layers:
-                    ivec = ivec + layer.item_matrix[user]
+                    ivec = ivec + layer.item_matrix[item, :]
                 ivec *= self._layer_scale
 
         if self.u_layers is not None and convolution is None:
@@ -174,7 +174,7 @@ class FlexMFModel(nn.Module):
             uvec = uemb = self.u_embed(item)
             if convolution is not None:
                 for layer in convolution.layers:
-                    uvec = uvec + layer.user_matrix[user]
+                    uvec = uvec + layer.user_matrix[user, :]
                 uvec *= self._layer_scale
 
         # compute the inner score
