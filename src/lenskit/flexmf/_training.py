@@ -52,6 +52,10 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     """
     The component whose model is being trained.
     """
+    options: TrainingOptions
+    """
+    The LensKit training options.
+    """
     opt: torch.optim.Optimizer
     """
     The PyTorch optimizer.
@@ -95,6 +99,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         ensure_parallel_init()
 
         self.component = component
+        self.options = options
         self.explicit_norm = component.config.reg_method == "L2"
 
         self.log = _log.bind(scorer=self.__class__.__name__, size=self.config.embedding_size)
@@ -196,6 +201,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
                     avg_loss = tot_loss.item() / (i + 1)
 
                 pb.update(loss=avg_loss)
+                self.options.step_profiler()
 
         avg_loss = tot_loss.item() / epoch_data.batch_count
         elog.debug("epoch complete", loss=avg_loss)

@@ -159,16 +159,12 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             inorms = mat.sum(0).to_dense().sqrt()
             idx = mat.indices()
             vals = mat.values()
-            ui_mat = (
-                torch.sparse_coo_tensor(
-                    idx,
-                    vals / unorms[idx[0, :]] / inorms[idx[1, :]],
-                    mat.size(),
-                    requires_grad=False,
-                )
-                .coalesce()
-                .to(self.device)
-            )
+            ui_mat = torch.sparse_coo_tensor(
+                idx,
+                vals / unorms[idx[0, :]] / inorms[idx[1, :]],
+                mat.size(),
+                requires_grad=False,
+            ).to(self.device)
             iu_mat = ui_mat.T.to_sparse_csr().detach()
             ui_mat = ui_mat.to_sparse_csr().detach()
 
