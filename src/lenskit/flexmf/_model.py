@@ -181,7 +181,7 @@ class FlexMFModel(nn.Module):
         if self.u_layers is not None:
             uvec = self.u_layers[:, user, :].sum(0) * self._layer_scale
             if return_norm:
-                uemb = self.u_layers[0, item, :]
+                uemb = self.u_layers[0, user, :]
         else:
             uvec = uemb = self.u_embed(user)
 
