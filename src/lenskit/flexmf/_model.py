@@ -196,3 +196,10 @@ class FlexMFModel(nn.Module):
         else:
             # we're done
             return score
+
+    def train(self, mode: bool):
+        super().train(mode)
+        if self.u_layers is not None:
+            self.u_layers = self.u_layers.detach()
+        if self.i_layers is not None:
+            self.i_layers = self.i_layers.detach()
