@@ -31,6 +31,9 @@ def main():
     except click.ClickException as e:
         _log.error("CLI error, terminating: %s", e)
         sys.exit(2)
+    except click.Abort:
+        _log.error("Program interrupted")
+        sys.exit(3)
     except Exception as e:
         _log.error("LensKit command failed", exc_info=e)
         sys.exit(3)
