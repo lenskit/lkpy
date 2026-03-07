@@ -98,6 +98,8 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
             self.data.n_users,
             self.data.n_items,
             self.torch_rng,
+            user_bias=True,
+            item_bias=True,
             sparse=self.config.reg_method != "AdamW",
             init_scale=0.1,
         )

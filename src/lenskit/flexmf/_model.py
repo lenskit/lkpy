@@ -56,9 +56,9 @@ class FlexMFModel(nn.Module):
         n_users: int,
         n_items: int,
         rng: torch.Generator,
+        user_bias: bool,
+        item_bias: bool,
         init_scale: float = 0.1,
-        user_bias: bool = True,
-        item_bias: bool = True,
         sparse: bool = False,
         layers: int = 0,
     ):
