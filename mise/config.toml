@@ -1,6 +1,6 @@
 [tools]
 rust = "stable"
-shfmt = "latest"
+"github:mvdan/sh" = "latest"
 uv = "latest"
 "pipx:pre-commit" = "4"
 cargo-binstall = "latest"
