@@ -78,7 +78,7 @@ def train(
     data = Dataset.load(dataset)
     log = _log.bind(data=data.name, name=name)
 
-    if profile_torch:
+    if profile_torch:  # pragma: nocover
         log.info("setting up Torch profiler")
 
         try:
