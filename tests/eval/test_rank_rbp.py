@@ -141,7 +141,7 @@ def test_rbp_empty_graded():
     assert metric.measure_list(recs, truth) == approx(0.0)
 
 
-def test_rbp_unknown_grade():
+def test_rbp_unknown_grade_default():
     recs = ItemList([1, 2], ordered=True)
     truth = ItemList(item_ids=[1], grade=[1.0])
 
@@ -150,6 +150,18 @@ def test_rbp_unknown_grade():
 
     # RBP = (1-p)*(relevance[0] + relevance[1]*p)
     expected = (1 - p) * (1 + 0.25 * p)
+    assert metric.measure_list(recs, truth) == approx(expected)
+
+
+def test_rbp_unknown_grade():
+    recs = ItemList([1, 2], ordered=True)
+    truth = ItemList(item_ids=[1], grade=[1.0])
+
+    p = 0.5
+    metric = RBP(patience=p, grade_field="grade", unknown_grade=0.30)
+
+    # RBP = (1-p)*(relevance[0] + relevance[1]*p)
+    expected = (1 - p) * (1 + 0.30 * p)
     assert metric.measure_list(recs, truth) == approx(expected)
 
 
