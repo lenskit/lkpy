@@ -67,6 +67,18 @@ class TrainingOptions:
     with :meth:`envvar`.
     """
 
+    torch_profiler: torch.profiler.profile | None = None
+    """
+    Torch profiler for profiling training options.
+    """
+
+    def step_profiler(self):
+        """
+        Signal to active profiler(s) that a new step has completed.
+        """
+        if self.torch_profiler is not None:
+            self.torch_profiler.step()
+
     @overload
     def random_generator(self, *, type: Literal["numpy"] = "numpy") -> np.random.Generator: ...
     @overload
