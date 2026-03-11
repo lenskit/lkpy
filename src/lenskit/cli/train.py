@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -8,12 +8,14 @@ import pickle
 from pathlib import Path
 
 import click
+import torch
 from xopen import xopen
 
 from lenskit.data import Dataset
 from lenskit.logging import get_logger
 from lenskit.pipeline import Component, Pipeline, topn_pipeline
 from lenskit.pipeline.types import resolve_type_string
+from lenskit.training import TrainingOptions
 
 _log = get_logger(__name__)
 
@@ -38,6 +40,7 @@ _log = get_logger(__name__)
     help="Include rating prediction in the pipeline capabilities.",
 )
 @click.option("-n", "--list-length", type=int, help="Default list length for pipeline ranker.")
+@click.option("--profile-torch", is_flag=True, help="Profile PyTorch training")
 @click.argument("dataset", metavar="DATA", type=Path)
 def train(
     scorer_class: str | None,
@@ -45,6 +48,7 @@ def train(
     out_file: Path,
     name: str | None,
     list_length: int | None,
+    profile_torch: bool,
     rating_predictor: bool,
     dataset: Path,
 ):
@@ -74,8 +78,24 @@ def train(
     data = Dataset.load(dataset)
     log = _log.bind(data=data.name, name=name)
 
-    log.info("training model")
-    pipe.train(data)
+    if profile_torch:  # pragma: nocover
+        log.info("setting up Torch profiler")
+
+        try:
+            with torch.profiler.profile(with_stack=True) as prof:
+                log.info("training pipeline")
+                pipe.train(data, TrainingOptions(torch_profiler=prof))
+        finally:
+            log.info("collecting profile data")
+            prof_data = prof.key_averages()
+            if torch.cuda.is_available():
+                tbl = prof_data.table("self_cuda_time_total")
+            else:
+                tbl = prof_data.table("self_cpu_time_total")
+            print(tbl)
+    else:
+        log.info("training pipeline")
+        pipe.train(data)
 
     _log.info("saving trained model", file=out_file)
     with xopen(out_file, "wb", threads=0) as pf:
