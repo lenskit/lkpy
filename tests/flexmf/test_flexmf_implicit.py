@@ -27,7 +27,7 @@ class TestFlexMFImplicit(BasicComponentTests, ScorerTests):
 class TestFlexMFBPR(BasicComponentTests, ScorerTests):
     expected_ndcg = (0.01, 0.25)
     component = FlexMFImplicitScorer
-    config = FlexMFImplicitConfig(loss="pairwise", epochs=3)
+    config = FlexMFImplicitConfig(preset="bpr", epochs=3)
 
     def test_skip_retrain(self, ml_ds):
         skip("not needed")
@@ -77,6 +77,12 @@ def test_config_exp_dict():
 def test_config_exp_json():
     cfg = FlexMFImplicitConfig.model_validate_json('{"embedding_size_exp": 2}')
     assert cfg.embedding_size == 4
+
+
+def test_config_preset():
+    cfg = FlexMFImplicitConfig(preset="warp")
+    assert cfg.loss == "warp"
+    assert cfg.negative_strategy == "misranked"
 
 
 @mark.slow
