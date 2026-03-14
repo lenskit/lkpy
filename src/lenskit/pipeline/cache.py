@@ -19,7 +19,7 @@ from pydantic import JsonValue, TypeAdapter
 from lenskit.logging import get_logger
 
 from .components import ComponentConstructor
-from .types import type_string
+from .types import make_importable_path
 
 _log = get_logger(__name__)
 
@@ -49,7 +49,7 @@ class PipelineCache:
         self._cache = {}
 
     def _make_key(self, ctor: ComponentConstructor[Any], config: object | None):
-        name = type_string(ctor)  # type: ignore
+        name = make_importable_path(ctor)  # type: ignore
         if config is not None:
             config = TypeAdapter[Any](ctor.config_class()).dump_python(config, mode="json")
             assert isinstance(config, dict)

@@ -29,7 +29,7 @@ from lenskit.diagnostics import PipelineError
 from ._hooks import HookEntry
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
-from .types import type_string
+from .types import make_importable_path
 
 
 class PipelineHook(BaseModel):
@@ -161,7 +161,7 @@ class PipelineInput(BaseModel):
     @classmethod
     def from_node(cls, node: InputNode[Any]) -> Self:
         if node.types is not None:
-            types = {type_string(t) for t in node.types}
+            types = {make_importable_path(t) for t in node.types}
         else:
             types = None
 

@@ -24,10 +24,10 @@ from pytest import mark, warns
 from lenskit.data import Dataset, MatrixRelationshipSet, RelationshipSet
 from lenskit.pipeline.types import (
     TypecheckWarning,
+    import_path_string,
     is_compatible_data,
     is_compatible_type,
-    resolve_type_string,
-    type_string,
+    make_importable_path,
 )
 
 T = TypeVar("T")
@@ -123,33 +123,33 @@ def test_not_compat_with_typevar():
     assert not is_compatible_data(100, Tstr)
 
 
-def test_type_string_none():
-    assert type_string(None) == "None"
+def test_importable_string_none():
+    assert make_importable_path(None) == "None"
 
 
-def test_type_string_str():
-    assert type_string(str) == "str"
+def test_importable_string_str():
+    assert make_importable_path(str) == "str"
 
 
-def test_type_string_generic():
-    assert type_string(list[str]) == "list"
+def test_importable_string_generic():
+    assert make_importable_path(list[str]) == "list"
 
 
-def test_type_string_class():
-    assert type_string(UUID) == "uuid.UUID"
+def test_importable_string_class():
+    assert make_importable_path(UUID) == "uuid.UUID"
 
 
 def test_parse_string_None():
-    assert resolve_type_string("None") == NoneType
+    assert import_path_string("None") == NoneType
 
 
 def test_parse_string_int():
-    assert resolve_type_string("int") is int
+    assert import_path_string("int") is int
 
 
 def test_parse_string_class():
-    assert resolve_type_string("pathlib.Path") is Path
+    assert import_path_string("pathlib.Path") is Path
 
 
 def test_parse_string_mod_class():
-    assert resolve_type_string("pathlib:Path") is Path
+    assert import_path_string("pathlib:Path") is Path

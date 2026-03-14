@@ -218,14 +218,16 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
     return False
 
 
-def type_string(typ: type | None) -> str:
+def make_importable_path(typ: type | None) -> str:
     """
-    Compute a string representation of a type that is both resolvable and
-    human-readable.  Type parameterizations are lost.
+    Compute a string representation of a class or function that is both
+    resolvable and human-readable.  Type parameterizations are lost.  The
+    resulting string can be imported with :func:`import_path_string`.
 
     Stability:
         Internal
     """
+
     if typ is None or typ is NoneType:
         return "None"
     elif typ.__module__ == "builtins":
@@ -236,10 +238,10 @@ def type_string(typ: type | None) -> str:
         return f"{typ.__module__}:{typ.__qualname__}"
 
 
-def resolve_type_string(tstr: str) -> Any:
+def import_path_string(tstr: str) -> Any:
     """
     Resolve a type string into an actual type or function.  This parses a string
-    referenceing a class or function (as returned by :fun:`type_string`),
+    referenceing a class or function (as returned by :func:`make_importable_path`),
     imports the module, and resolves the final member.
 
     Stability:

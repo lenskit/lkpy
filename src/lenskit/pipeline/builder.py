@@ -46,7 +46,7 @@ from .nodes import (
     LiteralNode,
     Node,
 )
-from .types import TypecheckWarning, resolve_type_string
+from .types import TypecheckWarning, import_path_string
 
 _log = get_logger(__name__)
 
@@ -703,7 +703,7 @@ class PipelineBuilder:
         for inpt in config.inputs:
             types: list[type[Any] | None] = []
             if inpt.types is not None:
-                types += [resolve_type_string(t) for t in inpt.types]
+                types += [import_path_string(t) for t in inpt.types]
             self.create_input(inpt.name, *types)
 
         # we now add the components and other nodes in multiple passes to ensure
@@ -721,7 +721,7 @@ class PipelineBuilder:
                 # ignore special nodes in first pass
                 continue
 
-            ctor = resolve_type_string(comp.code)
+            ctor = import_path_string(comp.code)
             if isinstance(ctor, type) and issubclass(ctor, Component):
                 cfg = ctor.validate_config(comp.config)
             else:
@@ -746,7 +746,7 @@ class PipelineBuilder:
 
         self._default = config.default
         self._run_hooks = {
-            name: [HookEntry(resolve_type_string(h.function), h.priority) for h in hooks]
+            name: [HookEntry(import_path_string(h.function), h.priority) for h in hooks]
             for name, hooks in config.hooks.run.items()
         }
 
