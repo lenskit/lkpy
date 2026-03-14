@@ -149,6 +149,26 @@ def test_importable_string_function():
     assert func is configure
 
 
+def test_importable_string_private_module():
+    from lenskit.pipeline import Pipeline
+
+    path = make_importable_path(Pipeline)
+    assert path == "lenskit.pipeline.Pipeline"
+
+    cls = import_path_string(path)
+    assert cls is Pipeline
+
+
+def test_importable_string_private_function():
+    from lenskit.logging import stdout_console
+
+    path = make_importable_path(stdout_console)
+    assert path == "lenskit.logging.stdout_console"
+
+    func = import_path_string(path)
+    assert func is stdout_console
+
+
 def test_parse_string_None():
     assert import_path_string("None") == NoneType
 

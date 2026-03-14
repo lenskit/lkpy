@@ -25,6 +25,8 @@ from typing import (
 
 import numpy as np
 
+from lenskit.diagnostics import PipelineWarning
+
 T = TypeVar("T", covariant=True)
 """
 General type variable for generic container types or inputs.
@@ -232,10 +234,23 @@ def make_importable_path(obj: type | FunctionType | None) -> str:
         return "None"
     elif obj.__module__ == "builtins":
         return obj.__name__
-    elif obj.__qualname__ == obj.__name__:
-        return f"{obj.__module__}.{obj.__name__}"
-    else:
-        return f"{obj.__module__}:{obj.__qualname__}"
+
+    if obj.__qualname__ != obj.__name__:
+        raise TypeError("nested objects not yet supported")
+
+    mod_path = obj.__module__
+    out_path = f"{mod_path}.{obj.__qualname__}"
+    short_mod_path = re.sub(r"\._.*", "", mod_path)
+    short_path = f"{short_mod_path}.{obj.__name__}"
+
+    if short_mod_path != mod_path:
+        short_mod = import_module(short_mod_path)
+        if getattr(short_mod, obj.__name__, None) is obj:
+            out_path = short_path
+        else:
+            warnings.warn(f"{short_path} is not {out_path}, using long path", PipelineWarning)
+
+    return out_path
 
 
 def import_path_string(tstr: str) -> Any:
