@@ -139,6 +139,16 @@ def test_importable_string_class():
     assert make_importable_path(UUID) == "uuid.UUID"
 
 
+def test_importable_string_function():
+    from lenskit.config import configure
+
+    path = make_importable_path(configure)
+    assert path == "lenskit.config.configure"
+
+    func = import_path_string(path)
+    assert func is configure
+
+
 def test_parse_string_None():
     assert import_path_string("None") == NoneType
 

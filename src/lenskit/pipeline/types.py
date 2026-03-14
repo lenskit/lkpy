@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import warnings
 from importlib import import_module
-from types import GenericAlias, NoneType, UnionType
+from types import FunctionType, GenericAlias, NoneType, UnionType
 from typing import (
     Any,
     Generic,
@@ -218,7 +218,7 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
     return False
 
 
-def make_importable_path(typ: type | None) -> str:
+def make_importable_path(obj: type | FunctionType | None) -> str:
     """
     Compute a string representation of a class or function that is both
     resolvable and human-readable.  Type parameterizations are lost.  The
@@ -228,14 +228,14 @@ def make_importable_path(typ: type | None) -> str:
         Internal
     """
 
-    if typ is None or typ is NoneType:
+    if obj is None or obj is NoneType:
         return "None"
-    elif typ.__module__ == "builtins":
-        return typ.__name__
-    elif typ.__qualname__ == typ.__name__:
-        return f"{typ.__module__}.{typ.__name__}"
+    elif obj.__module__ == "builtins":
+        return obj.__name__
+    elif obj.__qualname__ == obj.__name__:
+        return f"{obj.__module__}.{obj.__name__}"
     else:
-        return f"{typ.__module__}:{typ.__qualname__}"
+        return f"{obj.__module__}:{obj.__qualname__}"
 
 
 def import_path_string(tstr: str) -> Any:
