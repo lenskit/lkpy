@@ -38,7 +38,7 @@ class TestFlexMFBPR(BasicComponentTests, ScorerTests):
 
 class TestFlexMFWARP(BasicComponentTests, ScorerTests):
     component = FlexMFImplicitScorer
-    config = FlexMFImplicitConfig(loss="warp", epochs=3)
+    config = FlexMFImplicitConfig(preset="warp", epochs=3)
 
     def test_skip_retrain(self, ml_ds):
         skip("not needed")
@@ -50,7 +50,7 @@ class TestFlexMFWARP(BasicComponentTests, ScorerTests):
 class TestFlexMFGCN(BasicComponentTests, ScorerTests):
     expected_ndcg = (0.01, 0.25)
     component = FlexMFImplicitScorer
-    config = FlexMFImplicitConfig(loss="pairwise", epochs=3, convolution_layers=2)
+    config = FlexMFImplicitConfig(preset="lightgcn", epochs=3)
 
     def test_skip_retrain(self, ml_ds):
         skip("not needed")
