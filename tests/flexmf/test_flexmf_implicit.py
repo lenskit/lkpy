@@ -79,6 +79,18 @@ def test_config_exp_json():
     assert cfg.embedding_size == 4
 
 
+def test_config_negative_default():
+    cfg = FlexMFImplicitConfig(loss="pairwise")
+    assert cfg.loss == "pairwise"
+    assert cfg.negative_strategy == "uniform"
+
+
+def test_config_negative_default_warp():
+    cfg = FlexMFImplicitConfig(loss="warp")
+    assert cfg.loss == "warp"
+    assert cfg.negative_strategy == "misranked"
+
+
 def test_config_preset():
     cfg = FlexMFImplicitConfig(preset="warp")
     assert cfg.loss == "warp"
