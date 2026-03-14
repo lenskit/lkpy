@@ -82,13 +82,13 @@ def test_config_exp_json():
 def test_config_negative_default():
     cfg = FlexMFImplicitConfig(loss="pairwise")
     assert cfg.loss == "pairwise"
-    assert cfg.negative_strategy == "uniform"
+    assert cfg.selected_negative_strategy() == "uniform"
 
 
 def test_config_negative_default_warp():
     cfg = FlexMFImplicitConfig(loss="warp")
     assert cfg.loss == "warp"
-    assert cfg.negative_strategy == "misranked"
+    assert cfg.selected_negative_strategy() == "misranked"
 
 
 def test_config_preset():
