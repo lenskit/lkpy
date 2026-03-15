@@ -9,7 +9,6 @@ from typing import Any
 
 import numpy as np
 import ray.tune
-import ray.tune.result
 
 from lenskit.logging import Progress, get_logger, item_progress
 
