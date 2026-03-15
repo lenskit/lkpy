@@ -28,6 +28,22 @@ NegativeStrategy: TypeAlias = Literal["uniform", "popular", "misranked"]
 
 _log = get_logger(__name__)
 
+PRESETS = {
+    "bpr": {"loss": "pairwise", "user_bias": False, "item_bias": False},
+    "warp": {
+        "loss": "warp",
+        "negative_strategy": "misranked",
+        "user_bias": False,
+        "item_bias": False,
+    },
+    "lightgcn": {
+        "loss": "pairwise",
+        "user_bias": False,
+        "item_bias": False,
+        "convolution_layers": 3,
+    },
+}
+
 
 class FlexMFImplicitConfig(FlexMFConfigBase):
     """
@@ -36,6 +52,11 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
 
     Stability:
         Experimental
+    """
+
+    preset: Literal["bpr", "warp", "lightgcn"] | None = None
+    """
+    Select preset defaults to mimic a particular model's original presentation.
     """
 
     loss: ImplicitLoss = "logistic"
@@ -89,6 +110,17 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
             return "misranked"
         else:
             return "uniform"
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_preset(cls, data):
+        if preset := data.get("preset", None):
+            if preset in PRESETS:
+                return PRESETS[preset] | data
+            else:
+                raise ValueError(f"unknown preset '{preset}'")
+        else:
+            return data
 
     @model_validator(mode="after")
     def check_strategies(self):
