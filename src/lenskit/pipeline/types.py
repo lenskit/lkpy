@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import warnings
 from importlib import import_module
-from types import GenericAlias, NoneType, UnionType
+from types import FunctionType, GenericAlias, NoneType, UnionType
 from typing import (
     Any,
     Generic,
@@ -24,6 +24,8 @@ from typing import (
 )
 
 import numpy as np
+
+from lenskit.diagnostics import PipelineWarning
 
 T = TypeVar("T", covariant=True)
 """
@@ -218,28 +220,43 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
     return False
 
 
-def type_string(typ: type | None) -> str:
+def make_importable_path(obj: type | FunctionType | None) -> str:
     """
-    Compute a string representation of a type that is both resolvable and
-    human-readable.  Type parameterizations are lost.
+    Compute a string representation of a class or function that is both
+    resolvable and human-readable.  Type parameterizations are lost.  The
+    resulting string can be imported with :func:`import_path_string`.
 
     Stability:
         Internal
     """
-    if typ is None or typ is NoneType:
+
+    if obj is None or obj is NoneType:
         return "None"
-    elif typ.__module__ == "builtins":
-        return typ.__name__
-    elif typ.__qualname__ == typ.__name__:
-        return f"{typ.__module__}.{typ.__name__}"
-    else:
-        return f"{typ.__module__}:{typ.__qualname__}"
+    elif obj.__module__ == "builtins":
+        return obj.__name__
+
+    if obj.__qualname__ != obj.__name__:
+        raise TypeError("nested objects not yet supported")
+
+    mod_path = obj.__module__
+    out_path = f"{mod_path}.{obj.__qualname__}"
+    short_mod_path = re.sub(r"\._.*", "", mod_path)
+    short_path = f"{short_mod_path}.{obj.__name__}"
+
+    if short_mod_path != mod_path:
+        short_mod = import_module(short_mod_path)
+        if getattr(short_mod, obj.__name__, None) is obj:
+            out_path = short_path
+        else:
+            warnings.warn(f"{short_path} is not {out_path}, using long path", PipelineWarning)
+
+    return out_path
 
 
-def resolve_type_string(tstr: str) -> Any:
+def import_path_string(tstr: str) -> Any:
     """
     Resolve a type string into an actual type or function.  This parses a string
-    referenceing a class or function (as returned by :fun:`type_string`),
+    referenceing a class or function (as returned by :func:`make_importable_path`),
     imports the module, and resolves the final member.
 
     Stability:

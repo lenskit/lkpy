@@ -18,6 +18,10 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 Breaking Changes
 ----------------
 
+- Pipeline configurations serialized with previous versions **cannot** be
+  re-loaded in LensKit 2026, due to moves of module paths.  Import path
+  canonicalization (:issue:`948`) reduces the risk of such breakage in future
+  releases.  Handwritten configurations will often still work.
 - LensKit now requires Python 3.12 or newer, along with NumPy 2.x, Pandas 2.3 or
   newer, and SciPy 1.13 or newer (see :ref:`dep-policy`, :pr:`954`).
 - We no longer publish 32-bit binary wheels.
