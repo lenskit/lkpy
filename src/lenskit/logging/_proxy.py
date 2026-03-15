@@ -9,7 +9,7 @@ import re
 from typing import Any
 
 import structlog
-from structlog._config import BoundLoggerLazyProxy
+from structlog._config import BoundLoggerLazyProxy  # noqa: PLC2701
 
 _fallback_wrapper = structlog.make_filtering_bound_logger(logging.WARNING)
 
