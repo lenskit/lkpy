@@ -18,8 +18,8 @@ from pydantic import JsonValue, TypeAdapter
 
 from lenskit.logging import get_logger
 
+from ._types import make_importable_path
 from .components import ComponentConstructor
-from .types import make_importable_path
 
 _log = get_logger(__name__)
 

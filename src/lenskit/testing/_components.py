@@ -21,7 +21,7 @@ from lenskit.logging import get_logger
 from lenskit.metrics import quick_measure_model
 from lenskit.parallel.ray import ray_available
 from lenskit.pipeline import Component, Pipeline, predict_pipeline, topn_pipeline
-from lenskit.pipeline.builder import PipelineBuilder
+from lenskit.pipeline._builder import PipelineBuilder
 from lenskit.splitting import split_temporal_fraction
 from lenskit.training import Trainable, TrainingOptions
 

@@ -12,7 +12,7 @@ import numpy as np
 
 from lenskit.data.items import ItemList
 from lenskit.pipeline import Component
-from lenskit.pipeline.types import Lazy
+from lenskit.pipeline._types import Lazy
 
 _logger = logging.getLogger(__name__)
 

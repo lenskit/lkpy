@@ -11,8 +11,8 @@ from pydantic import JsonValue
 from lenskit.data import ID, ItemList, RecQuery
 from lenskit.pipeline.config import PipelineOptions
 
+from ._builder import PipelineBuilder
 from ._impl import Pipeline
-from .builder import PipelineBuilder
 from .components import Component, ComponentConstructor, Placeholder
 
 

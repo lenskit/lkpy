@@ -7,8 +7,8 @@
 # pyright: strict
 from dataclasses import dataclass
 
+from lenskit.pipeline._types import Lazy
 from lenskit.pipeline.components import Component, component_inputs, component_return_type
-from lenskit.pipeline.types import Lazy
 
 
 @dataclass

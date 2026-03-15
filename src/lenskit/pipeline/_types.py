@@ -18,7 +18,7 @@ from typing import (
     TypeAlias,
     TypeVar,
     Union,
-    _GenericAlias,  # type: ignore
+    _GenericAlias,  # type: ignore # noqa: PLC2701
     get_args,
     get_origin,
 )

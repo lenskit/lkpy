@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from lenskit.basic import BiasScorer, PopScorer
-from lenskit.pipeline.common import topn_pipeline
+from lenskit.pipeline import topn_pipeline
 
 
 def test_merge_simple_setting():

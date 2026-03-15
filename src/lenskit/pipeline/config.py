@@ -27,9 +27,9 @@ from typing_extensions import Any, Self
 from lenskit.diagnostics import PipelineError
 
 from ._hooks import HookEntry
+from ._types import make_importable_path
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
-from .types import make_importable_path
 
 
 class PipelineHook(BaseModel):

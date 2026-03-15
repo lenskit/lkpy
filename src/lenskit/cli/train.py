@@ -14,7 +14,7 @@ from xopen import xopen
 from lenskit.data import Dataset
 from lenskit.logging import get_logger
 from lenskit.pipeline import Component, Pipeline, topn_pipeline
-from lenskit.pipeline.types import import_path_string
+from lenskit.pipeline._types import import_path_string
 from lenskit.training import TrainingOptions
 
 _log = get_logger(__name__)

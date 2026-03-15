@@ -24,7 +24,7 @@ from lenskit.data import (
 )
 from lenskit.knn import UserKNNConfig, UserKNNScorer
 from lenskit.metrics import call_metric, quick_measure_model
-from lenskit.pipeline.common import predict_pipeline, topn_pipeline
+from lenskit.pipeline._common import predict_pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
 from lenskit.torch import inference_mode
 

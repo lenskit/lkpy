@@ -10,9 +10,9 @@ Input type checking hook.
 
 from typing import Any
 
+from .._types import SkipComponent, SkipInput, is_compatible_data
 from ..components import ComponentInput
 from ..nodes import ComponentInstanceNode
-from ..types import SkipComponent, SkipInput, is_compatible_data
 
 
 def typecheck_input_data(
