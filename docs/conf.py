@@ -11,7 +11,7 @@ from pathlib import Path
 
 from packaging.version import Version
 
-from lenskit._version import lenskit_version
+from lenskit._version import lenskit_version  # noqa: PLC2701
 
 sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
 
