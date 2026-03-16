@@ -4,7 +4,7 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::{cmp::Reverse, collections::BinaryHeap};
+use std::cmp::{Ordering, Reverse};
 
 use arrow::{
     array::{
@@ -140,8 +140,8 @@ pub(crate) fn argtopn<'py>(
     let scores = make_array(scores.0);
     let array = py.detach(|| {
         let indices = match_array_type!(scores, {
-            floating(arr) => argtopn_float(arr, n),
-            integer(arr) => argtopn_int(arr, n),
+            floating(arr) => argtopn_impl(arr, n),
+            integer(arr) => argtopn_impl(arr, n),
         })?;
 
         PyResult::Ok(Int32Array::from(indices))
@@ -149,79 +149,116 @@ pub(crate) fn argtopn<'py>(
     Ok(array.into_data().into())
 }
 
-struct HK<T: Ord> {
-    index: i32,
-    value: T,
-}
-
-impl<T: Ord> PartialEq for HK<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.value.eq(&other.value) && self.index.eq(&other.index)
-    }
-}
-
-impl<T: Ord> PartialOrd for HK<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.value.partial_cmp(&other.value)
-    }
-}
-
-impl<T: Ord> Eq for HK<T> {}
-
-impl<T: Ord> Ord for HK<T> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.value.cmp(&other.value)
-    }
-}
-
-fn argtopn_float<T: ArrowPrimitiveType>(scores: &PrimitiveArray<T>, n: usize) -> Vec<i32>
+fn argtopn_impl<T: ArrowPrimitiveType>(scores: &PrimitiveArray<T>, n: usize) -> Vec<i32>
 where
-    T::Native: FloatCore,
+    T::Native: PartialOrd,
 {
-    let mut heap = BinaryHeap::with_capacity(n + 1);
-    for (i, v) in scores.iter().enumerate() {
-        if let Some(v) = v {
-            if let Ok(nnv) = NotNan::new(v) {
-                heap.push(HK {
-                    index: i as i32,
-                    value: nnv,
-                });
+    let sbuf = scores.values();
+
+    let mut heap = IndirectHeap::create(n, sbuf);
+    for i in 0..scores.len() {
+        heap.insert(i as i32);
+    }
+
+    heap.topn_vec()
+}
+
+struct IndirectHeap<'v, V: PartialOrd> {
+    size: usize,
+    keys: Vec<i32>,
+    values: &'v [V],
+}
+
+impl<'v, V: PartialOrd + Copy> IndirectHeap<'v, V> {
+    fn create(size: usize, values: &'v [V]) -> Self {
+        IndirectHeap {
+            size,
+            keys: Vec::with_capacity(size + 1),
+            values,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn len(&self) -> usize {
+        self.keys.len()
+    }
+
+    fn _value_at(&self, idx: usize) -> V {
+        self.values[self.keys[idx] as usize]
+    }
+
+    fn insert(&mut self, key: i32) {
+        let n = self.keys.len();
+        if n < self.size {
+            // heap has space, add
+            self.keys.push(key);
+            self.upheap(n);
+        } else {
+            // heap is full, new value belongs — replace + adjust
+            let kv = self.values[key as usize];
+            match kv.partial_cmp(&self._value_at(0)) {
+                Some(Ordering::Greater) => {
+                    self.keys[0] = key;
+                    self.downheap(0, self.size);
+                }
+                _ => (),
             }
         }
-        while heap.len() > n {
-            heap.pop();
+    }
+
+    fn topn_vec(mut self) -> Vec<i32> {
+        let n = self.keys.len() - 1;
+        while n > 0 {
+            self.keys.swap(0, n);
+            self.downheap(0, n);
+        }
+        self.keys
+    }
+
+    fn downheap(&mut self, pos: usize, lim: usize) {
+        let mut min = pos;
+        let mut mv = self._value_at(min);
+        let left = 2 * pos + 1;
+        let right = 2 * pos + 2;
+
+        if left < lim {
+            let lv = self._value_at(left);
+            match lv.partial_cmp(&mv) {
+                Some(Ordering::Less) => {
+                    min = left;
+                    mv = lv;
+                }
+                _ => (),
+            }
+        }
+        if right < lim {
+            let rv = self._value_at(right);
+            match rv.partial_cmp(&mv) {
+                Some(Ordering::Less) => {
+                    min = right;
+                }
+                _ => (),
+            }
+        }
+
+        if min != pos {
+            self.keys.swap(pos, min);
+            self.downheap(min, lim);
         }
     }
 
-    let mut out: Vec<_> = Vec::with_capacity(n);
-    for k in heap.drain() {
-        out.push(k.index)
-    }
-
-    out
-}
-
-fn argtopn_int<T: ArrowPrimitiveType>(scores: &PrimitiveArray<T>, n: usize) -> Vec<i32>
-where
-    T::Native: Ord,
-{
-    let mut heap = BinaryHeap::with_capacity(n + 1);
-    for (i, v) in scores.iter().enumerate() {
-        if let Some(v) = v {
-            heap.push(HK {
-                index: i as i32,
-                value: v,
-            });
-        }
-        while heap.len() > n {
-            heap.pop();
+    fn upheap(&mut self, pos: usize) {
+        if pos > 0 {
+            let parent = (pos - 1) / 2;
+            let pv = self._value_at(parent);
+            let mv = self._value_at(pos);
+            match pv.partial_cmp(&mv) {
+                Some(Ordering::Greater) => {
+                    self.keys.swap(pos, parent);
+                    self.upheap(parent);
+                }
+                _ => (),
+            }
         }
     }
-
-    let mut out: Vec<_> = Vec::with_capacity(n);
-    for k in heap.drain() {
-        out.push(k.index)
-    }
-
-    out
 }
