@@ -58,6 +58,11 @@ class TrainingOptions:
         retrain instead of requiring that of every component implementation
         allows individual implementations to be slightly simpler, without
         requiring separate options classes for pipeline and component training.
+
+    .. versionchanged:: 2026.1
+
+        Added the :meth:`is_trained` method that implementers must now also
+        provide.
     """
 
     device: str | None = None

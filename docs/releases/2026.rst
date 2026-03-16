@@ -18,6 +18,16 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 Breaking Changes
 ----------------
 
+- The :class:`~lenskit.training.Trainable` protocol now has a separate method
+  :meth:`~lenskit.training.Trainable.is_trained` to query if a component has
+  been trained, and responsibility for skipping retraining of already-trained
+  components when :attr:`~lenskit.training.TrainingOptions.retrain` is ``False``
+  has been moved from individual components to
+  :meth:`lenskit.pipeline.Pipeline.train` (:issue:`1042`, :pr:`1044`).
+
+  The pipeline builder will issue a warning if a component implements
+  :meth:`~lenskit.training.Trainable.train` but not
+  :meth:`~lenskit.training.Trainable.is_trained`.
 - Pipeline configurations serialized with previous versions **cannot** be
   re-loaded in LensKit 2026, due to moves of module paths.  Import path
   canonicalization (:issue:`948`) reduces the risk of such breakage in future
