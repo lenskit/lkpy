@@ -10,7 +10,7 @@ from uuid import UUID
 import numpy as np
 from typing_extensions import assert_type
 
-from pytest import raises, warns
+from pytest import mark, raises, warns
 
 from lenskit.pipeline import PipelineBuilder, PipelineError
 from lenskit.pipeline._types import TypecheckWarning
@@ -558,6 +558,7 @@ def test_fail_missing_input():
     assert pipe.run(nd, a=3) == 6
 
 
+@mark.filterwarnings("ignore::lenskit.diagnostics.TypecheckWarning")
 def test_pipeline_component_default():
     """
     Test that the default component is run correctly.

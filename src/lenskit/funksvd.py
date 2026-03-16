@@ -104,6 +104,10 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
     item_embeddings: NPMatrix
 
     @override
+    def is_trained(self):
+        return hasattr(self, "item_embeddings")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Train a FunkSVD model.
@@ -111,9 +115,6 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         Args:
             ratings: the ratings data frame.
         """
-        if hasattr(self, "item_embeddings") and not options.retrain:
-            return
-
         log = _logger.bind(dataset=data.name)
 
         timer = Stopwatch()

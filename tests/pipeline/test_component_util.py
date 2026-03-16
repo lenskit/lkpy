@@ -7,6 +7,9 @@
 # pyright: strict
 from dataclasses import dataclass
 
+from pytest import warns
+
+from lenskit.diagnostics import TypecheckWarning
 from lenskit.pipeline._types import Lazy
 from lenskit.pipeline.components import Component, component_inputs, component_return_type
 
@@ -85,7 +88,8 @@ def test_component_unknown_input():
     def func(x) -> int:  # type: ignore
         return x + 5  # type: ignore
 
-    inputs = component_inputs(func)  # type: ignore
+    with warns(TypecheckWarning):
+        inputs = component_inputs(func)  # type: ignore
     assert len(inputs) == 1
     assert inputs["x"].type is None
     assert not inputs["x"].has_default

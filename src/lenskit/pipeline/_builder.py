@@ -30,7 +30,7 @@ from . import config
 from ._cache import PipelineCache
 from ._hooks import ComponentInputHook, HookEntry, RunHooks
 from ._impl import Pipeline
-from ._types import TypecheckWarning, import_path_string
+from ._types import TypecheckWarning, import_path_string, is_instance_or_subclass
 from .components import (
     Component,
     ComponentConstructor,
@@ -353,7 +353,16 @@ class PipelineBuilder:
         Returns:
             The node representing this component in the pipeline.
         """
+        from lenskit.training import Trainable
+
         self._check_available_name(name)
+
+        if hasattr(comp, "train"):
+            if not is_instance_or_subclass(comp, Trainable):
+                warnings.warn(
+                    f"{comp} has “train” method but does not fully implement Trainable",
+                    PipelineWarning,
+                )
 
         node = ComponentNode[ND].create(name, comp, config)
         if node.types is None:

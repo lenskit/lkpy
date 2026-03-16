@@ -32,6 +32,8 @@ from typing_extensions import (
     runtime_checkable,
 )
 
+from lenskit.diagnostics import PipelineWarning
+
 from ._types import Lazy, TypecheckWarning, is_compatible_data
 
 P = ParamSpec("P")
@@ -140,6 +142,7 @@ class Component(ABC, Generic[COut, CArgs]):
                         "component class {} does not define a config attribute type".format(
                             cls.__qualname__
                         ),
+                        PipelineWarning,
                         stacklevel=2,
                     )
 
@@ -155,6 +158,7 @@ class Component(ABC, Generic[COut, CArgs]):
                 "component class {} does not define a config attribute type".format(
                     self.__class__.__qualname__
                 ),
+                PipelineWarning,
                 stacklevel=2,
             )
         elif cfg_cls and not isinstance(config, cfg_cls):
@@ -242,6 +246,7 @@ def component_inputs(
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
     *,
     warn_on_missing: bool = True,
+    _warn_level: int = 1,
 ) -> dict[str, ComponentInput]:
     if isinstance(component, FunctionType):
         function = component
@@ -271,7 +276,7 @@ def component_inputs(
             warnings.warn(
                 f"parameter {param.name} of component {component} has no type annotation",
                 TypecheckWarning,
-                2,
+                stacklevel=_warn_level + 1,
             )
 
         if ci.type is None or is_compatible_data(None, ci.type):

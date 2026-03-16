@@ -68,10 +68,11 @@ class BaseRec(Component[ItemList], Trainable):
     item_embeddings: NDArray[np.float32]
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "item_embeddings") and not options.retrain:
-            return
+    def is_trained(self):
+        return hasattr(self, "item_embeddings")
 
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         matrix = data.interaction_matrix(format="scipy", layout="csr", legacy=True)
         uir = matrix * self.weight
 

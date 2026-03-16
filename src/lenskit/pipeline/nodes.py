@@ -146,4 +146,4 @@ class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
 
     @property
     def inputs(self):
-        return component_inputs(self.component)
+        return component_inputs(self.component, _warn_level=2)

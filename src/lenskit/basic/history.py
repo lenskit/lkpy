@@ -49,11 +49,11 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
     interactions: MatrixRelationshipSet | None
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        # TODO: find a better data structure for this
-        if hasattr(self, "interactions") and not options.retrain:
-            return
+    def is_trained(self):
+        return hasattr(self, "interactions")
 
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         ints = data.interactions(self.config.interaction_class)
         if "user" not in ints.entities:
             _log.info("interactions do not involve users, skipping history lookup")
@@ -124,10 +124,11 @@ class KnownRatingScorer(Component[ItemList], Trainable):
     interactions: MatrixRelationshipSet
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "interactions") and not options.retrain:
-            return
+    def is_trained(self):
+        return hasattr(self, "interactions")
 
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if self.config.source == "query":
             return
 

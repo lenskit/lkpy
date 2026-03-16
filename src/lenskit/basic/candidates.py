@@ -29,16 +29,17 @@ class TrainingCandidateSelectorBase(Component[ItemList], Trainable):
     """
 
     config: None
-    items_: Vocabulary
+    items: Vocabulary
     """
     List of known items from the training data.
     """
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "items_") and not options.retrain:
-            return
+    def is_trained(self):
+        return hasattr(self, "items")
 
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         self.items_ = data.items
 
 

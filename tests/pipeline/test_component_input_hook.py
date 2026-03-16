@@ -4,9 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import warnings
 from contextvars import ContextVar
 from typing import Any
 
+from lenskit.diagnostics import PipelineWarning
 from lenskit.logging import get_logger
 from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline._types import Lazy, T
@@ -43,9 +45,11 @@ def test_component_input_called():
     msg = build.create_input("message", str)
     hello = build.add_component("hello", proc_hello, msg=msg)
 
-    build.add_run_hook("component-input", _input_hook)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", PipelineWarning)
+        build.add_run_hook("component-input", _input_hook)
 
-    pipe = build.build()
+        pipe = build.build()
 
     assert len(pipe.config.hooks.run["component-input"]) == 1
     assert pipe.config.hooks.run["component-input"][0].function.endswith(

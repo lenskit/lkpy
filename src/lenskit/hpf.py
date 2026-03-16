@@ -68,10 +68,14 @@ class HPFScorer(Component[ItemList], Trainable):
 
     config: HPFConfig
 
-    users_: Vocabulary
-    user_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    items_: Vocabulary
-    item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+    users: Vocabulary
+    user_features: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+    items: Vocabulary
+    item_features: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+
+    @override
+    def is_trained(self):
+        return hasattr(self, "item_features")
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
@@ -88,10 +92,10 @@ class HPFScorer(Component[ItemList], Trainable):
         _logger.info("fitting HPF model with %d features", self.config.embedding_size)
         hpf.fit(matrix)
 
-        self.users_ = data.users
-        self.items_ = data.items
-        self.user_features_ = hpf.Theta  # type: ignore
-        self.item_features_ = hpf.Beta  # type: ignore
+        self.users = data.users
+        self.items = data.items
+        self.user_features = hpf.Theta  # type: ignore
+        self.item_features = hpf.Beta  # type: ignore
 
         return self
 
@@ -102,16 +106,16 @@ class HPFScorer(Component[ItemList], Trainable):
         user_id = query.user_id
         user_num = None
         if user_id is not None:
-            user_num = self.users_.number(user_id, missing=None)
+            user_num = self.users.number(user_id, missing=None)
         if user_num is None:
             _logger.debug("unknown user %s", query.user_id)
             return ItemList(items, scores=np.nan)
 
-        u_feat = self.user_features_[user_num, :]
+        u_feat = self.user_features[user_num, :]
 
-        item_nums = items.numbers(vocabulary=self.items_, missing="negative")
+        item_nums = items.numbers(vocabulary=self.items, missing="negative")
         item_mask = item_nums >= 0
-        i_feats = self.item_features_[item_nums[item_mask], :]
+        i_feats = self.item_features[item_nums[item_mask], :]
 
         scores = np.full((len(items),), np.nan, dtype=np.float64)
         scores[item_mask] = i_feats @ u_feat

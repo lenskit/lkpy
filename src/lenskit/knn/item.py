@@ -112,6 +112,10 @@ class ItemKNNScorer(Component[ItemList], Trainable):
     "Similarity matrix (sparse CSR tensor)."
 
     @override
+    def is_trained(self):
+        return hasattr(self, "sim_matrix")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Train a model.
@@ -123,9 +127,6 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ratings:
                 (user,item,rating) data for computing item similarities.
         """
-        if hasattr(self, "sim_matrix") and not options.retrain:
-            return
-
         ensure_parallel_init()
         log = _log.bind(n_items=data.item_count, feedback=self.config.feedback)
         # Training proceeds in 2 steps:

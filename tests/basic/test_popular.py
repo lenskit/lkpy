@@ -4,8 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import pickle
-
 import pandas as pd
 
 from lenskit.basic import PopScorer
@@ -21,20 +19,20 @@ class TestPopScore(BasicComponentTests, ScorerTests):
     component = PopScorer
 
     def verify_models_equivalent(self, orig, copy):
-        assert all(copy.item_scores_ == orig.item_scores_)
+        assert all(copy.item_scores == orig.item_scores)
 
 
 def test_popscore_quantile(rng, ml_ds):
     pop = PopScorer()
     pop.train(ml_ds)
 
-    assert pop.item_scores_.max() == 1.0
+    assert pop.item_scores.max() == 1.0
 
     counts = ml_ds.item_stats()["count"]
     counts = counts.sort_values()
 
     winner = counts.index[-1]
-    assert pop.item_scores_[ml_ds.items.number(winner)] == 1.0
+    assert pop.item_scores[ml_ds.items.number(winner)] == 1.0
 
 
 def test_popscore_rank(rng, ml_ds):
@@ -44,10 +42,10 @@ def test_popscore_rank(rng, ml_ds):
     counts = ml_ds.item_stats()["count"]
     counts = counts.sort_values()
 
-    assert pop.item_scores_.max() == len(counts)
+    assert pop.item_scores.max() == len(counts)
 
     winner = counts.index[-1]
-    assert pop.item_scores_[ml_ds.items.number(winner)] == len(counts)
+    assert pop.item_scores[ml_ds.items.number(winner)] == len(counts)
 
 
 def test_popscore_counts(rng, ml_ds):
@@ -56,7 +54,7 @@ def test_popscore_counts(rng, ml_ds):
 
     counts = ml_ds.item_stats()["count"]
 
-    scores, counts = pd.Series(pop.item_scores_, index=pop.items_.ids()).align(counts)
+    scores, counts = pd.Series(pop.item_scores, index=pop.items.ids()).align(counts)
     assert all(scores == counts)
 
     items = rng.choice(counts.index, 100)

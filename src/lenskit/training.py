@@ -16,7 +16,7 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from time import perf_counter
-from typing import TYPE_CHECKING, Literal, Protocol, overload, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, overload, override, runtime_checkable
 
 import numpy as np
 
@@ -40,7 +40,29 @@ class TrainingOptions:
     retrain: bool = True
     """
     Whether the model should retrain if it is already trained.  If ``False``,
-    the model should cleanly skip training if it is already trained.
+    the component is allowed to skip training if it is already trained.
+
+    In the common case of training pipelines, this flag is examined by
+    :meth:`lenskit.pipeline.Pipeline.train`: if it is ``False``, that method
+    skips training any components that are already trained.  Custom training
+    code that wishes to avoid retraining models should check
+    :meth:`Trainable.is_trained` instead of assuming that individual components
+    will respect this flag.
+
+    .. note::
+
+        This division of responsibility is to reduce the need for repetitive
+        code: since implementing components seems to be a more common activity
+        than logic that directly trains components (as opposed to pipelines) in
+        ordinary LensKit use, making training code responsible for skipping
+        retrain instead of requiring that of every component implementation
+        allows individual implementations to be slightly simpler, without
+        requiring separate options classes for pipeline and component training.
+
+    .. versionchanged:: 2026.1
+
+        Added the :meth:`is_trained` method that implementers must now also
+        provide.
     """
 
     device: str | None = None
@@ -188,7 +210,13 @@ class Trainable(Protocol):  # pragma: nocover
         Full
     """
 
-    def train(self, data: Dataset, options: TrainingOptions) -> None:
+    def is_trained(self) -> bool:  # pragma: nocover
+        """
+        Query if this component has already been trained.
+        """
+        raise NotImplementedError()
+
+    def train(self, data: Dataset, options: TrainingOptions) -> None:  # pragma: nocover
         """
         Train the model to learn its parameters from a training dataset.
 
@@ -226,6 +254,11 @@ class UsesTrainer(Component, ABC, Trainable):
         if cfg:
             return getattr(cfg, "epochs", None)
 
+    @override
+    def is_trained(self):
+        return self.trained_epochs > 0
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> None:
         """
         Implementation of :meth:`Trainable.train` that uses the model trainer.
