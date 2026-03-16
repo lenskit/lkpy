@@ -10,8 +10,10 @@ from typing import Any, final
 
 from typing_extensions import override
 
-from lenskit.data.dataset import Dataset
-from lenskit.data.vocab import Vocabulary
+from pytest import warns
+
+from lenskit.data import Dataset, Vocabulary
+from lenskit.diagnostics import PipelineWarning
 from lenskit.pipeline import Component, PipelineBuilder
 from lenskit.training import Trainable, TrainingOptions
 
@@ -80,6 +82,20 @@ def test_skip_retrain(ml_ds: Dataset):
     assert not pipe.run(item=-100)
 
 
+def test_warn_incomplete_trainable():
+    "Check that adding a trainable class without is_trained is a warning."
+    pipe = PipelineBuilder()
+    with warns(PipelineWarning, match=r"does not fully implement"):
+        pipe.add_component("partial", PartialTrainable)
+
+
+def test_warn_incomplete_trainable_instance():
+    "Check that adding a trainable object without is_trained is a warning."
+    pipe = PipelineBuilder()
+    with warns(PipelineWarning, match=r"does not fully implement"):
+        pipe.add_component("partial", PartialTrainable())
+
+
 @dataclass
 class TConfig:
     train_limit: int | None = None
@@ -111,3 +127,13 @@ class TComponent(Component, Trainable):
 
     def load_params(self, params: dict[str, Any]) -> None:
         self.items = params["items"]
+
+
+class PartialTrainable(Component):
+    config: None
+
+    def __call__(self) -> str:
+        return "foo"
+
+    def train(self, data: Dataset, options: TrainingOptions):
+        pass

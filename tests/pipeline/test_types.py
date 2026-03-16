@@ -27,6 +27,7 @@ from lenskit.pipeline._types import (
     import_path_string,
     is_compatible_data,
     is_compatible_type,
+    is_instance_or_subclass,
     make_importable_path,
 )
 
@@ -183,3 +184,24 @@ def test_parse_string_class():
 
 def test_parse_string_mod_class():
     assert import_path_string("pathlib:Path") is Path
+
+
+def test_is_not_instance():
+    assert not is_instance_or_subclass(10, str)
+
+
+def test_is_not_subclass():
+    assert not is_instance_or_subclass(int, str)
+
+
+def test_is_instance():
+    assert is_instance_or_subclass("foo", str)
+
+
+def test_is_instance_proto():
+    assert is_instance_or_subclass([], Sequence)
+    assert not is_instance_or_subclass(10, Sequence)
+
+
+def test_is_subclass_proto():
+    assert is_instance_or_subclass(list, Sequence)

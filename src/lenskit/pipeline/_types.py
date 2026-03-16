@@ -220,6 +220,16 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
     return False
 
 
+def is_instance_or_subclass(obj: Any, typ: type):
+    """
+    Query if an object is an instance or subclass of the specified type.
+    """
+    if isinstance(obj, type):
+        return issubclass(obj, typ)
+    else:
+        return isinstance(obj, typ)
+
+
 def make_importable_path(obj: type | FunctionType | None) -> str:
     """
     Compute a string representation of a class or function that is both
