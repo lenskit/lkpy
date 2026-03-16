@@ -36,6 +36,8 @@ Breaking Changes
 - Stopped providing wheels for macOS on Intel.  Users who still need to run
   LensKit on Intel-based Macs should use the Conda packages (available in conda-forge and
   `prefix.dev`_).
+- Removed the deprecated ``lenskit.training.IterativeTraining`` base class in
+  favor of :class:`lenskit.training.UsesTrainer`.
 
 .. _prefix.dev: https://prefix.dev/channels/lenskit/
 
