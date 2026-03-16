@@ -246,6 +246,7 @@ def component_inputs(
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
     *,
     warn_on_missing: bool = True,
+    _warn_level: int = 1,
 ) -> dict[str, ComponentInput]:
     if isinstance(component, FunctionType):
         function = component
@@ -275,7 +276,7 @@ def component_inputs(
             warnings.warn(
                 f"parameter {param.name} of component {component} has no type annotation",
                 TypecheckWarning,
-                2,
+                stacklevel=_warn_level + 1,
             )
 
         if ci.type is None or is_compatible_data(None, ci.type):

@@ -9,6 +9,7 @@ Tests for the pipeline type-checking functions.
 """
 
 import typing
+import warnings
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from types import NoneType
@@ -67,7 +68,9 @@ def test_type_compat_protocol_generic():
 
 
 def test_type_compat_generics_with_protocol():
-    assert is_compatible_type(list[int], Sequence[int])
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r"cannot type-check generic", TypecheckWarning)
+        assert is_compatible_type(list[int], Sequence[int])
 
 
 def test_type_incompat_generics():
