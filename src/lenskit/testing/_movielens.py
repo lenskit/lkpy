@@ -17,13 +17,14 @@ import pandas as pd
 
 import pytest
 
-from lenskit.basic import PopScorer, SoftmaxRanker
+from lenskit.basic import PopScorer
 from lenskit.batch import recommend
 from lenskit.data import Dataset, ItemListCollection, UserIDKey
 from lenskit.data.movielens import load_movielens, load_movielens_df
 from lenskit.logging import get_logger
 from lenskit.pipeline import RecPipelineBuilder
 from lenskit.splitting import TTSplit, simple_test_pair
+from lenskit.stochastic import StochasticTopNRanker
 
 _log = get_logger("lenskit.testing")
 
@@ -128,7 +129,7 @@ def demo_recs() -> DemoRecs:
 
     builder = RecPipelineBuilder()
     builder.scorer(PopScorer())
-    builder.ranker(SoftmaxRanker(n=500))
+    builder.ranker(StochasticTopNRanker(n=500))
     pipe = builder.build()
     pipe.train(split.train)
 

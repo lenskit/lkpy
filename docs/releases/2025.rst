@@ -218,7 +218,7 @@ Component Changes
 -   The :mod:`lenskit.als` scorers have been similarly refactored, and had their
     learned parameters renamed for better consistency.
 
--   Replaced the broken :class:`~lenskit.basic.SoftmaxRanker` with a proper
+-   Replaced the broken ``lenskit.basic.SoftmaxRanker`` with a proper
     stochastic sampler (:pr:`667`,
     :class:`~lenskit.stochastic.StochasticTopNRanker`).  The old ranker will be
     removed in LensKit 2026.

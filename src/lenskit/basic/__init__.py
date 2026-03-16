@@ -18,7 +18,7 @@ from .candidates import (
 from .composite import FallbackScorer
 from .history import UserTrainingHistoryLookup
 from .popularity import PopConfig, PopScorer
-from .random import RandomSelector, SoftmaxRanker
+from .random import RandomSelector
 from .topn import TopNConfig, TopNRanker
 
 __all__ = [
@@ -31,7 +31,6 @@ __all__ = [
     "TopNConfig",
     "TopNRanker",
     "RandomSelector",
-    "SoftmaxRanker",
     "UserTrainingHistoryLookup",
     "TrainingItemsCandidateConfig",
     "TrainingItemsCandidateSelector",
