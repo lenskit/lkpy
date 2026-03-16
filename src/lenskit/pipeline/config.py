@@ -24,7 +24,7 @@ from deepmerge import always_merger
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
-from lenskit.diagnostics import PipelineError
+from lenskit.diagnostics import PipelineError, PipelineWarning
 
 from ._hooks import HookEntry
 from ._types import make_importable_path
@@ -42,8 +42,8 @@ class PipelineHook(BaseModel):
 
     @classmethod
     def from_entry(cls, hook: HookEntry[Any]):
-        if not isinstance(hook, FunctionType):  # type: ignore
-            warnings.warn(f"hook {hook.function} is not a function")
+        if not isinstance(hook.function, FunctionType):  # type: ignore
+            warnings.warn(f"hook {hook.function} is not a function", PipelineWarning)
         function = f"{hook.function.__module__}:{hook.function.__qualname__}"
         return cls(function=function, priority=hook.priority)
 
