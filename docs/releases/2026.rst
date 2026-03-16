@@ -38,6 +38,8 @@ Breaking Changes
   `prefix.dev`_).
 - Removed the deprecated ``lenskit.training.IterativeTraining`` base class in
   favor of :class:`lenskit.training.UsesTrainer`.
+- Component class members have been renamed to no longer use the Scikit-Learn
+  pattern of trailing ``_`` in their names.
 
 .. _prefix.dev: https://prefix.dev/channels/lenskit/
 
