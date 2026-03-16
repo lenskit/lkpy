@@ -166,7 +166,7 @@ def test_pipeline_with_fair_reranker():
     prot_flags = ds.entities("item").attribute("protected").pandas().reindex(ids)
     counts = prot_flags.cumsum()
     reranker = pipe.node("reranker").component
-    assert np.all(counts >= reranker.m_list_[: len(ids)])
+    assert np.all(counts >= reranker.m_list[: len(ids)])
 
 
 def test_extreme_values():
