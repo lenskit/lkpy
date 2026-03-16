@@ -326,7 +326,11 @@ class Pipeline:
     def train(self, data: Dataset, options: TrainingOptions | None = None) -> None:
         """
         Trains the pipeline's trainable components (those implementing the
-        :class:`TrainableComponent` interface) on some training data.
+        :class:`Trainable` interface) on some training data.
+
+        If the :attr:`~TrainingOptions.retrain` option is ``False``, this method
+        will skip training components that are already trained (as reported by
+        the :meth:`~Trainable.is_trained` method).
 
         .. admonition:: Random Number Generation
             :class: note
@@ -362,10 +366,15 @@ class Pipeline:
                 case ComponentInstanceNode(name, comp):
                     clog = log.bind(name=name, component=comp)
                     if isinstance(comp, Trainable):
-                        # spawn new seed if needed
-                        c_opts = options if seed is None else replace(options, rng=seed.spawn(1)[0])
-                        clog.debug("training component")
-                        comp.train(data, c_opts)
+                        if comp.is_trained() and not options.retrain:
+                            clog.debug("component is already, traine3d skipping")
+                        else:
+                            # spawn new seed if needed
+                            c_opts = (
+                                options if seed is None else replace(options, rng=seed.spawn(1)[0])
+                            )
+                            clog.debug("training component")
+                            comp.train(data, c_opts)
                     else:
                         clog.debug("training not required")
                 case _:
