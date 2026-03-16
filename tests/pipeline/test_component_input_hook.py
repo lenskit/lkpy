@@ -9,9 +9,9 @@ from typing import Any
 
 from lenskit.logging import get_logger
 from lenskit.pipeline import PipelineBuilder
+from lenskit.pipeline._types import Lazy, T
 from lenskit.pipeline.components import ComponentInput
 from lenskit.pipeline.nodes import ComponentInstanceNode
-from lenskit.pipeline.types import Lazy, T
 
 _log = get_logger(__name__)
 hook_calls = ContextVar(f"lk-{__name__}-hook-calls", default=[])

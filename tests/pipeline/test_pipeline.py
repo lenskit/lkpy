@@ -13,8 +13,8 @@ from typing_extensions import assert_type
 from pytest import raises, warns
 
 from lenskit.pipeline import PipelineBuilder, PipelineError
+from lenskit.pipeline._types import TypecheckWarning
 from lenskit.pipeline.nodes import InputNode, Node
-from lenskit.pipeline.types import TypecheckWarning
 
 
 def test_init_empty():

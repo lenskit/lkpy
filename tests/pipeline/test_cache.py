@@ -12,8 +12,7 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from pytest import mark
 
-from lenskit.pipeline import Component, PipelineBuilder
-from lenskit.pipeline.cache import PipelineCache
+from lenskit.pipeline import Component, PipelineBuilder, PipelineCache
 from lenskit.pipeline.nodes import ComponentInstanceNode
 
 

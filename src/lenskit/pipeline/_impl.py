@@ -31,19 +31,19 @@ from lenskit.logging import get_logger
 
 from . import config
 from ._hooks import RunHooks, default_run_hooks
+from ._state import PipelineState
 from .config import PipelineConfig
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
     Node,
 )
-from .state import PipelineState
 
 if TYPE_CHECKING:
     from lenskit.training import TrainingOptions
 
+    from ._builder import PipelineBuilder
     from ._profiling import ProfileSink
-    from .builder import PipelineBuilder
 
 _log = get_logger(__name__)
 
@@ -278,7 +278,7 @@ class Pipeline:
                 configuration includes a hash but the constructed pipeline does
                 not have a matching hash.
         """
-        from .builder import PipelineBuilder
+        from ._builder import PipelineBuilder
 
         config = PipelineConfig.model_validate(config)
         builder = PipelineBuilder.from_config(config, file_path=file_path)
@@ -300,7 +300,7 @@ class Pipeline:
         See Also:
             :meth:`from_config` for the actual pipeline instantiation logic.
         """
-        from .builder import PipelineBuilder
+        from ._builder import PipelineBuilder
 
         bld = PipelineBuilder.load_config(cfg_file)
         return bld.build()
@@ -319,7 +319,7 @@ class Pipeline:
             :meth:`~lenskit.pipeline.PipelineBuilder.build`, the modifying
             builder does not have default connections.
         """
-        from .builder import PipelineBuilder
+        from ._builder import PipelineBuilder
 
         return PipelineBuilder.from_pipeline(self)
 
@@ -479,7 +479,7 @@ class Pipeline:
             The full pipeline state, with :attr:`~PipelineState.default` set to
             the last node specified.
         """
-        from .runner import PipelineRunner
+        from ._runner import PipelineRunner
 
         prof = _profile.run_profiler() if _profile is not None else None
         runner = PipelineRunner(self, kwargs, profiler=prof)

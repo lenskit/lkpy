@@ -32,7 +32,7 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning, is_compatible_data
+from ._types import Lazy, TypecheckWarning, is_compatible_data
 
 P = ParamSpec("P")
 T = TypeVar("T")

@@ -22,7 +22,7 @@ from numpy.typing import ArrayLike, NDArray
 from pytest import mark, warns
 
 from lenskit.data import Dataset, MatrixRelationshipSet, RelationshipSet
-from lenskit.pipeline.types import (
+from lenskit.pipeline._types import (
     TypecheckWarning,
     import_path_string,
     is_compatible_data,

@@ -35,7 +35,7 @@ from docopt import docopt
 if prj_root := os.environ.get("MISE_PROJECT_ROOT", None):
     sys.path.insert(0, f"{prj_root}/src")
 
-from lenskit._version import lenskit_version
+from lenskit._version import lenskit_version  # noqa: PLC2701
 
 _log = logging.getLogger("lenskit.version-tool")
 

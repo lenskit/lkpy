@@ -21,8 +21,7 @@ from lenskit.basic.history import UserTrainingHistoryLookup
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
 from lenskit.diagnostics import DataWarning
 from lenskit.knn.item import ItemKNNScorer
-from lenskit.pipeline import topn_pipeline
-from lenskit.pipeline.common import predict_pipeline
+from lenskit.pipeline import predict_pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)

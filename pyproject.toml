@@ -188,13 +188,14 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "Q", "B904"]
+preview = true
+select = ["E", "F", "I", "W", "Q", "B904", "PLC2701"]
 unfixable = ["F401"]
 exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.ruff.lint.per-file-ignores]
 # Importing PyTest fixtures triggers F811
-"tests/*.py" = ["F811", "F401"]
+"tests/*.py" = ["F811", "F401", "PLC2701"]
 
 [tool.ruff.lint.isort]
 section-order = [

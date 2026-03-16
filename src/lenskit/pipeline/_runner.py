@@ -20,9 +20,9 @@ from lenskit.logging import get_logger, trace
 
 from ._impl import Pipeline
 from ._profiling import RunProfiler
+from ._types import SkipComponent, SkipInput, is_compatible_data
 from .components import ComponentInput, component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
-from .types import SkipComponent, SkipInput, is_compatible_data
 
 _log = get_logger(__name__)
 T = TypeVar("T")

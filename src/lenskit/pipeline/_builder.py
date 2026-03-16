@@ -27,9 +27,10 @@ from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
 
 from . import config
+from ._cache import PipelineCache
 from ._hooks import ComponentInputHook, HookEntry, RunHooks
 from ._impl import Pipeline
-from .cache import PipelineCache
+from ._types import TypecheckWarning, import_path_string
 from .components import (
     Component,
     ComponentConstructor,
@@ -46,7 +47,6 @@ from .nodes import (
     LiteralNode,
     Node,
 )
-from .types import TypecheckWarning, import_path_string
 
 _log = get_logger(__name__)
 
@@ -660,7 +660,7 @@ class PipelineBuilder:
                 configuration includes a hash but the constructed pipeline does
                 not have a matching hash.
         """
-        from .common import topn_builder, topn_predict_builder
+        from ._common import topn_builder, topn_predict_builder
 
         cfg = PipelineConfig.model_validate(config)
 

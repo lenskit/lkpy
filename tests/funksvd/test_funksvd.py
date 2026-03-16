@@ -15,7 +15,7 @@ from pytest import approx, importorskip, mark
 
 from lenskit import batch
 from lenskit.data import Dataset, ItemList, ItemListCollection, UserIDKey, from_interactions_df
-from lenskit.pipeline.common import predict_pipeline
+from lenskit.pipeline import predict_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 funk = importorskip("lenskit.funksvd")

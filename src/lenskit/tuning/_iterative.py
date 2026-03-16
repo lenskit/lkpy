@@ -13,7 +13,6 @@ from __future__ import annotations
 import pickle
 from pathlib import Path
 
-import ray
 import ray.tune
 import ray.tune.result
 import torch

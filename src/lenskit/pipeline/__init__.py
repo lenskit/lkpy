@@ -12,12 +12,14 @@ from __future__ import annotations
 
 from lenskit.diagnostics import PipelineError, PipelineWarning
 
+from ._builder import PipelineBuilder
+from ._cache import PipelineCache
+from ._common import RecPipelineBuilder, predict_pipeline, topn_pipeline
 from ._hooks import ComponentInputHook
 from ._impl import CloneMethod, Pipeline
 from ._profiling import PipelineProfiler, ProfileSink
-from .builder import PipelineBuilder
-from .cache import PipelineCache
-from .common import RecPipelineBuilder, predict_pipeline, topn_pipeline
+from ._state import PipelineState
+from ._types import Lazy
 from .components import (
     Component,
     ComponentConstructor,
@@ -25,8 +27,6 @@ from .components import (
 )
 from .config import PipelineConfig
 from .nodes import Node
-from .state import PipelineState
-from .types import Lazy
 
 __all__ = [
     "Pipeline",

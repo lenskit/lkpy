@@ -28,8 +28,7 @@ from lenskit.data import (
 )
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import get_parallel_config, is_free_threaded
-from lenskit.pipeline import Pipeline, PipelineProfiler
-from lenskit.pipeline._profiling import ProfileSink
+from lenskit.pipeline import Pipeline, PipelineProfiler, ProfileSink
 
 from ._queries import BatchRequest, normalize_query_input
 from ._results import BatchResultRow, BatchResults
