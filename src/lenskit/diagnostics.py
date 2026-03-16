@@ -42,6 +42,12 @@ class ConfigWarning(UserWarning):
     pass
 
 
+class TypecheckWarning(UserWarning):
+    "Warnings for runtime type check failures."
+
+    pass
+
+
 class PipelineError(Exception):
     """
     Pipeline configuration errors.

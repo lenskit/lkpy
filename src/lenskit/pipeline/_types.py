@@ -25,7 +25,7 @@ from typing import (
 
 import numpy as np
 
-from lenskit.diagnostics import PipelineWarning
+from lenskit.diagnostics import PipelineWarning, TypecheckWarning
 
 T = TypeVar("T", covariant=True)
 """
@@ -46,12 +46,6 @@ This type is intended to encapsulate any fully-resolved type expression.
 - :class:`~types.MethodType`
 - :class:`~typing.TypeVar`
 """
-
-
-class TypecheckWarning(UserWarning):
-    "Warnings about type-checking logic."
-
-    pass
 
 
 class SkipComponent(Exception):
