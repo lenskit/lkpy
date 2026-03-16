@@ -41,27 +41,30 @@ class PopScorer(Component[ItemList], Trainable):
 
     Stability:
         Caller
-
-    Attributes:
-        item_pop_:
-            Item popularity scores.
     """
 
     config: PopConfig
 
-    items_: Vocabulary
-    item_scores_: np.ndarray[tuple[int], np.dtype[np.float32]]
+    items: Vocabulary
+    """
+    Vocabulary of known items at training time.
+    """
+    item_scores: np.ndarray[tuple[int], np.dtype[np.float32]]
+    """
+    Array of per-item popularity scores.
+    """
+
+    @override
+    def is_trained(self):
+        return hasattr(self, "item_scores")
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "item_scores_") and not options.retrain:
-            return
-
         _log.info("counting item popularity")
-        self.items_ = data.items
+        self.items = data.items
         stats = data.item_stats()
         scores = stats["count"]
-        self.item_scores_ = np.require(self._train_internal(scores).values, np.float32)
+        self.item_scores = np.require(self._train_internal(scores).values, np.float32)
 
     def _train_internal(self, scores: pd.Series) -> pd.Series:
         if self.config.score == "rank":
@@ -80,12 +83,12 @@ class PopScorer(Component[ItemList], Trainable):
             raise ValueError("invalid scoring method " + repr(self.config.score))
 
     def __call__(self, items: ItemList) -> ItemList:
-        inums = items.numbers(vocabulary=self.items_, missing="negative")
+        inums = items.numbers(vocabulary=self.items, missing="negative")
         mask = inums >= 0
         good_inums = inums[mask]
         _log.debug("getting popularity scores", n_good=len(good_inums), n_all=len(inums))
         scores = np.full(len(items), np.nan, np.float32)
-        scores[mask] = self.item_scores_[inums[mask]]
+        scores[mask] = self.item_scores[inums[mask]]
         return ItemList(items, scores=scores)
 
 
@@ -128,5 +131,5 @@ class TimeBoundedPopScore(PopScorer):
 
             item_scores = super()._train_internal(counts)
 
-        self.items_ = data.items
-        self.item_scores_ = np.require(item_scores.reindex(self.items_.ids()).values, np.float32)
+        self.items = data.items
+        self.item_scores = np.require(item_scores.reindex(self.items.ids()).values, np.float32)
