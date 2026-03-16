@@ -32,8 +32,8 @@ def test_hpf_train_large(tmp_path, ml_ratings):
     ds = from_interactions_df(ratings)
     algo.train(ds)
 
-    assert algo.user_features_.shape[0] == ratings.user_id.nunique()
-    assert algo.item_features_.shape[0] == ratings.item_id.nunique()
+    assert algo.user_features.shape[0] == ratings.user_id.nunique()
+    assert algo.item_features.shape[0] == ratings.item_id.nunique()
 
     mfile = tmp_path / "hpf.dat"
     with mfile.open("wb") as mf:
@@ -42,8 +42,8 @@ def test_hpf_train_large(tmp_path, ml_ratings):
     with mfile.open("rb") as mf:
         a2 = pickle.load(mf)
 
-    assert np.all(a2.user_features_ == algo.user_features_)
-    assert np.all(a2.item_features_ == algo.item_features_)
+    assert np.all(a2.user_features == algo.user_features)
+    assert np.all(a2.item_features == algo.item_features)
 
     pipe = topn_pipeline(algo)
     pipe.train(ds, TrainingOptions(retrain=False))
@@ -61,8 +61,8 @@ def test_hpf_train_binary(tmp_path, ml_ratings):
     ds = from_interactions_df(ratings)
     algo.train(ds)
 
-    assert algo.user_features_.shape[0] == ratings.user_id.nunique()
-    assert algo.item_features_.shape[0] == ratings.item_id.nunique()
+    assert algo.user_features.shape[0] == ratings.user_id.nunique()
+    assert algo.item_features.shape[0] == ratings.item_id.nunique()
 
     mfile = tmp_path / "hpf.dat"
     with mfile.open("wb") as mf:
@@ -71,8 +71,8 @@ def test_hpf_train_binary(tmp_path, ml_ratings):
     with mfile.open("rb") as mf:
         a2 = pickle.load(mf)
 
-    assert np.all(a2.user_features_ == algo.user_features_)
-    assert np.all(a2.item_features_ == algo.item_features_)
+    assert np.all(a2.user_features == algo.user_features)
+    assert np.all(a2.item_features == algo.item_features)
 
     pipe = topn_pipeline(algo)
     pipe.train(ds, TrainingOptions(retrain=False))
