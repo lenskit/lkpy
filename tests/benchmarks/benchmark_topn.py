@@ -148,6 +148,19 @@ def test_torch_topk_gpu(rng: np.random.Generator, size: int, benchmark):
 
 @mark.benchmark(group="topn")
 @mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
+def test_argtopn_rs(rng: np.random.Generator, size: int, benchmark):
+    ensure_parallel_init()
+    scores = rng.standard_exponential(size)
+    scores = pa.array(scores, pa.float32())
+
+    def sort():
+        _idx = data.argtopn(scores, 100)
+
+    benchmark(sort)
+
+
+@mark.benchmark(group="topn")
+@mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
 def test_list_topn(rng: np.random.Generator, size: int, benchmark):
     ensure_parallel_init()
     scores = rng.standard_exponential(size)

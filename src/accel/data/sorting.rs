@@ -4,7 +4,7 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::cmp::Reverse;
+use std::{cmp::Reverse, collections::BinaryHeap};
 
 use arrow::{
     array::{
@@ -125,4 +125,103 @@ where
     }
 
     indices
+}
+
+#[pyfunction]
+pub(crate) fn argtopn<'py>(
+    py: Python<'py>,
+    scores: PyArrowType<ArrayData>,
+    n: usize,
+) -> PyResult<PyArrowType<ArrayData>> {
+    if n <= 0 {
+        return Err(PyValueError::new_err("n must be positive"));
+    }
+
+    let scores = make_array(scores.0);
+    let array = py.detach(|| {
+        let indices = match_array_type!(scores, {
+            floating(arr) => argtopn_float(arr, n),
+            integer(arr) => argtopn_int(arr, n),
+        })?;
+
+        PyResult::Ok(Int32Array::from(indices))
+    })?;
+    Ok(array.into_data().into())
+}
+
+struct HK<T: Ord> {
+    index: i32,
+    value: T,
+}
+
+impl<T: Ord> PartialEq for HK<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.value.eq(&other.value) && self.index.eq(&other.index)
+    }
+}
+
+impl<T: Ord> PartialOrd for HK<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.value.partial_cmp(&other.value)
+    }
+}
+
+impl<T: Ord> Eq for HK<T> {}
+
+impl<T: Ord> Ord for HK<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
+fn argtopn_float<T: ArrowPrimitiveType>(scores: &PrimitiveArray<T>, n: usize) -> Vec<i32>
+where
+    T::Native: FloatCore,
+{
+    let mut heap = BinaryHeap::with_capacity(n + 1);
+    for (i, v) in scores.iter().enumerate() {
+        if let Some(v) = v {
+            if let Ok(nnv) = NotNan::new(v) {
+                heap.push(HK {
+                    index: i as i32,
+                    value: nnv,
+                });
+            }
+        }
+        while heap.len() > n {
+            heap.pop();
+        }
+    }
+
+    let mut out: Vec<_> = Vec::with_capacity(n);
+    for k in heap.drain() {
+        out.push(k.index)
+    }
+
+    out
+}
+
+fn argtopn_int<T: ArrowPrimitiveType>(scores: &PrimitiveArray<T>, n: usize) -> Vec<i32>
+where
+    T::Native: Ord,
+{
+    let mut heap = BinaryHeap::with_capacity(n + 1);
+    for (i, v) in scores.iter().enumerate() {
+        if let Some(v) = v {
+            heap.push(HK {
+                index: i as i32,
+                value: v,
+            });
+        }
+        while heap.len() > n {
+            heap.pop();
+        }
+    }
+
+    let mut out: Vec<_> = Vec::with_capacity(n);
+    for k in heap.drain() {
+        out.push(k.index)
+    }
+
+    out
 }
