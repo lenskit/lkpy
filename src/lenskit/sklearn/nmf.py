@@ -65,10 +65,11 @@ class NMFScorer(Component[ItemList], Trainable):
     item_components: NPMatrix
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "item_components") and not options.retrain:
-            return
+    def is_trained(self):
+        return hasattr(self, "item_components")
 
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         timer = Stopwatch()
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
