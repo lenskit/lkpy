@@ -79,6 +79,9 @@ class FAIRReranker(Component[ItemList], Trainable):
     config: FAIRRerankerConfig
     "FA*IR reranker configuration."
 
+    alpha_c: float
+    m_list: list[int]
+
     def _compute_m_list(self, n, p, alpha):
         n_vals = np.arange(1, n + 1)
         # if we see m or fewer protected, it’s rare enough (probability ≤ α) that we call it unfair.
@@ -87,14 +90,14 @@ class FAIRReranker(Component[ItemList], Trainable):
         m_list_ = np.clip(m_list_, 0, n_vals).astype(int)
         return m_list_
 
-    def _compute_blocks(self, m_list_):
-        max_m = int(m_list_[-1])
+    def _compute_blocks(self, m_list):
+        max_m = int(m_list[-1])
         if max_m == 0:
             return []
 
         # find the positions where m increases to form blocks
         # (last value of each block increases by 1)
-        change_points = np.flatnonzero(np.diff(m_list_, prepend=0)) + 1
+        change_points = np.flatnonzero(np.diff(m_list, prepend=0)) + 1
         block_sizes = np.diff(change_points, prepend=0)
         return block_sizes
 
@@ -142,6 +145,10 @@ class FAIRReranker(Component[ItemList], Trainable):
         return alpha_c
 
     @override
+    def is_trained(self):
+        return hasattr(self, "alpha_c")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Precompute adjusted alpha and m-table for the configured (n,p,alpha)
@@ -162,11 +169,11 @@ class FAIRReranker(Component[ItemList], Trainable):
         log.info("computing FA*IR thresholds")
 
         # 1. find α_c
-        self.alpha_c_ = self._binary_search_significance(
+        self.alpha_c = self._binary_search_significance(
             n=self.config.n, p=self.config.p, alpha=self.config.alpha
         )
         # 2. compute m_table
-        self.m_list_ = self._compute_m_list(n=self.config.n, p=self.config.p, alpha=self.alpha_c_)
+        self.m_list = self._compute_m_list(n=self.config.n, p=self.config.p, alpha=self.alpha_c)
 
         items = data.entities("item")
         protected = self.config.protected_attribute
@@ -185,7 +192,7 @@ class FAIRReranker(Component[ItemList], Trainable):
             timer,
             self.config.p,
             self.config.alpha,
-            self.alpha_c_,
+            self.alpha_c,
         )
 
     def __call__(self, items: ItemList, n: int | None = None) -> ItemList:
@@ -222,7 +229,7 @@ class FAIRReranker(Component[ItemList], Trainable):
 
         # rerank the list
         for i in range(n):
-            if count_prot < self.m_list_[i] and p_items:
+            if count_prot < self.m_list[i] and p_items:
                 reranked_indices.append(p_items.popleft())
                 count_prot += 1
             elif p_items and up_items:

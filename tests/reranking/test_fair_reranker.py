@@ -80,7 +80,7 @@ def test_rerank_small_list():
     prot_flags = data.entities("item").attribute("flag").pandas().reindex(ids)
 
     counts = prot_flags.cumsum()
-    assert np.all(counts >= reranker.m_list_[: len(ids)])
+    assert np.all(counts >= reranker.m_list[: len(ids)])
     assert len(ids) == len(set(ids))  # check for duplicates
 
 
@@ -133,7 +133,7 @@ def test_randomized_reranking(n, p, alpha):
 
     # verify that fairness constraints are enforced
     counts = np.cumsum([iid in items[protected] for iid in ids])
-    assert np.all(counts >= reranker.m_list_[: len(counts)])
+    assert np.all(counts >= reranker.m_list[: len(counts)])
 
     assert len(ids) == len(set(ids))  # check for duplicates
 
@@ -186,7 +186,7 @@ def test_extreme_values():
     prot_flags = data.entities("item").attribute("protected").pandas().reindex(ids)
 
     counts = prot_flags.cumsum()
-    assert np.all(counts >= reranker.m_list_[: len(ids)])
+    assert np.all(counts >= reranker.m_list[: len(ids)])
 
 
 def test_expected_output_with_missing_att():
