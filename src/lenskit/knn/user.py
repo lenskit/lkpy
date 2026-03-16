@@ -100,6 +100,10 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     @override
+    def is_trained(self):
+        return hasattr(self, "user_ratings")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
@@ -108,9 +112,6 @@ class UserKNNScorer(Component[ItemList], Trainable):
         Args:
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
-        if hasattr(self, "user_ratings_") and not options.retrain:
-            return
-
         ensure_parallel_init()
         rmat = (
             data.interactions().matrix().scipy(attribute="rating" if self.config.explicit else None)

@@ -15,6 +15,7 @@ import torch
 from humanize import naturalsize
 from packaging.version import Version
 from pydantic import BaseModel, PositiveFloat
+from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.types import NPMatrix
@@ -76,12 +77,14 @@ class EASEScorer(Component[ItemList], Trainable):
     Item interpolation weight matrix.
     """
 
+    @override
+    def is_trained(self):
+        return hasattr(self, "weights")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions | None = None):
         if options is None:
             options = TrainingOptions()
-
-        if hasattr(self, "weights") and not options.retrain:
-            return
 
         ensure_parallel_init()
 
