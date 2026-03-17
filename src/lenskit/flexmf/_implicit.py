@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,10 +12,11 @@ from typing import Literal, TypeAlias
 
 import numpy as np
 import torch
-from pydantic import PositiveFloat, PositiveInt, model_validator
+from pydantic import NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 from torch.nn import functional as F
 
 from lenskit.data import Dataset
+from lenskit.logging import get_logger
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
 from ._model import FlexMFModel
@@ -25,6 +26,24 @@ MAX_TRIES = 200
 ImplicitLoss: TypeAlias = Literal["logistic", "pairwise", "warp"]
 NegativeStrategy: TypeAlias = Literal["uniform", "popular", "misranked"]
 
+_log = get_logger(__name__)
+
+PRESETS = {
+    "bpr": {"loss": "pairwise", "user_bias": False, "item_bias": False},
+    "warp": {
+        "loss": "warp",
+        "negative_strategy": "misranked",
+        "user_bias": False,
+        "item_bias": False,
+    },
+    "lightgcn": {
+        "loss": "pairwise",
+        "user_bias": False,
+        "item_bias": False,
+        "convolution_layers": 3,
+    },
+}
+
 
 class FlexMFImplicitConfig(FlexMFConfigBase):
     """
@@ -33,6 +52,11 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
 
     Stability:
         Experimental
+    """
+
+    preset: Literal["bpr", "warp", "lightgcn"] | None = None
+    """
+    Select preset defaults to mimic a particular model's original presentation.
     """
 
     loss: ImplicitLoss = "logistic"
@@ -73,6 +97,12 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
     Whether to learn an item bias term.
     """
 
+    convolution_layers: NonNegativeInt = 0
+    """
+    The number of LightGCN convolution layers to use.  0 (the default)
+    configures for standard matrix factorization.
+    """
+
     def selected_negative_strategy(self) -> NegativeStrategy:
         if self.negative_strategy is not None:
             return self.negative_strategy
@@ -80,6 +110,17 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
             return "misranked"
         else:
             return "uniform"
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_preset(cls, data):
+        if preset := data.get("preset", None):
+            if preset in PRESETS:
+                return PRESETS[preset] | data
+            else:
+                raise ValueError(f"unknown preset '{preset}'")
+        else:
+            return data
 
     @model_validator(mode="after")
     def check_strategies(self):
@@ -142,6 +183,23 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         matrix = data.interactions().matrix()
         coo = matrix.coo_structure()
 
+        ui_mat = iu_mat = None
+        if self.config.convolution_layers:
+            _log.debug("preparing convolution neighborhood matrix")
+            mat = matrix.torch(layout="coo")
+            unorms = mat.sum(1).to_dense().sqrt()
+            inorms = mat.sum(0).to_dense().sqrt()
+            idx = mat.indices()
+            vals = mat.values()
+            ui_mat = torch.sparse_coo_tensor(
+                idx,
+                vals / unorms[idx[0, :]] / inorms[idx[1, :]],
+                mat.size(),
+                requires_grad=False,
+            ).to(self.device)
+            iu_mat = ui_mat.T.to_sparse_csr().detach()
+            ui_mat = ui_mat.to_sparse_csr().detach()
+
         # save data we learned at this stage
         self.component.users = data.users
         self.component.items = data.items
@@ -152,7 +210,9 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             n_items=data.item_count,
             users=coo.row_numbers,
             items=coo.col_numbers,
-            matrix=matrix,
+            interactions=matrix,
+            ui_matrix=ui_mat,
+            iu_matrix=iu_mat,
         )
 
     def create_model(self) -> FlexMFModel:
@@ -173,6 +233,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             self.torch_rng,
             user_bias=user_bias,
             item_bias=self.config.item_bias,
+            layers=self.config.convolution_layers,
             sparse=self.config.reg_method != "AdamW",
         )
 
@@ -189,6 +250,11 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         return scores, norms
 
     def train_batch(self, batch: FlexMFTrainingBatch) -> torch.Tensor:
+        # for LightGCN, we have to update the convolution layers *every* batch
+        if batch.data.ui_matrix is not None:
+            assert batch.data.iu_matrix is not None
+            self.model.update_convolution(batch.data.ui_matrix, batch.data.iu_matrix)
+
         users = torch.as_tensor(batch.users.reshape(-1, 1)).to(self.device, non_blocking=True)
         positives = torch.as_tensor(batch.items.reshape(-1, 1)).to(self.device, non_blocking=True)
 
@@ -209,10 +275,10 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
     def scored_negatives(
         self, batch: FlexMFTrainingBatch, users: torch.Tensor, pos_scores: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None]:
-        assert batch.data.matrix is not None
+        assert batch.data.interactions is not None
         assert isinstance(batch.users, np.ndarray)
         items = torch.as_tensor(
-            batch.data.matrix.sample_negatives(
+            batch.data.interactions.sample_negatives(
                 batch.users,
                 weighting=self.config.selected_negative_strategy(),
                 n=self.config.negative_count,
@@ -225,7 +291,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
 class FlexMFWARPTrainer(FlexMFImplicitTrainer):
     def scored_negatives(self, batch, users, pos_scores):
-        assert batch.data.matrix is not None
+        assert batch.data.interactions is not None
         assert isinstance(batch.users, np.ndarray)
 
         # start looking for misranked models
@@ -247,7 +313,7 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             n_users = batch.users[needed]
             if bi == 0:
                 neg_cand = torch.as_tensor(
-                    batch.data.matrix.sample_negatives(
+                    batch.data.interactions.sample_negatives(
                         n_users,
                         n=10,
                         weighting="uniform",

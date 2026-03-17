@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -52,6 +52,10 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     """
     The component whose model is being trained.
     """
+    options: TrainingOptions
+    """
+    The LensKit training options.
+    """
     opt: torch.optim.Optimizer
     """
     The PyTorch optimizer.
@@ -95,6 +99,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         ensure_parallel_init()
 
         self.component = component
+        self.options = options
         self.explicit_norm = component.config.reg_method == "L2"
 
         self.log = _log.bind(scorer=self.__class__.__name__, size=self.config.embedding_size)
@@ -116,29 +121,31 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.component.model = self.model.to(self.device)
         self.model.train(True)
 
-        if platform.system() not in ("Linux", "Darwin"):
-            _log.warn(
-                "compiled models are only usable on Linux and macOS, using uncompiled model",
-                err_code="LKW-TCOMP",
-            )
-        elif torch.__version__ < "2.8":
-            _log.warn(
-                "compiled models require Torch >=2.8, using uncompiled model", err_code="LKW-TCOMP"
-            )
-        else:
-            _log.debug("compiling FlexMF model")
-            try:
-                self._compiled_model = torch.compile(self.model)
-            except RuntimeError as e:
-                (msg,) = e.args
-                if msg.startswith("torch.compile"):
-                    _log.warn(
-                        "Torch compilation failed, using uncompiled model",
-                        exc_info=e,
-                        err_code="LKW-TCOMP",
-                    )
-                else:
-                    raise e
+        if options.env_flag("LK_TORCH_COMPILE", default=True):
+            if platform.system() not in ("Linux", "Darwin"):
+                _log.warn(
+                    "compiled models are only usable on Linux and macOS, using uncompiled model",
+                    err_code="LKW-TCOMP",
+                )
+            elif torch.__version__ < "2.8":
+                _log.warn(
+                    "compiled models require Torch >=2.8, using uncompiled model",
+                    err_code="LKW-TCOMP",
+                )
+            else:
+                _log.debug("compiling FlexMF model")
+                try:
+                    self._compiled_model = torch.compile(self.model)
+                except RuntimeError as e:
+                    (msg,) = e.args
+                    if msg.startswith("torch.compile"):
+                        _log.warn(
+                            "Torch compilation failed, using uncompiled model",
+                            exc_info=e,
+                            err_code="LKW-TCOMP",
+                        )
+                    else:
+                        raise e
 
         self.setup_optimizer()
 
@@ -188,11 +195,13 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
                 blog.debug("training batch")
                 loss = self.train_batch(batch)
                 self.opt.zero_grad()
+                tot_loss += loss
 
                 if i % 20 == 0:
-                    avg_loss = tot_loss.item() / epoch_data.batch_count
+                    avg_loss = tot_loss.item() / (i + 1)
+
                 pb.update(loss=avg_loss)
-                tot_loss += loss
+                self.options.step_profiler()
 
         avg_loss = tot_loss.item() / epoch_data.batch_count
         elog.debug("epoch complete", loss=avg_loss)
@@ -292,9 +301,18 @@ class FlexMFTrainingData:
     items: torch.Tensor | np.ndarray[tuple[int], np.dtype[np.int32]]
     "Item numbers for training samples."
 
-    matrix: MatrixRelationshipSet | None = None
+    interactions: MatrixRelationshipSet | None = None
     """
     The original relationship set we are training on.
+    """
+
+    ui_matrix: torch.Tensor | None = None
+    """
+    Normalized user-item adjacency matrix.
+    """
+    iu_matrix: torch.Tensor | None = None
+    """
+    Normalized item-user adjacency matrix.
     """
 
     fields: dict[str, torch.Tensor] = field(default_factory=dict)

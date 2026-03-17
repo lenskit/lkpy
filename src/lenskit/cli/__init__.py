@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -28,10 +28,13 @@ def main():
     np.set_printoptions(threshold=20)
     try:
         ec = lenskit.main(standalone_mode=False)
-    except click.ClickException as e:
+    except click.ClickException as e:  # pragma: nocover
         _log.error("CLI error, terminating: %s", e)
         sys.exit(2)
-    except Exception as e:
+    except click.Abort:  # pragma: nocover
+        _log.error("Program interrupted")
+        sys.exit(3)
+    except Exception as e:  # pragma: nocover
         _log.error("LensKit command failed", exc_info=e)
         sys.exit(3)
 

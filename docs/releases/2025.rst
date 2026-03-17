@@ -15,6 +15,7 @@ information on how to upgrade your code.
 ~~~~~~~~
 
 - Add EASE (:class:`~lenskit.knn.EASEScorer`) (:issue:`942`, :pr:`1011`, backported in :pr:`1015`).
+- Added LightGCN support to FlexMF (:issue:`1019`, :pr:`1033`).
 - Fix hyperparameter tuning for non-iterative scorers, and simplify configuration (:pr:`1014`, backported in :pr:`1015`).
 - Improve performance of :meth:`~lenskit.data.RelationshipSet.co_occurrences` (:issue:`970`, :pr:`1008`, :pr:`1010`).
 

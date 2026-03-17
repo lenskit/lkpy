@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -27,7 +27,7 @@ class TestFlexMFImplicit(BasicComponentTests, ScorerTests):
 class TestFlexMFBPR(BasicComponentTests, ScorerTests):
     expected_ndcg = (0.01, 0.25)
     component = FlexMFImplicitScorer
-    config = FlexMFImplicitConfig(loss="pairwise", epochs=3)
+    config = FlexMFImplicitConfig(preset="bpr", epochs=3)
 
     def test_skip_retrain(self, ml_ds):
         skip("not needed")
@@ -38,7 +38,19 @@ class TestFlexMFBPR(BasicComponentTests, ScorerTests):
 
 class TestFlexMFWARP(BasicComponentTests, ScorerTests):
     component = FlexMFImplicitScorer
-    config = FlexMFImplicitConfig(loss="warp", epochs=3)
+    config = FlexMFImplicitConfig(preset="warp", epochs=3)
+
+    def test_skip_retrain(self, ml_ds):
+        skip("not needed")
+
+    def test_run_with_doubles(self, ml_ratings):
+        skip("FlexMF is fine with doubles")
+
+
+class TestFlexMFGCN(BasicComponentTests, ScorerTests):
+    expected_ndcg = (0.01, 0.25)
+    component = FlexMFImplicitScorer
+    config = FlexMFImplicitConfig(preset="lightgcn", epochs=3)
 
     def test_skip_retrain(self, ml_ds):
         skip("not needed")
@@ -65,6 +77,24 @@ def test_config_exp_dict():
 def test_config_exp_json():
     cfg = FlexMFImplicitConfig.model_validate_json('{"embedding_size_exp": 2}')
     assert cfg.embedding_size == 4
+
+
+def test_config_negative_default():
+    cfg = FlexMFImplicitConfig(loss="pairwise")
+    assert cfg.loss == "pairwise"
+    assert cfg.selected_negative_strategy() == "uniform"
+
+
+def test_config_negative_default_warp():
+    cfg = FlexMFImplicitConfig(loss="warp")
+    assert cfg.loss == "warp"
+    assert cfg.selected_negative_strategy() == "misranked"
+
+
+def test_config_preset():
+    cfg = FlexMFImplicitConfig(preset="warp")
+    assert cfg.loss == "warp"
+    assert cfg.negative_strategy == "misranked"
 
 
 @mark.slow
