@@ -978,7 +978,8 @@ class ItemList:
             if want_all:
                 picked = _data_accel.argsort_descending(scores)
             else:
-                picked = _data_accel.argtopn(scores, n)
+                assert n is not None
+                picked = _data_accel.argtopn(scores, min(n, len(self)))
 
         return self._take(picked, ordered=True)
 
