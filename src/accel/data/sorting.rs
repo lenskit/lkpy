@@ -159,7 +159,9 @@ where
 
     let mut heap = IndirectMinHeap::create(n, |k: i32| sbuf[k as usize]);
     for i in 0..scores.len() {
-        heap.insert(i as i32);
+        if scores.is_valid(i) {
+            heap.insert(i as i32);
+        }
     }
 
     heap.topn_vec()
