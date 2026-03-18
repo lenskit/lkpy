@@ -17,7 +17,6 @@ from pytest import mark
 from lenskit._accel import data
 from lenskit.data import ItemList
 from lenskit.parallel import ensure_parallel_init
-from lenskit.stats import argtopn
 
 
 @mark.benchmark(group="all")
@@ -117,17 +116,6 @@ def test_list_sort(rng: np.random.Generator, size: int, benchmark):
 
     def sort():
         _top = ilist.top_n()
-
-    benchmark(sort)
-
-
-@mark.benchmark(group="topn")
-@mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
-def test_argtopn(rng: np.random.Generator, size: int, benchmark):
-    scores = rng.standard_exponential(size)
-
-    def sort():
-        _res = argtopn(scores, 100)
 
     benchmark(sort)
 
