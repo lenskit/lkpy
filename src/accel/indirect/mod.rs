@@ -5,3 +5,4 @@
 // SPDX-License-Identifier: MIT
 
 pub mod hashing;
+pub mod heap;
