@@ -4,7 +4,7 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::cmp::Reverse;
+use std::cmp::{min, Reverse};
 
 use arrow::{
     array::{
@@ -155,6 +155,7 @@ where
     T::Native: PartialOrd,
 {
     let sbuf = scores.values();
+    let n = min(n, scores.len());
 
     let mut heap = IndirectMinHeap::create(n, |k: i32| sbuf[k as usize]);
     for i in 0..scores.len() {
