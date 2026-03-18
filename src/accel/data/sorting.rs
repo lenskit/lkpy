@@ -135,14 +135,18 @@ pub(crate) fn argtopn<'py>(
     n: usize,
 ) -> PyResult<PyArrowType<ArrayData>> {
     let scores = make_array(scores.0);
-    let array = py.detach(|| {
-        let indices = match_array_type!(scores, {
-            floating(arr) => argtopn_impl(arr, n, |v| !v.is_nan()),
-            integer(arr) => argtopn_impl(arr, n, |_| true),
-        })?;
+    let array = if n > 0 {
+        py.detach(|| {
+            let indices = match_array_type!(scores, {
+                floating(arr) => argtopn_impl(arr, n, |v| !v.is_nan()),
+                integer(arr) => argtopn_impl(arr, n, |_| true),
+            })?;
 
-        PyResult::Ok(Int32Array::from(indices))
-    })?;
+            PyResult::Ok(Int32Array::from(indices))
+        })?
+    } else {
+        Vec::<i32>::new().into()
+    };
     Ok(array.into_data().into())
 }
 
