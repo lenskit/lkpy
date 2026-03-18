@@ -63,7 +63,7 @@ def test_sort_ints(arr):
         nph.array_shapes(max_dims=1),
         elements={"allow_nan": False, "allow_infinity": False},
     ),
-    st.integers(min_value=1, max_value=500),
+    st.integers(min_value=0, max_value=500),
 )
 def test_topn_floats(arr, n):
     a2 = pa.array(arr)
@@ -80,10 +80,11 @@ def test_topn_floats(arr, n):
     for i in range(1, tgt_n):
         assert items[i] <= items[i - 1]
 
-    mask = np.ones(len(arr), dtype=np.bool_)
-    mask[idx] = False
-    nopes = arr[mask]
-    assert np.all(nopes <= np.min(items))
+    if len(items):
+        mask = np.ones(len(arr), dtype=np.bool_)
+        mask[idx] = False
+        nopes = arr[mask]
+        assert np.all(nopes <= np.min(items))
 
 
 @given(

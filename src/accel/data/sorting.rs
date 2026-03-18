@@ -134,10 +134,6 @@ pub(crate) fn argtopn<'py>(
     scores: PyArrowType<ArrayData>,
     n: usize,
 ) -> PyResult<PyArrowType<ArrayData>> {
-    if n <= 0 {
-        return Err(PyValueError::new_err("n must be positive"));
-    }
-
     let scores = make_array(scores.0);
     let array = py.detach(|| {
         let indices = match_array_type!(scores, {
