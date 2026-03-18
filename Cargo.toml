@@ -34,6 +34,9 @@ arrow-schema = { version = "^57", features = ["serde"] }
 ndarray = { version = "^0.16", features = ["rayon"] }
 numpy = "^0.26"
 
+[dev-dependencies]
+ntest = "^0.9"
+
 [profile.dev]
 lto = "thin"
 opt-level = 2

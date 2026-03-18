@@ -54,3 +54,32 @@ def test_sort_ints(arr):
     # descending order
     for i in range(1, len(arr)):
         assert items[i] <= items[i - 1]
+
+
+@given(
+    nph.arrays(
+        nph.floating_dtypes(endianness="="),
+        nph.array_shapes(max_dims=1),
+        elements={"allow_nan": False, "allow_infinity": False},
+    ),
+    st.integers(min_value=1, max_value=500),
+)
+def test_topn_floats(arr, n):
+    a2 = pa.array(arr)
+    tgt_n = min(len(arr), n)
+
+    idx = data.argtopn(a2, n).to_numpy()
+    assert len(idx) == tgt_n
+    assert np.all(idx >= 0)
+    assert np.all(idx < len(arr))
+
+    items = arr[idx]
+
+    # descending order
+    for i in range(1, tgt_n):
+        assert items[i] <= items[i - 1]
+
+    mask = np.ones(len(arr), dtype=np.bool_)
+    mask[idx] = False
+    nopes = arr[mask]
+    assert np.all(nopes <= np.min(items))

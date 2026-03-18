@@ -12,6 +12,8 @@ use arrow::{
     },
     pyarrow::PyArrowType,
 };
+#[cfg(test)]
+use ntest::*;
 use ordered_float::{FloatCore, NotNan};
 use pyo3::{exceptions::PyValueError, prelude::*};
 use rayon::slice::ParallelSliceMut;
@@ -207,8 +209,9 @@ impl<'v, V: PartialOrd + Copy> IndirectHeap<'v, V> {
     }
 
     fn topn_vec(mut self) -> Vec<i32> {
-        let n = self.keys.len() - 1;
+        let mut n = self.keys.len();
         while n > 0 {
+            n -= 1;
             self.keys.swap(0, n);
             self.downheap(0, n);
         }
@@ -261,4 +264,63 @@ impl<'v, V: PartialOrd + Copy> IndirectHeap<'v, V> {
             }
         }
     }
+}
+
+#[test]
+fn test_heap_empty() {
+    let scores = [10];
+    let heap = IndirectHeap::create(5, &scores);
+    assert_eq!(heap.len(), 0);
+    assert_eq!(heap.topn_vec().len(), 0);
+}
+
+#[test]
+fn test_heap_one() {
+    let scores = [10];
+    let mut heap = IndirectHeap::create(5, &scores);
+    heap.insert(0);
+    assert_eq!(heap.len(), 1);
+    let vals = heap.topn_vec();
+    assert_eq!(vals.len(), 1);
+    assert_eq!(&vals, &[0]);
+}
+
+#[test]
+#[timeout(100)]
+fn test_heap_two() {
+    let scores = [10, 20];
+    let mut heap = IndirectHeap::create(5, &scores);
+    heap.insert(0);
+    heap.insert(1);
+    assert_eq!(heap.len(), 2);
+    let vals = heap.topn_vec();
+    assert_eq!(vals.len(), 2);
+    assert_eq!(&vals, &[1, 0]);
+}
+
+#[test]
+#[timeout(100)]
+fn test_heap_two_alt() {
+    let scores = [10, 20];
+    let mut heap = IndirectHeap::create(5, &scores);
+    heap.insert(1);
+    heap.insert(0);
+    assert_eq!(heap.len(), 2);
+    let vals = heap.topn_vec();
+    assert_eq!(vals.len(), 2);
+    assert_eq!(&vals, &[1, 0]);
+}
+
+#[test]
+#[timeout(100)]
+fn test_heap_sort() {
+    let scores = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    let mut heap = IndirectHeap::create(5, &scores);
+    for i in 0..scores.len() {
+        heap.insert(i as i32);
+    }
+    assert_eq!(heap.len(), 5);
+    let vals = heap.topn_vec();
+    assert_eq!(vals.len(), 5);
+    assert_eq!(&vals, &[9, 8, 7, 6, 5]);
 }
