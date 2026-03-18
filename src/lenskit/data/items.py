@@ -29,7 +29,6 @@ from typing_extensions import (
 
 from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataWarning
-from lenskit.stats import argtopn
 
 from .arrow import get_indexer
 from .checks import check_1d
@@ -979,7 +978,7 @@ class ItemList:
             if want_all:
                 picked = _data_accel.argsort_descending(scores)
             else:
-                picked = argtopn(scores, n)
+                picked = _data_accel.argtopn(scores, n)
 
         return self._take(picked, ordered=True)
 
