@@ -141,8 +141,8 @@ pub(crate) fn argtopn<'py>(
     let scores = make_array(scores.0);
     let array = py.detach(|| {
         let indices = match_array_type!(scores, {
-            floating(arr) => argtopn_impl(arr, n),
-            integer(arr) => argtopn_impl(arr, n),
+            floating(arr) => argtopn_impl(arr, n, |v| !v.is_nan()),
+            integer(arr) => argtopn_impl(arr, n, |_| true),
         })?;
 
         PyResult::Ok(Int32Array::from(indices))
@@ -150,7 +150,11 @@ pub(crate) fn argtopn<'py>(
     Ok(array.into_data().into())
 }
 
-fn argtopn_impl<T: ArrowPrimitiveType>(scores: &PrimitiveArray<T>, n: usize) -> Vec<i32>
+fn argtopn_impl<T: ArrowPrimitiveType, Filter: Fn(T::Native) -> bool>(
+    scores: &PrimitiveArray<T>,
+    n: usize,
+    accept: Filter,
+) -> Vec<i32>
 where
     T::Native: PartialOrd,
 {
@@ -159,7 +163,7 @@ where
 
     let mut heap = IndirectMinHeap::create(n, |k: i32| sbuf[k as usize]);
     for i in 0..scores.len() {
-        if scores.is_valid(i) {
+        if scores.is_valid(i) && accept(sbuf[i]) {
             heap.insert(i as i32);
         }
     }

@@ -86,7 +86,34 @@ def test_topn_floats(arr, n):
     assert np.all(nopes <= np.min(items))
 
 
-@mark.xfail(reason="NaN not yet supported")
+@given(
+    nph.arrays(
+        nph.integer_dtypes(endianness="="),
+        nph.array_shapes(max_dims=1),
+    ),
+    st.integers(min_value=1, max_value=500),
+)
+def test_topn_ints(arr, n):
+    a2 = pa.array(arr)
+    tgt_n = min(len(arr), n)
+
+    idx = data.argtopn(a2, n).to_numpy()
+    assert len(idx) == tgt_n
+    assert np.all(idx >= 0)
+    assert np.all(idx < len(arr))
+
+    items = arr[idx]
+
+    # descending order
+    for i in range(1, tgt_n):
+        assert items[i] <= items[i - 1]
+
+    mask = np.ones(len(arr), dtype=np.bool_)
+    mask[idx] = False
+    nopes = arr[mask]
+    assert np.all(nopes <= np.min(items))
+
+
 @given(
     nph.arrays(
         nph.floating_dtypes(endianness="="),
@@ -97,7 +124,7 @@ def test_topn_floats(arr, n):
 )
 def test_topn_with_nans(arr, n):
     a2 = pa.array(arr)
-    tgt_n = min(n, len(arr) - a2.null_count)
+    tgt_n = min(n, len(arr) - np.sum(np.isnan(arr)))
 
     idx = data.argtopn(a2, n).to_numpy()
     assert len(idx) == tgt_n
@@ -111,11 +138,12 @@ def test_topn_with_nans(arr, n):
     for i in range(1, tgt_n):
         assert items[i] <= items[i - 1]
 
-    mask = np.ones(len(arr), dtype=np.bool_)
-    mask[idx] = False
-    mask[np.isnan(arr)] = False
-    nopes = arr[mask]
-    assert np.all(nopes <= np.min(items))
+    if len(items):
+        mask = np.ones(len(arr), dtype=np.bool_)
+        mask[idx] = False
+        mask[np.isnan(arr)] = False
+        nopes = arr[mask]
+        assert np.all(nopes <= np.min(items))
 
 
 @given(
@@ -154,13 +182,13 @@ def test_topn_with_nulls(arr, n):
     nph.arrays(
         nph.floating_dtypes(endianness="="),
         nph.array_shapes(max_dims=1),
-        elements={"allow_nan": False, "allow_infinity": True},
+        elements={"allow_nan": True, "allow_infinity": True},
     ),
     st.integers(min_value=1, max_value=500),
 )
-def test_topn_with_inf(arr, n):
+def test_topn_any_float(arr, n):
     a2 = pa.array(arr)
-    tgt_n = min(n, len(arr) - a2.null_count)
+    tgt_n = min(n, len(arr) - np.sum(np.isnan(arr)))
 
     idx = data.argtopn(a2, n).to_numpy()
     assert len(idx) == tgt_n
@@ -174,8 +202,9 @@ def test_topn_with_inf(arr, n):
     for i in range(1, tgt_n):
         assert items[i] <= items[i - 1]
 
-    mask = np.ones(len(arr), dtype=np.bool_)
-    mask[idx] = False
-    mask[np.isnan(arr)] = False
-    nopes = arr[mask]
-    assert np.all(nopes <= np.min(items))
+    if len(items):
+        mask = np.ones(len(arr), dtype=np.bool_)
+        mask[idx] = False
+        mask[np.isnan(arr)] = False
+        nopes = arr[mask]
+        assert np.all(nopes <= np.min(items))
