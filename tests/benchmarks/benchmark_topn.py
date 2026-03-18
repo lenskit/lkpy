@@ -97,6 +97,19 @@ def test_accel_sort(rng: np.random.Generator, size: int, benchmark):
 
 @mark.benchmark(group="all")
 @mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
+def test_accel_topn(rng: np.random.Generator, size: int, benchmark):
+    ensure_parallel_init()
+    scores = rng.standard_exponential(size)
+    scores = pa.array(scores, pa.float32())
+
+    def sort():
+        _idx = data.argtopn(scores, len(scores))
+
+    benchmark(sort)
+
+
+@mark.benchmark(group="all")
+@mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
 def test_list_sort(rng: np.random.Generator, size: int, benchmark):
     ensure_parallel_init()
     scores = rng.standard_exponential(size)
