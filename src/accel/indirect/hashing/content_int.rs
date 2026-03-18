@@ -17,7 +17,7 @@ use rustc_hash::FxHasher;
 
 use log::*;
 
-use crate::indirect_hashing::{IndirectHashContent, IndirectSearcher};
+use super::{IndirectHashContent, IndirectSearcher};
 
 /// Backend hash storage for primitive (integer) arrays.
 pub struct PrimitiveContentArray<T: ArrowPrimitiveType> {
