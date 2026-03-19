@@ -50,6 +50,9 @@ Breaking Changes
   favor of :class:`lenskit.training.UsesTrainer`.
 - Component class members have been renamed to no longer use the Scikit-Learn
   pattern of trailing ``_`` in their names.
+- Removed the ``lenskit.stats.argtopn`` function (:issue:`833`).
+  :meth:`lenskit.data.ItemList.top_n` now uses a Rust-accelerated top-*N*
+  implementation (:pr:`1049`).
 
 .. _prefix.dev: https://prefix.dev/channels/lenskit/
 

@@ -15,7 +15,7 @@ mod cython;
 mod data;
 mod errors;
 mod funksvd;
-mod indirect_hashing;
+mod indirect;
 mod knn;
 mod progress;
 mod sparse;

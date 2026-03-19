@@ -16,7 +16,7 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::types::PyAnyMethods;
 use rustc_hash::FxHasher;
 
-use crate::indirect_hashing::{IndirectHashContent, IndirectSearcher};
+use super::{IndirectHashContent, IndirectSearcher};
 
 /// Helper trait for accessing string arrays.
 trait StringAccess {

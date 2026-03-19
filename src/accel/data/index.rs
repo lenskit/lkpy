@@ -22,9 +22,9 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 
-use crate::indirect_hashing::content_int::PrimitiveContentArray;
-use crate::indirect_hashing::content_string::StringContentArray;
-use crate::indirect_hashing::{IndirectHashTable, PositionLookup};
+use crate::indirect::hashing::content_int::PrimitiveContentArray;
+use crate::indirect::hashing::content_string::StringContentArray;
+use crate::indirect::hashing::{IndirectHashTable, PositionLookup};
 
 /// Arrow-based ID index.
 #[pyclass]

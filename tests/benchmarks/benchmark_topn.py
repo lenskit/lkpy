@@ -15,8 +15,8 @@ import torch
 from pytest import mark
 
 from lenskit._accel import data
+from lenskit.data import ItemList
 from lenskit.parallel import ensure_parallel_init
-from lenskit.stats import argtopn
 
 
 @mark.benchmark(group="all")
@@ -94,13 +94,28 @@ def test_accel_sort(rng: np.random.Generator, size: int, benchmark):
     benchmark(sort)
 
 
-@mark.benchmark(group="topn")
+@mark.benchmark(group="all")
 @mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
-def test_argtopn(rng: np.random.Generator, size: int, benchmark):
+def test_accel_topn(rng: np.random.Generator, size: int, benchmark):
+    ensure_parallel_init()
     scores = rng.standard_exponential(size)
+    scores = pa.array(scores, pa.float32())
 
     def sort():
-        _res = argtopn(scores, 100)
+        _idx = data.argtopn(scores, len(scores))
+
+    benchmark(sort)
+
+
+@mark.benchmark(group="all")
+@mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
+def test_list_sort(rng: np.random.Generator, size: int, benchmark):
+    ensure_parallel_init()
+    scores = rng.standard_exponential(size)
+    ilist = ItemList(item_nums=np.arange(size), scores=scores)
+
+    def sort():
+        _top = ilist.top_n()
 
     benchmark(sort)
 
@@ -128,5 +143,44 @@ def test_torch_topk_gpu(rng: np.random.Generator, size: int, benchmark):
         _s, _idx = torch.topk(-scores, 100)
         _s = _s.cpu()
         _idx = _idx.cpu()
+
+    benchmark(sort)
+
+
+@mark.benchmark(group="topn")
+@mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
+def test_argtopn_rs(rng: np.random.Generator, size: int, benchmark):
+    ensure_parallel_init()
+    scores = rng.standard_exponential(size)
+    scores = pa.array(scores, pa.float32())
+
+    def sort():
+        _idx = data.argtopn(scores, 100)
+
+    benchmark(sort)
+
+
+@mark.benchmark(group="topn")
+@mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
+def test_list_topn(rng: np.random.Generator, size: int, benchmark):
+    ensure_parallel_init()
+    scores = rng.standard_exponential(size)
+    ilist = ItemList(item_nums=np.arange(size), scores=scores)
+
+    def sort():
+        _top = ilist.top_n(100)
+
+    benchmark(sort)
+
+
+@mark.benchmark(group="topn")
+@mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
+def test_list_topn_torch(rng: np.random.Generator, size: int, benchmark):
+    ensure_parallel_init()
+    scores = torch.from_numpy(rng.standard_exponential(size))
+    ilist = ItemList(item_nums=np.arange(size), scores=scores)
+
+    def sort():
+        _top = ilist.top_n(100)
 
     benchmark(sort)

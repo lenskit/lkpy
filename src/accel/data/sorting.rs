@@ -4,7 +4,7 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::cmp::Reverse;
+use std::cmp::{min, Reverse};
 
 use arrow::{
     array::{
@@ -16,6 +16,7 @@ use ordered_float::{FloatCore, NotNan};
 use pyo3::{exceptions::PyValueError, prelude::*};
 use rayon::slice::ParallelSliceMut;
 
+use crate::indirect::heap::IndirectMinHeap;
 use crate::match_array_type;
 use crate::{arrow::checked_array, ok_or_pyerr};
 
@@ -125,4 +126,47 @@ where
     }
 
     indices
+}
+
+#[pyfunction]
+pub(crate) fn argtopn<'py>(
+    py: Python<'py>,
+    scores: PyArrowType<ArrayData>,
+    n: usize,
+) -> PyResult<PyArrowType<ArrayData>> {
+    let scores = make_array(scores.0);
+    let array = if n > 0 {
+        py.detach(|| {
+            let indices = match_array_type!(scores, {
+                floating(arr) => argtopn_impl(arr, n, |v| !v.is_nan()),
+                integer(arr) => argtopn_impl(arr, n, |_| true),
+            })?;
+
+            PyResult::Ok(Int32Array::from(indices))
+        })?
+    } else {
+        Vec::<i32>::new().into()
+    };
+    Ok(array.into_data().into())
+}
+
+fn argtopn_impl<T: ArrowPrimitiveType, Filter: Fn(T::Native) -> bool>(
+    scores: &PrimitiveArray<T>,
+    n: usize,
+    accept: Filter,
+) -> Vec<i32>
+where
+    T::Native: PartialOrd,
+{
+    let sbuf = scores.values();
+    let n = min(n, scores.len());
+
+    let mut heap = IndirectMinHeap::create(n, |k: i32| sbuf[k as usize]);
+    for i in 0..scores.len() {
+        if scores.is_valid(i) && accept(sbuf[i]) {
+            heap.insert(i as i32);
+        }
+    }
+
+    heap.topn_vec()
 }
