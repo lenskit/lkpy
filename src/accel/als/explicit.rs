@@ -40,7 +40,7 @@ pub(super) fn train_explicit_matrix<'py>(
     let other_py = other.readonly();
     let other = other_py.as_array();
 
-    let mut progress = ProgressHandle::from_input(progress);
+    let progress = ProgressHandle::from_input(progress);
     debug!(
         "beginning explicit ALS training half with {} rows",
         other.nrows()
@@ -58,7 +58,6 @@ pub(super) fn train_explicit_matrix<'py>(
                 .sum())
         },
     )?;
-    progress.shutdown(py)?;
 
     Ok(frob.sqrt())
 }

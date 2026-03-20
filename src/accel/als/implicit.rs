@@ -43,23 +43,23 @@ pub(super) fn train_implicit_matrix<'py>(
     let otor_py = otor.readonly();
     let otor = otor_py.as_array();
 
-    let mut progress = ProgressHandle::from_input(progress);
+    let progress = ProgressHandle::from_input(progress);
     debug!(
         "beginning implicit ALS training half with {} rows",
         other.nrows()
     );
-    let frob: f32 = py.detach(|| {
-        this.outer_iter_mut()
-            .into_par_iter()
-            .enumerate()
-            .map(|(i, row)| {
-                let f = train_row_solve(&solver, &matrix, i, row, &other, &otor);
-                progress.tick();
-                f
-            })
-            .sum()
-    });
-    progress.shutdown(py)?;
+    let frob: f32 = progress.process_iter(
+        py,
+        this.outer_iter_mut().into_par_iter().enumerate(),
+        |iter| {
+            Ok(iter
+                .map(|(i, row)| {
+                    let f = train_row_solve(&solver, &matrix, i, row, &other, &otor);
+                    f
+                })
+                .sum())
+        },
+    )?;
 
     Ok(frob.sqrt())
 }
