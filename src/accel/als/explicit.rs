@@ -46,17 +46,18 @@ pub(super) fn train_explicit_matrix<'py>(
         other.nrows()
     );
 
-    let frob: f32 = py.detach(|| {
-        this.outer_iter_mut()
-            .into_par_iter()
-            .enumerate()
-            .map(|(i, row)| {
-                let f = train_row_solve(&solver, &matrix, i, row, &other, reg);
-                progress.tick();
-                f
-            })
-            .sum()
-    });
+    let frob: f32 = progress.process_iter(
+        py,
+        this.outer_iter_mut().into_par_iter().enumerate(),
+        |iter| {
+            Ok(iter
+                .map(|(i, row)| {
+                    let f = train_row_solve(&solver, &matrix, i, row, &other, reg);
+                    f
+                })
+                .sum())
+        },
+    )?;
     progress.shutdown(py)?;
 
     Ok(frob.sqrt())

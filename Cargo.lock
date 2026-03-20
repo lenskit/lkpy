@@ -625,6 +625,7 @@ dependencies = [
  "rand",
  "rand_pcg",
  "rayon",
+ "rayon-cancel",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -1020,6 +1021,15 @@ checksum = "368f01d005bf8fd9b1206fb6fa653e6c4a81ceb1466406b81792d87c5677a58f"
 dependencies = [
  "either",
  "rayon-core",
+]
+
+[[package]]
+name = "rayon-cancel"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee4f327c66965c769eb84538cdb86b63ce33046f2ea0153d4d29606b241c5143"
+dependencies = [
+ "rayon",
 ]
 
 [[package]]

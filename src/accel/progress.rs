@@ -6,11 +6,14 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
-use std::thread::{spawn, JoinHandle};
+use std::thread::{self, spawn, JoinHandle};
 use std::time::Duration;
 
+use log::*;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::{intern, prelude::*, types::PyDict};
+use rayon::iter::ParallelIterator;
+use rayon_cancel::CancelAdapter;
 
 const UPDTATE_TIMEOUT: Duration = Duration::from_millis(200);
 
@@ -30,7 +33,7 @@ struct ProgressData {
 ///
 /// This method applies internal throttling to reduce the number of calls
 /// to the Python progress bar.
-pub(crate) struct ProgressHandle {
+pub struct ProgressHandle {
     data: Option<Arc<ProgressData>>,
     handle: Option<JoinHandle<()>>,
 }
@@ -102,6 +105,45 @@ impl ProgressHandle {
         } else {
             Ok(())
         }
+    }
+
+    /// Process an iterator, with progress, thread-detach, and interrupt checks.
+    pub fn process_iter<'py, I, R, F>(&self, py: Python<'py>, iter: I, proc: F) -> PyResult<R>
+    where
+        I: ParallelIterator + Send,
+        R: Send,
+        F: FnOnce(CancelAdapter<I>) -> PyResult<R> + Send,
+    {
+        let adapter = CancelAdapter::new(iter);
+        let counter = adapter.counter();
+        let cancel = adapter.canceller();
+        let caller = thread::current();
+
+        thread::scope(move |scope| {
+            let handle = scope.spawn(move || {
+                let result = proc(adapter);
+                caller.unpark();
+                result
+            });
+
+            let mut count = counter.get();
+            while !handle.is_finished() {
+                py.detach(|| thread::park_timeout(UPDTATE_TIMEOUT));
+                if let Err(e) = py.check_signals() {
+                    cancel.cancel();
+                    return Err(e);
+                }
+                let n = counter.get();
+                debug!("counter: {} / {}", n, count);
+                self.advance(n - count);
+                count = n;
+            }
+
+            match handle.join() {
+                Ok(r) => r,
+                Err(_) => Err(PyRuntimeError::new_err("worker thread panicked")),
+            }
+        })
     }
 }
 
