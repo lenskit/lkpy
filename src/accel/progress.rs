@@ -4,6 +4,7 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -37,14 +38,12 @@ impl ProgressHandle {
         ProgressHandle { pb, count: 0 }
     }
 
-    pub fn tick<'py>(&self, py: Python<'py>) {
-        self.advance(py, 1);
+    /// Advance the progress bar by the specified amount.
+    pub fn advance<'py>(&self, py: Python<'py>, n: usize) -> PyResult<()> {
+        self.update(py, self.count + n)
     }
 
-    pub fn advance<'py>(&self, py: Python<'py>, n: usize) {
-        self.update(py, self.count + n);
-    }
-
+    /// Update the current completed total of the progress bar.
     pub fn update<'py>(&self, py: Python<'py>, complete: usize) -> PyResult<()> {
         if let Some(pb) = &self.pb {
             let pb = pb.bind(py);
@@ -83,7 +82,54 @@ impl ProgressHandle {
                     return Err(e);
                 }
                 let n = counter.get();
-                self.update(py, n);
+                if let Err(e) = self.update(py, n) {
+                    cancel.cancel();
+                    return Err(e);
+                }
+            }
+
+            match handle.join() {
+                Ok(r) => r,
+                Err(_) => Err(PyRuntimeError::new_err("worker thread panicked")),
+            }
+        })
+    }
+
+    /// Process an iterator, with progress, thread-detach, and interrupt checks.
+    pub fn process_iter_with_counter<'py, I, R, F>(
+        &self,
+        py: Python<'py>,
+        iter: I,
+        proc: F,
+    ) -> PyResult<R>
+    where
+        I: ParallelIterator + Send,
+        R: Send,
+        F: FnOnce(CancelAdapter<I>, &AtomicUsize) -> PyResult<R> + Send,
+    {
+        let adapter = CancelAdapter::new(iter);
+        let cancel = adapter.canceller();
+        let caller = thread::current();
+        let rc = AtomicUsize::new(0);
+
+        thread::scope(|scope| {
+            let handle = scope.spawn(|| {
+                let result = proc(adapter, &rc);
+                caller.unpark();
+                result
+            });
+
+            while !handle.is_finished() {
+                py.detach(|| thread::park_timeout(UPDATE_TIMEOUT));
+                if let Err(e) = py.check_signals() {
+                    cancel.cancel();
+                    return Err(e);
+                }
+                let n = rc.load(Ordering::Relaxed);
+                if let Err(e) = self.update(py, n) {
+                    cancel.cancel();
+                    return Err(e);
+                }
             }
 
             match handle.join() {

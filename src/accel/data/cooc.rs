@@ -6,6 +6,8 @@
 
 //! Support for counting co-occurrences.
 
+use std::sync::atomic::Ordering;
+
 use arrow::{
     array::{make_array, Array, ArrayData, Int32Array, RecordBatch},
     pyarrow::PyArrowType,
@@ -131,12 +133,12 @@ fn count_cooc_sequential<PC: PairCounter>(
         count_items(&mut counts, items);
         if i % 100 == 0 {
             Python::attach(|py| {
-                pb.advance(py, items.len());
+                let _ = pb.advance(py, items.len());
             })
         }
     }
     Python::attach(|py| {
-        pb.advance(py, items.len());
+        let _ = pb.advance(py, items.len());
     });
 
     // assemble the result
@@ -158,7 +160,7 @@ fn count_cooc_parallel<'py, PC: ConcurrentPairCounter>(
 
     debug!("pass 2: counting groups");
     // TODO: fix progress update
-    pb.process_iter(py, (0..n_groups).into_par_iter(), |iter| {
+    pb.process_iter_with_counter(py, (0..n_groups).into_par_iter(), |iter, counter| {
         iter.for_each(|i| {
             let start = g_ptrs[i];
             let end = g_ptrs[i + 1];
@@ -172,6 +174,7 @@ fn count_cooc_parallel<'py, PC: ConcurrentPairCounter>(
                     counts.crecord(ri, ci);
                 }
             }
+            counter.fetch_add(items.len(), Ordering::Relaxed);
         });
         Ok(())
     })?;
