@@ -11,9 +11,7 @@ use arrow::{
     buffer::OffsetBuffer,
 };
 use arrow_schema::{DataType, Field, Fields};
-use rayon::iter::plumbing::{Consumer, Folder, Reducer};
-
-use crate::progress::ProgressHandle;
+use rayon::iter::plumbing::{Consumer, Folder, Reducer, UnindexedConsumer};
 
 use super::SparseIndexType;
 
@@ -32,15 +30,11 @@ pub struct ArrowCSRConsumer {
 
 struct CSRState {
     dimension: usize,
-    progress: ProgressHandle,
 }
 
 impl CSRState {
-    fn new(dim: usize, progress: ProgressHandle) -> Self {
-        CSRState {
-            dimension: dim,
-            progress: progress,
-        }
+    fn new(dim: usize) -> Self {
+        CSRState { dimension: dim }
     }
 }
 
@@ -60,11 +54,7 @@ impl ArrowCSRConsumer {
 
     #[allow(dead_code)]
     pub(crate) fn new(dim: usize) -> Self {
-        Self::from_state(CSRState::new(dim, ProgressHandle::null()))
-    }
-
-    pub(crate) fn with_progress(dim: usize, progress: &ProgressHandle) -> Self {
-        Self::from_state(CSRState::new(dim, progress.clone()))
+        Self::from_state(CSRState::new(dim))
     }
 }
 
@@ -90,6 +80,16 @@ impl Consumer<CSRItem> for ArrowCSRConsumer {
     }
 }
 
+impl UnindexedConsumer<CSRItem> for ArrowCSRConsumer {
+    fn split_off_left(&self) -> Self {
+        ArrowCSRConsumer::from_state_ref(self.state.clone())
+    }
+
+    fn to_reducer(&self) -> Self::Reducer {
+        ArrowCSRConsumer::from_state_ref(self.state.clone())
+    }
+}
+
 impl Folder<CSRItem> for ArrowCSRConsumer {
     type Result = CSRResult;
 
@@ -100,7 +100,6 @@ impl Folder<CSRItem> for ArrowCSRConsumer {
             self.val_bld.append_value(s);
         }
         self.lengths.push(len);
-        self.state.progress.tick();
         self
     }
 

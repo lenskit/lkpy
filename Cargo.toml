@@ -17,6 +17,7 @@ pyo3-log = "^0.13"
 thiserror = "^2"
 
 rayon = "^1.10"
+rayon-cancel = "^1.0"
 
 hashbrown = "^0.16"
 hex = "^0.4"

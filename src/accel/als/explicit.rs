@@ -40,24 +40,24 @@ pub(super) fn train_explicit_matrix<'py>(
     let other_py = other.readonly();
     let other = other_py.as_array();
 
-    let mut progress = ProgressHandle::from_input(progress);
+    let progress = ProgressHandle::from_input(progress);
     debug!(
         "beginning explicit ALS training half with {} rows",
         other.nrows()
     );
 
-    let frob: f32 = py.detach(|| {
-        this.outer_iter_mut()
-            .into_par_iter()
-            .enumerate()
-            .map(|(i, row)| {
-                let f = train_row_solve(&solver, &matrix, i, row, &other, reg);
-                progress.tick();
-                f
-            })
-            .sum()
-    });
-    progress.shutdown(py)?;
+    let frob: f32 = progress.process_iter(
+        py,
+        this.outer_iter_mut().into_par_iter().enumerate(),
+        |iter| {
+            Ok(iter
+                .map(|(i, row)| {
+                    let f = train_row_solve(&solver, &matrix, i, row, &other, reg);
+                    f
+                })
+                .sum())
+        },
+    )?;
 
     Ok(frob.sqrt())
 }

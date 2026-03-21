@@ -5,34 +5,23 @@
 // SPDX-License-Identifier: MIT
 
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
-use std::thread::{spawn, JoinHandle};
+use std::thread;
 use std::time::Duration;
 
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::{intern, prelude::*, types::PyDict};
+use rayon::iter::ParallelIterator;
+use rayon_cancel::CancelAdapter;
 
-const UPDTATE_TIMEOUT: Duration = Duration::from_millis(200);
-
-struct ProgressThreadState {
-    running: bool,
-    last_count: usize,
-}
-
-struct ProgressData {
-    pb: Py<PyAny>,
-    count: AtomicUsize,
-    state: Mutex<ProgressThreadState>,
-    condition: Condvar,
-}
+const UPDATE_TIMEOUT: Duration = Duration::from_millis(200);
 
 /// Thin Rust wrapper around a LensKit progress bar.
 ///
 /// This method applies internal throttling to reduce the number of calls
 /// to the Python progress bar.
-pub(crate) struct ProgressHandle {
-    data: Option<Arc<ProgressData>>,
-    handle: Option<JoinHandle<()>>,
+pub struct ProgressHandle {
+    pb: Option<Py<PyAny>>,
+    count: usize,
 }
 
 impl ProgressHandle {
@@ -46,138 +35,107 @@ impl ProgressHandle {
     }
 
     pub fn new(pb: Option<Py<PyAny>>) -> Self {
-        pb.map(|pb| {
-            let data = Arc::new(ProgressData {
-                pb,
-                count: AtomicUsize::new(0),
-                state: Mutex::new(ProgressThreadState {
-                    running: true,
-                    last_count: 0,
-                }),
-                condition: Condvar::new(),
-            });
-            let d2 = data.clone();
-            let handle = spawn(move || d2.background_update());
-            ProgressHandle {
-                data: Some(data),
-                handle: Some(handle),
-            }
-        })
-        .unwrap_or_else(Self::null)
+        ProgressHandle { pb, count: 0 }
     }
 
-    pub fn null() -> Self {
-        ProgressHandle {
-            data: None,
-            handle: None,
-        }
+    /// Advance the progress bar by the specified amount.
+    pub fn advance<'py>(&self, py: Python<'py>, n: usize) -> PyResult<()> {
+        self.update(py, self.count + n)
     }
 
-    pub fn tick(&self) {
-        self.advance(1);
-    }
-
-    pub fn advance(&self, n: usize) {
-        if let Some(data) = &self.data {
-            data.count.fetch_add(n, Ordering::Relaxed);
-        }
-    }
-
-    /// Force an update of the progress bar.
-    pub fn flush(&self) {
-        if let Some(data) = &self.data {
-            data.ping();
-        }
-    }
-
-    pub fn shutdown<'py>(&mut self, py: Python<'py>) -> PyResult<()> {
-        if let Some(data) = self.data.take() {
-            data.shutdown();
-        }
-        if let Some(h) = self.handle.take() {
-            py.detach(|| {
-                h.join()
-                    .map_err(|_e| PyRuntimeError::new_err(format!("progress thread panicked")))
-            })
+    /// Update the current completed total of the progress bar.
+    pub fn update<'py>(&self, py: Python<'py>, complete: usize) -> PyResult<()> {
+        if let Some(pb) = &self.pb {
+            let pb = pb.bind(py);
+            let kwargs = PyDict::new(py);
+            kwargs.set_item(intern!(py, "completed"), complete)?;
+            pb.call_method(intern!(py, "update"), (), Some(&kwargs))?;
+            Ok(())
         } else {
             Ok(())
         }
     }
-}
 
-impl Clone for ProgressHandle {
-    fn clone(&self) -> Self {
-        ProgressHandle {
-            data: self.data.clone(),
-            handle: None,
-        }
-    }
-}
+    /// Process an iterator, with progress, thread-detach, and interrupt checks.
+    pub fn process_iter<'py, I, R, F>(&self, py: Python<'py>, iter: I, proc: F) -> PyResult<R>
+    where
+        I: ParallelIterator + Send,
+        R: Send,
+        F: FnOnce(CancelAdapter<I>) -> PyResult<R> + Send,
+    {
+        let adapter = CancelAdapter::new(iter);
+        let counter = adapter.counter();
+        let cancel = adapter.canceller();
+        let caller = thread::current();
 
-impl Drop for ProgressHandle {
-    fn drop(&mut self) {
-        if let Some(data) = self.data.take() {
-            data.shutdown();
-        }
-    }
-}
+        thread::scope(move |scope| {
+            let handle = scope.spawn(move || {
+                let result = proc(adapter);
+                caller.unpark();
+                result
+            });
 
-impl ProgressData {
-    fn background_update(&self) {
-        let mut state = self.acquire_state();
-        while state.running {
-            state = self.wait(state);
-
-            let count = self.count.load(Ordering::Relaxed);
-
-            if count > state.last_count {
-                // drop lock so we don't deadlock with the Python GIL
-                drop(state);
-
-                // send update to Python
-                Python::try_attach(|py| {
-                    let kwargs = PyDict::new(py);
-                    kwargs.set_item(intern!(py, "completed"), count)?;
-                    self.pb
-                        .call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
-                    Ok::<(), PyErr>(())
-                })
-                .unwrap_or(Ok(()))
-                .expect("progress update failed");
-
-                // re-acquire lock, update last count, and loop.
-                // updating the last count is safe because we are the only thread that does so.
-                state = self.acquire_state();
-                state.last_count = count;
+            while !handle.is_finished() {
+                py.detach(|| thread::park_timeout(UPDATE_TIMEOUT));
+                if let Err(e) = py.check_signals() {
+                    cancel.cancel();
+                    return Err(e);
+                }
+                let n = counter.get();
+                if let Err(e) = self.update(py, n) {
+                    cancel.cancel();
+                    return Err(e);
+                }
             }
-        }
+
+            match handle.join() {
+                Ok(r) => r,
+                Err(_) => Err(PyRuntimeError::new_err("worker thread panicked")),
+            }
+        })
     }
 
-    /// Acquire the state lock.
-    fn acquire_state<'a>(&'a self) -> MutexGuard<'a, ProgressThreadState> {
-        self.state.lock().expect("poisoned lock")
-    }
+    /// Process an iterator, with progress, thread-detach, and interrupt checks.
+    pub fn process_iter_with_counter<'py, I, R, F>(
+        &self,
+        py: Python<'py>,
+        iter: I,
+        proc: F,
+    ) -> PyResult<R>
+    where
+        I: ParallelIterator + Send,
+        R: Send,
+        F: FnOnce(CancelAdapter<I>, &AtomicUsize) -> PyResult<R> + Send,
+    {
+        let adapter = CancelAdapter::new(iter);
+        let cancel = adapter.canceller();
+        let caller = thread::current();
+        let rc = AtomicUsize::new(0);
 
-    /// Wait for a wakeup
-    fn wait<'a>(
-        &'a self,
-        state: MutexGuard<'a, ProgressThreadState>,
-    ) -> MutexGuard<'a, ProgressThreadState> {
-        // wait to be notified, or for timeout
-        let (s2, _res) = self
-            .condition
-            .wait_timeout(state, UPDTATE_TIMEOUT)
-            .expect("poisoned lock");
-        s2
-    }
+        thread::scope(|scope| {
+            let handle = scope.spawn(|| {
+                let result = proc(adapter, &rc);
+                caller.unpark();
+                result
+            });
 
-    fn shutdown(&self) {
-        let mut state = self.acquire_state();
-        state.running = false;
-        self.ping();
-    }
+            while !handle.is_finished() {
+                py.detach(|| thread::park_timeout(UPDATE_TIMEOUT));
+                if let Err(e) = py.check_signals() {
+                    cancel.cancel();
+                    return Err(e);
+                }
+                let n = rc.load(Ordering::Relaxed);
+                if let Err(e) = self.update(py, n) {
+                    cancel.cancel();
+                    return Err(e);
+                }
+            }
 
-    fn ping(&self) {
-        self.condition.notify_all();
+            match handle.join() {
+                Ok(r) => r,
+                Err(_) => Err(PyRuntimeError::new_err("worker thread panicked")),
+            }
+        })
     }
 }

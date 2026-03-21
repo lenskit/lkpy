@@ -6,6 +6,8 @@
 
 //! Support for counting co-occurrences.
 
+use std::sync::atomic::Ordering;
+
 use arrow::{
     array::{make_array, Array, ArrayData, Int32Array, RecordBatch},
     pyarrow::PyArrowType,
@@ -47,20 +49,18 @@ pub fn count_cooc<'py>(
         return Err(PyValueError::new_err("array length mismatch"));
     }
 
-    let mut pb = ProgressHandle::new(progress);
+    let pb = ProgressHandle::new(progress);
 
-    let out = py.detach(|| {
-        let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
-        let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
-
-        if ordered {
+    let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
+    let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
+    let out = if ordered {
+        py.detach(|| {
             count_cooc_sequential::<AsymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
-        } else {
-            let ctr = SymmetricPairCounter::with_diagonal(n_items, diagonal);
-            count_cooc_parallel(ctr, groups, items, n_groups, &pb)
-        }
-    });
-    pb.shutdown(py)?;
+        })
+    } else {
+        let ctr = SymmetricPairCounter::with_diagonal(n_items, diagonal);
+        count_cooc_parallel(py, ctr, groups, items, n_groups, &pb)
+    };
     let out = out?;
     debug!(
         "finished counting {} co-occurrances",
@@ -99,17 +99,13 @@ pub fn dense_cooc<'py>(
         return Err(PyValueError::new_err("array length mismatch"));
     }
 
-    let mut pb = ProgressHandle::new(progress);
+    let pb = ProgressHandle::new(progress);
 
-    let out = py.detach(|| {
-        let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
-        let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
+    let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
+    let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
 
-        let ctr = DensePairCounter::with_diagonal(n_items, diagonal);
-        count_cooc_parallel(ctr, groups, items, n_groups, &pb)
-    });
-    pb.shutdown(py)?;
-    let out = out?;
+    let ctr = DensePairCounter::with_diagonal(n_items, diagonal);
+    let out = count_cooc_parallel(py, ctr, groups, items, n_groups, &pb)?;
     debug!("finished counting co-occurrances");
 
     Ok(out.to_pyarray(py))
@@ -135,15 +131,22 @@ fn count_cooc_sequential<PC: PairCounter>(
         let end = g_ptrs[i + 1];
         let items = &ivals[start..end];
         count_items(&mut counts, items);
-        pb.advance(items.len());
+        if i % 100 == 0 {
+            Python::attach(|py| {
+                let _ = pb.advance(py, items.len());
+            })
+        }
     }
-    pb.flush();
+    Python::attach(|py| {
+        let _ = pb.advance(py, items.len());
+    });
 
     // assemble the result
     Ok(counts.finish())
 }
 
-fn count_cooc_parallel<PC: ConcurrentPairCounter>(
+fn count_cooc_parallel<'py, PC: ConcurrentPairCounter>(
+    py: Python<'py>,
     counts: PC,
     groups: &Int32Array,
     items: &Int32Array,
@@ -153,26 +156,28 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
     let gvals = groups.values();
     let ivals = items.values();
 
-    let g_ptrs = compute_group_pointers(n_groups, gvals)?;
+    let g_ptrs = py.detach(|| compute_group_pointers(n_groups, gvals))?;
 
     debug!("pass 2: counting groups");
-    (0..n_groups).into_par_iter().for_each(|i| {
-        let start = g_ptrs[i];
-        let end = g_ptrs[i + 1];
-        let items = &ivals[start..end];
-        let n = items.len();
+    // TODO: fix progress update
+    pb.process_iter_with_counter(py, (0..n_groups).into_par_iter(), |iter, counter| {
+        iter.for_each(|i| {
+            let start = g_ptrs[i];
+            let end = g_ptrs[i + 1];
+            let items = &ivals[start..end];
+            let n = items.len();
 
-        for i in 0..n {
-            let ri = items[i as usize];
-            for j in i..n {
-                let ci = items[j as usize];
-                counts.crecord(ri, ci);
+            for i in 0..n {
+                let ri = items[i as usize];
+                for j in i..n {
+                    let ci = items[j as usize];
+                    counts.crecord(ri, ci);
+                }
             }
-        }
-
-        pb.advance(items.len());
-    });
-    pb.flush();
+            counter.fetch_add(items.len(), Ordering::Relaxed);
+        });
+        Ok(())
+    })?;
 
     // assemble the result
     Ok(counts.finish())

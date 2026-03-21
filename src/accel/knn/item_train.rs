@@ -31,38 +31,33 @@ pub fn compute_similarities<'py>(
     progress: Bound<'py, PyAny>,
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
     let (nu, ni) = shape;
-    let mut progress = ProgressHandle::from_input(progress);
+    let progress = ProgressHandle::from_input(progress);
 
-    let res = py.detach(|| {
-        // extract the data
-        debug!("preparing {}x{} training", nu, ni);
-        debug!(
-            "resolving user-item matrix (type: {:#?})",
-            ui_ratings.0.data_type()
-        );
-        let ui_mat = CSRMatrix::from_arrow(make_array(ui_ratings.0))?;
-        debug!("resolving item-user matrix");
-        let iu_mat = CSRMatrix::from_arrow(make_array(iu_ratings.0))?;
-        assert_eq!(ui_mat.len(), nu);
-        assert_eq!(ui_mat.n_cols, ni);
-        assert_eq!(iu_mat.len(), ni);
-        assert_eq!(iu_mat.n_cols, nu);
+    // extract the data
+    debug!("preparing {}x{} training", nu, ni);
+    debug!(
+        "resolving user-item matrix (type: {:#?})",
+        ui_ratings.0.data_type()
+    );
+    let ui_mat = CSRMatrix::from_arrow(make_array(ui_ratings.0))?;
+    debug!("resolving item-user matrix");
+    let iu_mat = CSRMatrix::from_arrow(make_array(iu_ratings.0))?;
+    assert_eq!(ui_mat.len(), nu);
+    assert_eq!(ui_mat.n_cols, ni);
+    assert_eq!(iu_mat.len(), ni);
+    assert_eq!(iu_mat.n_cols, nu);
 
-        // let's compute!
-        let range = 0..ni;
-        debug!("computing similarity rows");
-        let collector = ArrowCSRConsumer::with_progress(ni, &progress);
-        let chunks = range
-            .into_par_iter()
+    // let's compute!
+    let range = 0..ni;
+    debug!("computing similarity rows");
+    let collector = ArrowCSRConsumer::new(ni);
+    let chunks = progress.process_iter(py, range.into_par_iter(), |iter| {
+        Ok(iter
             .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim, save_nbrs))
-            .drive(collector);
+            .drive_unindexed(collector))
+    })?;
 
-        Ok(chunks.iter().map(|a| a.into_data().into()).collect())
-    });
-
-    progress.shutdown(py)?;
-
-    res
+    Ok(chunks.iter().map(|a| a.into_data().into()).collect())
 }
 
 fn sim_row(
