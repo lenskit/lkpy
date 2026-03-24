@@ -29,6 +29,7 @@ import pyarrow as pa
 from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import get_logger
 
 from ..arrow import explode_column
 from ..builder import DatasetBuilder
@@ -40,6 +41,8 @@ from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, pro
 
 if TYPE_CHECKING:
     from ..dataset import Dataset
+
+_log = get_logger(__name__)
 
 
 class ItemListCollection(Generic[KL], ABC):
@@ -306,10 +309,13 @@ class ItemListCollection(Generic[KL], ABC):
             mkdir:
                 Whether to create the parent directories if they don't exist.
         """
+        log = _log.bind(path=str(path), n_lists=len(self))
         if mkdir:
+            log.debug("ensuring parent dir exists")
             Path(path).parent.mkdir(parents=True, exist_ok=True)
 
         if layout == "flat":
+            log.debug("saving flat Parquet file")
             self.to_df().to_parquet(path, compression=compression)
             return
 
@@ -317,6 +323,7 @@ class ItemListCollection(Generic[KL], ABC):
         try:
             for batch in self.record_batches(batch_size):
                 if writer is None:
+                    log.debug("opening Parquet writer", schema=batch.schema)
                     writer = ParquetWriter(
                         Path(path), batch.schema, compression=compression or "snappy"
                     )
