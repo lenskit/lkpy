@@ -347,7 +347,8 @@ def test_save_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
     _log.info("initial list:\n%s", ilc.to_df())
 
     f = tmpdir / "items.parquet"
-    ilc.save_parquet(f)
+    with warns(DataWarning, match="unknown field"):
+        ilc.save_parquet(f)
 
     assert f.exists()
 
