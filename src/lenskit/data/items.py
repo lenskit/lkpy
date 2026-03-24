@@ -377,7 +377,7 @@ class ItemList:
         """
         length = getattr(self, "_len", None)
         if self._ids is None and self._numbers is None:
-            self._ids = pa.array([], pa.int32())
+            self._ids = pa.array([], pa.null())
             self._numbers = MTArray(pa.array([], pa.int32()))
             self._len = 0
         elif length is None:  # pragma: nocover
@@ -839,7 +839,7 @@ class ItemList:
         numbers: bool = False,
         ranks: bool = True,
         type: Literal["table"] = "table",
-        columns: dict[str, pa.DataType] | None = None,
+        columns: Sequence[str] | None = None,
     ) -> pa.Table: ...
     @overload
     def to_arrow(
@@ -849,7 +849,7 @@ class ItemList:
         numbers: bool = False,
         ranks: bool = True,
         type: Literal["array"],
-        columns: dict[str, pa.DataType] | None = None,
+        columns: Sequence[str] | None = None,
     ) -> pa.StructArray: ...
     def to_arrow(
         self,
@@ -858,47 +858,51 @@ class ItemList:
         numbers: bool = False,
         ranks: bool = True,
         type: Literal["table", "array"] = "table",
-        columns: dict[str, pa.DataType] | None = None,
+        columns: Sequence[str] | None = None,
     ):
         """
         Convert the item list to a Pandas table.
         """
         arrays = []
-        names = []
-        if columns is not None and len(self) == 0:
-            arrays = [pa.array([], ft) for ft in columns.values()]
-            names = list(columns.keys())
+
+        if columns is None:
+            columns = list(self.arrow_types(ids=ids, numbers=numbers, ranks=ranks).keys())
         else:
-            if columns is None:
-                columns = self.arrow_types(ids=ids, numbers=numbers, ranks=ranks)
+            columns = list(columns)
 
-            for c_name, c_type in columns.items():
-                names.append(c_name)
-                if c_name == "item_id":
-                    arrays.append(self.ids(format="arrow"))
-                elif c_name == "item_num":
-                    arrays.append(self.numbers("arrow"))
-                elif c_name == "rank":
-                    if self.ordered:
-                        arrays.append(self.ranks("arrow"))
-                    else:
-                        warnings.warn("requested rank column for unordered list", DataWarning)
-                        arrays.append(pa.nulls(len(self), c_type))
+        for c_name in columns:
+            if c_name == "item_id":
+                arrays.append(self.ids(format="arrow"))
+            elif c_name == "item_num":
+                arrays.append(self.numbers("arrow"))
+            elif c_name == "rank":
+                if self.ordered:
+                    arrays.append(self.ranks("arrow"))
                 else:
-                    fld = self.field(c_name, format="arrow")
+                    warnings.warn(
+                        "requested rank column for unordered list", DataWarning, stacklevel=2
+                    )
+                    arrays.append(pa.nulls(len(self), pa.null()))
+            else:
+                fld = self.field(c_name, format="arrow")
 
-                    if fld is not None:
-                        arrays.append(fld)
-                    else:
-                        warnings.warn(f"unknown field {c_name}", DataWarning)
-                        arrays.append(pa.nulls(len(self), c_type))
+                if fld is not None:
+                    arrays.append(fld)
+                else:
+                    warnings.warn(f"unknown field {c_name}", DataWarning, stacklevel=2)
+                    arrays.append(pa.nulls(len(self), pa.null()))
 
         if type == "table":
-            return pa.Table.from_arrays(arrays, names)
+            return pa.Table.from_arrays(arrays, columns)
         elif type == "array":
-            return pa.StructArray.from_arrays(arrays, names)
+            return pa.StructArray.from_arrays(arrays, columns)
         else:  # pragma: nocover
             raise ValueError(f"unsupported target type {type}")
+
+    def arrow_schema(
+        self, *, ids: bool = True, numbers: bool = False, ranks: bool = True
+    ) -> pa.Schema:
+        return pa.schema(self.arrow_types(ids=ids, numbers=numbers, ranks=ranks))
 
     def arrow_types(
         self, *, ids: bool = True, numbers: bool = False, ranks: bool = True
@@ -913,6 +917,8 @@ class ItemList:
                 types["item_id"] = self._ids.type
             elif self._vocab is not None:
                 types["item_id"] = self._vocab.id_array().type
+            else:
+                types["item_id"] = pa.null()
 
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()
