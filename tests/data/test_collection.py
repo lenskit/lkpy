@@ -249,6 +249,31 @@ def test_rename(rng, ml_ratings: pd.DataFrame):
     assert len(il2) == len(ilc)
 
 
+def test_empty_lists(rng):
+    users = rng.choice(100_000, size=1000, replace=False)
+    ilc = ItemListCollection.from_dict({u: ItemList() for u in users})
+    assert len(ilc) == 1000
+    assert sum(len(il) for il in ilc.lists()) == 0
+
+    tbl = ilc.to_arrow()
+    print(tbl)
+    assert tbl.num_rows == 1000
+
+
+def test_save_empty_lists(rng, tmpdir: Path):
+    users = rng.choice(100_000, size=1000, replace=False)
+    ilc = ItemListCollection.from_dict({u: ItemList() for u in users})
+    assert len(ilc) == 1000
+    assert sum(len(il) for il in ilc.lists()) == 0
+
+    out_file = tmpdir / "empty.parquet"
+    ilc.save_parquet(out_file)
+
+    ilc2 = ItemListCollection.load_parquet(out_file)
+    assert len(ilc2) == 1000
+    assert sum(len(il) for il in ilc2.lists()) == 0
+
+
 def test_to_arrow():
     ilc = ItemListCollection.from_dict(
         {72: ItemList(["a"], scores=[1]), 82: ItemList(["a", "b", "c"], scores=[3, 4, 10])},
