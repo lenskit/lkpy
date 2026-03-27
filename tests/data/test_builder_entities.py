@@ -6,10 +6,10 @@
 
 # pyright: strict
 import numpy as np
-import pyarrow as pa
 import pandas as pd
+import pyarrow as pa
 
-from pytest import raises
+from pytest import mark, raises
 
 from lenskit.data import DatasetBuilder
 from lenskit.diagnostics import DataError
@@ -147,7 +147,8 @@ def test_add_entities_twice():
     assert np.all(ds.users.ids() == ["a", "b", "x", "y", "z", "q", "r", "s"])
 
 
-def test_add_entities_with_dataframe():
+@mark.parametrize("index", [False, True])
+def test_add_entities_with_dataframe(index: bool):
     dsb = DatasetBuilder()
 
     items = pd.read_csv(ml_test_dir / "movies.csv")
@@ -156,12 +157,20 @@ def test_add_entities_with_dataframe():
     genres = items["genres"].str.split("|")
     items["genres"] = genres
 
-    dsb.add_entities("item", items)
+    input = items if index else items.reset_index()
+
+    dsb.add_entities("item", input)
 
     ds = dsb.build()
+    assert ds.item_count == len(items)
 
     assert ds.entities("item").attribute("title").is_scalar
     assert ds.entities("item").attribute("genres").is_list
+
+    titles = ds.entities("item").attribute("title").pandas()
+    assert len(titles) == len(items)
+    titles, ot = titles.align(items["title"])
+    assert np.all(titles == ot)
 
 
 def test_add_entities_with_arrow_table():
@@ -177,6 +186,12 @@ def test_add_entities_with_arrow_table():
     dsb.add_entities("item", table)
 
     ds = dsb.build()
+    assert ds.item_count == len(items)
 
     assert ds.entities("item").attribute("title").is_scalar
     assert ds.entities("item").attribute("genres").is_list
+
+    titles = ds.entities("item").attribute("title").pandas()
+    assert len(titles) == len(items)
+    titles, ot = titles.align(items["title"])
+    assert np.all(titles == ot)
