@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from itertools import batched
 from os import PathLike
 from pathlib import Path
 from typing import (
@@ -25,20 +26,23 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from more_itertools import chunked
 from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import get_logger
 
 from ..arrow import explode_column
 from ..builder import DatasetBuilder
 from ..container import DataContainer
 from ..items import ItemList
+from ..repr import object_repr
 from ..types import ID, Column
 from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
 
 if TYPE_CHECKING:
     from ..dataset import Dataset
+
+_log = get_logger(__name__)
 
 
 class ItemListCollection(Generic[KL], ABC):
@@ -50,7 +54,9 @@ class ItemListCollection(Generic[KL], ABC):
     An item list collection consists of a sequence of item lists with associated
     *keys* following a fixed schema.  Item list collections support iteration
     (in order) and lookup by key. They are used to represent a variety of
-    things, including test data and the results of a batch run.
+    things, including test data and the results of a batch run. The length of an
+    item list collection (accessed with :func:`len`) is the number of item lists
+    in the collection, not the total number of items in the lists.
 
     The key schema can be specified either by a list of field names, or by
     providing a named tuple class (created by either :func:`namedtuple` or
@@ -303,10 +309,13 @@ class ItemListCollection(Generic[KL], ABC):
             mkdir:
                 Whether to create the parent directories if they don't exist.
         """
+        log = _log.bind(path=str(path), n_lists=len(self))
         if mkdir:
+            log.debug("ensuring parent dir exists")
             Path(path).parent.mkdir(parents=True, exist_ok=True)
 
         if layout == "flat":
+            log.debug("saving flat Parquet file")
             self.to_df().to_parquet(path, compression=compression)
             return
 
@@ -314,6 +323,7 @@ class ItemListCollection(Generic[KL], ABC):
         try:
             for batch in self.record_batches(batch_size):
                 if writer is None:
+                    log.debug("opening Parquet writer", schema=batch.schema)
                     writer = ParquetWriter(
                         Path(path), batch.schema, compression=compression or "snappy"
                     )
@@ -382,7 +392,7 @@ class ItemListCollection(Generic[KL], ABC):
     def record_batches(
         self,
         batch_size: int = 5000,
-        columns: dict[str, pa.DataType] | None = None,
+        columns: Mapping[str, pa.DataType] | Sequence[pa.Field] | pa.Schema | None = None,
         *,
         layout: Literal["native", "flat"] = "native",
     ) -> Generator[pa.RecordBatch, None, None]:
@@ -390,16 +400,20 @@ class ItemListCollection(Generic[KL], ABC):
         Get the item list collection as Arrow record batches (in native layout).
         """
         if columns is None:
-            columns = self.list_schema
+            schema = self.list_schema
+        elif isinstance(columns, pa.Schema):
+            schema = columns
+        else:
+            schema = pa.schema(columns)
 
-        for batch in chunked(self.items(), batch_size):
+        for batch in batched(self.items(), batch_size):
             keys = pa.Table.from_pylist([key_dict(k) for (k, _il) in batch])
-            schema = pa.list_(pa.struct(columns))  # type: ignore
+            item_type = pa.list_(pa.struct(list(schema)))  # type: ignore
             col_elts = [
-                il.to_arrow(ids=True, numbers=False, type="array", columns=columns)
+                il.to_arrow(ids=True, numbers=False, type="array", columns=schema.names)
                 for (_k, il) in batch
             ]
-            col = pa.array(col_elts, schema)
+            col = pa.array(col_elts, item_type)
             tbl = keys.add_column(keys.num_columns, "items", col)
             if layout == "flat":
                 tbl = explode_column(tbl, "items").flatten()
@@ -426,6 +440,19 @@ class ItemListCollection(Generic[KL], ABC):
         """
         Get the schema for the lists in this ILC.
         """
+
+    def rename_key(self, **names: str) -> ItemListCollection:
+        """
+        Rename one or more keys fields in this collection.
+        """
+        from ._list import ListILC
+
+        new_key = [names.get(f, f) for f in self.key_fields]
+        nkt = create_key_type(*new_key)
+        new = ListILC(nkt)
+        for k, il in self.items():
+            new.add(il, *k)
+        return new
 
     @overload
     def lookup(self, key: tuple) -> ItemList | None: ...
@@ -466,6 +493,12 @@ class ItemListCollection(Generic[KL], ABC):
         kp = project_key(key, self._key_class)
         return self.lookup(kp)
 
+    def total_items(self) -> int:
+        """
+        Count the total number of items across all lists in this collection.
+        """
+        return sum(len(il) for il in self.lists())
+
     @abstractmethod
     def items(self) -> Iterator[tuple[KL, ItemList]]:
         "Iterate over item lists and keys."
@@ -502,6 +535,11 @@ class ItemListCollection(Generic[KL], ABC):
                 when ``pos`` is out-of-bounds.
         """
         pass
+
+    def __str__(self):
+        return object_repr(
+            "ItemListCollection", ",".join(self.key_fields), comment=f"{len(self)} lists"
+        ).string()
 
 
 class ItemListCollector(Protocol):

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -26,6 +26,11 @@ from lenskit.training import ModelTrainer, TrainingOptions
 
 from ._model import FlexMFModel
 
+try:
+    from torch._dynamo.exc import TorchDynamoException
+except ImportError:
+    TorchDynamoException = None
+
 # hide base import to avoid circular imports
 if TYPE_CHECKING:
     from ._base import FlexMFConfigBase, FlexMFScorerBase
@@ -46,6 +51,10 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     component: Comp
     """
     The component whose model is being trained.
+    """
+    options: TrainingOptions
+    """
+    The LensKit training options.
     """
     opt: torch.optim.Optimizer
     """
@@ -90,12 +99,14 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         ensure_parallel_init()
 
         self.component = component
+        self.options = options
         self.explicit_norm = component.config.reg_method == "L2"
 
         self.log = _log.bind(scorer=self.__class__.__name__, size=self.config.embedding_size)
 
         self.device = options.configured_device(gpu_default=True)
-        self._init_rng(options)
+        self.rng = options.random_generator()
+        self.torch_rng = options.random_generator(type="torch")
 
         self.data = self.prepare_data(data)
         self.component.model = self.create_model()
@@ -110,13 +121,31 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.component.model = self.model.to(self.device)
         self.model.train(True)
 
-        if platform.system() not in ("Linux", "Darwin"):
-            _log.warn("compiled models are only usable on Linux and macOS")
-        elif torch.__version__ < "2.8":
-            _log.warn("compiled models require Torch >=2.8")
-        else:
-            _log.debug("compiling FlexMF model")
-            self._compiled_model = torch.compile(self.model)
+        if options.env_flag("LK_TORCH_COMPILE", default=True):
+            if platform.system() not in ("Linux", "Darwin"):
+                _log.warn(
+                    "compiled models are only usable on Linux and macOS, using uncompiled model",
+                    err_code="LKW-TCOMP",
+                )
+            elif torch.__version__ < "2.8":
+                _log.warn(
+                    "compiled models require Torch >=2.8, using uncompiled model",
+                    err_code="LKW-TCOMP",
+                )
+            else:
+                _log.debug("compiling FlexMF model")
+                try:
+                    self._compiled_model = torch.compile(self.model)
+                except RuntimeError as e:
+                    (msg,) = e.args
+                    if msg.startswith("torch.compile"):
+                        _log.warn(
+                            "Torch compilation failed, using uncompiled model",
+                            exc_info=e,
+                            err_code="LKW-TCOMP",
+                        )
+                    else:
+                        raise e
 
         self.setup_optimizer()
 
@@ -139,7 +168,13 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         Invoke the model, using the compiled version if available.
         """
         if self._compiled_model is not None:
-            return self._compiled_model(*args, **kwargs)
+            assert TorchDynamoException is not None
+            try:
+                return self._compiled_model(*args, **kwargs)
+            except TorchDynamoException as e:
+                self.log.warning("calling compiled model failed, falling back: %s", e)
+                self._compiled_model = None
+                return self.call_model(*args, **kwargs)
         else:
             return self.model(*args, **kwargs)
 
@@ -160,11 +195,13 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
                 blog.debug("training batch")
                 loss = self.train_batch(batch)
                 self.opt.zero_grad()
+                tot_loss += loss
 
                 if i % 20 == 0:
-                    avg_loss = tot_loss.item() / epoch_data.batch_count
+                    avg_loss = tot_loss.item() / (i + 1)
+
                 pb.update(loss=avg_loss)
-                tot_loss += loss
+                self.options.step_profiler()
 
         avg_loss = tot_loss.item() / epoch_data.batch_count
         elog.debug("epoch complete", loss=avg_loss)
@@ -238,14 +275,6 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
             opt = torch.optim.SparseAdam(self.model.parameters(), lr=self.config.learning_rate)
         self.opt = opt
 
-    def _init_rng(self, options: TrainingOptions):
-        self.rng = options.random_generator()
-
-        # use the NumPy generator to seed Torch
-        self.torch_rng = torch.Generator()
-        i32 = np.iinfo(np.int32)
-        self.torch_rng.manual_seed(int(self.rng.integers(i32.min, i32.max)))
-
     def get_parameters(self) -> Mapping[str, object]:
         return self.model.state_dict()
 
@@ -272,9 +301,18 @@ class FlexMFTrainingData:
     items: torch.Tensor | np.ndarray[tuple[int], np.dtype[np.int32]]
     "Item numbers for training samples."
 
-    matrix: MatrixRelationshipSet | None = None
+    interactions: MatrixRelationshipSet | None = None
     """
     The original relationship set we are training on.
+    """
+
+    ui_matrix: torch.Tensor | None = None
+    """
+    Normalized user-item adjacency matrix.
+    """
+    iu_matrix: torch.Tensor | None = None
+    """
+    Normalized item-user adjacency matrix.
     """
 
     fields: dict[str, torch.Tensor] = field(default_factory=dict)

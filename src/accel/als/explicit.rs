@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -9,7 +9,6 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
-use nshare::{IntoNalgebra, IntoNdarray1};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -17,6 +16,7 @@ use rayon::prelude::*;
 use log::*;
 
 use crate::{
+    als::solve::POSV,
     progress::ProgressHandle,
     sparse::{CSRMatrix, CSR},
 };
@@ -30,6 +30,7 @@ pub(super) fn train_explicit_matrix<'py>(
     reg: f32,
     progress: Bound<'py, PyAny>,
 ) -> PyResult<f32> {
+    let solver = POSV::load(py)?;
     let matrix_ref = make_array(matrix.0);
     let matrix: CSRMatrix<i32> = CSRMatrix::from_arrow(matrix_ref)?;
 
@@ -45,22 +46,24 @@ pub(super) fn train_explicit_matrix<'py>(
         other.nrows()
     );
 
-    let frob: f32 = py.allow_threads(|| {
-        this.outer_iter_mut()
-            .into_par_iter()
-            .enumerate()
-            .map(|(i, row)| {
-                let f = train_row_solve(&matrix, i, row, &other, reg);
-                progress.tick();
-                f
-            })
-            .sum()
-    });
+    let frob: f32 = progress.process_iter(
+        py,
+        this.outer_iter_mut().into_par_iter().enumerate(),
+        |iter| {
+            Ok(iter
+                .map(|(i, row)| {
+                    let f = train_row_solve(&solver, &matrix, i, row, &other, reg);
+                    f
+                })
+                .sum())
+        },
+    )?;
 
     Ok(frob.sqrt())
 }
 
 fn train_row_solve(
+    solver: &POSV,
     matrix: &CSRMatrix<i32>,
     row_num: usize,
     mut row_data: ArrayBase<ViewRepr<&mut f32>, Ix1>,
@@ -92,15 +95,8 @@ fn train_row_solve(
     let v = mt.dot(&vals);
     assert_eq!(v.shape(), &[nd]);
 
-    let mtm = mtm.into_nalgebra();
-    let v = v.into_nalgebra();
-    let soln = if let Some(cholesky) = mtm.view((0, 0), (nd, nd)).cholesky() {
-        cholesky.solve(&v)
-    } else {
-        mtm.lu().solve(&v).expect("matrix is non-invertible")
-    };
+    let soln = solver.solve(&mut mtm, &v).expect("LAPACK error");
 
-    let soln = soln.into_ndarray1();
     let deltas = &soln - &row_data;
     row_data.assign(&soln);
 

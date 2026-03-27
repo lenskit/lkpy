@@ -2,17 +2,47 @@ from __future__ import annotations
 
 import numpy as np
 import pyarrow as pa
+from typing_extensions import TypeVar
 
+from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import ID
+from lenskit.logging import Progress
 
+A = TypeVar("A", bound=pa.Array, default=pa.Array)
+
+def transpose_csr(
+    matrix: SparseRowArray, permute: bool
+) -> tuple[pa.Array, pa.Int32Array, pa.Array | None]: ...
 def is_sorted_coo(data: list[pa.RecordBatch], c1: str, c2: str) -> bool: ...
 def argsort_descending(data: pa.Array) -> pa.Int32Array: ...
+def argtopn(data: pa.Array, n: int) -> pa.Int32Array: ...
 def negative_mask(n: int, indices: pa.Int32Array) -> pa.BooleanArray:
     """
     Efficiently create a boolean array that is true everywhere except ``indices``.
     """
     ...
 
+def count_cooc(
+    n_groups: int,
+    n_items: int,
+    groups: pa.Int32Array,
+    cols: pa.Int32Array,
+    *,
+    ordered: bool = False,
+    diagonal: bool = True,
+    progress: Progress | None,
+) -> list[pa.RecordBatch]: ...
+def dense_cooc(
+    n_groups: int,
+    n_items: int,
+    groups: pa.Int32Array,
+    cols: pa.Int32Array,
+    *,
+    diagonal: bool = True,
+    progress: Progress | None,
+) -> np.ndarray[tuple[int, int], np.dtype[np.float32]]: ...
+def scatter_array(dst: A, idx: pa.Array, src: A) -> A: ...
+def scatter_array_empty(dst_size: int, idx: pa.Array, src: A) -> A: ...
 def sample_negatives(
     coords: CoordinateTable,
     rows: np.ndarray[tuple[int], np.dtype[np.int32]],
@@ -30,8 +60,8 @@ class IDIndex:
     Backend implementation for ID indexes / vocabularies.
     """
     def __init__(self, ids: pa.Array | None = None): ...
-    def get_index(self, id: ID): ...
-    def get_indexes(self, ids: pa.Array): ...
+    def get_index(self, id: ID) -> int: ...
+    def get_indexes(self, ids: pa.Array) -> pa.Array: ...
     def id_array(self) -> pa.Array: ...
     def __len__(self) -> int: ...
 

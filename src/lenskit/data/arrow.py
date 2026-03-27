@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -77,6 +77,8 @@ def arrow_slice(sel: slice, array: MTArray | A | None) -> A | None:
     if sel.step and sel.step != 1:
         raise ValueError("slices with steps unsupported")
     start = sel.start or 0
+    if start < 0:
+        start = len(array) + start
     if sel.stop is None:
         slen = len(array) - start
     elif sel.stop < 0:

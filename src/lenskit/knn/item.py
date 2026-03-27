@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -112,6 +112,10 @@ class ItemKNNScorer(Component[ItemList], Trainable):
     "Similarity matrix (sparse CSR tensor)."
 
     @override
+    def is_trained(self):
+        return hasattr(self, "sim_matrix")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Train a model.
@@ -123,9 +127,6 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ratings:
                 (user,item,rating) data for computing item similarities.
         """
-        if hasattr(self, "sim_matrix") and not options.retrain:
-            return
-
         ensure_parallel_init()
         log = _log.bind(n_items=data.item_count, feedback=self.config.feedback)
         # Training proceeds in 2 steps:
@@ -136,12 +137,12 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
         field = "rating" if self.config.explicit else None
         rmat = data.interactions().matrix().scipy(field, layout="coo").astype(np.float32)
-        n_users, n_items = rmat.shape
+        n_rows, n_items = rmat.shape
         log.info(
             "[%s] made sparse matrix",
             timer,
             n_ratings=rmat.nnz,
-            n_users=data.user_count,
+            n_rows=rmat.shape[0],
         )
 
         rmat, means = self._center_ratings(log, timer, rmat)
@@ -156,7 +157,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         log.info("[%s] computing similarity matrix", timer)
         with item_progress("Neighborhoods", total=n_items) as pb:
             smat = _accel.knn.compute_similarities(
-                ui_mat, iu_mat, (n_users, n_items), self.config.min_sim, self.config.save_nbrs, pb
+                ui_mat, iu_mat, (n_rows, n_items), self.config.min_sim, self.config.save_nbrs, pb
             )
         log.debug("[%s] computed, memory use %s", timer, max_memory())
         assert isinstance(smat, list)
@@ -224,16 +225,16 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         log = _log.bind(user_id=query.user_id, n_items=len(items))
         trace(log, "beginning prediction")
 
-        ratings = query.user_items
+        ratings = query.query_items
         if ratings is None or len(ratings) == 0:
             if ratings is None:
-                warnings.warn("no user history, did you omit a history component?", DataWarning)
+                warnings.warn("no query items, did you omit a history component?", DataWarning)
             log.debug("user has no history, returning")
             return ItemList(items, scores=np.nan)
 
         # set up rating array
         # get rated item positions & limit to in-model items
-        ri_nums = ratings.numbers(format="numpy", vocabulary=self.items, missing="negative")
+        ri_nums = ratings.numbers(vocabulary=self.items, missing="negative")
         ri_mask = ri_nums >= 0
         ri_arr = pa.array(ri_nums, mask=~ri_mask)
         n_invalid = ri_arr.null_count
@@ -257,24 +258,26 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ri_vals[ri_mask] -= self.item_means[ri_nums[ri_mask]]
             ri_vals = pa.array(ri_vals, mask=~ri_mask)
 
-            scores = _accel.knn.score_explicit(
+            scores, counts = _accel.knn.score_explicit(
                 self.sim_matrix,
                 ri_arr,
                 ri_vals,
                 ti_arr,
                 self.config.max_nbrs,
                 self.config.min_nbrs,
-            ).to_numpy(zero_copy_only=False, writable=True)
+            )
+            scores = scores.to_numpy(zero_copy_only=False, writable=True)
             scores[ti_mask] += self.item_means[ti_nums[ti_mask]]
 
         else:
-            scores = _accel.knn.score_implicit(
+            scores, counts = _accel.knn.score_implicit(
                 self.sim_matrix, ri_arr, ti_arr, self.config.max_nbrs, self.config.min_nbrs
-            ).to_numpy(zero_copy_only=False)
+            )
+            scores = scores.to_numpy(zero_copy_only=False, writable=True)
 
         log.debug(
             "scored %d items",
             int(np.isfinite(scores).sum()),
         )
 
-        return ItemList(items, scores=scores)
+        return ItemList(items, scores=scores, nbr_counts=counts)

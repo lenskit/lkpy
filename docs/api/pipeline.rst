@@ -47,11 +47,14 @@ Standard Pipelines
 Serialized Configurations
 -------------------------
 
+Most code will not need to directly use the configuration classes, but they define
+the schema of pipeline configuration files.
+
 .. autosummary::
     :toctree: .
     :nosignatures:
 
-    ~lenskit.pipeline.PipelineConfig
+    lenskit.pipeline.config
 
 Hook Interfaces
 ---------------
@@ -61,3 +64,15 @@ Hook Interfaces
     :nosignatures:
 
     ~lenskit.pipeline.ComponentInputHook
+
+Nodes
+-----
+
+The pipeline directly exposes its nodes, but most code will not need to use
+them.
+
+.. autosummary::
+    :toctree: .
+    :nosignatures:
+
+    lenskit.pipeline.nodes

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -362,12 +362,39 @@ def test_count_synthetic(ml_ds: Dataset):
     assert np.all(matrix.data == 1.0)
 
 
+def test_matrix_transpose(ml_ds: Dataset):
+    matrix = ml_ds.interactions().matrix()
+    transpose = matrix.matrix(row_entity="item")
+    assert transpose.n_rows == matrix.n_cols
+    assert transpose.n_cols == matrix.n_rows
+
+    istats = ml_ds.item_stats()
+    csr = transpose.csr_structure()
+    nnz = csr.row_nnzs
+
+    assert np.all(nnz == istats["count"].values)
+
+
 def test_matrix_csr_structure(ml_ds: Dataset):
     matrix = ml_ds.interactions().matrix()
     csr = matrix.csr_structure()
     assert csr.nrows == ml_ds.user_count
     assert csr.ncols == ml_ds.item_count
     assert csr.nnz == ml_ds.interaction_count
+
+    row_nnzs = csr.row_nnzs
+    assert len(row_nnzs) == csr.nrows
+    assert np.sum(row_nnzs) == csr.nnz
+    assert np.all(row_nnzs >= 0)
+
+
+def test_matrix_csr_structure_arrow(ml_ds: Dataset):
+    matrix = ml_ds.interactions().matrix()
+    csr = matrix.csr_structure(format="arrow")
+    assert len(csr) == matrix.n_rows
+    assert csr.shape == (matrix.n_rows, matrix.n_cols)
+    assert len(csr.indices) == matrix.count()
+    assert not csr.has_values
 
 
 def test_matrix_coo_structure(ml_ds: Dataset):
@@ -376,3 +403,39 @@ def test_matrix_coo_structure(ml_ds: Dataset):
     assert coo.nrows == ml_ds.user_count
     assert coo.ncols == ml_ds.item_count
     assert coo.nnz == ml_ds.interaction_count
+
+
+def test_matrix_scipy_coo_partial(ml_ratings: pd.DataFrame, rng: np.random.Generator):
+    ml_ratings = ml_ratings.copy()
+    ml_ratings.loc[rng.choice(len(ml_ratings), 1000, replace=False), "rating"] = np.nan
+    ds = from_interactions_df(ml_ratings)
+
+    matrix = ds.interactions().matrix()
+
+    coo = matrix.scipy(attribute="rating", layout="coo")
+    assert coo.nnz == matrix.count() - 1000
+    assert np.all(np.isfinite(coo.data))
+
+
+def test_matrix_scipy_csr_partial(ml_ratings: pd.DataFrame, rng: np.random.Generator):
+    ml_ratings = ml_ratings.copy()
+    ml_ratings.loc[rng.choice(len(ml_ratings), 1000, replace=False), "rating"] = np.nan
+    ds = from_interactions_df(ml_ratings)
+
+    matrix = ds.interactions().matrix()
+
+    coo = matrix.scipy(attribute="rating", layout="coo")
+    assert coo.nnz == matrix.count() - 1000
+    assert np.all(np.isfinite(coo.data))
+
+
+def test_matrix_tensor_partial(ml_ratings: pd.DataFrame, rng: np.random.Generator):
+    ml_ratings = ml_ratings.copy()
+    ml_ratings.loc[rng.choice(len(ml_ratings), 1000, replace=False), "rating"] = np.nan
+    ds = from_interactions_df(ml_ratings)
+
+    matrix = ds.interactions().matrix()
+
+    coo = matrix.torch(attribute="rating")
+    assert len(coo.values()) == matrix.count() - 1000
+    assert torch.all(torch.isfinite(coo.values()))

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -100,6 +100,10 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     @override
+    def is_trained(self):
+        return hasattr(self, "user_ratings")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
@@ -108,9 +112,6 @@ class UserKNNScorer(Component[ItemList], Trainable):
         Args:
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
-        if hasattr(self, "user_ratings_") and not options.retrain:
-            return
-
         ensure_parallel_init()
         rmat = (
             data.interactions().matrix().scipy(attribute="rating" if self.config.explicit else None)

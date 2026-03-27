@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -40,7 +40,7 @@ class LightGCNConfig(EmbeddingSizeMixin, BaseModel):
         Experimental
     """
 
-    embedding_size: PositiveInt = 64
+    embedding_size: PositiveInt = 16
     """
     The dimension of the embedding space (number of latent features).  Seems
     to work best as a power of 2.
@@ -57,7 +57,7 @@ class LightGCNConfig(EmbeddingSizeMixin, BaseModel):
     ``alpha`` in :class:`LightGCN`.
     """
 
-    batch_size: PositiveInt = 8 * 1024
+    batch_size: PositiveInt = 4 * 1024
     """
     The training batch size.
     """
@@ -296,7 +296,7 @@ class LightGCNTrainer(ModelTrainer):
         return {"loss": avg_loss}
 
     def finalize(self):
-        pass
+        self.model.eval()
 
     def batch_loss(self, mb_edges: torch.Tensor, scores: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()

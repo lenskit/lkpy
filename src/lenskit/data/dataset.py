@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -543,7 +543,7 @@ class Dataset:
         out.write("<Dataset")
         if self.name is not None:
             out.write(" " + self.name)
-        out.write(" {")
+        out.write(" {\n")
         for entity in self.schema.entities:
             eset = self._entities.get(entity, None)
             if eset is not None:

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -14,6 +14,7 @@ from lenskit.tuning import PipelineTuner, TuningSpec
 
 
 @mark.slow
+@mark.realdata
 def test_tune_bias(ml_100k, tmpdir):
     spec = TuningSpec.load(Path("pipelines/bias-search.toml"))
     tuner = PipelineTuner(spec, Path(tmpdir))

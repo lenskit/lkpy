@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -10,11 +10,11 @@ from uuid import UUID
 import numpy as np
 from typing_extensions import assert_type
 
-from pytest import raises, warns
+from pytest import mark, raises, warns
 
 from lenskit.pipeline import PipelineBuilder, PipelineError
+from lenskit.pipeline._types import TypecheckWarning
 from lenskit.pipeline.nodes import InputNode, Node
-from lenskit.pipeline.types import TypecheckWarning
 
 
 def test_init_empty():
@@ -41,6 +41,14 @@ def test_lookup_optional():
     pipe.create_input("user", int, str)
 
     assert pipe.node("item", missing="none") is None
+
+
+def test_input_no_component():
+    pipe = PipelineBuilder()
+    pipe.create_input("user", int, str)
+    pipe = pipe.build()
+
+    assert pipe.component("user") is None
 
 
 def test_lookup_missing():
@@ -192,6 +200,19 @@ def test_component_unwired_input():
     assert pipe.run(node, msg="hello") == "hello"
 
 
+def test_extract_component():
+    pipe = PipelineBuilder()
+    msg = pipe.create_input("msg", str)
+
+    def incr(msg: str) -> str:
+        return msg
+
+    pipe.add_component("return", incr, msg=msg)
+    pipe = pipe.build()
+
+    assert pipe.component("return") is incr
+
+
 def test_chain():
     pipe = PipelineBuilder()
     x = pipe.create_input("x", int)
@@ -216,6 +237,24 @@ def test_chain():
 
     # run only first node
     assert pipe.run(ni, x=10) == 11
+
+
+def test_chain_component_names():
+    pipe = PipelineBuilder()
+    x = pipe.create_input("x", int)
+
+    def incr(x: int) -> int:
+        return x + 1
+
+    def triple(x: int) -> int:
+        return x * 3
+
+    ni = pipe.add_component("incr", incr, x=x)
+    nt = pipe.add_component("triple", triple, x=ni)
+    pipe.default_component(nt)
+
+    pipe = pipe.build()
+    assert pipe.component_names() == ["incr", "triple"]
 
 
 def test_simple_graph():
@@ -519,6 +558,7 @@ def test_fail_missing_input():
     assert pipe.run(nd, a=3) == 6
 
 
+@mark.filterwarnings("ignore::lenskit.diagnostics.TypecheckWarning")
 def test_pipeline_component_default():
     """
     Test that the default component is run correctly.

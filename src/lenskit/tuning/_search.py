@@ -1,11 +1,14 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 """
 Hyperparameter searching wrapper.
+
+.. stability:: experimental
+
 """
 
 from pathlib import Path
@@ -19,23 +22,24 @@ from pydantic import JsonValue
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
 
+from lenskit.config import TuneSettings, lenskit_config
 from lenskit.data import Dataset, ItemListCollection
 from lenskit.data.collection._keys import GenericKey
 from lenskit.logging import get_logger
 from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
-from lenskit.pipeline import PipelineBuilder
+from lenskit.pipeline import PipelineBuilder, PipelineConfig
 from lenskit.pipeline.nodes import ComponentConstructorNode
 from lenskit.random import RNGInput, default_rng, int_seed, spawn_seed
 from lenskit.splitting import TTSplit
 from lenskit.training import UsesTrainer
 
-from .iterative import IterativeEval
-from .job import TuningJobData
-from .reporting import ProgressReport, StatusCallback
-from .simple import SimplePointEval
+from ._iterative import IterativeEval
+from ._job import TuningJobData
+from ._reporting import ProgressReport, StatusCallback
+from ._simple import SimplePointEval
+from ._stopper import RelativePlateauStopper
 from .spec import PipelineFile, SearchSpace, TuningSpec
-from .stopper import RelativePlateauStopper
 
 _log = get_logger(__name__)
 
@@ -43,14 +47,17 @@ _log = get_logger(__name__)
 class PipelineTuner:
     """
     Set up and run a hyperparameter tuning job for a pipeline.
+
+    Stability:
+        Experimental
     """
 
+    settings: TuneSettings
     spec: TuningSpec
     out_dir: Path
     pipe_name: str | None
     random_seed: np.random.SeedSequence
     iterative: bool
-    job_limit: int | None = None
 
     data: TTSplit[GenericKey]
     harness: Any
@@ -70,6 +77,8 @@ class PipelineTuner:
         out_dir: Path | None = None,
         rng: RNGInput = None,
     ):
+        cfg = lenskit_config()
+        self.settings = cfg.tuning
         if out_dir is None:
             out_dir = Path("lenskit-tune")
         self.out_dir = out_dir
@@ -163,10 +172,21 @@ class PipelineTuner:
         if res is None:
             raise ValueError("best result has no metrics")
 
-        if "training_iteration" in res:
+        if self.iterative:
             res["config"] = res["config"] | {"epochs": res["training_iteration"]}
 
         return res
+
+    def best_pipeline(self) -> PipelineConfig:
+        """
+        Get the (full) configuration for the best pipeline.
+        """
+        best = self.best_result()
+        cfg = self.spec.pipeline
+        assert isinstance(cfg, PipelineConfig)
+        name = self.spec.component_name
+        assert name is not None
+        return cfg.merge_component_configs({name: best["config"]})  # type: ignore
 
     def search_space(self):
         """
@@ -196,14 +216,9 @@ class PipelineTuner:
 
         paracfg = get_parallel_config()
 
-        self.log.info(
-            "setting up parallel tuner",
-            cpus=paracfg.total_threads,
-        )
-
         match self.spec.search.num_cpus:
             case "threads":
-                tune_cpus = paracfg.threads
+                tune_cpus = paracfg.num_backend_threads or 1
             case "all-threads":
                 tune_cpus = paracfg.total_threads
             case int(n) if n > 0:
@@ -211,9 +226,12 @@ class PipelineTuner:
             case _:
                 raise ValueError(f"invalid CPU count {self.spec.search.num_cpus}")
 
-        self.harness = ray.tune.with_resources(
-            harness, {"CPU": tune_cpus, "GPU": self.spec.search.num_gpus}
-        )
+        self.log.info("setting up parallel tuner", cpus=tune_cpus)
+
+        resources: dict[str, float | int] = {"CPU": tune_cpus}
+        if self.spec.search.num_gpus:
+            resources["GPU"] = self.spec.search.num_gpus * self.settings.gpu_mult
+        self.harness = ray.tune.with_resources(harness, resources)
 
     @property
     def metric(self):
@@ -282,7 +300,7 @@ class PipelineTuner:
                 checkpoint_at_end=False,
             )
 
-        nsamp = self.spec.search.max_points
+        nsamp = self.spec.search.num_search_points()
         space = self.search_space()
         self.log.info("creating tuner for %d samples", nsamp, space=space)
         self.tuner = ray.tune.Tuner(
@@ -292,7 +310,7 @@ class PipelineTuner:
                 metric=self.metric,
                 mode=self.mode,
                 num_samples=nsamp,
-                max_concurrent_trials=self.job_limit,
+                max_concurrent_trials=self.settings.jobs,
                 search_alg=searcher,
                 scheduler=scheduler,
             ),

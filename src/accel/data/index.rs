@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -22,9 +22,9 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 
-use crate::indirect_hashing::content_int::PrimitiveContentArray;
-use crate::indirect_hashing::content_string::StringContentArray;
-use crate::indirect_hashing::{IndirectHashTable, PositionLookup};
+use crate::indirect::hashing::content_int::PrimitiveContentArray;
+use crate::indirect::hashing::content_string::StringContentArray;
+use crate::indirect::hashing::{IndirectHashTable, PositionLookup};
 
 /// Arrow-based ID index.
 #[pyclass]
@@ -70,9 +70,12 @@ impl IDIndex {
             DataType::Int64 => prim_tbl::<Int64Type>(&ids)?,
             DataType::UInt64 => prim_tbl::<UInt64Type>(&ids)?,
             DataType::Utf8 => Box::new(IndirectHashTable::from_unique(StringContentArray::new(
-                ids.as_string().clone(),
+                ids.as_string::<i32>().clone(),
             ))?),
-            // TODO: add support for large strings, views, and binaries
+            DataType::LargeUtf8 => Box::new(IndirectHashTable::from_unique(
+                StringContentArray::new(ids.as_string::<i64>().clone()),
+            )?),
+            // TODO: add support for views and binaries
             _ => {
                 return Err(PyTypeError::new_err(format!(
                     "unsupported ID type {}",

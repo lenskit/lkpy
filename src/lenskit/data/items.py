@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -29,7 +29,6 @@ from typing_extensions import (
 
 from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataWarning
-from lenskit.stats import argtopn
 
 from .arrow import get_indexer
 from .checks import check_1d
@@ -148,6 +147,7 @@ class ItemList:
     # storage for individual components of the item list
     _ids: pa.Array | None = None
     _ids_numpy: IDArray | None = None
+    _id_idx: _data_accel.IDIndex | None = None
     _mask_cache: tuple[ItemList, np.ndarray[tuple[int], np.dtype[np.bool_]]] | None = None
     _numbers: MTArray[np.int32] | None = None
     _vocab: Vocabulary | None = None
@@ -254,11 +254,13 @@ class ItemList:
         try:
             self._ids = array.field("item_id")
         except KeyError:
+            # ignore missing field
             pass
 
         try:
             numbers = array.field("item_num")
         except KeyError:
+            # ignore missing field
             pass
         else:
             self._numbers = MTArray(numbers.cast(pa.int32()))
@@ -313,8 +315,8 @@ class ItemList:
         elif len(item_ids) > 0:
             try:
                 self._ids = pa.array(item_ids)  # type: ignore
-            except pa.ArrowInvalid:  # pragma: nocover
-                raise TypeError("invalid item ID type or dimension")
+            except pa.ArrowInvalid as e:  # pragma: nocover
+                raise TypeError("invalid item ID type or dimension") from e
             if isinstance(item_ids, np.ndarray):
                 self._ids_numpy = item_ids
         else:
@@ -375,7 +377,7 @@ class ItemList:
         """
         length = getattr(self, "_len", None)
         if self._ids is None and self._numbers is None:
-            self._ids = pa.array([], pa.int32())
+            self._ids = pa.array([], pa.null())
             self._numbers = MTArray(pa.array([], pa.int32()))
             self._len = 0
         elif length is None:  # pragma: nocover
@@ -575,6 +577,11 @@ class ItemList:
             case _:  # pragma: nocover
                 raise ValueError(f"unknown format {format}")
 
+    def _id_index(self) -> _data_accel.IDIndex:
+        if self._id_idx is None:
+            self._id_idx = _data_accel.IDIndex(self.ids(format="arrow"))
+        return self._id_idx
+
     @overload
     def numbers(
         self,
@@ -597,7 +604,7 @@ class ItemList:
         format: Literal["arrow"],
         *,
         vocabulary: Vocabulary | None = None,
-        missing: Literal["error", "negative"] = "error",
+        missing: Literal["error", "negative", "null"] = "error",
     ) -> pa.Array[pa.Int32Scalar]: ...
     @overload
     def numbers(
@@ -612,7 +619,7 @@ class ItemList:
         format: LiteralString = "numpy",
         *,
         vocabulary: Vocabulary | None = None,
-        missing: Literal["error", "negative"] = "error",
+        missing: Literal["error", "negative", "null"] = "error",
     ) -> ArrayLike:
         """
         Get the item numbers.
@@ -633,10 +640,14 @@ class ItemList:
             :class:`Vocabulary`.
         """
         if vocabulary is not None and vocabulary != self._vocab:
+            if format == "torch":
+                nums = self.numbers(format="numpy", vocabulary=vocabulary, missing=missing)  # type: ignore
+                return torch.from_numpy(nums)
+
             # we need to translate vocabulary
             ids = self.ids()
-            mta = MTArray(vocabulary.numbers(ids, missing=missing))
-            return mta.to(format)
+
+            return vocabulary.numbers(ids, format=format, missing=missing)
 
         if self._numbers is None:
             if self._vocab is None:
@@ -646,6 +657,11 @@ class ItemList:
 
         if missing == "error" and np.any(self._numbers.numpy() < 0):
             raise KeyError("item IDs")
+        if missing == "null":
+            assert format == "arrow"
+            nums = self._numbers.to("numpy")
+            return pa.array(nums, mask=nums < 0)
+
         return self._numbers.to(format)
 
     @overload
@@ -821,8 +837,9 @@ class ItemList:
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["table"] = "table",
-        columns: dict[str, pa.DataType] | None = None,
+        columns: Sequence[str] | None = None,
     ) -> pa.Table: ...
     @overload
     def to_arrow(
@@ -830,58 +847,66 @@ class ItemList:
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["array"],
-        columns: dict[str, pa.DataType] | None = None,
+        columns: Sequence[str] | None = None,
     ) -> pa.StructArray: ...
     def to_arrow(
         self,
         *,
         ids: bool = True,
         numbers: bool = False,
+        ranks: bool = True,
         type: Literal["table", "array"] = "table",
-        columns: dict[str, pa.DataType] | None = None,
+        columns: Sequence[str] | None = None,
     ):
         """
         Convert the item list to a Pandas table.
         """
         arrays = []
-        names = []
-        if columns is not None and len(self) == 0:
-            arrays = [pa.array([], ft) for ft in columns.values()]
-            names = list(columns.keys())
+
+        if columns is None:
+            columns = list(self.arrow_types(ids=ids, numbers=numbers, ranks=ranks).keys())
         else:
-            if columns is None:
-                columns = self.arrow_types(ids=ids, numbers=numbers)
+            columns = list(columns)
 
-            for c_name, c_type in columns.items():
-                names.append(c_name)
-                if c_name == "item_id":
-                    arrays.append(self.ids(format="arrow"))
-                elif c_name == "item_num":
-                    arrays.append(self.numbers("arrow"))
-                elif c_name == "rank":
-                    if self.ordered:
-                        arrays.append(self.ranks("arrow"))
-                    else:
-                        warnings.warn("requested rank column for unordered list", DataWarning)
-                        arrays.append(pa.nulls(len(self), c_type))
+        for c_name in columns:
+            if c_name == "item_id":
+                arrays.append(self.ids(format="arrow"))
+            elif c_name == "item_num":
+                arrays.append(self.numbers("arrow"))
+            elif c_name == "rank":
+                if self.ordered:
+                    arrays.append(self.ranks("arrow"))
                 else:
-                    fld = self.field(c_name, format="arrow")
+                    warnings.warn(
+                        "requested rank column for unordered list", DataWarning, stacklevel=2
+                    )
+                    arrays.append(pa.nulls(len(self), pa.null()))
+            else:
+                fld = self.field(c_name, format="arrow")
 
-                    if fld is not None:
-                        arrays.append(fld)
-                    else:
-                        warnings.warn(f"unknown field {c_name}", DataWarning)
-                        arrays.append(pa.nulls(len(self), c_type))
+                if fld is not None:
+                    arrays.append(fld)
+                else:
+                    warnings.warn(f"unknown field {c_name}", DataWarning, stacklevel=2)
+                    arrays.append(pa.nulls(len(self), pa.null()))
 
         if type == "table":
-            return pa.Table.from_arrays(arrays, names)
+            return pa.Table.from_arrays(arrays, columns)
         elif type == "array":
-            return pa.StructArray.from_arrays(arrays, names)
+            return pa.StructArray.from_arrays(arrays, columns)
         else:  # pragma: nocover
             raise ValueError(f"unsupported target type {type}")
 
-    def arrow_types(self, *, ids: bool = True, numbers: bool = False) -> dict[str, pa.DataType]:
+    def arrow_schema(
+        self, *, ids: bool = True, numbers: bool = False, ranks: bool = True
+    ) -> pa.Schema:
+        return pa.schema(self.arrow_types(ids=ids, numbers=numbers, ranks=ranks))
+
+    def arrow_types(
+        self, *, ids: bool = True, numbers: bool = False, ranks: bool = True
+    ) -> dict[str, pa.DataType]:
         """
         Get the Arrow data types for this item list.
         """
@@ -892,11 +917,13 @@ class ItemList:
                 types["item_id"] = self._ids.type
             elif self._vocab is not None:
                 types["item_id"] = self._vocab.id_array().type
+            else:
+                types["item_id"] = pa.null()
 
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()
 
-        if self.ordered:
+        if self.ordered and ranks:
             types["rank"] = pa.int32()
 
         for n, f in self._fields.items():
@@ -957,9 +984,81 @@ class ItemList:
             if want_all:
                 picked = _data_accel.argsort_descending(scores)
             else:
-                picked = argtopn(scores, n)
+                assert n is not None
+                picked = _data_accel.argtopn(scores, min(n, len(self)))
 
         return self._take(picked, ordered=True)
+
+    def concat(self, other: ItemList) -> ItemList:
+        """
+        Concatenate this item list with another.
+
+        If ``self`` has a vocabulary that accomodates the item IDs in ``other``,
+        the returned item list will share the vocabulary.
+        """
+
+        ordered = self.ordered and other.ordered
+        tbl = pa.concat_tables(
+            [self.to_arrow(ids=True, ranks=ordered), other.to_arrow(ids=True, ranks=ordered)],
+            promote_options="default",
+        )
+        return ItemList.from_arrow(tbl, vocabulary=self.vocabulary)
+
+    def update(self, other: ItemList) -> ItemList:
+        """
+        Create a copy of the item list, updated with new data from another list.
+
+        This creates a new item list with the same items as ``self``, but with
+        new or modified fields from ``other``.  For any item in both ``self``
+        and ``other``, and each field present in ``other``, the values of that
+        field in ``other`` are used instead of ``self``.  That is:
+
+        - If a field is only present in ``self``, it is used unchanged.
+        - If a field is only present in ``other``, its values are used for the
+          items that appear in both sets, and items only in ``self`` have an
+          unset / null value for the field (``NaN`` for foating arrays).
+        - If a field is present in both lists, then its values from ``other``
+          are used for items appearing in ``other``, and the values from
+          ``self`` are used for items that appear only in ``self``.
+        - Items that appear only in ``other`` are ignored.
+
+        .. note::
+            Only the *presence or absence* of an item in ``self`` and ``other``
+            is considered, not the nullity of individual field values.  If a
+            field appears in both ``self`` and ``other``, and some of its values
+            in ``other`` are null or ``NaN``, then they will be null or ``NaN``
+            in the resulting item list, regardless of the value of that field
+            for those items on ``self``.
+
+            That is, this method does not do item-level coalescing of null field
+            values.
+
+
+        Args:
+            other:
+                The item list to merge into this one.
+        Returns:
+            The updated item list.
+        """
+        if len(other) == 0:
+            nf = {}
+            for k, v in other._fields.items():
+                if k not in self._fields:
+                    av = v.arrow()
+                    nf[k] = pa.nulls(len(self), type=av.type)
+            return ItemList(self, **nf)
+
+        id_idx = self._id_index()
+        o_ids = other.ids(format="arrow")
+        o_pos = id_idx.get_indexes(o_ids)
+        o_mask = o_pos.is_valid().to_numpy(zero_copy_only=False)
+        o_arr = o_pos.fill_null(-1).to_numpy()
+
+        fields = {}
+        for k, v in other._fields.items():
+            fields[k] = MTArray.scatter(self._fields.get(k, len(self)), o_arr, v, mask=o_mask)
+
+        return ItemList(self, **fields)
 
     @overload
     def remove(
@@ -1031,7 +1130,9 @@ class ItemList:
 
         # Only subset the IDs if we don't have a vocabulary.  Otherwise, defer
         # ID subset until IDs are actually needed.
-        array = self.to_arrow(ids=self.vocabulary is None, numbers=True, type="array")
+        array = self.to_arrow(
+            ids=self.vocabulary is None and self._ids is not None, numbers=True, type="array"
+        )
         array = indexer(array)
 
         return ItemList(_init_array=array, vocabulary=self.vocabulary, ordered=ordered)  # type: ignore
@@ -1084,15 +1185,25 @@ class ItemList:
 
     def __repr__(self) -> str:  # pragma: nocover
         out = io.StringIO()
-        nf = len(self._fields)
+        fields = self._fields
+        if self.ordered and "rank" not in fields:
+            fields = fields | {"rank": None}
+        nf = len(fields)
         print(f"<ItemList of {self._len} items with {nf} fields", "{", file=out)
 
-        if self._numbers is not None:
-            print("  numbers:", np.array2string(self._numbers.numpy(), threshold=10), file=out)
         if self._ids is not None:
             print("  ids:", np.array2string(self.ids(), threshold=10), file=out)
-        for name, f in self._fields.items():
-            print(f"  {name}:", np.array2string(f.numpy(), threshold=10), file=out)
+        elif self._vocab is not None:
+            print("  ids: <lazy>", file=out)
+        if self._numbers is not None:
+            print("  numbers:", np.array2string(self._numbers.numpy(), threshold=10), file=out)
+        elif self._vocab is not None:
+            print("  numbers: <lazy>", file=out)
+        for name, f in sorted(fields.items(), key=lambda t: t[0]):
+            if f is None:
+                print(f"  {name}: <lazy>", file=out)
+            else:
+                print(f"  {name}:", np.array2string(f.numpy(), threshold=10), file=out)
         print("}>", end="", file=out)
 
         return out.getvalue()

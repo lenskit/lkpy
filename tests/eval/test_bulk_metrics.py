@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -69,8 +69,8 @@ def test_duplicate_metric(demo_recs):
     split, recs = demo_recs
 
     bms = RunAnalysis()
-    bms.add_metric(NDCG(k=10))
-    bms.add_metric(NDCG(k=10))
+    bms.add_metric(NDCG(n=10))
+    bms.add_metric(NDCG(n=10))
     bms.add_metric(RBP)
     bms.add_metric(RecipRank)
 

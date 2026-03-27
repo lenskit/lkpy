@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -28,10 +28,13 @@ def main():
     np.set_printoptions(threshold=20)
     try:
         ec = lenskit.main(standalone_mode=False)
-    except click.ClickException as e:
+    except click.ClickException as e:  # pragma: nocover
         _log.error("CLI error, terminating: %s", e)
         sys.exit(2)
-    except Exception as e:
+    except click.Abort:  # pragma: nocover
+        _log.error("Program interrupted")
+        sys.exit(3)
+    except Exception as e:  # pragma: nocover
         _log.error("LensKit command failed", exc_info=e)
         sys.exit(3)
 
@@ -41,6 +44,7 @@ def main():
 
 @click.group("lenskit")
 @click.option("-v", "--verbose", "verbosity", count=True, help="Enable verbose logging output")
+@click.option("--skip-log-setup", is_flag=True, hidden=True, envvar="LK_SKIP_LOG_SETUP")
 @click.option(
     "-R",
     "--project-root",
@@ -48,16 +52,17 @@ def main():
     metavar="DIR",
     help="Look for project root in DIR for configuration files.",
 )
-def lenskit(verbosity: int, project_root: Path | None):
+def lenskit(verbosity: int, project_root: Path | None, skip_log_setup: bool = False):
     """
     Data and pipeline operations with LensKit.
     """
 
     # this code is run before any other command logic, so we can do global setup
-    lc = LoggingConfig()
-    if verbosity:
-        lc.set_verbose(verbosity)
-    lc.apply()
+    if not skip_log_setup:
+        lc = LoggingConfig()
+        if verbosity:
+            lc.set_verbose(verbosity)
+        lc.apply()
 
     if project_root is None:
         if pr := os.environ.get("LK_PROJECT_ROOT"):

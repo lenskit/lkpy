@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -28,8 +28,8 @@ class Precision(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"Precision@{self.k}"
+        if self.n is not None:
+            return f"Precision@{self.n}"
         else:
             return "Precision"
 
@@ -54,8 +54,8 @@ class Recall(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"Recall@{self.k}"
+        if self.n is not None:
+            return f"Recall@{self.n}"
         else:
             return "Recall"
 
@@ -65,6 +65,6 @@ class Recall(ListMetric, RankingMetricBase):
 
         ngood = recs.isin(test).sum()
         nrel = len(test)
-        if self.k is not None and self.k < nrel:
-            nrel = self.k
+        if self.n is not None and self.n < nrel:
+            nrel = self.n
         return ngood / nrel

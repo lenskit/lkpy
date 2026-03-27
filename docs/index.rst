@@ -9,14 +9,6 @@ algorithms in a flexible fashion suitable for research and education.
 
     To start using LensKit, see :ref:`installation` and then :ref:`getting-started`.
 
-LensKit for Python (also known as LKPY) is the successor to the Java-based
-LensKit toolkit and a part of the LensKit project.
-
-.. important::
-
-    If you use LensKit in published research, see the :ref:`citation
-    instructions <citation>`, and particularly cite our paper [LKPY]_.
-
 News
 ----
 
@@ -58,6 +50,12 @@ News
     </script>
 
 
+Why use LensKit?
+----------------
+
+- Modular
+- Flexible
+- Tested
 
 Connecting with LensKit
 -----------------------
@@ -71,7 +69,7 @@ Connecting with LensKit
 
 .. |bluesky| raw:: html
 
-    <a href="https://bsky.app/profile/lenskit.org" rel="me" target="_blank">🦋 BlueSky</a>
+    <a href="https://bsky.app/profile/lenskit.org" rel="me" target="_blank"><i class="fa-brands fa-bluesky"></i> BlueSky</a>
 
 .. |subscribe| raw:: html
 

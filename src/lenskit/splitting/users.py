@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -32,18 +32,16 @@ def crossfold_users(
     rng: RNGInput | None = None,
 ) -> Iterator[TTSplit]:
     """
-    Partition a frame of ratings or other data into train-test partitions
-    user-by-user. This function does not care what kind of data is in `data`, so
-    long as it is a Pandas DataFrame (or equivalent) and has a `user` column.
+    Partition a dataset user-by-user for user-based cross-validation.
 
     Stability:
         Caller
 
     Args:
         data:
-            a data frame containing ratings or other data you wish to partition.
+            The dataset to partition.
         partitions:
-            the number of partitions to produce
+            The number of partitions to produce.
         method:
             The method for selecting test rows for each user.
         test_only:
@@ -125,7 +123,7 @@ def sample_users(
 
     Args:
         data:
-            Data frame containing ratings or other data you wish to partition.
+            The data set to sample.
         size:
             The sample size.
         method:

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -98,6 +98,8 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
             self.data.n_users,
             self.data.n_items,
             self.torch_rng,
+            user_bias=True,
+            item_bias=True,
             sparse=self.config.reg_method != "AdamW",
             init_scale=0.1,
         )

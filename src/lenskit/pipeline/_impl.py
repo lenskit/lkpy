@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
+from graphlib import TopologicalSorter
 from os import PathLike
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
@@ -30,18 +31,19 @@ from lenskit.logging import get_logger
 
 from . import config
 from ._hooks import RunHooks, default_run_hooks
+from ._state import PipelineState
 from .config import PipelineConfig
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
     Node,
 )
-from .state import PipelineState
 
 if TYPE_CHECKING:
     from lenskit.training import TrainingOptions
 
-    from .builder import PipelineBuilder
+    from ._builder import PipelineBuilder
+    from ._profiling import ProfileSink
 
 _log = get_logger(__name__)
 
@@ -189,6 +191,19 @@ class Pipeline:
         else:
             raise KeyError(node)
 
+    def component_names(self) -> list[str]:
+        """
+        Get the component names (in topological order).
+        """
+        sort = TopologicalSorter[str]()
+        comp_nodes = [n for n in self.nodes() if isinstance(n, ComponentInstanceNode)]
+        for node in comp_nodes:
+            edges = self._edges.get(node.name, {})
+            prev = [v for v in edges.values() if isinstance(self.node(v), ComponentInstanceNode)]
+            sort.add(node.name, *prev)
+
+        return list(sort.static_order())
+
     def node_input_connections(self, node: str | Node[Any]) -> Mapping[str, Node[Any]]:
         """
         Get the input wirings for a node.
@@ -196,6 +211,16 @@ class Pipeline:
         node = self.node(node)
         edges = self._edges.get(node.name, {})
         return {name: self.node(src) for (name, src) in edges.items()}
+
+    def component(self, node: str | Node[Any]) -> object | None:
+        """
+        Get the component at a particular node, if any.
+        """
+        node = self.node(node)
+        if isinstance(node, ComponentInstanceNode):
+            return node.component
+        else:
+            return None
 
     def clone(self) -> Pipeline:
         """
@@ -253,7 +278,7 @@ class Pipeline:
                 configuration includes a hash but the constructed pipeline does
                 not have a matching hash.
         """
-        from .builder import PipelineBuilder
+        from ._builder import PipelineBuilder
 
         config = PipelineConfig.model_validate(config)
         builder = PipelineBuilder.from_config(config, file_path=file_path)
@@ -275,7 +300,7 @@ class Pipeline:
         See Also:
             :meth:`from_config` for the actual pipeline instantiation logic.
         """
-        from .builder import PipelineBuilder
+        from ._builder import PipelineBuilder
 
         bld = PipelineBuilder.load_config(cfg_file)
         return bld.build()
@@ -294,14 +319,18 @@ class Pipeline:
             :meth:`~lenskit.pipeline.PipelineBuilder.build`, the modifying
             builder does not have default connections.
         """
-        from .builder import PipelineBuilder
+        from ._builder import PipelineBuilder
 
         return PipelineBuilder.from_pipeline(self)
 
     def train(self, data: Dataset, options: TrainingOptions | None = None) -> None:
         """
         Trains the pipeline's trainable components (those implementing the
-        :class:`TrainableComponent` interface) on some training data.
+        :class:`Trainable` interface) on some training data.
+
+        If the :attr:`~TrainingOptions.retrain` option is ``False``, this method
+        will skip training components that are already trained (as reported by
+        the :meth:`~Trainable.is_trained` method).
 
         .. admonition:: Random Number Generation
             :class: note
@@ -337,10 +366,15 @@ class Pipeline:
                 case ComponentInstanceNode(name, comp):
                     clog = log.bind(name=name, component=comp)
                     if isinstance(comp, Trainable):
-                        # spawn new seed if needed
-                        c_opts = options if seed is None else replace(options, rng=seed.spawn(1)[0])
-                        clog.debug("training component")
-                        comp.train(data, c_opts)
+                        if comp.is_trained() and not options.retrain:
+                            clog.debug("component is already, traine3d skipping")
+                        else:
+                            # spawn new seed if needed
+                            c_opts = (
+                                options if seed is None else replace(options, rng=seed.spawn(1)[0])
+                            )
+                            clog.debug("training component")
+                            comp.train(data, c_opts)
                     else:
                         clog.debug("training not required")
                 case _:
@@ -387,6 +421,8 @@ class Pipeline:
                 The component(s) to run.
             kwargs:
                 The pipeline's inputs, as defined with :meth:`create_input`.
+                These are passed as-is to :meth:`run_all`, so they can also
+                contain auxillary options like `_profile`.
 
         Returns:
             The pipeline result.  If no nodes are supplied, this is the result
@@ -414,7 +450,7 @@ class Pipeline:
         else:
             node_list = nodes
 
-        state = self.run_all(*node_list, **kwargs)
+        state = self.run_all(*node_list, **kwargs)  # type: ignore
         results = [state[self.node(n).name] for n in node_list]
 
         if node_list is nodes:
@@ -422,7 +458,9 @@ class Pipeline:
         else:
             return results[0]
 
-    def run_all(self, *nodes: str | Node[Any], **kwargs: object) -> PipelineState:
+    def run_all(
+        self, *nodes: str | Node[Any], _profile: ProfileSink | None = None, **kwargs: object
+    ) -> PipelineState:
         """
         Run all nodes in the pipeline, or all nodes required to fulfill the
         requested node, and return a mapping with the full pipeline state (the
@@ -441,16 +479,19 @@ class Pipeline:
             nodes:
                 The nodes to run, as positional arguments (if no nodes are
                 specified, this method runs all nodes).
+            _profile:
+                A profiler to profile this pipeline run.
             kwargs:
-                The inputs.
+                The pipeline inputs.
 
         Returns:
             The full pipeline state, with :attr:`~PipelineState.default` set to
             the last node specified.
         """
-        from .runner import PipelineRunner
+        from ._runner import PipelineRunner
 
-        runner = PipelineRunner(self, kwargs)
+        prof = _profile.run_profiler() if _profile is not None else None
+        runner = PipelineRunner(self, kwargs, profiler=prof)
         node_list = [self.node(n) for n in nodes]
         _log.debug("running pipeline", name=self.name, nodes=[n.name for n in node_list])
         if not node_list:
@@ -460,6 +501,9 @@ class Pipeline:
         for node in node_list:
             runner.run(node)
             last = node.name
+
+        if prof is not None:
+            prof.finish_run()
 
         return PipelineState(
             runner.state,

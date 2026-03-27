@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -68,10 +68,11 @@ class BaseRec(Component[ItemList], Trainable):
     item_embeddings: NDArray[np.float32]
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "item_embeddings") and not options.retrain:
-            return
+    def is_trained(self):
+        return hasattr(self, "item_embeddings")
 
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         matrix = data.interaction_matrix(format="scipy", layout="csr", legacy=True)
         uir = matrix * self.weight
 
@@ -146,7 +147,7 @@ class ALS(BaseRec):
         ensure_parallel_init()
         pcfg = get_parallel_config()
         return AlternatingLeastSquares(
-            num_threads=pcfg.threads,
+            num_threads=pcfg.num_threads,
             **self.config.__pydantic_extra__,  # type: ignore
         )
 
@@ -163,6 +164,6 @@ class BPR(BaseRec):
         ensure_parallel_init()
         pcfg = get_parallel_config()
         return BayesianPersonalizedRanking(
-            num_threads=pcfg.threads,
+            num_threads=pcfg.num_threads,
             **self.config.__pydantic_extra__,  # type: ignore
         )

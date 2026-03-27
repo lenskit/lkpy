@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -20,13 +20,16 @@ from types import FunctionType
 from typing import Annotated, Literal, Mapping
 
 from annotated_types import Predicate
+from deepmerge import always_merger
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
+from lenskit.diagnostics import PipelineError, PipelineWarning
+
 from ._hooks import HookEntry
+from ._types import make_importable_path
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
-from .types import type_string
 
 
 class PipelineHook(BaseModel):
@@ -39,8 +42,8 @@ class PipelineHook(BaseModel):
 
     @classmethod
     def from_entry(cls, hook: HookEntry[Any]):
-        if not isinstance(hook, FunctionType):  # type: ignore
-            warnings.warn(f"hook {hook.function} is not a function")
+        if not isinstance(hook.function, FunctionType):  # type: ignore
+            warnings.warn(f"hook {hook.function} is not a function", PipelineWarning)
         function = f"{hook.function.__module__}:{hook.function.__qualname__}"
         return cls(function=function, priority=hook.priority)
 
@@ -102,6 +105,26 @@ class PipelineConfig(BaseModel):
     hooks: PipelineHooks = PipelineHooks()
     "The hooks configured for the pipeline."
 
+    def merge_component_configs(
+        self, configs: Mapping[str, Mapping[str, JsonValue]]
+    ) -> PipelineConfig:
+        """
+        Merge component configuration options into the pipeline configuration.
+
+        This returns a modified copy of the pipeline with the applied
+        configurations, and does not modify the configuration in-place.
+        """
+        pipe = self.model_copy(deep=True)
+        for name, cfg in configs.items():
+            try:
+                comp = pipe.components[name]
+            except KeyError:
+                raise PipelineError(f"unknown component {name}")  # noqa: B904
+
+            comp.config = always_merger.merge(comp.config or {}, cfg)
+
+        return pipe
+
 
 class PipelineMeta(BaseModel):
     """
@@ -138,7 +161,7 @@ class PipelineInput(BaseModel):
     @classmethod
     def from_node(cls, node: InputNode[Any]) -> Self:
         if node.types is not None:
-            types = {type_string(t) for t in node.types}
+            types = {make_importable_path(t) for t in node.types}
         else:
             types = None
 

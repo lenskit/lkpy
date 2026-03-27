@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -30,15 +30,14 @@ class BiasedMFConfig(ALSConfig):
 class BiasedMFScorer(ALSBase):
     """
     Biased matrix factorization trained with alternating least squares
-    :cite:p:`zhouLargeScaleParallelCollaborative2008`.  This is a
-    prediction-oriented algorithm suitable for explicit feedback data, using the
-    alternating least squares approach to compute :math:`P` and :math:`Q` to
-    minimize the regularized squared reconstruction error of the ratings matrix.
+    :cite:p:`NetflixALS,ExplicitALS`.  This is a prediction-oriented algorithm
+    suitable for explicit feedback data, using the alternating least squares
+    approach to compute :math:`P` and :math:`Q` to minimize the regularized
+    squared reconstruction error of the ratings matrix.
 
     See the base class :class:`ALSBase` for documentation on the estimated
-    parameters you can extract from a trained model. See
-    :class:`BiasedMFConfig` and :class:`ALSConfig` for the configuration
-    options for this component.
+    parameters you can extract from a trained model. See :class:`BiasedMFConfig`
+    and :class:`ALSConfig` for the configuration options for this component.
 
     Stability:
         Caller
@@ -58,6 +57,7 @@ class BiasedMFScorer(ALSBase):
         mask = inums >= 0
         ratings = items.field("rating")
         assert ratings is not None
+        mask &= np.isfinite(ratings)
 
         biases, u_bias = self.bias.compute_for_items(items, None, items)
         ratings = ratings - biases

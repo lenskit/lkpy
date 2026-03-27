@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -56,6 +56,9 @@ _log = get_logger(__name__)
     default="RBP",
     help="the metric to optimize",
 )
+@click.option(
+    "--save-pipeline", type=Path, metavar="FILE", help="Save best pipeline configuration to FILE"
+)
 @click.argument("SEARCH_SPEC", type=Path)
 @click.argument("OUT", type=Path)
 def tune(
@@ -67,6 +70,7 @@ def tune(
     metric: str,
     training_data: Path,
     tuning_data: Path,
+    save_pipeline: Path | None,
 ):
     """
     Tune pipeline hyperparameters with Ray Tune.
@@ -77,8 +81,7 @@ def tune(
 
     spec = TuningSpec.load(search_spec)
     # override settings from command line
-    if max_points is not None:
-        spec.search.max_points = max_points
+    spec.search.update_max_points(max_points)
     if metric is not None:
         spec.search.metric = metric
     if method is not None:
@@ -90,11 +93,13 @@ def tune(
         ray.init(address="auto")
         _log.info("connected to existing Ray cluster")
     except ConnectionError:
+        # use global parallel setup for tuning
         init_cluster(global_logging=True)
 
     # set up the tuning controller
     controller = PipelineTuner(spec, out)
-    controller.job_limit = job_limit
+    if job_limit is not None:
+        controller.settings.jobs = job_limit
     controller.set_data(training_data, tuning_data)
 
     with Task(label=f"${spec.search.method} tune {controller.pipe_name}", tags=["tune"]) as task:
@@ -111,6 +116,10 @@ def tune(
     result_file = out / "result.json"
     result_json = to_json(best, indent=2)
     result_file.write_bytes(result_json + b"\n")
+
+    if save_pipeline is not None:
+        pipe_json = controller.best_pipeline().model_dump_json(indent=2)
+        save_pipeline.write_text(pipe_json + "\n")
 
     _log.info("finished hyperparameter search")
     console.print("[bold yellow]Hyperparameter search completed![/bold yellow]")

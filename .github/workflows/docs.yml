@@ -29,12 +29,12 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
-      - name: 📦 Set up Python dependencies (Unix)
-        if: runner.os != 'Windows'
+      - name: 📦 Set up Python dependencies
         run: |
           uv sync --all-extras --no-default-groups --group doc
 
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
-    if: github.event_name == 'push' || github.event_name == 'release'
+    if: github.event_name == 'push' || (github.event_name == 'release' && !github.event.release.prerelease)
     environment: docs
     steps:
       - name: "🛒 Checkout"
@@ -88,19 +88,26 @@ jobs:
 
       - name: "🛻 Copy documentation content"
         run: |
-          rsync -av --delete --exclude=.git/ --exclude=.buildinfo --exclude=.doctrees build/doc/ doc-site/
+          rsync -avc --delete --exclude=.git/ --exclude=.buildinfo --exclude=.doctrees build/doc/ doc-site/
+
+      - name: "🧳 Commit updated documentation content"
+        run: |
           cd doc-site
           git config user.name 'LensKit Doc Bot'
           git config user.email 'docbot@lenskit.org'
           git add .
-          git commit -m 'rebuild documentation'
-          git push
+          if git status --porcelain |grep '^.'; then
+            git commit -m 'rebuild documentation'
+            git push
+          else
+            echo "no changes to documentation"
+          fi
 
       - name: "🏷️ Tag release documentation"
         if: github.event_name == 'release'
         run: |
           cd doc-site
-          ver=$(echo ${{github.event.release.tag_name}} | sed -e 's/^v//'
+          ver=$(echo ${{github.event.release.tag_name}} | sed -e 's/^v//')
           git checkout -b version/$ver
           git push origin version/$ver
 

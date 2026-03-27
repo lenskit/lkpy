@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -46,19 +46,24 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
 
     config: LookupConfig
 
-    interactions: MatrixRelationshipSet
+    interactions: MatrixRelationshipSet | None
+
+    @override
+    def is_trained(self):
+        return hasattr(self, "interactions")
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        # TODO: find a better data structure for this
-        if hasattr(self, "interactions") and not options.retrain:
+        ints = data.interactions(self.config.interaction_class)
+        if "user" not in ints.entities:
+            _log.info("interactions do not involve users, skipping history lookup")
+            self.interactions = None
             return
 
-        self.interactions = data.interactions(self.config.interaction_class).matrix()
-        if self.interactions.row_type != "user":  # pragma: nocover
-            raise DataError("interactions must have user rows")
-        if self.interactions.col_type != "item":  # pragma: nocover
+        if "item" not in ints.entities:  # pragma: nocover
             raise DataError("interactions must have item columns")
+
+        self.interactions = ints.matrix(row_entity="user", col_entity="item")
 
     def __call__(self, query: QueryInput) -> RecQuery:
         """
@@ -71,15 +76,21 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
             return query
 
         log = _log.bind(user_id=query.user_id)
+
+        if self.interactions is None:
+            trace(log, "no training interactions")
+            return query
+
         id_type = self.interactions.row_vocabulary.ids().dtype
         if isinstance(query.user_id, str) and issubclass(id_type.type, np.number):
-            query.user_id = id_type.type(query.user_id)
+            query.user_id = id_type.type(query.user_id)  # type: ignore
 
-        if query.user_items is None:
+        if query.history_items is None:
             trace(log, "looking up user history")
-            query.user_items = self.interactions.row_items(query.user_id)
-            if query.user_items is not None:
-                log.debug("fetched %d history items", len(query.user_items))
+            query.history_items = self.interactions.row_items(query.user_id)
+            query.user_items = query.history_items
+            if query.history_items is not None:
+                log.debug("fetched %d history items", len(query.history_items))
             else:
                 log.debug("no history found")
 
@@ -113,10 +124,11 @@ class KnownRatingScorer(Component[ItemList], Trainable):
     interactions: MatrixRelationshipSet
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "interactions") and not options.retrain:
-            return
+    def is_trained(self):
+        return hasattr(self, "interactions")
 
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if self.config.source == "query":
             return
 

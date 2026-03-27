@@ -10,6 +10,7 @@ Candidate Selectors
 .. autosummary::
     :nosignatures:
 
+    lenskit.basic.TrainingItemsCandidateSelector
     lenskit.basic.UnratedTrainingItemsCandidateSelector
     lenskit.basic.AllTrainingItemsCandidateSelector
 

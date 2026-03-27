@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -45,7 +45,20 @@ class UserIDKey(NamedTuple):
     user_id: ID
 
 
-KEY_CACHE: dict[tuple[str, ...], type[tuple]] = {("user_id",): UserIDKey}
+class QueryIDKey(NamedTuple):
+    """
+    Key type for query IDs.  This is used for :ref:`item list collections
+    <item-list-collections>` that are keyed by query ID, a common setup for
+    recommendation runs and test data.
+    """
+
+    query_id: ID
+
+
+KEY_CACHE: dict[tuple[str, ...], type[tuple]] = {
+    ("user_id",): UserIDKey,
+    ("query_id",): QueryIDKey,
+}
 
 
 def key_fields(kt: type[tuple]) -> tuple[str]:
@@ -103,4 +116,4 @@ def project_key(key: tuple, target: type[K]) -> K:
     try:
         return target._make(getattr(key, f) for f in target._fields)  # type: ignore
     except AttributeError as e:
-        raise TypeError(f"source key is missing field {e.name}")
+        raise TypeError(f"source key is missing field {e.name}") from e

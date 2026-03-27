@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -8,6 +8,7 @@
 Bias scoring model.
 """
 
+# pyright: strict
 from __future__ import annotations
 
 import logging
@@ -310,7 +311,10 @@ class BiasScorer(Component[ItemList], Trainable):
     """
 
     config: BiasConfig
-    model_: BiasModel
+    model: BiasModel
+
+    def is_trained(self):
+        return hasattr(self, "model")
 
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
@@ -323,10 +327,7 @@ class BiasScorer(Component[ItemList], Trainable):
         Returns:
             The trained bias object.
         """
-        if hasattr(self, "model_") and not options.retrain:
-            return
-
-        self.model_ = BiasModel.learn(data, self.config.damping, entities=self.config.entities)
+        self.model = BiasModel.learn(data, self.config.damping, entities=self.config.entities)
 
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
@@ -345,7 +346,7 @@ class BiasScorer(Component[ItemList], Trainable):
         """
         query = RecQuery.create(query)
 
-        scores, _bias = self.model_.compute_for_items(items, query.user_id, query.user_items)
+        scores, _bias = self.model.compute_for_items(items, query.user_id, query.user_items)
         return ItemList(items, scores=scores)
 
 

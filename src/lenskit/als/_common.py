@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -32,7 +32,7 @@ Scorer = TypeVar("Scorer", bound="ALSBase")
 Config = TypeVar("Config", bound="ALSConfig")
 
 
-class ALSConfig(BaseModel, EmbeddingSizeMixin):
+class ALSConfig(EmbeddingSizeMixin, BaseModel):
     """
     Configuration for ALS scorers.
     """
@@ -142,12 +142,12 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
         u_offset = None
         u_feat = None
         if (
-            query.user_items is not None
-            and len(query.user_items) > 0
+            query.query_items is not None
+            and len(query.query_items) > 0
             and self.config.user_embeddings != "prefer"
         ):
             log.debug("training user embedding")
-            u_feat, u_offset = self.new_user_embedding(user_num, query.user_items)
+            u_feat, u_offset = self.new_user_embedding(user_num, query.query_items)
 
         if u_feat is None:
             if user_num is None or self.user_embeddings is None:
@@ -157,10 +157,17 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
 
         item_nums = items.numbers(vocabulary=self.items, missing="negative")
         item_mask = item_nums >= 0
-        i_feats = self.item_embeddings[item_nums[item_mask], :]
 
         scores = np.full((len(items),), np.nan, dtype=np.float32)
-        scores[item_mask] = i_feats @ u_feat
+        if len(item_nums) <= self.item_embeddings.shape[0] * 0.8:
+            # small set — subset inputs
+            i_feats = self.item_embeddings[item_nums[item_mask], :]
+            scores[item_mask] = i_feats @ u_feat
+        else:
+            # larger set — subset outputs
+            allmult = self.item_embeddings @ u_feat
+            scores[item_mask] = allmult[item_nums[item_mask]]
+
         log.debug("scored %d items", np.sum(item_mask))
 
         results = ItemList(items, scores=scores)
@@ -244,6 +251,7 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
         log.debug("finished item epoch")
 
         log.debug("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
+        self.epochs_trained += 1
         return {"deltaP": du, "deltaQ": di}
 
     @property

@@ -22,6 +22,10 @@ Data Sets
     ~lenskit.data.Dataset
     ~lenskit.data.EntitySet
     ~lenskit.data.AttributeSet
+    ~lenskit.data.ScalarAttributeSet
+    ~lenskit.data.ListAttributeSet
+    ~lenskit.data.VectorAttributeSet
+    ~lenskit.data.SparseAttributeSet
     ~lenskit.data.RelationshipSet
     ~lenskit.data.MatrixRelationshipSet
     ~lenskit.data.CSRStructure
@@ -38,6 +42,8 @@ Building Data Sets
     ~lenskit.data.from_interactions_df
     ~lenskit.data.load_movielens
     ~lenskit.data.load_movielens_df
+    ~lenskit.data.load_amazon_ratings
+    ~lenskit.data.load_ms_web
 
 
 Item Data

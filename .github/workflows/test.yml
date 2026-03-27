@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - future/*
+      - series/*
   pull_request:
 
 concurrency:
@@ -19,19 +21,15 @@ jobs:
       fail-fast: false
       matrix:
         python:
-          - "3.11"
           - "3.12"
           - "3.13"
+          - "3.14"
+          - "3.14t"
         platform:
           - ubuntu-latest
           - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
-        exclude:
-          - python: "3.13"
-            platform: macos-latest
-          - python: "3.13"
-            platform: windows-latest
 
     steps:
       - name: 🛒 Checkout
@@ -39,29 +37,37 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: jdx/mise-action@v3
+        with:
+          cache: false
+          install: true
+
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
+          activate-environment: true
+          cache-suffix: vanilla-2
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
           uv_extra=
-          if [ "${{matrix.python}}" = "3.13" ]; then
-            uv_extra="--no-extra ray"
-          fi
-          if [ "$(uname)" = Linux ]; then
-            export CC=gcc
+          if [[ "${{matrix.python}}" = 3.14* ]]; then
+            uv_extra="--no-extra ray --no-extra tune"
           fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
         env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
+          # disable MARCH for hpfrec wheels
+          DONT_SET_MARCH: 1
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           uv sync --no-default-groups --group test
+        env:
+          # disable MARCH for hpfrec wheels
+          DONT_SET_MARCH: 1
 
       - name: 🔍 Inspect environment
         run: |
@@ -70,6 +76,12 @@ jobs:
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit --cov-append tests
+
+      - name: 🕺🏻 Test LensKit CLI
+        if: runner.os != 'Windows'
+        run: |
+          mise run test-cli -- --coverage --cov-append
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
@@ -88,6 +100,49 @@ jobs:
             coverage.db
             coverage.xml
 
+  rust-cover:
+    name: Rust test coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install mise-en-place
+        uses: jdx/mise-action@v2
+        with:
+          cache: false
+
+      - name: 📦 Set up Python dependencies
+        run: |
+          uv sync -p 3.12
+
+      - name: 🏃🏻‍➡️ Test LKPY
+        run: |
+          mise run test -- --coverage --accel-coverage -- --log-file=test.log
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
+        run: |
+          uv run coverage report
+          cp .coverage coverage.db
+        env:
+          UV_NO_SYNC: 1
+
+      - name: 📤 Upload test results
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: "test-rust-coverage"
+          path: |
+            test*.log
+            lcov.info
+            coverage.db
+            coverage.xml
+
   mindep-all:
     name: Minimal dependency tests (all options)
     runs-on: ubuntu-latest
@@ -100,16 +155,16 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
           uv sync --only-group=test
           uv pip install --resolution=lowest-direct '.[sklearn,hpf,implicit,funksvd]'
         env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
           CC: gcc
 
       - name: 🔍 Inspect environment
@@ -148,17 +203,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+      - uses: jdx/mise-action@v3
         with:
-          python-version: "3.11"
+          install: false
+
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
           uv sync --only-group=test
           uv pip install --resolution=lowest-direct .
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: 🔍 Inspect environment
         run: |
@@ -167,6 +225,11 @@ jobs:
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
+
+      - name: 🕺🏻 Test LensKit CLI
+        run: |
+          mise run test-cli -- --coverage --cov-append
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
@@ -195,17 +258,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: jdx/mise-action@v3
+        with:
+          install: false
+
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
+          uv pip install optuna
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -220,10 +287,16 @@ jobs:
           coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az23 --amazon --core Video_Games
           coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az18 --amazon --edition 2018 Video_Games
           coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az14 --amazon --edition 2014 Video_Games
+          coverage run -a --source=src/lenskit -m lenskit data fetch --ms-web
 
       - name: Run Eval Tests
         run: |
           pytest --cov-append --cov=src/lenskit -m 'eval or realdata' --log-file test-eval.log tests
+
+      - name: 🕺🏻 Test LensKit CLI
+        run: |
+          mise run test-cli -- --coverage --cov-append tests/cli/test-tune.sh
+        shell: bash -e {0}
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
@@ -253,16 +326,15 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test --group doc  --group demo
-        env:
-          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -306,6 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - vanilla
+      - rust-cover
       - mindep-all
       - mindep
       - eval-tests
@@ -326,9 +399,10 @@ jobs:
           git config user.email lkbot@lenskit.org
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
+          activate-environment: true
 
       - name: 📦 Set up Python dependencies
         run: |
@@ -353,9 +427,14 @@ jobs:
       - name: ⛙ Merge and report
         run: |
           coverage combine --keep test-logs/*/coverage.db
-          coverage xml
           coverage html -d lenskit-coverage
-          coverage report --format=markdown >coverage.md
+          coverage report
+
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          path: lenskit-coverage
+          name: lenskit-coverage-report
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v4.2.0

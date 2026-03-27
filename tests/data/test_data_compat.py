@@ -1,9 +1,10 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import platform
 import subprocess as sp
 from os import environ, fspath
 from pathlib import Path
@@ -15,15 +16,24 @@ from lenskit.data.matrix import SparseRowArray
 from lenskit.logging import get_logger
 from lenskit.testing import ml_test_dir
 
-# The LensKit versions we want to test backwards compatibility with
-LK_VERSIONS = ["2025.1.1"]
+pytestmark = mark.skipif(
+    "CI" in environ and platform.system() != "Linux",
+    reason="tests in CI but not Linux, skipping to save time",
+)
+
+# The LensKit versions we want to test backwards compatibility with,
+# along with the appropriate Python versions.
+LK_VERSIONS = {
+    "2025.1.1": "3.11",
+    "2025.6.*": "3.14",
+}
 
 _log = get_logger(__name__)
 _ml_path = Path("data/ml-20m.zip")
 
 
 @mark.slow
-@mark.parametrize("version", LK_VERSIONS)
+@mark.parametrize("version", LK_VERSIONS.keys())
 def test_data_backwards_compat(version, tmpdir: Path):
     "Test that we can load datasets prepared by old versions."
     _log.info("processing ML file", version=version)
@@ -39,6 +49,7 @@ def test_data_backwards_compat(version, tmpdir: Path):
     sp.check_call(
         [
             "uvx",
+            f"--python={LK_VERSIONS[version]}",
             "--isolated",
             pkg,
             "data",
@@ -57,7 +68,7 @@ def test_data_backwards_compat(version, tmpdir: Path):
 
 @mark.realdata
 @mark.skipif(not _ml_path.exists(), reason="ml-20m not available")
-@mark.parametrize("version", LK_VERSIONS)
+@mark.parametrize("version", LK_VERSIONS.keys())
 def test_data_backwards_ml20m(version, tmpdir: Path):
     "Test that we can load datasets prepared by old versions (ML20M)."
     try:
@@ -73,6 +84,7 @@ def test_data_backwards_ml20m(version, tmpdir: Path):
     sp.check_call(
         [
             "uvx",
+            f"--python={LK_VERSIONS[version]}",
             "--isolated",
             pkg,
             "data",

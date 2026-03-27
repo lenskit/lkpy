@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -11,7 +11,7 @@ from pathlib import Path
 
 from packaging.version import Version
 
-from lenskit._version import lenskit_version
+from lenskit._version import lenskit_version  # noqa: PLC2701
 
 sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
 
@@ -33,6 +33,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.extlinks",
     "sphinx.ext.todo",
+    "sphinx.ext.graphviz",
     "sphinx_togglebutton",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
@@ -58,18 +59,19 @@ pygments_style = "sphinx"
 highlight_language = "python3"
 
 html_theme = "pydata_sphinx_theme"
-html_logo = "LKLogo2.png"
+html_logo = "lenskit-wordmark.png"
+html_favicon = "lenskit-icon.png"
 if _parsed_ver.is_devrelease:
-    html_baseurl = "https://lkpy.lenskit.org/latest/"
+    html_baseurl = "https://lenskit.org/latest/"
 else:
-    html_baseurl = "https://lkpy.lenskit.org/stable/"
+    html_baseurl = "https://lenskit.org/stable/"
 html_css_files = [
     "css/custom.css",
 ]
 
 html_theme_options = {
     "switcher": {
-        "json_url": "https://lkpy.lenskit.org/versions.json",
+        "json_url": "https://lenskit.org/versions.json",
         "version_match": "2024.0dev",
     },
     "show_version_warning_banner": True,
@@ -99,7 +101,7 @@ html_theme_options = {
     # "github_user": "lenskit",
     # 'github_repo': 'lkpy',
     # 'travis_button': False,
-    # 'canonical_url': 'https://lkpy.lenskit.org/',
+    # 'canonical_url': 'https://lenskit.org/',
     # 'font_family': 'Charter, serif'
     # 'font_family': '"Source Sans Pro", "Georgia Pro", Georgia, serif',
     # 'font_size': '15px',
@@ -140,7 +142,7 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
     "structlog": ("https://www.structlog.org/en/stable/", None),
-    "torch": ("https://pytorch.org/docs/stable/", None),
+    "torch": ("https://docs.pytorch.org/docs/stable/", None),
     "implicit": ("https://benfred.github.io/implicit/", None),
     "pydantic": ("https://docs.pydantic.dev/latest/", None),
     "ray": ("https://docs.ray.io/en/latest/", None),
@@ -154,6 +156,7 @@ doctest_default_flags = (
     doctest.ELLIPSIS | doctest.IGNORE_EXCEPTION_DETAIL | doctest.NORMALIZE_WHITESPACE
 )
 
+graphviz_output_format = "svg"
 mermaid_d3_zoom = True
 
 # -- external links
@@ -163,5 +166,3 @@ extlinks = {
     "pr": ("https://github.com/lenskit/lkpy/pull/%s", "⛙ %s"),
     "user": ("https://github.com/%s", "@%s"),
 }
-
-bibtex_bibfiles = ["lenskit.bib"]

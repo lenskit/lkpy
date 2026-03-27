@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -16,7 +16,7 @@ import pandas as pd
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import item_progress
-from lenskit.metrics._accum import MetricAccumulator
+from lenskit.metrics import MeasurementCollector
 
 from ._base import Metric, MetricFunction
 
@@ -129,7 +129,7 @@ class RunAnalysis:
     """
 
     def __init__(self, *metrics: Metric):
-        self._accumulator = MetricAccumulator()
+        self._accumulator = MeasurementCollector()
         for metric in metrics:
             self._accumulator.add_metric(metric)
 

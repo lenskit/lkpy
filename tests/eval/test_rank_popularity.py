@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -29,7 +29,7 @@ def test_mpr_label(ml_ds: Dataset):
     mpr = MeanPopRank(ml_ds)
     assert mpr.label == "MeanPopRank"
 
-    mpr = MeanPopRank(ml_ds, k=10)
+    mpr = MeanPopRank(ml_ds, n=10)
     assert mpr.label == "MeanPopRank@10"
 
 

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -15,7 +15,7 @@ from pytest import approx, mark, skip
 from lenskit.als import BiasedMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
-from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
 
@@ -28,6 +28,15 @@ simple_ds = from_interactions_df(simple_df)
 class TestExplicitALS(BasicComponentTests, ScorerTests):
     component = BiasedMFScorer
     expected_rmse = (0.89, 0.99)
+
+    def verify_models_equivalent(self, orig, copy):
+        assert copy.bias.global_bias == orig.bias.global_bias
+        assert np.all(copy.bias.user_biases == orig.bias.user_biases)
+        assert np.all(copy.bias.item_biases == orig.bias.item_biases)
+        assert np.all(copy.user_embeddings == orig.user_embeddings)
+        assert np.all(copy.item_embeddings == orig.item_embeddings)
+        assert np.all(copy.items.index == orig.items.index)
+        assert np.all(copy.users.index == orig.users.index)
 
 
 def test_als_basic_build():
@@ -202,7 +211,6 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
     assert new_preds.scores() == approx(preds.scores(), rel=9e-1)
 
 
-@wantjit
 @mark.slow
 def test_als_train_large(ml_ratings, ml_ds: Dataset):
     algo = BiasedMFScorer(features=20, epochs=10)
@@ -228,28 +236,3 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     ibias = pd.Series(algo.bias.item_biases, index=algo.items.index)
     imeans, ibias = imeans.align(ibias, fill_value=0.0)
     assert ibias.values == approx(imeans.values, rel=1.0e-3)
-
-
-# don't use wantjit, use this to do a non-JIT test
-def test_als_save_load(ml_ds: Dataset):
-    original = BiasedMFScorer(features=5, epochs=5)
-    original.train(ml_ds)
-
-    assert original.bias is not None
-    assert original.users is not None
-
-    mod = pickle.dumps(original)
-    _log.info("serialized to %d bytes", len(mod))
-
-    algo = pickle.loads(mod)
-    assert algo.bias.global_bias == original.bias.global_bias
-    assert np.all(algo.bias.user_biases == original.bias.user_biases)
-    assert np.all(algo.bias.item_biases == original.bias.item_biases)
-    assert np.all(algo.user_embeddings == original.user_embeddings)
-    assert np.all(algo.item_embeddings == original.item_embeddings)
-    assert np.all(algo.items.index == original.items.index)
-    assert np.all(algo.users.index == original.users.index)
-
-    # make sure it still works
-    preds = algo(query=10, items=ItemList(np.arange(0, 50, dtype="i8")))
-    assert len(preds) == 50

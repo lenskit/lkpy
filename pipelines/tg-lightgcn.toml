@@ -1,0 +1,13 @@
+[meta]
+name = "lightgcn-bpr"
+
+[options]
+base = "std:topn"
+
+[components.scorer]
+class = "lenskit.graphs.LightGCNScorer"
+
+[components.scorer.config]
+loss = "pairwise"
+embedding_size = 32
+batch_size = 8192

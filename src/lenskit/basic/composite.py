@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -11,8 +11,7 @@ import logging
 import numpy as np
 
 from lenskit.data.items import ItemList
-from lenskit.pipeline import Component
-from lenskit.pipeline.types import Lazy
+from lenskit.pipeline import Component, Lazy
 
 _logger = logging.getLogger(__name__)
 

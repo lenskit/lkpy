@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -11,6 +11,7 @@ Data attribute accessors.
 from __future__ import annotations
 
 import json
+from abc import ABC, abstractmethod
 from typing import Literal
 
 import numpy as np
@@ -22,9 +23,10 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_array
 from typing_extensions import Any
 
-from lenskit.data.matrix import SparseRowArray
 from lenskit.torch import safe_tensor
 
+from .matrix import SparseIndexListType, SparseRowArray, SparseRowType, normalize_matrix
+from .repr import object_repr
 from .schema import AttrLayout, ColumnSpec
 from .types import IDArray
 from .vocab import Vocabulary
@@ -46,7 +48,7 @@ def attr_set(
             raise ValueError(f"unsupported layout {spec.layout}")
 
 
-class AttributeSet:
+class AttributeSet(ABC):
     """
     Base class for attributes associated with entities.
 
@@ -60,6 +62,10 @@ class AttributeSet:
     name: str
     """
     The name of the attribute.
+    """
+    layout: AttrLayout
+    """
+    The attribute layout.
     """
     _spec: ColumnSpec
     _table: pa.Table
@@ -76,10 +82,26 @@ class AttributeSet:
         rows: pa.Int32Array | None,
     ):
         self.name = name
+        self.layout = spec.layout
         self._spec = spec
         self._table = table
         self._vocab = vocab
         self._selected = rows
+
+    @property
+    def _qname(self):
+        vn = self._vocab.name
+        if vn is None:
+            return self.name
+        else:
+            return f"{vn}.{self.name}"
+
+    @property
+    @abstractmethod
+    def data_type(self) -> pa.DataType:
+        """
+        Get the data type of this attribute set.
+        """
 
     def ids(self) -> IDArray:
         """
@@ -107,6 +129,23 @@ class AttributeSet:
             return np.arange(self._table.num_rows, dtype=np.int32)
         else:
             return self._selected.to_numpy()
+
+    def cat_matrix(
+        self, *, normalize: Literal["unit", "distribution"] | None = None
+    ) -> tuple[NDArray[np.floating] | csr_array, Vocabulary | None]:
+        """
+        Compute a categorical matrix representation of the attribute.
+
+        Args:
+            normalize: Optional normalization method.
+                "unit": Normalize each row to unit length.
+                "distribution": Normalize each row so elements sum to 1
+        Returns:
+            tuple: A tuple containing:
+                matrix (numpy.ndarray or scipy.sparse.csr_array): The categorical matrix.
+                vocab (Vocabulary or None): The vocabulary associated with the categories.
+        """
+        raise NotImplementedError()
 
     @property
     def dim_names(self) -> list[str] | None:
@@ -209,6 +248,12 @@ class AttributeSet:
 
 
 class ScalarAttributeSet(AttributeSet):
+    _cat_vocab: Vocabulary | None = None
+
+    @property
+    def data_type(self) -> pa.DataType:
+        return self._table.field(self.name).type
+
     def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
         arr = self.arrow()
         mask = arr.is_valid()
@@ -218,8 +263,78 @@ class ScalarAttributeSet(AttributeSet):
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
 
+    def cat_matrix(
+        self,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ) -> tuple[csr_array, Vocabulary]:
+        """
+        Create item * category sparse matrix for scalar attributes.
+
+        Returns:
+            Tuple of (sparse matrix, vocabulary of categories)
+        """
+
+        arr = self.arrow()
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
+
+        if pa.types.is_floating(arr.type):
+            raise TypeError(f"unsupported ID type {arr.type}")
+
+        if self._cat_vocab is None:
+            vocab = Vocabulary(arr)
+            self._cat_vocab = vocab
+        else:
+            vocab = self._cat_vocab
+
+        indices = vocab.numbers(arr.drop_null())
+        indptr = np.zeros(len(arr) + 1, dtype=np.int32)
+        # validity converted to int will be 1 where item is valid - what we need
+        # result: we have a 1 everywhere there is a non-null scalar value, and 0
+        # elsewehere, which will yield an empty row.
+        indptr[1:] = arr.is_valid().to_numpy(zero_copy_only=False).astype(np.int32)
+        # convert sizes to pointers / offsets
+        indptr = np.cumsum(indptr)
+
+        data = np.ones(len(indices), dtype=np.float32)
+
+        matrix = csr_array(
+            (data, indices, indptr),
+            shape=(len(arr), len(vocab)),
+        )
+
+        matrix = normalize_matrix(matrix, normalize)
+        return matrix, vocab
+
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "ScalarAttributeSet",
+            f"{self._qname}: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "ScalarAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
+
 
 class ListAttributeSet(AttributeSet):
+    _cat_vocab: Vocabulary | None = None
+
+    @property
+    def data_type(self) -> pa.DataType:
+        lt = self._table.field(self.name).type
+        assert isinstance(lt, pa.ListType)
+        return lt.value_type
+
     def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
         arr = self.arrow()
         mask = arr.is_valid()
@@ -231,13 +346,82 @@ class ListAttributeSet(AttributeSet):
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
 
+    def cat_matrix(
+        self,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ) -> tuple[csr_array, Vocabulary]:
+        """
+        Create item * category matrix for list attributes.
+
+        Returns:
+            Tuple of (sparse matrix, vocabulary of categories)
+        """
+
+        arr = self.arrow()
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
+
+        assert isinstance(arr, pa.ListArray)
+
+        values = arr.values.to_numpy(zero_copy_only=False)
+        indptr = arr.offsets.to_numpy()
+
+        if self._cat_vocab is None:
+            self._cat_vocab = Vocabulary(values, reorder=True)
+
+        vocab = self._cat_vocab
+        indices = vocab.numbers(values, missing="error")
+
+        data = np.ones(len(indices), dtype=np.float32)
+
+        matrix = csr_array(
+            (data, indices, indptr),
+            shape=(len(arr), len(vocab)),
+        )
+
+        matrix = matrix.copy()
+        matrix = normalize_matrix(matrix, normalize)
+
+        return matrix, vocab
+
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "ListAttributeSet",
+            f"{self._qname}: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "ListAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
+
 
 class VectorAttributeSet(AttributeSet):
     _names: list[str] | None = None
     _size: int | None = None
+    _cat_vocab: Vocabulary | None = None
+
+    @property
+    def data_type(self) -> pa.DataType:
+        lt = self._table.field(self.name).type
+        assert isinstance(lt, pa.ListType)
+        return lt.value_type
 
     @property
     def dim_names(self) -> list[str] | None:
+        """
+        Get the names of the dimensions of this vector.  I.e., if the vector
+        is storing weights attached to tags, the dimension names will be the
+        tags.
+        """
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
@@ -252,6 +436,9 @@ class VectorAttributeSet(AttributeSet):
 
     @property
     def vector_size(self) -> int:
+        """
+        Get the size (dimensionality) of this vector attribute.
+        """
         assert self._spec.vector_size is not None, "vector column has no size"
         return self._spec.vector_size
 
@@ -315,12 +502,66 @@ class VectorAttributeSet(AttributeSet):
         mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
         return pd.DataFrame(mat, index=ids, columns=self.dim_names)
 
+    def cat_matrix(
+        self,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ) -> tuple[NDArray[np.floating], Vocabulary | None]:
+        """
+        Create item * category matrix for list attributes.
+
+        Returns:
+            dense matrix, vocabulary if present
+        """
+        mat = self.numpy()
+        # dimensions specify names, can be none
+        # turn names into category vocab w/ reorder=False
+        if self._cat_vocab is None and self.dim_names is not None:
+            self._cat_vocab = Vocabulary(np.asarray(self.dim_names), reorder=False)
+
+        vocab = self._cat_vocab
+        matrix = normalize_matrix(mat, normalize)
+
+        return matrix, vocab
+
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "VectorAttributeSet",
+            f"{self._qname}[{self.vector_size}]: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "VectorAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            dim=self.vector_size,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
+
 
 class SparseAttributeSet(AttributeSet):
     _names: list[str] | None = None
+    _cat_vocab: Vocabulary | None = None
+
+    @property
+    def data_type(self) -> pa.DataType | None:
+        lt = self._table.field(self.name).type
+        assert isinstance(lt, (SparseRowType, SparseIndexListType))
+        return lt.value_type
 
     @property
     def dim_names(self) -> list[str] | None:
+        """
+        Get the names of the dimensions of this vector.  I.e., if the vector
+        is storing weights attached to tags, the dimension names will be the
+        tags.
+        """
+
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
@@ -332,6 +573,14 @@ class SparseAttributeSet(AttributeSet):
                 self._names = json.loads(nstr)
 
         return self._names
+
+    @property
+    def vector_size(self) -> int:
+        """
+        Get the size (dimensionality) of this vector attribute.
+        """
+        assert self._spec.vector_size is not None, "sparse vector column has no size"
+        return self._spec.vector_size
 
     def arrow(self) -> SparseRowArray:
         arr = super().arrow()
@@ -357,6 +606,46 @@ class SparseAttributeSet(AttributeSet):
         col = self.arrow()
 
         return col.to_torch()
+
+    def cat_matrix(
+        self,
+        *,
+        normalize: Literal["unit", "distribution"] | None = None,
+    ) -> tuple[csr_array, Vocabulary | None]:
+        """
+        Create item * category matrix for list attributes.
+
+        Returns:
+            sparse matrix, vocabulary if present
+        """
+        mat = self.scipy()
+        mat = mat.copy()
+        if self._cat_vocab is None and self.dim_names is not None:
+            self._cat_vocab = Vocabulary(np.asarray(self.dim_names), reorder=False)
+
+        vocab = self._cat_vocab
+        matrix = normalize_matrix(mat, normalize)
+
+        return matrix, vocab
+
+    def __str__(self):  # pragma: nocover
+        return object_repr(
+            "SparseAttributeSet",
+            f"{self._qname}[{self.vector_size}]: {self.data_type}",
+            comment=f"{len(self)} entities",
+        ).string()
+
+    def _lk_object_repr(self):  # pragma: nocover
+        return object_repr(
+            "SparseAttributeSet",
+            self._qname,
+            dtype=self.data_type,
+            dim=self.vector_size,
+            entities=len(self),
+        )
+
+    def __repr__(self):  # pragma: nocover
+        return self._lk_object_repr().string()
 
 
 def _replace_vectors(

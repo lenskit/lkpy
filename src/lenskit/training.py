@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,12 +12,11 @@ Interfaces and support for model training.
 from __future__ import annotations
 
 import os
-import warnings
+import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from time import perf_counter
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, overload, override, runtime_checkable
 
 import numpy as np
 
@@ -25,6 +24,9 @@ from lenskit.data.dataset import Dataset
 from lenskit.logging import get_logger, item_progress
 from lenskit.pipeline.components import Component
 from lenskit.random import RNGInput, random_generator
+
+if TYPE_CHECKING:
+    import torch
 
 _log = get_logger(__name__)
 
@@ -38,7 +40,29 @@ class TrainingOptions:
     retrain: bool = True
     """
     Whether the model should retrain if it is already trained.  If ``False``,
-    the model should cleanly skip training if it is already trained.
+    the component is allowed to skip training if it is already trained.
+
+    In the common case of training pipelines, this flag is examined by
+    :meth:`lenskit.pipeline.Pipeline.train`: if it is ``False``, that method
+    skips training any components that are already trained.  Custom training
+    code that wishes to avoid retraining models should check
+    :meth:`Trainable.is_trained` instead of assuming that individual components
+    will respect this flag.
+
+    .. note::
+
+        This division of responsibility is to reduce the need for repetitive
+        code: since implementing components seems to be a more common activity
+        than logic that directly trains components (as opposed to pipelines) in
+        ordinary LensKit use, making training code responsible for skipping
+        retrain instead of requiring that of every component implementation
+        allows individual implementations to be slightly simpler, without
+        requiring separate options classes for pipeline and component training.
+
+    .. versionchanged:: 2026.1
+
+        Added the :meth:`is_trained` method that implementers must now also
+        provide.
     """
 
     device: str | None = None
@@ -55,7 +79,33 @@ class TrainingOptions:
     that into a NumPy :class:`~numpy.random.Generator`.
     """
 
-    def random_generator(self) -> np.random.Generator:
+    environment: dict[str, str] = field(default_factory=lambda: {})
+    """
+    Additional training environment variables to control training behavior.
+    Variables and their meanings are defined by individual components.
+    Variables in this option override system environment variables when fetched
+    with :meth:`envvar`.
+    """
+
+    torch_profiler: torch.profiler.profile | None = None
+    """
+    Torch profiler for profiling training options.
+    """
+
+    def step_profiler(self):
+        """
+        Signal to active profiler(s) that a new step has completed.
+        """
+        if self.torch_profiler is not None:
+            self.torch_profiler.step()
+
+    @overload
+    def random_generator(self, *, type: Literal["numpy"] = "numpy") -> np.random.Generator: ...
+    @overload
+    def random_generator(self, *, type: Literal["torch"]) -> torch.Generator: ...
+    def random_generator(
+        self, *, type: Literal["numpy", "torch"] = "numpy"
+    ) -> np.random.Generator | torch.Generator:
         """
         Obtain a random generator from the configured RNG or seed.
 
@@ -65,7 +115,7 @@ class TrainingOptions:
             seed.  Components should call it once at the beginning of their
             training procesess.
         """
-        return random_generator(self.rng)
+        return random_generator(self.rng, type=type)
 
     def configured_device(self, *, gpu_default: bool = False) -> str:
         """
@@ -93,6 +143,51 @@ class TrainingOptions:
         else:
             return "cpu"
 
+    @overload
+    def env_var(self, name: str, default: str) -> str: ...
+    @overload
+    def env_var(self, name: str, default: str | None = None) -> str | None: ...
+    def env_var(self, name: str, default: str | None = None) -> str | None:
+        """
+        Fetch a training environment variable.  Variables are first looked up in
+        :attr:`environment`, then in :attr:`os.environ`.
+
+        .. seealso::
+            :attr:`environment`, :ref:`training-config`
+
+        Args:
+            name:
+                The full name of the environment variable.
+            default:
+                Default value to return if the environment varible is not specified.
+        Returns:
+            The environment variable's value, or ``default``.
+        """
+        if name in self.environment:
+            return self.environment[name]
+        else:
+            return os.environ.get(name, default)
+
+    def env_flag(self, name: str, *, default: bool = False) -> bool:
+        """
+        Query a boolean flag from the environment.
+        """
+        val = self.env_var(name)
+        if val is None:
+            return default
+        elif isinstance(val, bool):
+            return val
+        elif isinstance(val, int):
+            return bool(val)
+        elif re.match(r"^\d+$", val):
+            return bool(int(val))
+        elif re.match(r"^(?:t(?:rue)?|y(?:es)?)$", val, re.IGNORECASE):
+            return True
+        elif re.match(r"^(?:f(?:alse)?|n(?:o)?)$", val, re.IGNORECASE):
+            return False
+        else:
+            raise ValueError(f"unrecognized boolean value {name}={val}")
+
 
 @runtime_checkable
 class Trainable(Protocol):  # pragma: nocover
@@ -105,15 +200,23 @@ class Trainable(Protocol):  # pragma: nocover
     -   They are usually components (:class:`~lenskit.pipeline.Component`), with
         an appropriate ``__call__`` method.
     -   They should be pickleable.
-    -   They should also usually implement
-        :class:`~lenskit.state.ParameterContainer`, to allow the learned
-        parameters to be serialized and deserialized without pickling.
+
+    ..
+        -   They should also usually implement
+            :class:`~lenskit.state.ParameterContainer`, to allow the learned
+            parameters to be serialized and deserialized without pickling.
 
     Stability:
         Full
     """
 
-    def train(self, data: Dataset, options: TrainingOptions) -> None:
+    def is_trained(self) -> bool:  # pragma: nocover
+        """
+        Query if this component has already been trained.
+        """
+        raise NotImplementedError()
+
+    def train(self, data: Dataset, options: TrainingOptions) -> None:  # pragma: nocover
         """
         Train the model to learn its parameters from a training dataset.
 
@@ -126,28 +229,19 @@ class Trainable(Protocol):  # pragma: nocover
         raise NotImplementedError()
 
 
-class IterativeTraining(ABC, Trainable):
+class UsesTrainer(Component, ABC, Trainable):
     """
-    Base class for components that support iterative training.  This both
-    automates the :meth:`Trainable.train` method for iterative training in terms
-    of initialization, epoch, and finalization methods, and exposes those
-    methods to client code that may wish to directly control the iterative
-    training process.
+    Base class for models that implement :class:`Trainable` via a
+    :class:`ModelTrainer`.
 
-    .. deprecated: 2025.3
-
-        This base class is deprecated in favor of :class:`ModelTrainer` and
-        :class:`UsesTrainer`, which are a better fit for integration with
-        tools like Ray Tune.
+    The component's configuration must have an ``epochs`` attribute defining the
+    number of epochs to train.
 
     Stability:
         Full
     """
 
     trained_epochs: int = 0
-    """
-    The number of epochs for which this model has been trained.
-    """
 
     @property
     def expected_training_epochs(self) -> int | None:
@@ -160,70 +254,11 @@ class IterativeTraining(ABC, Trainable):
         if cfg:
             return getattr(cfg, "epochs", None)
 
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> None:
-        """
-        Implementation of :meth:`Trainable.train` that uses the training loop.
-        It also uses the :attr:`trained_epochs` attribute to detect if the model
-        has already been trained for the purposes of honoring
-        :attr:`TrainingOptions.retrain`, and updates that attribute as model
-        training progresses.
-        """
-        if self.trained_epochs > 0 and not options.retrain:
-            return
+    @override
+    def is_trained(self):
+        return self.trained_epochs > 0
 
-        self.trained_epochs = 0
-        log = _log.bind(model=f"{self.__class__.__module__}.{self.__class__.__qualname__}")
-        log.info("training model")
-        n = self.expected_training_epochs
-        log.debug("creating training loop")
-        loop = self.training_loop(data, options)
-        log.debug("beginning training epochs")
-        with item_progress("Training epochs", total=n) as pb:
-            start = perf_counter()
-            for i, metrics in enumerate(loop, 1):
-                metrics = metrics or {}
-                now = perf_counter()
-                elapsed = now - start
-                log.info("finished epoch", time="{:.1f}s".format(elapsed), epoch=i, **metrics)
-                self.trained_epochs += 1
-                start = now
-                pb.update()
-
-        log.info("model training finished", epochs=self.trained_epochs)
-
-    @abstractmethod
-    def training_loop(
-        self, data: Dataset, options: TrainingOptions
-    ) -> Iterator[dict[str, float] | None]:
-        """
-        Training loop implementation, to be supplied by the derived class.  This
-        method should return a iterator that, when iterated, will perform each
-        training epoch; when training is complete, it should finalize the model
-        and signal iteration completion.
-
-        Each epoch can yield metrics, such as training or validation loss, to be
-        logged with structured logging and can be used by calling code to do
-        other analysis.
-
-        See :ref:`iterative-training` for more details on writing iterative
-        training loops.
-        """
-        raise NotImplementedError()
-
-
-class UsesTrainer(IterativeTraining, Component, ABC):
-    """
-    Base class for models that implement :class:`Trainable` via a
-    :class:`ModelTrainer`.  This class implements :class:`IterativeTraining` for
-    compatibility, but the :class:`IterativeTraining` interface is deprecated.
-
-    The component's configuration must have an ``epochs`` attribute noting the
-    number of epochs to train.
-
-    Stability:
-        Full
-    """
-
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> None:
         """
         Implementation of :meth:`Trainable.train` that uses the model trainer.
@@ -258,33 +293,6 @@ class UsesTrainer(IterativeTraining, Component, ABC):
 
         log.info("model training finished", epochs=self.trained_epochs)
 
-    def training_loop(self, data: Dataset, options: TrainingOptions):
-        warnings.warn("IteratativeTraining API is deprecated", DeprecationWarning)
-
-        log = _log.bind(model=f"{self.__class__.__module__}.{self.__class__.__qualname__}")
-        log.info("training model")
-        n = self.expected_training_epochs
-        assert n is not None, "no training epochs configured"
-        log.debug("creating model trainer")
-        trainer = self.create_trainer(data, options)
-
-        log.debug("beginning training epochs")
-        with item_progress("Training epochs", total=n) as pb:
-            start = perf_counter()
-            for i in range(1, n + 1):
-                metrics = trainer.train_epoch()
-                metrics = metrics or {}
-                now = perf_counter()
-                elapsed = now - start
-                log.info("finished epoch", time="{:.1f}s".format(elapsed), epoch=i, **metrics)
-                start = now
-                self.trained_epochs += 1
-                pb.update()
-                yield metrics
-
-        log.debug("finalizing model")
-        trainer.finalize()
-
     @abstractmethod
     def create_trainer(
         self, data: Dataset, options: TrainingOptions
@@ -300,12 +308,14 @@ class ModelTrainer(ABC):
     implement :class:`UsesTrainer` will return an object implementing this
     protocol from their :meth:`~UsesTrainer.create_trainer` method.
 
-    This protocol only defines the core aspects of training a model. Trainers
-    should also implement :class:`~lenskit.state.ParameterContainer` to allow
-    training to be checkpointed and resumed.
+    ..
 
-    It is also a good idea for the trainer to be pickleable, but the parameter
-    container interface is the primary mechanism for checkpointing.
+        This protocol only defines the core aspects of training a model. Trainers
+        should also implement :class:`~lenskit.state.ParameterContainer` to allow
+        training to be checkpointed and resumed.
+
+        It is also a good idea for the trainer to be pickleable, but the parameter
+        container interface is the primary mechanism for checkpointing.
 
     Stability:
         Full
@@ -319,9 +329,11 @@ class ModelTrainer(ABC):
         must be usable.
         """
 
-    @abstractmethod
     def finalize(self) -> None:
         """
         Finish the training process, cleaning up any unneeded data structures
         and doing any finalization steps to the model.
+
+        The default implementation does nothing.
         """
+        pass

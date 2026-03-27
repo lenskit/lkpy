@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -16,6 +16,7 @@ from lenskit.logging import get_logger
 
 from ..adapt import Column, column_name, normalize_columns
 from ..items import ItemList
+from ..repr import object_repr
 from ._base import ItemListCollection, MutableItemListCollection
 from ._keys import ID, GenericKey, K, Ko, create_key_type, key_dict, key_fields
 
@@ -30,7 +31,7 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
     _key_class: type[K]
     _lists: list[tuple[K, ItemList]]
     _index: dict[K, int] | None = None
-    _list_schema: dict[str, pa.DataType]
+    list_schema: pa.Schema = pa.schema({"item_id": pa.null()})
 
     def __init__(self, key: type[K] | Sequence[str], *, index: bool = True):
         """
@@ -44,11 +45,6 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
         self._lists = []
         if index:
             self._index = {}
-        self._list_schema = {}
-
-    @property
-    def list_schema(self):
-        return self._list_schema
 
     @overload
     @classmethod
@@ -137,6 +133,7 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
         df = normalize_columns(df, *columns)
         ilc = cls(key)  # type: ignore
         for k, gdf in df.groupby(list(fields)):
+            gdf = gdf.drop(columns=fields, errors="ignore")
             ilc.add(ItemList.from_df(gdf), *k)
 
         return ilc
@@ -193,13 +190,10 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
         self._lists.append((key, list))
         if self._index is not None:
             self._index[key] = len(self._lists) - 1
-        if len(list):
-            for fn, ft in list.arrow_types().items():
-                pft = self._list_schema.get(fn, None)
-                if pft is None:
-                    self._list_schema[fn] = ft
-                elif not ft.equals(pft):
-                    raise TypeError(f"incompatible item lists: field {fn} type {ft} != {pft}")
+
+        schema = list.arrow_schema()
+        if not schema.equals(self.list_schema):
+            self.list_schema = pa.unify_schemas([self.list_schema, schema])
 
     @overload
     def lookup(self, key: tuple) -> ItemList | None: ...
@@ -240,3 +234,11 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
 
     def __getitem__(self, pos: int, /) -> tuple[K, ItemList]:
         return self._lists[pos]
+
+    def __repr__(self):
+        return object_repr(
+            "ItemListCollection",
+            comment=f"{len(self)} lists",
+            storage="list",
+            key=",".join(self.key_fields),
+        ).string()

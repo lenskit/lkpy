@@ -1,16 +1,19 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import warnings
 from contextvars import ContextVar
 from typing import Any
 
+from lenskit.diagnostics import PipelineWarning
 from lenskit.logging import get_logger
 from lenskit.pipeline import PipelineBuilder
+from lenskit.pipeline._types import Lazy, T
+from lenskit.pipeline.components import ComponentInput
 from lenskit.pipeline.nodes import ComponentInstanceNode
-from lenskit.pipeline.types import Lazy, T
 
 _log = get_logger(__name__)
 hook_calls = ContextVar(f"lk-{__name__}-hook-calls", default=[])
@@ -29,11 +32,11 @@ def lazy_prefix(msg: Lazy[str], prefix: str, extra: Lazy[str]) -> str:
 
 
 def _input_hook(
-    node: ComponentInstanceNode[Any], input_name: str, input_type: Any, value: Any, **context
+    node: ComponentInstanceNode[Any], input: ComponentInput, value: Any, **context
 ) -> Any:
     cs = hook_calls.get()
     _log.debug("input hook called", n=len(cs), msg=value)
-    cs.append((node.name, input_name))
+    cs.append((node.name, input.name))
     return value
 
 
@@ -42,9 +45,11 @@ def test_component_input_called():
     msg = build.create_input("message", str)
     hello = build.add_component("hello", proc_hello, msg=msg)
 
-    build.add_run_hook("component-input", _input_hook)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", PipelineWarning)
+        build.add_run_hook("component-input", _input_hook)
 
-    pipe = build.build()
+        pipe = build.build()
 
     assert len(pipe.config.hooks.run["component-input"]) == 1
     assert pipe.config.hooks.run["component-input"][0].function.endswith(

@@ -1,28 +1,24 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::cmp::Reverse;
+use std::cmp::{min, Reverse};
 
 use arrow::{
     array::{
-        make_array, Array, ArrayData, ArrowPrimitiveType, Float16Array, Float32Array, Float64Array,
-        Int16Array, Int32Array, Int64Array, Int8Array, PrimitiveArray, RecordBatch, UInt16Array,
-        UInt32Array, UInt64Array, UInt8Array,
+        make_array, Array, ArrayData, ArrowPrimitiveType, Int32Array, PrimitiveArray, RecordBatch,
     },
     pyarrow::PyArrowType,
 };
-use arrow_schema::DataType;
 use ordered_float::{FloatCore, NotNan};
-use pyo3::{
-    exceptions::{PyTypeError, PyValueError},
-    prelude::*,
-};
+use pyo3::{exceptions::PyValueError, prelude::*};
 use rayon::slice::ParallelSliceMut;
 
-use crate::types::checked_array;
+use crate::indirect::heap::IndirectMinHeap;
+use crate::match_array_type;
+use crate::{arrow::checked_array, ok_or_pyerr};
 
 const PAR_SORT_THRESHOLD: usize = 10_000;
 
@@ -35,12 +31,18 @@ pub(super) fn is_sorted_coo<'py>(
 ) -> PyResult<bool> {
     let mut last = None;
     for PyArrowType(batch) in data {
-        let col1 = batch
-            .column_by_name(c1)
-            .ok_or_else(|| PyValueError::new_err(format!("unknown column: {}", c1)))?;
-        let col2 = batch
-            .column_by_name(c2)
-            .ok_or_else(|| PyValueError::new_err(format!("unknown column: {}", c2)))?;
+        let col1 = ok_or_pyerr!(
+            batch.column_by_name(c1),
+            PyValueError,
+            "unknown column: {}",
+            c1
+        )?;
+        let col2 = ok_or_pyerr!(
+            batch.column_by_name(c2),
+            PyValueError,
+            "unknown column: {}",
+            c2
+        )?;
 
         let col1: Int32Array = checked_array(c1, col1)?;
         let col2: Int32Array = checked_array(c2, col2)?;
@@ -69,34 +71,13 @@ pub(crate) fn argsort_descending<'py>(
     scores: PyArrowType<ArrayData>,
 ) -> PyResult<PyArrowType<ArrayData>> {
     let scores = make_array(scores.0);
-    let array = py.allow_threads(|| {
-        let indices = match scores.data_type() {
-            DataType::Float16 => {
-                argsort_float(scores.as_any().downcast_ref::<Float16Array>().unwrap())
-            }
-            DataType::Float32 => {
-                argsort_float(scores.as_any().downcast_ref::<Float32Array>().unwrap())
-            }
-            DataType::Float64 => {
-                argsort_float(scores.as_any().downcast_ref::<Float64Array>().unwrap())
-            }
-            DataType::Int8 => argsort_int(scores.as_any().downcast_ref::<Int8Array>().unwrap()),
-            DataType::Int16 => argsort_int(scores.as_any().downcast_ref::<Int16Array>().unwrap()),
-            DataType::Int32 => argsort_int(scores.as_any().downcast_ref::<Int32Array>().unwrap()),
-            DataType::Int64 => argsort_int(scores.as_any().downcast_ref::<Int64Array>().unwrap()),
-            DataType::UInt8 => argsort_int(scores.as_any().downcast_ref::<UInt8Array>().unwrap()),
-            DataType::UInt16 => argsort_int(scores.as_any().downcast_ref::<UInt16Array>().unwrap()),
-            DataType::UInt32 => argsort_int(scores.as_any().downcast_ref::<UInt32Array>().unwrap()),
-            DataType::UInt64 => argsort_int(scores.as_any().downcast_ref::<UInt64Array>().unwrap()),
-            _ => {
-                return Err(PyTypeError::new_err(format!(
-                    "unsupported type {}",
-                    scores.data_type()
-                )))
-            }
-        };
+    let array = py.detach(|| {
+        let indices = match_array_type!(scores, {
+            floating(arr) => argsort_float(arr),
+            integer(arr) => argsort_int(arr),
+        })?;
 
-        Ok(Int32Array::from(indices))
+        PyResult::Ok(Int32Array::from(indices))
     })?;
     Ok(array.into_data().into())
 }
@@ -145,4 +126,47 @@ where
     }
 
     indices
+}
+
+#[pyfunction]
+pub(crate) fn argtopn<'py>(
+    py: Python<'py>,
+    scores: PyArrowType<ArrayData>,
+    n: usize,
+) -> PyResult<PyArrowType<ArrayData>> {
+    let scores = make_array(scores.0);
+    let array = if n > 0 {
+        py.detach(|| {
+            let indices = match_array_type!(scores, {
+                floating(arr) => argtopn_impl(arr, n, |v| !v.is_nan()),
+                integer(arr) => argtopn_impl(arr, n, |_| true),
+            })?;
+
+            PyResult::Ok(Int32Array::from(indices))
+        })?
+    } else {
+        Vec::<i32>::new().into()
+    };
+    Ok(array.into_data().into())
+}
+
+fn argtopn_impl<T: ArrowPrimitiveType, Filter: Fn(T::Native) -> bool>(
+    scores: &PrimitiveArray<T>,
+    n: usize,
+    accept: Filter,
+) -> Vec<i32>
+where
+    T::Native: PartialOrd,
+{
+    let sbuf = scores.values();
+    let n = min(n, scores.len());
+
+    let mut heap = IndirectMinHeap::create(n, |k: i32| sbuf[k as usize]);
+    for i in 0..scores.len() {
+        if scores.is_valid(i) && accept(sbuf[i]) {
+            heap.insert(i as i32);
+        }
+    }
+
+    heap.topn_vec()
 }

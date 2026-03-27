@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -16,13 +16,13 @@ from lenskit.data import Dataset, ItemList
 from lenskit.logging import get_logger
 from lenskit.stats import gini
 
-from ._base import DecomposedMetric, RankingMetricBase
+from ._base import RankingMetricBase
 from ._weighting import GeometricRankWeight, RankWeight
 
 _log = get_logger(__name__)
 
 
-class GiniBase(DecomposedMetric, RankingMetricBase):
+class GiniBase(RankingMetricBase):
     """
     Base class for Gini diversity / popularity concentration metrics.
     """
@@ -31,11 +31,12 @@ class GiniBase(DecomposedMetric, RankingMetricBase):
 
     def __init__(
         self,
+        n: int | None = None,
         *,
-        items: int | pd.Series | pd.DataFrame | Dataset,
         k: int | None = None,
+        items: int | pd.Series | pd.DataFrame | Dataset,
     ):
-        super().__init__(k)
+        super().__init__(n, k=k)
         if isinstance(items, int):
             self.item_count = items
         elif isinstance(items, Dataset):
@@ -52,7 +53,7 @@ class ListGini(GiniBase):
     appears in.
 
     Args:
-        k:
+        n:
             The maximum recommendation list length.
         items:
             The total number of items, a data frame or series of item data, or a
@@ -65,12 +66,12 @@ class ListGini(GiniBase):
     """
 
     @override
-    def compute_list_data(self, output: ItemList, test):
+    def measure_list(self, output: ItemList, test):
         recs = self.truncate(output)
         return recs.ids(format="arrow")
 
     @override
-    def global_aggregate(self, values: list[pa.Array]):
+    def summarize(self, values: list[pa.Array] | pa.ChunkedArray, /):
         log = _log.bind(metric=self.label, item_count=self.item_count)
         log.debug("aggregating for %d lists", len(values))
         chunked = pa.chunked_array(values)
@@ -89,7 +90,7 @@ class ExposureGini(GiniBase):
     and computes the Gini coefficient of the total exposure.
 
     Args:
-        k:
+        n:
             The maximum recommendation list length.
         items:
             The total number of items, a data frame or series of item data, or a
@@ -108,22 +109,23 @@ class ExposureGini(GiniBase):
 
     def __init__(
         self,
+        n: int | None = None,
         *,
-        items: int | pd.Series | pd.DataFrame | Dataset,
         k: int | None = None,
+        items: int | pd.Series | pd.DataFrame | Dataset,
         weight: RankWeight = GeometricRankWeight(),
     ):
-        super().__init__(k=k, items=items)
+        super().__init__(n=n, k=k, items=items)
         self.weight = weight
 
     @override
-    def compute_list_data(self, output: ItemList, test):
+    def measure_list(self, output: ItemList, test):
         recs = self.truncate(output)
         weights = self.weight.weight(np.arange(1, len(recs) + 1))
         return (recs.ids(format="arrow"), pa.array(weights, type=pa.float32()))
 
     @override
-    def global_aggregate(self, values: list[tuple[pa.Array, pa.FloatArray]]):
+    def summarize(self, values: list[tuple[pa.Array, pa.FloatArray]]):
         log = _log.bind(metric=self.label, item_count=self.item_count)
         log.debug("aggregating for %d lists", len(values))
         table = pa.Table.from_batches(

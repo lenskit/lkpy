@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -16,6 +16,7 @@ ray = importorskip("ray")
 data_dir = Path("data")
 
 
+@mark.slow
 @mark.parametrize("name", ["ml-latest-small", "ml-100k.zip", "ml-20m.zip"])
 def test_ray_roundtrip(name):
     ensure_cluster()

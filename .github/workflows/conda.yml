@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main
+      - future/*
+      - series/*
   pull_request:
+  release:
+    types: [published]
 
 concurrency:
   group: conda-test-${{github.ref}}
@@ -19,7 +23,9 @@ jobs:
       matrix:
         platform:
           - ubuntu-latest
+          - ubuntu-24.04-arm
           - macos-latest
+          - macos-15-intel
           - windows-latest
 
     steps:
@@ -37,7 +43,7 @@ jobs:
       - name: Build LensKit source distribution
         id: source
         run: |
-          uv sync --only-group=scripting
+          uv sync --only-group=scripting -p 3.13
           mise run version --github
           mise run build:dist -sd
 
@@ -59,6 +65,8 @@ jobs:
     name: "Upload to prefix.dev"
     needs: conda-build
     runs-on: ubuntu-latest
+    environment: prefix-dev
+    if: github.event_name == 'push' || github.event_name == 'release'
     permissions:
       id-token: write
 
@@ -78,7 +86,12 @@ jobs:
         with:
           repo: prefix-dev/rattler-build
 
-      - name: Upload packages
+      - name: Upload dev package
         if: github.event_name == 'push'
         run: |
           rattler-build upload prefix --channel lenskit-dev dist/conda/*/*.conda
+
+      - name: Upload release package
+        if: github.event_name == 'release'
+        run: |
+          rattler-build upload prefix --channel lenskit dist/conda/*/*.conda

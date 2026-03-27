@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -23,13 +23,13 @@ from typing_extensions import Literal, overload, override
 
 from lenskit._accel import data as _accel_data
 from lenskit.diagnostics import FieldError
-from lenskit.logging import get_logger
+from lenskit.logging import get_logger, item_progress
 from lenskit.random import random_generator
 
 from .items import ItemList
-from .matrix import COOStructure, CSRStructure, SparseRowArray
+from .matrix import COOStructure, CSRStructure, SparseRowArray, fast_col_cooc
 from .schema import RelationshipSchema, id_col_name, num_col_name
-from .types import ID, LAYOUT, MAT_AGG
+from .types import ID, LAYOUT, NPMatrix
 from .vocab import Vocabulary
 
 if TYPE_CHECKING:
@@ -123,6 +123,15 @@ class RelationshipSet:
     def attribute_names(self) -> list[str]:
         return [c for c in self._table.column_names if c not in self._link_cols]
 
+    def item_lists(self) -> ItemListCollection:
+        """
+        Get a view of this relationship set as an item list collection.
+
+        Currently only implemented for :class:`MatrixRelationshipSet`, call
+        :meth:`matrix` first.
+        """
+        raise NotImplementedError("item_lists only implemented for matrix relationship sets")
+
     def count(self):
         if "count" in self._table.column_names:
             count_column = self._table.column("count")
@@ -131,6 +140,113 @@ class RelationshipSet:
             return count.as_py()
 
         return self._table.num_rows
+
+    @overload
+    def co_occurrences(
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: Literal[True],
+    ) -> NPMatrix[np.float32]: ...
+    @overload
+    def co_occurrences(
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: Literal[False] = False,
+    ) -> sps.coo_array: ...
+    def co_occurrences(
+        self,
+        entity: str,
+        *,
+        group: str | list[str] | None = None,
+        order: str | None = None,
+        include_self: bool = False,
+        dense: bool = False,
+    ) -> sps.coo_array | NPMatrix[np.float32]:
+        """
+        Count co-occurrences of the specified entity.  This is useful for
+        counting item co-occurrences for association rules and probabilties, but
+        also has other uses as well.
+
+        This method supports both **ordered** and **unordered** co-occurrences.
+        Unordered co-occurrences just count the number of times the two items
+        appear together, and the resulting matrix is symmetric.
+
+        For ordered co-occurrences, the interactions are ordered by the
+        attribute specified by ``order``, and the resulting matrix ``M`` may not
+        be symmetric.  ``M[i,j]`` counts the number of times item ``j`` has
+        appeared **after** item ``i``.  The order does not need to be global —
+        an attribute recording order *within* a group is sufficient.
+
+        If ``group`` is specified, it controls the grouping for counting
+        co-occurrences. For example, if a relationship connects the ``user``,
+        ``session``, and ``item`` classes, then:
+
+        - ``rs.co_occurrances("item")`` counts the number of times each pair of
+          items appear together in a session.
+        - ``rs.co_occurrances("item", group="user")`` counts the number of times
+          each pair of items were interacted with by the same user, regardless
+          of session.
+
+        Args:
+            entity:
+                The name of the entity to count.
+            group:
+                The names of grouping entity classes for counting
+                co-occurrences. The default is to use all entities that are not
+                being counted.
+            order:
+                The name of an attribute to use for ordering interactions to
+                compute sequential co-occurrences.
+            include_self:
+                Include self co-occurrences (interaction counts on the diagonal
+                of the co-occurrence matrix).
+            dense:
+                Pass ``True`` to return a dense co-occurrence matrix.
+
+        Returns:
+            A sparse matrix with the co-occurrence counts.
+        """
+        if isinstance(group, str):
+            group = [group]
+        elif group is None:
+            group = [e for e in self.entities if e != entity]
+
+        if entity in group:  # pragma: nocover
+            raise ValueError("cannot group by and count the same entity")
+
+        if len(group) > 1:
+            raise NotImplementedError("multiple grouping entities not yet supported")
+
+        # TODO: handle count columns
+
+        gc = num_col_name(group[0])
+        ec = num_col_name(entity)
+        sorts = [(num_col_name(k), "ascending") for k in group]
+        if order is not None:
+            sorts.append((order, "ascending"))
+        _log.debug("sorting table by %s", sorts)
+        tbl = self._table.sort_by(sorts)
+        m = len(self._vocabularies[group[0]])
+        n = len(self._vocabularies[entity])
+        _log.debug("counting co-occurrences", items=n)
+        with item_progress("Counting co-occurrences", tbl.num_rows) as pb:
+            return fast_col_cooc(
+                tbl.column(gc).combine_chunks(),
+                tbl.column(ec).combine_chunks(),
+                (m, n),
+                include_diagonal=include_self,
+                ordered=order is not None,
+                dense=dense,
+                progress=pb,
+            )
 
     def arrow(self, *, attributes: str | list[str] | None = None, ids=False) -> pa.Table:
         """
@@ -188,18 +304,29 @@ class RelationshipSet:
         return tbl.to_pandas()
 
     def matrix(
-        self, *, row_entity: str = "user", col_entity: str = "item"
+        self, *, row_entity: str | None = None, col_entity: str | None = None
     ) -> MatrixRelationshipSet:
         """
         Convert this relationship set into a matrix, coalescing duplicate
         observations.
 
+        .. versionchanged:: 2025.6
+
+            Removed the fixed defaults for ``row_entity`` and ``col_entity``.
+
         Args:
             row_entity:
-                The specified row entity of the matrix
+                The specified row entity of the matrix.  Defaults to the first
+                entity in the relationship's list of involved entities.
             col_entity:
-                The specified column entity of the matrix
+                The specified column entity of the matrix. Defaults to the last
+                entity in the relationship's list of involved entities.
         """
+        if row_entity is None:
+            row_entity = self.entities[0]
+        if col_entity is None:
+            col_entity = self.entities[-1]
+
         mat = self._matrix_set.get((row_entity, col_entity), None)
         if mat is None:
             mat = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
@@ -276,6 +403,7 @@ class RelationshipSet:
 
         aggregated_table = table_group.aggregate(aggregates)
         aggregated_table = aggregated_table.rename_columns(column_renames)
+        aggregated_table = aggregated_table.sort_by([(k, "ascending") for k in group_keys])
 
         return MatrixRelationshipSet(self.name, self._vocabularies, matrix_schema, aggregated_table)
 
@@ -389,20 +517,50 @@ class MatrixRelationshipSet(RelationshipSet):
 
     @override
     def matrix(
-        self, *, combine: MAT_AGG | dict[str, MAT_AGG] | None = None
+        self,
+        *,
+        row_entity: str | None = None,
+        col_entity: str | None = None,
     ) -> MatrixRelationshipSet:
-        # already a matrix relationship set
-        return self
+        c_row, c_col = self.entities
+        row_matches = row_entity is None or row_entity == self.entities[0]
+        col_matches = col_entity is None or col_entity == self.entities[1]
+        if row_matches and col_matches:
+            return self
 
-    def csr_structure(self) -> CSRStructure:
+        # we don't want ourselves, so make sure we're requesting the transpose
+        if row_entity is None and col_entity != c_row:  # pragma: nocover
+            raise ValueError(
+                f"unknown column entity {col_entity} (expected “{c_row}” or “{c_col}”)"
+            )
+        if col_entity is None and row_entity != c_col:  # pragma: nocover
+            raise ValueError(f"unknown row entity {row_entity} (expected “{c_col}” or “{c_row}”)")
+
+        schema = self.schema.model_copy(deep=True)
+        schema.entities = {
+            c_col: self.schema.entities[c_row],
+            c_row: self.schema.entities[c_col],
+        }
+        return MatrixRelationshipSet(self.name, self._vocabularies, schema, self._table)
+
+    @overload
+    def csr_structure(self, *, format: Literal["numpy"] = "numpy") -> CSRStructure: ...
+    @overload
+    def csr_structure(self, *, format: Literal["arrow"]) -> SparseRowArray: ...
+    def csr_structure(
+        self, *, format: Literal["numpy", "arrow"] = "numpy"
+    ) -> CSRStructure | SparseRowArray:
         """
         Get the compressed sparse row structure of this relationship matrix.
         """
-        n_rows = len(self.row_vocabulary)
-        n_cols = len(self.col_vocabulary)
+        if format == "arrow":
+            return self._structure
+        else:
+            n_rows = len(self.row_vocabulary)
+            n_cols = len(self.col_vocabulary)
 
-        colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
-        return CSRStructure(self._row_ptrs, colinds, (n_rows, n_cols))
+            colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
+            return CSRStructure(self._row_ptrs, colinds, (n_rows, n_cols))
 
     def coo_structure(self) -> COOStructure:
         """
@@ -449,6 +607,10 @@ class MatrixRelationshipSet(RelationshipSet):
         """
         Get this relationship matrix as a SciPy sparse matrix.
 
+        .. note::
+            If the selected attribute has missing values, they are *omitted* from the
+            returned matrix.
+
         Args:
             attribute:
                 The attribute to return, or ``None`` to return an indicator-only
@@ -464,22 +626,37 @@ class MatrixRelationshipSet(RelationshipSet):
         nnz = self._table.num_rows
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
+        mask = None
         if attribute is None or (attribute == "count" and "count" not in self._table.column_names):
             values = np.ones(nnz, dtype=np.float32)
         else:
-            values = self._table.column(attribute).to_numpy()
+            value_col = self._table.column(attribute)
+            if value_col.null_count:
+                mask = value_col.is_valid()
+                values = value_col.filter(mask).to_numpy()
+                mask = mask.to_numpy()
+            else:
+                values = value_col.to_numpy()
 
-        if layout == "csr":
+        if layout == "csr" and mask is None:
             if legacy:
                 return sps.csr_matrix((values, colinds, self._row_ptrs), shape=(n_rows, n_cols))
             else:
                 return sps.csr_array((values, colinds, self._row_ptrs), shape=(n_rows, n_cols))
-        elif layout == "coo":
-            rowinds = self._table.column(num_col_name(self.row_type))
+        else:
+            rowinds = self._table.column(num_col_name(self.row_type)).to_numpy()
+            if mask is not None:
+                colinds = colinds[mask]
+                rowinds = rowinds[mask]
             if legacy:
-                return sps.coo_matrix((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+                mat = sps.coo_matrix((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+                if layout == "csr":
+                    mat = mat.tocsr()
             else:
-                return sps.coo_array((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+                mat = sps.coo_array((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+                if layout == "csr":
+                    mat = mat.tocsr()
+            return mat
 
     @overload
     def torch(
@@ -490,6 +667,10 @@ class MatrixRelationshipSet(RelationshipSet):
     def torch(self, attribute: str | None = None, *, layout: LAYOUT = "csr") -> torch.Tensor:
         """
         Get this relationship matrix as a PyTorch sparse tensor.
+
+        .. note::
+            If the selected attribute has missing values, they are *omitted* from the
+            returned matrix.
 
         Args:
             attribute:
@@ -507,28 +688,40 @@ class MatrixRelationshipSet(RelationshipSet):
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
         colinds = torch.tensor(np.require(colinds, requirements="W"))
+        mask = None
         if attribute is None or (attribute == "count" and "count" not in self._table.column_names):
             values = torch.ones(nnz, dtype=torch.float32)
-        elif pa.types.is_timestamp(self._table.field(attribute).type):
-            vals = self._table.column(attribute)
-            vals = vals.cast(pa.timestamp("s")).cast(pa.int64())
-            values = torch.tensor(vals.to_numpy())
         else:
-            values = torch.tensor(self._table.column(attribute).to_numpy())
+            mask = None
+            value_col = self._table.column(attribute)
+            if value_col.null_count:
+                mask = value_col.is_valid()
+                value_col = value_col.filter(mask)
+                mask = mask.to_numpy()
 
-        if layout == "csr":
+            if pa.types.is_timestamp(self._table.field(attribute).type):
+                value_col = value_col.cast(pa.timestamp("s")).cast(pa.int64())
+
+            values = torch.tensor(value_col.to_numpy())
+
+        if layout == "csr" and mask is None:
             return torch.sparse_csr_tensor(
                 crow_indices=torch.tensor(self._row_ptrs),
                 col_indices=colinds,
                 values=values,
                 size=(n_rows, n_cols),
             )
-        elif layout == "coo":
+        else:
             rowinds = torch.tensor(self._table.column(num_col_name(self.row_type)).to_numpy())
             indices = torch.stack((rowinds, colinds))
-            return torch.sparse_coo_tensor(
+            if mask is not None:
+                indices = indices[:, torch.as_tensor(mask)]
+            mat = torch.sparse_coo_tensor(
                 indices=indices, values=values, size=(n_rows, n_cols)
             ).coalesce()
+            if layout == "csr":
+                mat = mat.to_sparse_csr()
+            return mat
 
     def sample_negatives(
         self,
@@ -648,6 +841,16 @@ class MatrixRelationshipSet(RelationshipSet):
         return ItemList.from_arrow(tbl, vocabulary=self.col_vocabulary)
 
     def to_ilc(self) -> ItemListCollection:
+        """
+        Get the rows as an item list collection.
+
+        .. deprecated:: 2025.6
+
+            Deprecated alias for :meth:`item_lists`.
+        """
+        return self.item_lists()
+
+    def item_lists(self) -> ItemListCollection:
         """
         Get the rows as an item list collection.
         """

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - future/*
+      - series/*
   pull_request:
   release:
     types: [published]
@@ -27,12 +29,13 @@ jobs:
         uses: jdx/mise-action@v2
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: Install dependencies
-        run: uv sync --group=scripting
+        run: uv sync --only-group=scripting
         env:
           UV_LOCKED: 1
 
@@ -50,7 +53,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pypi-dist-src
-          path: dist
+          path: |
+            dist
+            !dist/CACHEDIR.TAG
 
       - name: List dist dir
         run: ls -R dist
@@ -66,10 +71,6 @@ jobs:
             pyarch: x64
             target: x86_64
             manylinux: 2_28
-          - host: ubuntu-22.04
-            pyarch: x64
-            target: x86
-            manylinux: 2014
           - host: ubuntu-24.04-arm
             pyarch: arm64
             target: aarch64
@@ -77,14 +78,6 @@ jobs:
           - host: windows-latest
             pyarch: x64
             target: x64
-            manylinux: auto
-          - host: windows-latest
-            pyarch: x86
-            target: x86
-            manylinux: auto
-          - host: macos-13
-            pyarch: x64
-            target: x86_64
             manylinux: auto
           - host: macos-14
             pyarch: arm64
@@ -107,13 +100,21 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           architecture: ${{matrix.plat.pyarch}}
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           args: --release --out dist
+          target: ${{ matrix.plat.target }}
+          manylinux: ${{ matrix.plat.manylinux }}
+
+      - name: Build free-threaded wheels
+        uses: PyO3/maturin-action@v1
+        if: matrix.plat.host != 'windows-latest'
+        with:
+          args: --release --out dist -i 3.14t
           target: ${{ matrix.plat.target }}
           manylinux: ${{ matrix.plat.manylinux }}
 
@@ -142,9 +143,10 @@ jobs:
         run: ls dist
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
 
       - name: Set up Rclone configuration
         run: |

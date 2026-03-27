@@ -4,14 +4,17 @@ Rust acceleration code.
 
 from __future__ import annotations
 
+import pyarrow as pa
+
 from lenskit.data.types import NPMatrix, NPVector
 from lenskit.funksvd import FunkSVDTrainingData, FunkSVDTrainingParams
 
-from . import als, data
+from . import als, data, knn
 
 __all__ = [
     "als",
     "data",
+    "knn",
     "init_accel_pool",
     "thread_count",
     "FunkSVDTrainer",
@@ -29,3 +32,6 @@ class FunkSVDTrainer:
         item_features: NPMatrix,
     ): ...
     def feature_epoch(self, feature: int, estimates: NPVector, trail: float) -> float: ...
+
+def sparse_row_debug_type(arr: pa.Array) -> tuple[str, int, int]: ...
+def sparse_structure_debug_large(arr: pa.Array) -> tuple[int, int, int]: ...

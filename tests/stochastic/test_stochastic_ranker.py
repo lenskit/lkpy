@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -30,6 +30,7 @@ from lenskit.pipeline import topn_pipeline
 from lenskit.splitting import simple_test_pair
 from lenskit.stochastic import StochasticTopNRanker
 from lenskit.testing import BasicComponentTests, ScorerTests, scored_lists
+from lenskit.training import TrainingOptions
 
 _log = get_logger(__name__)
 
@@ -189,7 +190,7 @@ def test_stochasticity(rng):
     items = ItemList(item_ids=iids, scores=scores)
     size = 50
 
-    TRIALS = 100
+    TRIALS = 250
     topn = StochasticTopNRanker(n=size)
 
     _log.info("testing stochastic ranking: top %d of %d", size, len(items))
@@ -233,23 +234,34 @@ def test_stochasticity(rng):
         _log.info("trial %d: 𝜏=%.3f, p=%.3f", i, tau.statistic, tau.pvalue)
 
     pvals = np.array(pvals)
-    _log.info("trial p-value statistics: mean=%.3f, median=%.3f", np.mean(pvals), np.median(pvals))
+    _log.info(
+        "trial p-value statistics: mean=%.3f, median=%.3f, pass=%d/%d",
+        np.mean(pvals),
+        np.median(pvals),
+        np.sum(pvals < 0.05).item(),
+        TRIALS,
+    )
     # do 90% of trials pass the test?
     assert np.mean(pvals < 0.05) >= 0.9
 
 
-@mark.flaky(retries=1)
-def test_scale_affects_ranking(rng, ml_ds: Dataset):
+@mark.flaky(retries=5)
+def test_scale_affects_ranking(ml_ds: Dataset):
     """
     Test that different softmax scales produce different levels of ranking variation.
     """
-    pipe = topn_pipeline(ImplicitMFScorer())
-    pipe.train(ml_ds)
+    # generate a fresh RNG, ignoring global seeding
+    seed = np.random.SeedSequence()
+    rng = np.random.default_rng(seed)
+    pipe = topn_pipeline(ImplicitMFScorer(embedding_size=32, weight=5))
+    pipe.train(ml_ds, TrainingOptions(rng=rng))
+
+    seeds = [int(s.generate_state(1)[0]) for s in seed.spawn(3)]
 
     topn = TopNRanker()
-    samp_frac = StochasticTopNRanker(scale=0.05)
-    samp_one = StochasticTopNRanker(scale=1)
-    samp_hundred = StochasticTopNRanker(scale=50)
+    samp_frac = StochasticTopNRanker(scale=0.01, rng=seeds[0])
+    samp_one = StochasticTopNRanker(scale=1, rng=seeds[1])
+    samp_hundred = StochasticTopNRanker(scale=50, rng=seeds[2])
 
     jc_frac = []
     jc_one = []
@@ -257,10 +269,13 @@ def test_scale_affects_ranking(rng, ml_ds: Dataset):
 
     for uid in rng.choice(ml_ds.users.ids(), size=500):
         ilist = recommend(pipe, uid)
-        rl_topn = topn(items=ilist, n=10)
-        rl_frac = samp_frac(items=ilist, n=10)
-        rl_one = samp_one(items=ilist, n=10)
-        rl_hundred = samp_hundred(items=ilist, n=10)
+        rl_topn = topn(items=ilist, n=20)
+        rl_frac = samp_frac(items=ilist, n=20)
+        assert len(rl_frac) == 20
+        rl_one = samp_one(items=ilist, n=20)
+        assert len(rl_one) == 20
+        rl_hundred = samp_hundred(items=ilist, n=20)
+        assert len(rl_hundred) == 20
 
         jc_frac.append(_jaccard(rl_topn, rl_frac))
         jc_one.append(_jaccard(rl_topn, rl_one))

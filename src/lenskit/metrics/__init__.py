@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,16 +12,18 @@ from typing import Callable, ParamSpec
 
 from lenskit.data import ItemList
 
-from ._accum import MetricAccumulator
 from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
+from ._collect import MeasurementCollector
 from ._quick import quick_measure_model
 from .basic import ListLength, TestItemCount
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
 from .ranking import (
     DCG,
+    ILS,
     NDCG,
     RBP,
+    Entropy,
     ExposureGini,
     GeometricRankWeight,
     Hit,
@@ -29,16 +31,18 @@ from .ranking import (
     LogRankWeight,
     MeanPopRank,
     Precision,
+    RankBiasedEntropy,
     RankingMetricBase,
     RankWeight,
     Recall,
     RecipRank,
 )
+from .reranking import least_item_promoted, rank_biased_overlap
 
 __all__ = [
     "Metric",
     "MetricFunction",
-    "MetricAccumulator",
+    "MeasurementCollector",
     "ListMetric",
     "GlobalMetric",
     "RankingMetricBase",
@@ -62,9 +66,21 @@ __all__ = [
     "ListGini",
     "ExposureGini",
     "quick_measure_model",
+    "least_item_promoted",
+    "rank_biased_overlap",
+    "ILS",
+    "Entropy",
+    "RankBiasedEntropy",
 ]
 
 P = ParamSpec("P")
+MetricAccumulator = MeasurementCollector
+"""
+Deprecated alias for :class:`MeasurementCollector`.
+
+.. deprecated:: 2025.5
+    Use the new name.
+"""
 
 
 def call_metric(

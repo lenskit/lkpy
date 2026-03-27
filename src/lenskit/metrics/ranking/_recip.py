@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -30,8 +30,8 @@ class RecipRank(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"RecipRank@{self.k}"
+        if self.n is not None:
+            return f"RecipRank@{self.n}"
         else:
             return "RecipRank"
 

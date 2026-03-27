@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -11,7 +11,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated, Literal, TypeAliasType
 
-from lenskit.config import load_config_data
+from lenskit.config import lenskit_config, load_config_data
 from lenskit.pipeline.config import PipelineConfig
 
 SearchSpace = TypeAliasType("SearchSpace", "dict[str, SearchParam | SearchSpace]")
@@ -26,9 +26,13 @@ class SearchConfig(BaseModel):
     """
     The search method to use.
     """
-    max_points: int = 60
+    max_points: int | None = None
     """
     The maximum number of points to try.
+    """
+    default_points: int = 60
+    """
+    The default number of search points, if not limited by a maximum configuration.
     """
     max_epochs: int = 100
     """
@@ -56,8 +60,32 @@ class SearchConfig(BaseModel):
     """
     checkpoint_iters: int = 2
     """
-    The frqeuencey for saving checkpoints.
+    The frequency for saving checkpoints.
     """
+
+    def update_max_points(self, n: int | None):
+        """
+        Limit the search points to a new maximum, if it exceeds the current maximum.
+        """
+        if n is not None:
+            if self.max_points is None or self.max_points > n:
+                self.max_points = n
+
+    def num_search_points(self) -> int:
+        """
+        Get the number of search points to use.
+        """
+        cfg = lenskit_config()
+
+        points = self.default_points
+
+        if self.max_points is not None and points > self.max_points:
+            points = self.max_points
+
+        if cfg.tuning.max_points is not None and points > cfg.tuning.max_points:
+            points = cfg.tuning.max_points
+
+        return points
 
 
 class TuningSpec(BaseModel, extra="forbid"):

@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -11,7 +11,7 @@ use arrow::{
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 
-use crate::types::checked_array;
+use crate::arrow::checked_array;
 
 #[derive(FromPyObject, Clone, Debug)]
 struct FunkSVDConfig {
@@ -92,7 +92,7 @@ impl FunkSVDTrainer {
         let mut uf_col = uf_mat.column_mut(feature);
         let mut if_col = if_mat.column_mut(feature);
 
-        py.allow_threads(|| {
+        py.detach(|| {
             let mut sse = 0.0;
 
             for s in 0..n {

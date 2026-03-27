@@ -24,6 +24,57 @@ as :func:`~lenskit.data.load_movielens`) or the
     packages like PyTorch-Geometric is not difficult, and will be directly
     supported in an upcoming backwards-compatible revision.
 
+Example
+~~~~~~~
+
+To warm up, here is a simple version of how a MovieLens rating dataset is
+represented in the LensKit data model, in `Chen's entity-relationship notation`_:
+
+.. _Chen's entity-relationship notation: https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model
+
+..
+    Michael is annoyed that this requires GraphViz and cannot yet be done in Mermaid.
+    https://github.com/mermaid-js/mermaid/issues/3723
+
+.. graphviz::
+
+    graph G {
+        rankdir="LR"
+        node [shape=box, fontname="Sans-Serif", style=filled, fillcolor="#3fb1c5"]
+        U [label="user"]
+        I [label="item"]
+
+        node [shape=oval, fillcolor="#f3cf95", style="filled,dashed"]
+        Uid [label=<<u>user_id</u>>]
+        Iid [label=<<u>item_id</u>>]
+        node [style="filled"]
+        It [label="title"]
+
+        subgraph R {
+            rank="same"
+            node [shape=diamond, fillcolor="#e47fd7"]
+            R [label="rating"]
+
+            node[shape=oval, fillcolor="#f3cf95"]
+            Rv [label="rating"]
+            Rt [label="timestamp"]
+
+            Rt -- R;
+            R -- Rv;
+        }
+
+        U -- R;
+        R -- I;
+
+        Uid -- U;
+        I -- Iid;
+        I -- It;
+    }
+
+This model shows two :term:`entities <entity>`, **user** and **item**, connected
+by a :term:`relationship` **rating**.  Users, items, and ratings have various
+:term:`attributes <attribute>` further describing them.
+
 Core Concepts
 ~~~~~~~~~~~~~
 

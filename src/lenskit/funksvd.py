@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -104,6 +104,10 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
     item_embeddings: NPMatrix
 
     @override
+    def is_trained(self):
+        return hasattr(self, "item_embeddings")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Train a FunkSVD model.
@@ -111,9 +115,6 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         Args:
             ratings: the ratings data frame.
         """
-        if hasattr(self, "item_embeddings") and not options.retrain:
-            return
-
         log = _logger.bind(dataset=data.name)
 
         timer = Stopwatch()

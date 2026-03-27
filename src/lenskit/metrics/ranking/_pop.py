@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -51,10 +51,11 @@ class MeanPopRank(ListMetric, RankingMetricBase):
         self,
         data: Dataset,
         *,
+        n: int | None = None,
         k: int | None = None,
         count: Literal["users", "interactions"] = "users",
     ):
-        super().__init__(k=k)
+        super().__init__(n, k=k)
         stats = data.item_stats()
         match count:
             case "users":

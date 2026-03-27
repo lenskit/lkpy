@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -13,14 +13,20 @@ from __future__ import annotations
 
 import json
 import warnings
-from typing import Any, NamedTuple, TypeVar, cast
+from typing import Any, Literal, NamedTuple, TypeVar, cast, overload
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import scipy.sparse as sps
 import torch
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
+from scipy.sparse import csr_array
+
+from lenskit._accel import data as _data_accel
+from lenskit.logging import Progress
+
+from .types import NPVector
 
 t = torch
 M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, sps.spmatrix, t.Tensor)
@@ -54,6 +60,13 @@ class CSRStructure(NamedTuple):
     @property
     def nnz(self):
         return self.rowptrs[self.nrows]
+
+    @property
+    def row_nnzs(self) -> NPVector[np.int32]:
+        """
+        Array of row sizes (number of nonzeros in each row).
+        """
+        return np.diff(self.rowptrs)
 
     def extent(self, row: int) -> tuple[int, int]:
         return self.rowptrs[row], self.rowptrs[row + 1]
@@ -435,6 +448,19 @@ class SparseRowArray(pa.ExtensionArray):
             size=self.shape,
         )
 
+    def to_coo(self) -> pa.Table:
+        """
+        Convert this array to table representing the array in COO format.
+        """
+        nr, nc = self.shape
+        lengths = self.storage.value_lengths()
+        assert len(lengths) == nr
+        rowinds = np.repeat(np.arange(nr, dtype=np.int32), lengths)
+        fields = {"row": rowinds, "col": self.indices}
+        if self.has_values:
+            fields["value"] = self.values
+        return pa.table(fields)
+
     @property
     def dimension(self) -> int:
         """
@@ -467,6 +493,29 @@ class SparseRowArray(pa.ExtensionArray):
             return self.storage.values.field(1)
         else:
             return None
+
+    def structure(self) -> SparseRowArray:
+        """
+        Get the structure of this matrix (without values).
+        """
+        if self.has_values:
+            return self.from_arrays(self.offsets, self.indices, shape=self.shape)
+        else:
+            return self
+
+    def transpose(self) -> SparseRowArray:
+        """
+        Get the transpose of this sparse matrix.
+        """
+        nr, nc = self.shape
+        row_ptr, col_ind, perm = _data_accel.transpose_csr(self.structure(), self.has_values)
+        if perm is None:
+            return self.from_arrays(row_ptr, col_ind, shape=(nc, nr))
+        else:
+            values = self.values
+            assert values is not None
+            values = values.take(perm)
+            return self.from_arrays(row_ptr, col_ind, values, shape=(nc, nr))
 
     def row_extent(self, row: int) -> tuple[int, int]:
         """
@@ -504,3 +553,119 @@ def _check_index_type(index_type: pa.DataType, dimension: int | None) -> int:
 pa.register_extension_type(SparseIndexType(0))  # type: ignore
 pa.register_extension_type(SparseIndexListType(0))  # type: ignore
 pa.register_extension_type(SparseRowType(0))  # type: ignore
+
+
+@overload
+def fast_col_cooc(
+    rows: NPVector[np.int32] | pa.Int32Array,
+    cols: NPVector[np.int32] | pa.Int32Array,
+    shape: tuple[int, int],
+    *,
+    progress: Progress | None = None,
+    include_diagonal: bool = True,
+    ordered: bool = False,
+    dense: Literal[True],
+) -> np.ndarray[tuple[int, int], np.dtype[np.float32]]: ...
+@overload
+def fast_col_cooc(
+    rows: NPVector[np.int32] | pa.Int32Array,
+    cols: NPVector[np.int32] | pa.Int32Array,
+    shape: tuple[int, int],
+    *,
+    progress: Progress | None = None,
+    include_diagonal: bool = True,
+    ordered: bool = False,
+    dense: Literal[False] = False,
+) -> sps.coo_array: ...
+@overload
+def fast_col_cooc(
+    rows: NPVector[np.int32] | pa.Int32Array,
+    cols: NPVector[np.int32] | pa.Int32Array,
+    shape: tuple[int, int],
+    *,
+    progress: Progress | None = None,
+    include_diagonal: bool = True,
+    ordered: bool = False,
+    dense: bool = False,
+) -> Any: ...
+def fast_col_cooc(
+    rows: NPVector[np.int32] | pa.Int32Array,
+    cols: NPVector[np.int32] | pa.Int32Array,
+    shape: tuple[int, int],
+    *,
+    progress: Progress | None = None,
+    include_diagonal: bool = True,
+    ordered: bool = False,
+    dense: bool = False,
+) -> Any:
+    r"""
+    Compute column co-occurrances (:math:`M^{\mathrm{T}}M`) efficiently.
+    """
+
+    m, n = shape
+    if not isinstance(rows, pa.Int32Array):
+        rows = cast(pa.Int32Array, pa.array(rows))
+    if not isinstance(cols, pa.Int32Array):
+        cols = cast(pa.Int32Array, pa.array(cols))
+
+    if dense:
+        if ordered:
+            raise NotImplementedError("dense ordered co-occurrences not supported")
+        return _data_accel.dense_cooc(
+            m, n, rows, cols, progress=progress, diagonal=include_diagonal
+        )
+    else:
+        batches = _data_accel.count_cooc(
+            m, n, rows, cols, progress=progress, diagonal=include_diagonal, ordered=ordered
+        )
+        tbl = pa.Table.from_batches(batches)
+        indices = np.stack(
+            [
+                tbl.column("row").to_numpy(zero_copy_only=False),
+                tbl.column("col").to_numpy(zero_copy_only=False),
+            ],
+            axis=0,
+        )
+
+        return sps.coo_array(
+            (tbl.column("count").to_numpy(zero_copy_only=False), indices),
+            shape=(n, n),
+        )
+
+
+def normalize_matrix(
+    matrix: csr_array | NDArray[np.floating[Any]],
+    normalize: Literal["unit", "distribution"] | None,
+) -> csr_array | NDArray[np.floating[Any]]:
+    """
+    Normalize rows of a matrix.
+
+    Args:
+        matrix: Sparse or dense matrix to normalize
+        normalize: Normalization mode ("unit" for L2, "distribution" for L1)
+
+    Returns:
+        Normalized matrix
+    """
+    if normalize is None:
+        return matrix
+
+    is_sparse = isinstance(matrix, csr_array)
+
+    if normalize == "unit":
+        if is_sparse:
+            stats = sps.linalg.norm(matrix, axis=1)
+        else:
+            stats = np.linalg.norm(matrix, axis=1)
+    else:
+        if (matrix.data if is_sparse else matrix).min() < 0:
+            raise ValueError("Cannot normalize to distribution: negative values present")
+        stats = matrix.sum(axis=1)
+
+    stats[stats == 0] = 1.0
+
+    if is_sparse:
+        result = matrix / stats[:, None]
+        return result.tocsr()
+    else:
+        return matrix / stats[:, None]

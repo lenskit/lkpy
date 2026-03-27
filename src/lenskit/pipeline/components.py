@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,8 +12,10 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
-from inspect import isabstract, signature
+from dataclasses import dataclass
+from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
+from typing import get_args
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
@@ -30,7 +32,9 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning
+from lenskit.diagnostics import PipelineWarning
+
+from ._types import Lazy, TypecheckWarning, is_compatible_data
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -51,6 +55,19 @@ PipelineFunction: TypeAlias = Callable[..., COut]
 """
 Pure-function interface for pipeline functions.
 """
+
+
+@dataclass
+class ComponentInput:
+    """
+    Representation of a component input slot.
+    """
+
+    name: str
+    type: type | None = None
+    is_lazy: bool = False
+    accepts_none: bool = False
+    has_default: bool = False
 
 
 @runtime_checkable
@@ -125,6 +142,7 @@ class Component(ABC, Generic[COut, CArgs]):
                         "component class {} does not define a config attribute type".format(
                             cls.__qualname__
                         ),
+                        PipelineWarning,
                         stacklevel=2,
                     )
 
@@ -140,6 +158,7 @@ class Component(ABC, Generic[COut, CArgs]):
                 "component class {} does not define a config attribute type".format(
                     self.__class__.__qualname__
                 ),
+                PipelineWarning,
                 stacklevel=2,
             )
         elif cfg_cls and not isinstance(config, cfg_cls):
@@ -227,7 +246,8 @@ def component_inputs(
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
     *,
     warn_on_missing: bool = True,
-) -> dict[str, type | None]:
+    _warn_level: int = 1,
+) -> dict[str, ComponentInput]:
     if isinstance(component, FunctionType):
         function = component
     elif hasattr(component, "__call__"):
@@ -238,21 +258,32 @@ def component_inputs(
     types = get_type_hints(function)
     sig = signature(function)
 
-    inputs: dict[str, type | None] = {}
+    inputs: dict[str, ComponentInput] = {}
     for param in sig.parameters.values():
+        ci = ComponentInput(param.name)
         if param.name == "self":
             continue
 
+        inputs[param.name] = ci
+
         if pt := types.get(param.name, None):
-            inputs[param.name] = pt
-        else:
-            if warn_on_missing:
-                warnings.warn(
-                    f"parameter {param.name} of component {component} has no type annotation",
-                    TypecheckWarning,
-                    2,
-                )
-            inputs[param.name] = None
+            if get_origin(pt) == Lazy:
+                ci.is_lazy = True
+                (ci.type,) = get_args(pt)
+            else:
+                ci.type = pt
+        elif warn_on_missing:
+            warnings.warn(
+                f"parameter {param.name} of component {component} has no type annotation",
+                TypecheckWarning,
+                stacklevel=_warn_level + 1,
+            )
+
+        if ci.type is None or is_compatible_data(None, ci.type):
+            ci.accepts_none = True
+
+        if param.default is not Parameter.empty:
+            ci.has_default = True
 
     return inputs
 

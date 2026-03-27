@@ -19,8 +19,8 @@ allows list length to be baked into a pipeline configuration, and also allows
 that length to be specified or overridden at runtime.  If both lengths are
 specified, the runtime length takes precedence.
 
-See :class:`lenskit.basic.TopNRanker` or :class:`lenskit.basic.SoftmaxRanker`
-for examples.
+See :class:`lenskit.basic.TopNRanker` or
+:class:`lenskit.stochastic.StochasticTopNRanker` for examples.
 
 
 .. _config-conventions:

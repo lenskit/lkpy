@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -11,29 +11,26 @@ Support for parallelism with Ray.
 from __future__ import annotations
 
 import base64
-import itertools
 import os
 import pickle
 from collections import deque
-from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
-from functools import partial
-from platform import python_version_tuple
-from typing import Any, Generic, TypeVar
+from collections.abc import Callable, Generator, Iterable, Iterator
+from typing import Any, TypeVar, overload
 
-from lenskit.logging import Task, get_logger
+import torch
+
+from lenskit.logging import get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
 from .config import (
-    ParallelConfig,
     effective_cpu_count,
     ensure_parallel_init,
     get_parallel_config,
-    subprocess_config,
 )
-from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
 try:
     import ray
+    import ray.util
     from ray.remote_function import RemoteFunction
 
     _ray_imported = True
@@ -44,7 +41,7 @@ except ImportError:
 T = TypeVar("T")
 
 BATCH_SIZE = 200
-_worker_parallel: ParallelConfig
+_serializers_registered = False
 _log = get_logger(__name__)
 
 
@@ -64,13 +61,13 @@ def ensure_cluster():
             else:
                 raise e
 
+    init_serializers()
+
 
 def init_cluster(
     *,
     num_cpus: int | None = None,
-    proc_slots: int | None = None,
     resources: dict[str, float] | None = None,
-    worker_parallel: ParallelConfig | None = None,
     global_logging: bool = False,
     **kwargs,
 ):
@@ -91,9 +88,6 @@ def init_cluster(
             the ``lk_process`` resource on the Ray cluster.
         resources:
             Additional custom resources to register in the Ray cluster.
-        worker_parallel:
-            Parallel processing configuration for worker processes.  If
-            ``None``, uses the default.
         global_logging:
             ``True`` to wire up logging in the workers at startup, instead of only
             connecting logs when a task is run.
@@ -103,7 +97,6 @@ def init_cluster(
     Stability:
         Experimental
     """
-    global _worker_parallel
     import ray
     import ray.runtime_env
 
@@ -113,17 +106,11 @@ def init_cluster(
         resources = resources.copy()
 
     cfg = get_parallel_config()
-    if proc_slots is None:
-        proc_slots = cfg.processes
 
     if num_cpus is None:
         num_cpus = effective_cpu_count()
 
-    if worker_parallel is None:
-        worker_parallel = subprocess_config()
-    _worker_parallel = worker_parallel
-
-    env = worker_parallel.env_vars().copy()
+    env = cfg.env_vars().copy()
     wc = WorkerLogConfig.current()
     env["LK_LOG_CONFIG"] = base64.encodebytes(pickle.dumps(wc)).decode()
 
@@ -134,23 +121,17 @@ def init_cluster(
     ray.init(num_cpus=num_cpus, resources=resources, runtime_env=runtime, **kwargs)
 
 
-def inference_worker_cpus() -> int:
-    return _worker_parallel.backend_threads
+def init_serializers():
+    global _serializers_registered
+    if _serializers_registered:
+        return
 
+    _log.debug("registering Pytorch serializer")
+    ray.util.register_serializer(
+        torch.Tensor, serializer=_SharedTensor, deserializer=torch.as_tensor
+    )
 
-def training_worker_cpus() -> int:
-    return _worker_parallel.total_threads
-
-
-def ray_supported() -> bool:
-    """
-    Check if this Ray setup is supported by LensKit.
-    """
-    major, minor, patch = python_version_tuple()
-    if int(major) < 3 or int(minor) < 12:
-        return False
-    else:
-        return ray_available()
+    _serializers_registered = True
 
 
 def ray_available() -> bool:
@@ -189,43 +170,6 @@ def is_ray_worker() -> bool:
         return False
 
 
-class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
-    function: InvokeOp[M, A, R]
-    model_ref: Any
-    action: RemoteFunction
-    limit: int | None
-
-    def __init__(self, model: M, func: InvokeOp[M, A, R], *, limit: int | None = None):
-        _log.debug("persisting to Ray cluster")
-        import ray
-        import torch
-
-        if isinstance(model, ray.ObjectRef):
-            self.model_ref = model
-        else:
-            self.model_ref = ray.put(model)
-        self.function = func
-
-        self.limit = limit
-
-        worker = ray.remote(_ray_invoke_worker)
-        # request a little GPU
-        if torch.cuda.is_available():
-            n_gpus = 0.1
-        else:
-            n_gpus = None
-        self.action = worker.options(num_cpus=inference_worker_cpus(), num_gpus=n_gpus)  # type: ignore
-
-    def map(self, tasks: Iterable[A]) -> Iterator[R]:
-        limit = TaskLimiter(self.limit)
-        function = partial(self.action.remote, self.function, self.model_ref)
-        for bres in limit.imap(function, itertools.batched(tasks, BATCH_SIZE)):
-            yield from bres  # type: ignore
-
-    def shutdown(self):
-        del self.model_ref
-
-
 class TaskLimiter:
     """
     Limit task concurrency using :func:`ray.wait`.
@@ -251,7 +195,7 @@ class TaskLimiter:
 
     def __init__(self, limit: int | None = None):
         if limit is None or limit <= 0:
-            self.limit = get_parallel_config().processes
+            self.limit = get_parallel_config().num_batch_jobs
         else:
             self.limit = limit
         self.finished = 0
@@ -264,37 +208,74 @@ class TaskLimiter:
         """
         return len(self._tasks)
 
+    def throttle[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]], *, ordered: bool = True
+    ) -> Generator[Elt, None, int]:
+        """
+        Throttle a generator of Ray tasks, only requesting new tasks from the
+        generator as the limit has space.
+
+        Args:
+            tasks:
+                A generator of tasks (usually the result of calling a Ray remote
+                function).
+        Returns:
+            A generator of the results (already awaited with :func:`ray.get`).
+        """
+        if ordered:
+            return self._throttle_ordered(tasks)
+        else:
+            return self._throttle_unordered(tasks)
+
+    @overload
     def imap(
+        self,
+        function: RemoteFunction,
+        items: Iterable[Any],
+        *,
+        ordered: bool = True,
+    ) -> Generator[Any, None, int]: ...
+    @overload
+    def imap[A, R](
+        self,
+        function: Callable[[A], R],
+        items: Iterable[A],
+        *,
+        ordered: bool = True,
+    ) -> Generator[R, None, int]: ...
+    def imap[A, R](
         self,
         function: RemoteFunction | Callable[[A], R],
         items: Iterable[A],
         *,
         ordered: bool = True,
     ) -> Generator[R, None, int]:
-        if ordered:
-            return self._imap_ordered(function, items)
-        else:
-            return self._imap_unordered(function, items)
-
-    def _imap_ordered(
-        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
-    ) -> Generator[Any, None, int]:
-        n = 0
-        queued = deque()
-        ready = set()
-
         # make a callable from a Ray remote function
         if hasattr(function, "remote"):
             function = function.remote  # type: ignore
 
-        for arg in items:
+        tasks = (function(e) for e in items)
+        return self.throttle(tasks)  # type: ignore
+
+    def _throttle_ordered[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]]
+    ) -> Generator[Elt, None, int]:
+        n = 0
+        queued = deque()
+        ready = set()
+
+        while True:
             for res in self.results_until_limit():
                 ready.add(res)
                 n += 1
 
             yield from _drain_queue(queued, ready)
 
-            task: Any = function(arg)
+            # now we invoke the next task
+            try:
+                task = next(tasks)
+            except StopIteration:
+                break
             self.add_task(task)
             queued.append(task)
 
@@ -309,20 +290,21 @@ class TaskLimiter:
 
         return n
 
-    def _imap_unordered(
-        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
-    ) -> Generator[Any, None, int]:
+    def _throttle_unordered[Elt](
+        self, tasks: Generator[ray.ObjectRef[Elt]]
+    ) -> Generator[Elt, None, int]:
         n = 0
 
-        # make a callable from a Ray remote function
-        if hasattr(function, "remote"):
-            function = function.remote  # type: ignore
-
-        for arg in items:
+        while True:
             for res in self.results_until_limit():
                 yield ray.get(res)
                 n += 1
-            task: Any = function(arg)
+
+            # now we invoke the next task
+            try:
+                task = next(tasks)
+            except StopIteration:
+                break
             self.add_task(task)
 
         for res in self.drain_results():
@@ -391,17 +373,6 @@ def _drain_queue(queued: deque[ray.ObjectRef], ready: set[ray.ObjectRef]) -> Ite
         yield ray.get(ref)
 
 
-def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: Sequence[A]) -> list[R]:
-    with init_worker(autostart=False) as ctx:
-        try:
-            with Task("cluster worker", subprocess=True) as task:
-                result = [func(model, arg) for arg in args]
-        finally:
-            ctx.send_task(task)
-
-    return result
-
-
 def _worker_setup():
     init_worker()
 
@@ -424,3 +395,15 @@ def init_worker(*, autostart: bool = True) -> WorkerContext:
 
     ensure_parallel_init()
     return context
+
+
+class _SharedTensor:
+    tensor: torch.Tensor
+
+    def __init__(self, tensor: torch.Tensor):
+        self.tensor = tensor
+
+    def __reduce__(self):
+        from torch.multiprocessing.reductions import reduce_tensor
+
+        return reduce_tensor(self.tensor)

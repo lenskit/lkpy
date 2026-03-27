@@ -1,12 +1,16 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
 from dataclasses import dataclass
 
+from pytest import warns
+
+from lenskit.diagnostics import TypecheckWarning
+from lenskit.pipeline._types import Lazy
 from lenskit.pipeline.components import Component, component_inputs, component_return_type
 
 
@@ -27,6 +31,21 @@ class CallObj:
         return q.encode()
 
 
+def comp_with_dft(q: str = "hello") -> str:
+    return q + " world"
+
+
+def comp_with_none(q: str | None = None) -> str:
+    return (q or "UNKNOWN") + " world"
+
+
+class LazyComp(Component):
+    config: XConfig
+
+    def __call__(self, msg: Lazy[str]) -> str:
+        return msg.get() + self.config.suffix
+
+
 def test_empty_input():
     def func() -> int:
         return 9
@@ -41,40 +60,71 @@ def test_single_function_input():
 
     inputs = component_inputs(func)
     assert len(inputs) == 1
-    assert inputs["x"] is int
+    assert inputs["x"].type is int
+
+
+def test_input_accepts_none():
+    inputs = component_inputs(comp_with_none)
+    assert inputs["q"].accepts_none
 
 
 def test_component_class_input():
     inputs = component_inputs(XComp)
     assert len(inputs) == 1
-    assert inputs["msg"] is str
+    assert inputs["msg"].type is str
+    assert not inputs["msg"].accepts_none
+    assert not inputs["msg"].has_default
 
 
 def test_component_object_input():
     inputs = component_inputs(XComp())
     assert len(inputs) == 1
-    assert inputs["msg"] is str
+    assert inputs["msg"].type is str
+    assert not inputs["msg"].is_lazy
+    assert not inputs["msg"].has_default
 
 
 def test_component_unknown_input():
     def func(x) -> int:  # type: ignore
         return x + 5  # type: ignore
 
-    inputs = component_inputs(func)  # type: ignore
+    with warns(TypecheckWarning):
+        inputs = component_inputs(func)  # type: ignore
     assert len(inputs) == 1
-    assert inputs["x"] is None
+    assert inputs["x"].type is None
+    assert not inputs["x"].has_default
 
 
 def test_callable_object_input():
     inputs = component_inputs(CallObj())
     assert len(inputs) == 1
-    assert inputs["q"] is str
+    assert inputs["q"].type is str
+    assert not inputs["q"].has_default
 
 
 def test_callable_class_input():
     inputs = component_inputs(CallObj)
     assert len(inputs) == 1
-    assert inputs["q"] is str
+    assert inputs["q"].type is str
+    assert not inputs["q"].accepts_none
+    assert not inputs["q"].is_lazy
+    assert not inputs["q"].has_default
+
+
+def test_callable_default_input():
+    inputs = component_inputs(comp_with_dft)
+    assert len(inputs) == 1
+    assert inputs["q"].type is str
+    assert not inputs["q"].is_lazy
+    assert inputs["q"].has_default
+
+
+def test_lazy_input():
+    inputs = component_inputs(LazyComp)
+    assert len(inputs) == 1
+    assert inputs["msg"].type is str
+    assert inputs["msg"].is_lazy
+    assert not inputs["msg"].has_default
 
 
 def test_function_return():
