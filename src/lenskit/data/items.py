@@ -1130,7 +1130,9 @@ class ItemList:
 
         # Only subset the IDs if we don't have a vocabulary.  Otherwise, defer
         # ID subset until IDs are actually needed.
-        array = self.to_arrow(ids=self.vocabulary is None, numbers=True, type="array")
+        array = self.to_arrow(
+            ids=self.vocabulary is None and self._ids is not None, numbers=True, type="array"
+        )
         array = indexer(array)
 
         return ItemList(_init_array=array, vocabulary=self.vocabulary, ordered=ordered)  # type: ignore

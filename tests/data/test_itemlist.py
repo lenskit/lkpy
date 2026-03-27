@@ -881,8 +881,8 @@ def test_remove_numbers(ids, remove):
     st.lists(st.integers(min_value=0, max_value=1000), unique=True),
     st.lists(st.integers(min_value=0, max_value=1000), unique=True),
 )
-def test_remove_numbers_no_vocab(ids, remove):
-    il = ItemList(item_nums=ids)
+def test_remove_numbers_no_vocab(nums, remove):
+    il = ItemList(item_nums=nums)
 
     il2 = il.remove(numbers=remove)
 
