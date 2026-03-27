@@ -29,6 +29,7 @@ import pyarrow as pa
 from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import get_logger
 
 from ..arrow import explode_column
 from ..builder import DatasetBuilder
@@ -40,6 +41,8 @@ from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, pro
 
 if TYPE_CHECKING:
     from ..dataset import Dataset
+
+_log = get_logger(__name__)
 
 
 class ItemListCollection(Generic[KL], ABC):
@@ -306,10 +309,13 @@ class ItemListCollection(Generic[KL], ABC):
             mkdir:
                 Whether to create the parent directories if they don't exist.
         """
+        log = _log.bind(path=str(path), n_lists=len(self))
         if mkdir:
+            log.debug("ensuring parent dir exists")
             Path(path).parent.mkdir(parents=True, exist_ok=True)
 
         if layout == "flat":
+            log.debug("saving flat Parquet file")
             self.to_df().to_parquet(path, compression=compression)
             return
 
@@ -317,6 +323,7 @@ class ItemListCollection(Generic[KL], ABC):
         try:
             for batch in self.record_batches(batch_size):
                 if writer is None:
+                    log.debug("opening Parquet writer", schema=batch.schema)
                     writer = ParquetWriter(
                         Path(path), batch.schema, compression=compression or "snappy"
                     )
@@ -385,7 +392,7 @@ class ItemListCollection(Generic[KL], ABC):
     def record_batches(
         self,
         batch_size: int = 5000,
-        columns: dict[str, pa.DataType] | None = None,
+        columns: Mapping[str, pa.DataType] | Sequence[pa.Field] | pa.Schema | None = None,
         *,
         layout: Literal["native", "flat"] = "native",
     ) -> Generator[pa.RecordBatch, None, None]:
@@ -393,16 +400,20 @@ class ItemListCollection(Generic[KL], ABC):
         Get the item list collection as Arrow record batches (in native layout).
         """
         if columns is None:
-            columns = self.list_schema
+            schema = self.list_schema
+        elif isinstance(columns, pa.Schema):
+            schema = columns
+        else:
+            schema = pa.schema(columns)
 
         for batch in batched(self.items(), batch_size):
             keys = pa.Table.from_pylist([key_dict(k) for (k, _il) in batch])
-            schema = pa.list_(pa.struct(columns))  # type: ignore
+            item_type = pa.list_(pa.struct(list(schema)))  # type: ignore
             col_elts = [
-                il.to_arrow(ids=True, numbers=False, type="array", columns=columns)
+                il.to_arrow(ids=True, numbers=False, type="array", columns=schema.names)
                 for (_k, il) in batch
             ]
-            col = pa.array(col_elts, schema)
+            col = pa.array(col_elts, item_type)
             tbl = keys.add_column(keys.num_columns, "items", col)
             if layout == "flat":
                 tbl = explode_column(tbl, "items").flatten()

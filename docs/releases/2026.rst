@@ -53,6 +53,9 @@ Breaking Changes
 - Removed the ``lenskit.stats.argtopn`` function (:issue:`833`).
   :meth:`lenskit.data.ItemList.top_n` now uses a Rust-accelerated top-*N*
   implementation (:pr:`1049`).
+- :meth:`lenskit.data.ItemList.to_arrow` no longer accepts mappings for its
+  optional ``columns`` argument, sequences of names are used instead
+  (:pr:`1052`).
 
 .. _prefix.dev: https://prefix.dev/channels/lenskit/
 
@@ -85,3 +88,5 @@ Minor Changes
   (:issue:`1000`, :pr:`1001`).
 - Rust progress updates now use a background thread to simplify logic and keep
   locks out of the work path (:pr:`1008`).
+- Fixed a bug saving item list collections of emtpy item lists to Parquet files
+  (:issue:`1051`, :pr:`1052`).
