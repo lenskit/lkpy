@@ -195,3 +195,23 @@ def test_add_entities_with_arrow_table():
     assert len(titles) == len(items)
     titles, ot = titles.align(items["title"])
     assert np.all(titles == ot)
+
+
+def test_add_entities_catch_ids():
+    "test that creating entities with too many IDs is error"
+    dsb = DatasetBuilder()
+
+    df = pd.DataFrame({"item_id": np.arange(10), "user_id": np.arange(10) * 100})
+
+    with raises(DataError):
+        dsb.add_entities("item", df)
+
+
+def test_add_entities_no_id():
+    "test that creating entities with too many IDs is error"
+    dsb = DatasetBuilder()
+
+    df = pd.DataFrame({"item": np.arange(10), "score": np.arange(10) * 100})
+
+    with raises(DataError):
+        dsb.add_entities("item", df)

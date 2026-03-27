@@ -268,19 +268,31 @@ class DatasetBuilder:
         if isinstance(source, pd.DataFrame):
             source = pa.Table.from_pandas(source)
         if isinstance(source, pa.Table):
-            entity_col = source.column(cls + "_id")
+            try:
+                entity_col = source.column(cls + "_id")
+            except KeyError as e:
+                raise DataError(f"data frame must have column named {cls}_id") from e
+
             self.add_entities(cls, entity_col)
 
             for col_name in source.column_names:
-                if not col_name.endswith("_id"):
-                    col_type = source.column(col_name).type
+                if col_name.endswith("_id"):
+                    if col_name != f"{cls}_id":
+                        raise DataError(f"unexpected ID column {col_name}")
+                    continue
 
-                    if any([pa.types.is_list(col_type), 
-                            pa.types.is_large_list(col_type), 
-                            pa.types.is_fixed_size_list(col_type)]):
-                        self.add_list_attribute(cls, col_name, entity_col, source.column(col_name))
-                    else:
-                        self.add_scalar_attribute(cls, col_name, entity_col, source.column(col_name))
+                col_type = source.column(col_name).type
+
+                if any(
+                    [
+                        pa.types.is_list(col_type),
+                        pa.types.is_large_list(col_type),
+                        pa.types.is_fixed_size_list(col_type),
+                    ]
+                ):
+                    self.add_list_attribute(cls, col_name, entity_col, source.column(col_name))
+                else:
+                    self.add_scalar_attribute(cls, col_name, entity_col, source.column(col_name))
             return
 
         self._validate_entity_name(cls)
