@@ -265,19 +265,27 @@ class DatasetBuilder:
             duplicates:
                 How to handle duplicate entity IDs.
         """
+        id_col = f"{cls}_id"
         if isinstance(source, pd.DataFrame):
-            source = pa.Table.from_pandas(source)
+            if id_col not in source.columns:
+                if source.index.name != id_col:
+                    warnings.warn(
+                        f"data frame has no column {id_col}, using index as {cls} IDs", DataWarning
+                    )
+                source = source.reset_index(names=id_col)
+            source = pa.Table.from_pandas(source, preserve_index=False)
+
         if isinstance(source, pa.Table):
             try:
-                entity_col = source.column(cls + "_id")
+                entity_col = source.column(id_col)
             except KeyError as e:
-                raise DataError(f"data frame must have column named {cls}_id") from e
+                raise DataError(f"data frame must have column named {id_col}") from e
 
             self.add_entities(cls, entity_col)
 
             for col_name in source.column_names:
                 if col_name.endswith("_id"):
-                    if col_name != f"{cls}_id":
+                    if col_name != id_col:
                         raise DataError(f"unexpected ID column {col_name}")
                     continue
 

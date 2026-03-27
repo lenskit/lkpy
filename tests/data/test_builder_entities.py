@@ -5,14 +5,16 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
+from typing import Literal
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from pytest import mark, raises
+from pytest import mark, raises, warns
 
 from lenskit.data import DatasetBuilder
-from lenskit.diagnostics import DataError
+from lenskit.diagnostics import DataError, DataWarning
 from lenskit.testing import ml_test_dir
 
 
@@ -147,8 +149,8 @@ def test_add_entities_twice():
     assert np.all(ds.users.ids() == ["a", "b", "x", "y", "z", "q", "r", "s"])
 
 
-@mark.parametrize("index", [False, True])
-def test_add_entities_with_dataframe(index: bool):
+@mark.parametrize("index", [False, True, "unnamed"])
+def test_add_entities_with_dataframe(index: bool | Literal["unnamed"]):
     dsb = DatasetBuilder()
 
     items = pd.read_csv(ml_test_dir / "movies.csv")
@@ -157,9 +159,18 @@ def test_add_entities_with_dataframe(index: bool):
     genres = items["genres"].str.split("|")
     items["genres"] = genres
 
-    input = items if index else items.reset_index()
+    if index:
+        input = items
+        if index == "unnamed":
+            input.index.name = None
+    else:
+        input = items.reset_index()
 
-    dsb.add_entities("item", input)
+    if index == "unnamed":
+        with warns(DataWarning):
+            dsb.add_entities("item", input)
+    else:
+        dsb.add_entities("item", input)
 
     ds = dsb.build()
     assert ds.item_count == len(items)
@@ -213,5 +224,5 @@ def test_add_entities_no_id():
 
     df = pd.DataFrame({"item": np.arange(10), "score": np.arange(10) * 100})
 
-    with raises(DataError):
+    with warns(DataWarning):
         dsb.add_entities("item", df)
