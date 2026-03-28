@@ -254,19 +254,65 @@ class DatasetBuilder:
         """
         Add entities to the data set.
 
+        When constructed with a data frame or table, this method looks for
+        entitiy IDs in the column ``{cls}_id`` (e.g. ``item_id``).  If no such
+        column exists, and the data frame is a Pandas data frame, then item IDs
+        are taken from the data frame's index.  A warning is issued if the data
+        frame index name is not ``{cls}_id``.
+
         Args:
             cls:
                 The name of the entity class (e.g. ``"item"``).
             source:
-                The input data, as an array or list of entity IDs.
-
-                .. note::
-                    Data frame support will be added in a future version.
+                The input data, as an array or list of entity IDs, or a data
+                frame of entities with attributes.
             duplicates:
                 How to handle duplicate entity IDs.
+        Raises:
+            DataError:
+                When there is a fatal problem with the supplied data.
+        Warns:
+            DataWarning:
+                When the data is valid but suspect, such as a data frame with no
+                column or index named ``{cls}_id``.
         """
-        if isinstance(source, (pd.DataFrame, pa.Table, dict)):  # pragma: nocover
-            raise NotImplementedError()
+        id_col = f"{cls}_id"
+        if isinstance(source, pd.DataFrame):
+            if id_col not in source.columns:
+                if source.index.name != id_col:
+                    warnings.warn(
+                        f"data frame has no column {id_col}, using index as {cls} IDs", DataWarning
+                    )
+                source = source.reset_index(names=id_col)
+            source = pa.Table.from_pandas(source, preserve_index=False)
+
+        if isinstance(source, pa.Table):
+            try:
+                entity_col = source.column(id_col)
+            except KeyError as e:
+                raise DataError(f"data frame must have column named {id_col}") from e
+
+            self.add_entities(cls, entity_col)
+
+            for col_name in source.column_names:
+                if col_name.endswith("_id"):
+                    if col_name != id_col:
+                        raise DataError(f"unexpected ID column {col_name}")
+                    continue
+
+                col_type = source.column(col_name).type
+
+                if any(
+                    [
+                        pa.types.is_list(col_type),
+                        pa.types.is_large_list(col_type),
+                        pa.types.is_fixed_size_list(col_type),
+                    ]
+                ):
+                    self.add_list_attribute(cls, col_name, entity_col, source.column(col_name))
+                else:
+                    self.add_scalar_attribute(cls, col_name, entity_col, source.column(col_name))
+            return
 
         self._validate_entity_name(cls)
 
