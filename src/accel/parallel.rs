@@ -7,7 +7,7 @@
 use log::*;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
-#[cfg(feature = "fuse-parallel")]
+#[cfg(debug_assertions)]
 use rayon::iter::PanicFuse;
 use rayon::{current_num_threads, iter::ParallelIterator, ThreadPoolBuilder};
 
@@ -28,12 +28,12 @@ pub fn thread_count() -> PyResult<usize> {
     Ok(current_num_threads())
 }
 
-#[cfg(not(feature = "fuse-parallel"))]
+#[cfg(not(debug_assertions))]
 pub fn maybe_fuse<I: ParallelIterator>(iter: I) -> I {
     iter
 }
 
-#[cfg(feature = "fuse-parallel")]
+#[cfg(debug_assertions)]
 pub fn maybe_fuse<I: ParallelIterator>(iter: I) -> PanicFuse<I> {
     iter.panic_fuse()
 }
