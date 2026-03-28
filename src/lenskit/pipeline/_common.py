@@ -295,7 +295,6 @@ def predict_pipeline(
     scorer: Component,
     *,
     fallback: bool | Component = True,
-    n: int = -1,
     name: str | None = None,
 ) -> Pipeline:
     """
@@ -314,9 +313,6 @@ def predict_pipeline(
             Whether to use a fallback predictor when the scorer cannot score.
             When configured, the `scorer` node is the scorer, and the
             `rating-predictor` node applies the fallback.
-        n:
-            The recommendation list length to configure in the pipeline.  This
-            parameter is ignored, and will be removed in 2026.
         name:
             The pipeline name.
     """
