@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -58,10 +58,10 @@ class SLIMScorer(Component, Trainable):
     weights: csr_array
     items: Vocabulary
 
-    def train(self, data: Dataset, options: TrainingOptions):
-        if hasattr(self, "weights") and not options.retrain:
-            return
+    def is_trained(self) -> bool:
+        return hasattr(self, "weights")
 
+    def train(self, data: Dataset, options: TrainingOptions):
         ensure_parallel_init()
         ui_matrix = data.interactions().matrix().csr_structure(format="arrow")
         _log.info(
