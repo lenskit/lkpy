@@ -126,6 +126,14 @@ impl<'a> SLIMWorkspace<'a> {
     /// This code was written from the papers, referencing Karypis's LIBSLIM for
     /// ideas on implementation details.  The relevant LIBSLIM source code
     /// is at https://github.com/KarypisLab/SLIM/tree/master/src/libslim.
+    ///
+    /// Our implementation differs by working directly with residuals, instead
+    /// of working with estimates (yhat).
+    ///
+    /// **NOTE:** the Regularization Paths paper assumes standardized predictors,
+    /// but the Karypis SLIM implementation does *not* center the vectors as near
+    /// as I can tell.  We follow the implementation's direction here (which is
+    /// also simpler).
     fn compute_column(&mut self, item: usize) -> Vec<(i32, f32)> {
         // get the active users for this item — indices where target vector is 1
         let i_users = self.iu_matrix.row_cols(item);
@@ -203,7 +211,8 @@ impl<'a> SLIMWorkspace<'a> {
 
         // step 2: compute update weight value from the users
         let upd: f64 = nz_rows.iter().map(|u| resids[*u as usize]).sum();
-        let upd = upd / nz_rows.len() as f64;
+
+        // Reg Paths divides by N to get a mean, but Karypis does *not*.
 
         // step 3: update with soft-thresholded weight update
         let new = self.soft_thresh(upd, nz_rows.len() as f64);
@@ -219,10 +228,10 @@ impl<'a> SLIMWorkspace<'a> {
         diff.abs()
     }
 
-    fn soft_thresh(&self, val: f64, norm: f64) -> f64 {
+    fn soft_thresh(&self, val: f64, sqnorm: f64) -> f64 {
         if val >= self.options.l1_reg {
             let num = val - self.options.l1_reg;
-            let den = norm + self.options.l2_reg;
+            let den = sqnorm + self.options.l2_reg;
             num / den
         } else {
             0.0
