@@ -4,7 +4,7 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use pyo3::prelude::*;
+use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
 mod als;
 mod arrow;
@@ -14,23 +14,30 @@ mod errors;
 mod funksvd;
 mod indirect;
 mod knn;
+mod logging;
 mod parallel;
 mod progress;
 mod sparse;
 
 /// Entry point for LensKit accelerator module.
 #[pymodule(gil_used = false)]
-fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    pyo3_log::init();
+fn _accel<'py>(py: Python<'py>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    logging::init_rust_logger()
+        .map_err(|_| PyRuntimeError::new_err("failed to install Rust logger"))?;
+
     knn::register_knn(m)?;
     als::register_als(m)?;
     data::register_data(m)?;
 
+    m.add_class::<logging::AccelLogListener>()?;
     m.add_class::<funksvd::FunkSVDTrainer>()?;
     m.add_function(wrap_pyfunction!(parallel::init_accel_pool, m)?)?;
     m.add_function(wrap_pyfunction!(parallel::thread_count, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_row_debug_type, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_structure_debug_large, m)?)?;
+
+    let helper = py.import("lenskit.logging._accel")?;
+    helper.call_method("ensure_accel_logging", (), None)?;
 
     Ok(())
 }
