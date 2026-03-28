@@ -90,7 +90,7 @@ fn train_slim<'py>(
     let collector = ArrowCSRConsumer::new(ui_matrix.n_cols);
 
     let range = 0..ui_matrix.n_cols;
-    let chunks = progress.process_iter(py, range.into_par_iter(), |iter| {
+    let chunks = progress.process_iter(py, range.into_par_iter(), move |iter| {
         let chunks = maybe_fuse(iter)
             .map_init(
                 || SLIMWorkspace::create(&ui_matrix, &iu_matrix, &options),
@@ -185,7 +185,8 @@ impl<'a> SLIMWorkspace<'a> {
     ) -> f64 {
         let mut dmax = 0.0;
         for j in 0..self.n_items {
-            let di = self.cd_single(j, nz_rows, weights, resids);
+            let j_users = self.iu_matrix.row_cols(j);
+            let di = self.cd_single(j, j_users, weights, resids);
             if di > dmax {
                 dmax = di;
             }
