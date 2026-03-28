@@ -16,7 +16,7 @@ from lenskit import batch, recommend
 from lenskit.als import ImplicitMFScorer
 from lenskit.basic import (
     RandomSelector,
-    UnratedTrainingItemsCandidateSelector,
+    TrainingItemsCandidateSelector,
     UserTrainingHistoryLookup,
 )
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
@@ -29,7 +29,7 @@ def random_pipe(ml_ds: Dataset):
     query = pb.create_input("query", QueryInput)
     history = pb.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
     candidates = pb.add_component(
-        "candidate-selector", UnratedTrainingItemsCandidateSelector, query=history
+        "candidate-selector", TrainingItemsCandidateSelector, query=history
     )
     pb.add_component("recommender", RandomSelector, {"n": 100}, items=candidates)
 

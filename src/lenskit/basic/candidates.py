@@ -20,78 +20,6 @@ from lenskit.training import Trainable, TrainingOptions
 _logger = logging.getLogger(__name__)
 
 
-class TrainingCandidateSelectorBase(Component[ItemList], Trainable):
-    """
-    Base class for candidate selectors using the training data.
-
-    Stability:
-        Caller
-    """
-
-    config: None
-    items: Vocabulary
-    """
-    List of known items from the training data.
-    """
-
-    @override
-    def is_trained(self):
-        return hasattr(self, "items")
-
-    @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        self.items_ = data.items
-
-
-class AllTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
-    """
-    Candidate selector that selects all known items from the training data.
-
-    .. deprecated:: 2025.6
-        Use :class:`TrainingItemsCandidateSelector` with ``None``
-        for :attr:`TrainingItemsCandidateConfig.exclude` instead.
-
-    Stability:
-        Caller
-    """
-
-    config: None
-
-    def __call__(self) -> ItemList:
-        return ItemList.from_vocabulary(self.items_)
-
-
-class UnratedTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
-    """
-    Candidate selector that selects all known items from the training data that
-    do not appear in the request user's history
-    (:attr:`RecQuery.history_items`). If no item history is available, then all
-    training items are returned.
-
-    In order to look up the user's history in the training data, this needs to
-    be combined with a component like
-    :class:`~.history.UserTrainingHistoryLookup`.
-
-    .. deprecated:: 2025.6
-        Use :class:`TrainingItemsCandidateSelector` with default settings or the
-        ``"history"`` option for :attr:`TrainingItemsCandidateConfig.exclude` instead.
-
-    Stability:
-        Caller
-    """
-
-    config: None
-
-    def __call__(self, query: QueryInput) -> ItemList:
-        query = RecQuery.create(query)
-        items = ItemList.from_vocabulary(self.items_)
-
-        if query.user_items is not None:
-            items = items.remove(numbers=query.user_items.numbers(vocabulary=self.items_))
-
-        return items
-
-
 @dataclass
 class TrainingItemsCandidateConfig:
     """
@@ -121,7 +49,7 @@ class TrainingItemsCandidateConfig:
     """
 
 
-class TrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
+class TrainingItemsCandidateSelector(Component[ItemList], Trainable):
     """
     Candidate selector that selects all known items from the training data, optionally
     excluding certain items from the query (i.e., the request user's history).
@@ -135,6 +63,18 @@ class TrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
     """
 
     config: TrainingItemsCandidateConfig
+    items: Vocabulary
+    """
+    List of known items from the training data.
+    """
+
+    @override
+    def is_trained(self):
+        return hasattr(self, "items")
+
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+        self.items_ = data.items
 
     def __call__(self, query: QueryInput) -> ItemList:
         query = RecQuery.create(query)

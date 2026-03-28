@@ -82,11 +82,11 @@ New Features
 Deprecations
 ------------
 
-- :class:`~lenskit.basic.UnratedTrainingItemsCandidateSelector` is deprecated in
-  favor of :class:`~lenskit.basic.TrainingItemCandidateSelector` with default
+- ``UnratedTrainingItemsCandidateSelector`` is deprecated in favor of
+  :class:`~lenskit.basic.TrainingItemCandidateSelector` with default
   configuration.
-- :class:`~lenskit.basic.AllTrainingItemsCandidateSelector` is deprecated in
-  favor of :class:`~lenskit.basic.TrainingItemCandidateSelector` with suitable
+- ``AllTrainingItemsCandidateSelector`` is deprecated in favor of
+  :class:`~lenskit.basic.TrainingItemCandidateSelector` with suitable
   configuration.
 - :attr:`lenskit.data.RecQuery.user_items` is deprecated in favor of
   :class:`~lenskit.data.RecQuery.history_items`.
