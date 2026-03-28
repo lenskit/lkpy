@@ -1,22 +1,23 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
 //! Sparse Linear Methods for recommendation.
 
-use log::*;
-use pyo3::{exceptions::PyValueError, prelude::*};
-use rayon::prelude::*;
-
 use arrow::{
     array::{make_array, Array, ArrayData},
     pyarrow::PyArrowType,
 };
+use log::*;
+use ndarray::Array1;
+use pyo3::{exceptions::PyValueError, prelude::*};
+use rayon::prelude::*;
 
 use crate::{
     parallel::maybe_fuse,
+    progress::ProgressHandle,
     sparse::{ArrowCSRConsumer, CSRStructure, CSR},
 };
 
@@ -77,11 +78,8 @@ fn train_slim<'py>(
         return Err(PyValueError::new_err("rating count mismatch"));
     }
 
-    let progress = if progress.is_none() {
-        None
-    } else {
-        Some(progress.unbind())
-    };
+    let progress = ProgressHandle::from_input(progress);
+
     let options = SLIMOptions {
         l1_reg,
         l2_reg,
@@ -89,22 +87,19 @@ fn train_slim<'py>(
     };
 
     debug!("computing similarity rows");
-    let collector = if let Some(pb) = progress {
-        ArrowCSRConsumer::with_progress(ui_matrix.n_cols, pb)
-    } else {
-        ArrowCSRConsumer::new(ui_matrix.n_cols)
-    };
+    let collector = ArrowCSRConsumer::new(ui_matrix.n_cols);
 
-    let result = py.allow_threads(move || {
-        let range = 0..ui_matrix.n_cols;
-        let chunks = maybe_fuse(range.into_par_iter())
+    let range = 0..ui_matrix.n_cols;
+    let chunks = progress.process_iter(py, range.into_par_iter(), |iter| {
+        let chunks = maybe_fuse(iter)
             .map_init(
                 || SLIMWorkspace::create(&ui_matrix, &iu_matrix, &options),
                 SLIMWorkspace::compute_column,
             )
-            .drive(collector);
-        chunks.into_iter().map(|a| a.into_data().into()).collect()
-    });
+            .drive_unindexed(collector);
+        Ok(chunks)
+    })?;
+    let result = py.detach(move || chunks.into_iter().map(|a| a.into_data().into()).collect());
 
     Ok(result)
 }
@@ -132,61 +127,31 @@ impl<'a> SLIMWorkspace<'a> {
     /// ideas on implementation details.  The relevant LIBSLIM source code
     /// is at https://github.com/KarypisLab/SLIM/tree/master/src/libslim.
     fn compute_column(&mut self, item: usize) -> Vec<(i32, f32)> {
-        // get the active users for this item
+        // get the active users for this item — indices where target vector is 1
         let i_users = self.iu_matrix.row_cols(item);
-        // since it's all 1s, the length of active entries is the squared norm
-        let sq_cnorm = i_users.len() as f64;
 
-        let mut weights = vec![0.0; self.n_items];
-        let mut estimates = vec![0.0; self.n_users];
+        // initialize our vectors
+        let mut weights = Array1::zeros(self.n_items);
+        let mut resids = Array1::zeros(self.n_users);
 
+        // since our weights are initialized to zero, residuals are -1 for every user who rated
+        // resid: r̂ᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all r̂ᵤᵢ and wᵢⱼ are initially 0
+        for i in i_users {
+            resids[*i as usize] = -1.0;
+        }
+
+        // iteratively apply coordinate descent until we converge
         for iter in 0..self.options.max_iters {
-            let mut sqdelta = 0.0;
-            // coordinate descent - loop over items, learn that row in the weight vector
-            for i in 0..self.n_items {
-                let old_w = weights[i];
-                // subtract this item's contribution to the estimate
-                if old_w > 0.0 {
-                    for c in i_users {
-                        estimates[*c as usize] -= old_w
-                    }
-                }
+            let max_upd = self.cd_round(&i_users, &mut weights, &mut resids);
 
-                // compute the update value - sum errors where user is active (so rating is 1)
-                let mut update = 0.0;
-                for u in i_users {
-                    let u = *u as usize;
-                    update += 1.0 - estimates[u];
-                }
-                // convert to mean
-                update /= self.n_users as f64;
-
-                // soft-threshold and adjust
-                let new = if update >= self.options.l1_reg {
-                    let num = update - self.options.l1_reg;
-                    num / (sq_cnorm - self.options.l2_reg)
-                } else {
-                    0.0
-                };
-                let delta = new - old_w;
-                sqdelta += delta * delta;
-                weights[i] = new;
-
-                // update estimates
-                if new > 0.0 {
-                    for c in i_users {
-                        estimates[*c as usize] += new
-                    }
-                }
-            }
-            if sqdelta <= OPT_TOLERANCE {
+            if max_upd <= OPT_TOLERANCE {
                 debug!("finished column {} after {} iters", item, iter + 1);
                 break;
             }
         }
 
         // sparsify weights for final result
-        let res: Vec<_> = weights
+        let mut res: Vec<_> = weights
             .into_iter()
             .enumerate()
             .filter_map(|(i, v)| {
@@ -197,8 +162,70 @@ impl<'a> SLIMWorkspace<'a> {
                 }
             })
             .collect();
+        res.shrink_to_fit();
 
         // and we're done!
         res
+    }
+
+    /// Do one round of coordinate descent, returning the maximum coordinate change.
+    fn cd_round(
+        &mut self,
+        nz_rows: &[i32],
+        weights: &mut Array1<f64>,
+        resids: &mut Array1<f64>,
+    ) -> f64 {
+        let mut dmax = 0.0;
+        for j in 0..self.n_items {
+            let di = self.cd_single(j, nz_rows, weights, resids);
+            if di > dmax {
+                dmax = di;
+            }
+        }
+        dmax
+    }
+
+    /// Do one parameter update of coordinate descent, returning the (absolute) coordinate change.
+    fn cd_single(
+        &mut self,
+        j: usize,
+        nz_rows: &[i32],
+        weights: &mut Array1<f64>,
+        resids: &mut Array1<f64>,
+    ) -> f64 {
+        let cur_w = weights[j];
+        // step 1: *remove* this entry's contribution from residuals
+        for u in nz_rows {
+            let u = *u as usize;
+            // since set ratings are 1, update is simple
+            resids[u] += cur_w;
+        }
+
+        // step 2: compute update weight value from the users
+        let upd: f64 = nz_rows.iter().map(|u| resids[*u as usize]).sum();
+        let upd = upd / nz_rows.len() as f64;
+
+        // step 3: update with soft-thresholded weight update
+        let new = self.soft_thresh(upd, nz_rows.len() as f64);
+        let diff = new - cur_w;
+        weights[j] = new;
+
+        // step 4: put *new* weight contribution back into residual
+        for u in nz_rows {
+            let u = *u as usize;
+            resids[u] -= new;
+        }
+
+        diff.abs()
+    }
+
+    fn soft_thresh(&self, val: f64, norm: f64) -> f64 {
+        if val >= self.options.l1_reg {
+            let num = val - self.options.l1_reg;
+            let den = norm + self.options.l2_reg;
+            num / den
+        } else {
+            0.0
+        }
     }
 }
