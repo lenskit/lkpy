@@ -11,11 +11,12 @@ path = "src/accel/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-log = { version = "^0.4", features = ["release_max_level_debug"] }
+log = { version = "^0.4", features = ["release_max_level_debug", "serde"] }
 pyo3 = { version = "^0.26", features = ["extension-module", "abi3-py312"] }
-pyo3-log = "^0.13"
 thiserror = "^2"
 
+arc-swap = "^1.9"
+crossbeam-channel = "^0.5"
 rayon = "^1.10"
 rayon-cancel = "^1.0"
 

@@ -21,6 +21,7 @@ from typing import Literal, TypeAlias
 import structlog
 from structlog.dev import RichTracebackFormatter
 
+from ._accel import update_log_level
 from ._console import ConsoleHandler, console, setup_console
 from .processors import filter_exceptions, format_timestamp, log_warning, remove_internal
 from .tracing import activate_tracing, lenskit_filtering_logger
@@ -242,6 +243,8 @@ class LoggingConfig:  # pragma: nocover
 
         warnings.showwarning = log_warning
         warnings.filterwarnings("ignore", message=r"Sparse CSR tensor support is in beta state")
+
+        update_log_level()
 
         _active_config = self
 

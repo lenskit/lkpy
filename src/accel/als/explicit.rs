@@ -17,6 +17,7 @@ use log::*;
 
 use crate::{
     als::solve::POSV,
+    parallel::maybe_fuse,
     progress::ProgressHandle,
     sparse::{CSRMatrix, CSR},
 };
@@ -48,7 +49,7 @@ pub(super) fn train_explicit_matrix<'py>(
 
     let frob: f32 = progress.process_iter(
         py,
-        this.outer_iter_mut().into_par_iter().enumerate(),
+        maybe_fuse(this.outer_iter_mut().into_par_iter()).enumerate(),
         |iter| {
             Ok(iter
                 .map(|(i, row)| {
