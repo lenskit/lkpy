@@ -42,6 +42,7 @@ ntest = "^0.9"
 [profile.dev]
 lto = "thin"
 opt-level = 2
+debug-assertions = true
 
 [profile.release]
 lto = true

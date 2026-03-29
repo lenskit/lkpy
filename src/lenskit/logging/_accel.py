@@ -25,7 +25,6 @@ class AccelLogThread(Thread):
         self.queue = _accel.AccelLogListener()
 
         while msg := self.queue.get_message():
-            print("bob")
             log = logging.getLogger(msg["logger"])
             match msg["level"]:
                 case "TRACE":
@@ -51,6 +50,7 @@ class AccelLogThread(Thread):
             level = "trace"
         elif nl <= logging.DEBUG:
             level = "debug"
+        _log.debug("setting accelerator log to %s", level)
 
         self.queue.update_level(level)
 
