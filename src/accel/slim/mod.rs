@@ -11,7 +11,6 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use log::*;
-use ndarray::Array1;
 use pyo3::{exceptions::PyValueError, prelude::*};
 use rayon::prelude::*;
 
@@ -139,8 +138,8 @@ impl<'a> SLIMWorkspace<'a> {
         let i_users = self.iu_matrix.row_cols(item);
 
         // initialize our vectors
-        let mut weights = Array1::zeros(self.n_items);
-        let mut resids = Array1::zeros(self.n_users);
+        let mut weights = vec![0.0; self.n_items];
+        let mut resids = vec![0.0; self.n_users];
 
         // since our weights are initialized to zero, residuals are -1 for every user who rated
         // resid: rᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all r̂ᵤᵢ and wᵢⱼ are initially 0
@@ -184,12 +183,7 @@ impl<'a> SLIMWorkspace<'a> {
     }
 
     /// Do one round of coordinate descent, returning the maximum coordinate change.
-    fn cd_round(
-        &mut self,
-        nz_rows: &[i32],
-        weights: &mut Array1<f64>,
-        resids: &mut Array1<f64>,
-    ) -> f64 {
+    fn cd_round(&mut self, nz_rows: &[i32], weights: &mut [f64], resids: &mut [f64]) -> f64 {
         let mut dmax = 0.0;
         for j in 0..self.n_items {
             let j_users = self.iu_matrix.row_cols(j);
@@ -201,13 +195,14 @@ impl<'a> SLIMWorkspace<'a> {
         dmax
     }
 
-    /// Do one parameter update of coordinate descent, returning the (absolute) coordinate change.
+    /// Do one parameter update of coordinate descent, returning the (absolute)
+    /// coordinate change.
     fn cd_single(
         &mut self,
         j: usize,
         nz_rows: &[i32],
-        weights: &mut Array1<f64>,
-        resids: &mut Array1<f64>,
+        weights: &mut [f64],
+        resids: &mut [f64],
     ) -> f64 {
         let cur_w = weights[j];
         // step 1: *remove* this entry's contribution from residuals
