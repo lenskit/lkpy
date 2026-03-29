@@ -56,6 +56,10 @@ Breaking Changes
 - :meth:`lenskit.data.ItemList.to_arrow` no longer accepts mappings for its
   optional ``columns`` argument, sequences of names are used instead
   (:pr:`1052`).
+- Removed the ``n`` option to :func:`~lenskit.pipeline.predict_pipeline`
+  (:issue:`835`).
+- Removed the deprecated unrated and all-items candidate selectors, in favor of
+  :class:`~lenskit.basic.TrainingItemsCandidateSelector` (:issue:`935`).
 
 .. _prefix.dev: https://prefix.dev/channels/lenskit/
 

@@ -11,8 +11,6 @@ Candidate Selectors
     :nosignatures:
 
     lenskit.basic.TrainingItemsCandidateSelector
-    lenskit.basic.UnratedTrainingItemsCandidateSelector
-    lenskit.basic.AllTrainingItemsCandidateSelector
 
 History Lookup
 ~~~~~~~~~~~~~~

@@ -784,7 +784,7 @@ class PipelineBuilder:
             items = pipe.create_input('items', list[EntityId], None)
             # find candidates from the training data (optional)
             lookup_candidates = pipe.add_component(
-                'select-candidates', UnratedTrainingItemsCandidateSelector(),
+                'select-candidates', TrainingItemsCandidateSelector(),
                 user=history,
             )
             # if the client provided items as a pipeline input, use those; otherwise
