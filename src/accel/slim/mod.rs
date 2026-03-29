@@ -140,16 +140,30 @@ impl<'a> SLIMWorkspace<'a> {
         let mut weights = vec![0.0; self.n_items];
         let mut resids = vec![0.0; self.n_users];
 
-        // since our weights are initialized to zero, residuals are -1 for every user who rated
+        // since our weights are initialized to zero, residuals are -1 for every
+        // user who rated. we will aslo pre-compute lists of active items —
+        // items that are never co-rated with the target item will have zero
+        // weight.
+        let mut act_mask = vec![false; self.n_items];
+        let mut active = Vec::with_capacity(self.n_items / 4);
+
         // resid: rᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all wᵢⱼ are initially 0
-        for i in i_users {
-            resids[*i as usize] = 1.0;
+        for u in i_users {
+            let u = *u as usize;
+            resids[u] = 1.0;
+            for j in self.ui_matrix.row_cols(u) {
+                let j = *j as usize;
+                if !act_mask[j] {
+                    active.push(j);
+                    act_mask[j] = true;
+                }
+            }
         }
 
         // iteratively apply coordinate descent until we converge
         let mut n_iters = 1;
         while n_iters <= self.options.max_iters {
-            let max_upd = self.cd_round(item, &mut weights, &mut resids);
+            let max_upd = self.cd_round(item, &mut weights, &mut resids, &active);
             trace!("column {} iter {}: max update {}", item, n_iters, max_upd);
 
             if max_upd <= OPT_TOLERANCE {
@@ -183,13 +197,19 @@ impl<'a> SLIMWorkspace<'a> {
     }
 
     /// Do one round of coordinate descent, returning the maximum coordinate change.
-    fn cd_round(&mut self, item: usize, weights: &mut [f64], resids: &mut [f64]) -> f64 {
+    fn cd_round(
+        &mut self,
+        item: usize,
+        weights: &mut [f64],
+        resids: &mut [f64],
+        active: &[usize],
+    ) -> f64 {
         let mut dmax = 0.0;
-        for j in 0..self.n_items {
-            if j != item {
-                let j_users = self.iu_matrix.row_cols(j);
+        for j in active {
+            if *j != item {
+                let j_users = self.iu_matrix.row_cols(*j);
                 if !j_users.is_empty() {
-                    let di = self.cd_single(j, j_users, weights, resids);
+                    let di = self.cd_single(*j, j_users, weights, resids);
                     if di > dmax {
                         dmax = di;
                     }
