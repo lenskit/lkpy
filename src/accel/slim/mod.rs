@@ -21,7 +21,7 @@ use crate::{
 };
 
 const EPSILON: f64 = 1.0e-12;
-const OPT_TOLERANCE: f64 = 1e-6;
+const OPT_TOLERANCE: f64 = 1e-3;
 
 #[derive(Debug, Clone, Copy)]
 struct SLIMOptions {
@@ -162,15 +162,15 @@ impl<'a> SLIMWorkspace<'a> {
         }
 
         // iteratively apply coordinate descent until we converge
-        let mut n_iters = 1;
-        while n_iters <= self.options.max_iters {
+        let mut n_iters = self.options.max_iters;
+        for it in 0..n_iters {
             let max_upd = self.cd_round(&mut weights, &mut resids, &active);
-            trace!("column {} iter {}: max update {}", item, n_iters, max_upd);
+            trace!("column {} iter {}: max update {}", item, it + 1, max_upd);
 
             if max_upd <= OPT_TOLERANCE {
+                n_iters = it + 1;
                 break;
             }
-            n_iters += 1;
         }
 
         // sparsify weights for final result
