@@ -149,13 +149,14 @@ impl<'a> SLIMWorkspace<'a> {
         }
 
         // iteratively apply coordinate descent until we converge
-        for iter in 0..self.options.max_iters {
+        let mut n_iters = 1;
+        while n_iters <= self.options.max_iters {
             let max_upd = self.cd_round(&i_users, &mut weights, &mut resids);
 
             if max_upd <= OPT_TOLERANCE {
-                debug!("finished column {} after {} iters", item, iter + 1);
                 break;
             }
+            n_iters += 1;
         }
 
         // sparsify weights for final result
@@ -170,6 +171,12 @@ impl<'a> SLIMWorkspace<'a> {
                 }
             })
             .collect();
+        debug!(
+            "column {}  trained in {} iters with {} nonzero entries",
+            item,
+            n_iters,
+            res.len()
+        );
         res.shrink_to_fit();
 
         // and we're done!
