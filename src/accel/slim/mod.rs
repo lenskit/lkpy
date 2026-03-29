@@ -132,6 +132,7 @@ impl<'a> SLIMWorkspace<'a> {
     /// but the Karypis SLIM implementation does *not* center the vectors as near
     /// as I can tell.  We follow the implementation's direction here (which is
     /// also simpler).
+    #[inline(never)] // a lot of work is in here, let's make profiling easeir
     fn compute_column(&mut self, item: usize) -> Vec<(i32, f32)> {
         // get the active users for this item — indices where target vector is 1
         let i_users = self.iu_matrix.row_cols(item);
