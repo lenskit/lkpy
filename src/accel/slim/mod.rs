@@ -143,9 +143,9 @@ impl<'a> SLIMWorkspace<'a> {
         let mut resids = Array1::zeros(self.n_users);
 
         // since our weights are initialized to zero, residuals are -1 for every user who rated
-        // resid: r̂ᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all r̂ᵤᵢ and wᵢⱼ are initially 0
+        // resid: rᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all r̂ᵤᵢ and wᵢⱼ are initially 0
         for i in i_users {
-            resids[*i as usize] = -1.0;
+            resids[*i as usize] = 1.0;
         }
 
         // iteratively apply coordinate descent until we converge
