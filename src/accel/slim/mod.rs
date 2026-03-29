@@ -21,8 +21,7 @@ use crate::{
 };
 
 const EPSILON: f64 = 1.0e-12;
-// default value from Karypis code
-const OPT_TOLERANCE: f64 = 1e-7;
+const OPT_TOLERANCE: f64 = 1e-6;
 
 #[derive(Debug, Clone, Copy)]
 struct SLIMOptions {
