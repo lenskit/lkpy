@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -23,7 +23,7 @@ def test_slim_trainer(ml_ds: Dataset):
     ui_matrix = ml_ds.interactions().matrix().csr_structure(format="arrow")
     iu_matrix = ui_matrix.transpose()
 
-    result = _slim_accel.train_slim(ui_matrix, iu_matrix, 0.005, 0.01, 10, None)
+    result = _slim_accel.train_slim(iu_matrix, 0.005, 0.01, 10, None)
     result = pa.chunked_array(result).combine_chunks()
     result = SparseRowArray.from_array(result)
     assert isinstance(result, SparseRowArray)
