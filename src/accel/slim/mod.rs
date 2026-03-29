@@ -132,7 +132,7 @@ impl<'a> SLIMWorkspace<'a> {
         // iteratively apply coordinate descent until we converge
         let mut n_iters = 1;
         while n_iters <= self.options.max_iters {
-            let max_upd = self.cd_round(&mut weights, &mut resids);
+            let max_upd = self.cd_round(item, &mut weights, &mut resids);
             trace!("column {} iter {}: max update {}", item, n_iters, max_upd);
 
             if max_upd <= OPT_TOLERANCE {
@@ -166,13 +166,15 @@ impl<'a> SLIMWorkspace<'a> {
     }
 
     /// Do one round of coordinate descent, returning the maximum coordinate change.
-    fn cd_round(&mut self, weights: &mut [f64], resids: &mut [f64]) -> f64 {
+    fn cd_round(&mut self, item: usize, weights: &mut [f64], resids: &mut [f64]) -> f64 {
         let mut dmax = 0.0;
         for j in 0..self.n_items {
-            let j_users = self.iu_matrix.row_cols(j);
-            let di = self.cd_single(j, j_users, weights, resids);
-            if di > dmax {
-                dmax = di;
+            if j != item {
+                let j_users = self.iu_matrix.row_cols(j);
+                let di = self.cd_single(j, j_users, weights, resids);
+                if di > dmax {
+                    dmax = di;
+                }
             }
         }
         dmax
