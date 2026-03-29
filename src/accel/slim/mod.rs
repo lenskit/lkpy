@@ -191,27 +191,24 @@ impl<'a> SLIMWorkspace<'a> {
         resids: &mut [f64],
     ) -> f64 {
         let cur_w = weights[j];
-        // step 1: *remove* this entry's contribution from residuals
-        for u in nz_rows {
-            let u = *u as usize;
-            // since set ratings are 1, update is simple
-            resids[u] += cur_w;
-        }
-
-        // step 2: compute update weight value from the users
-        let upd: f64 = nz_rows.iter().map(|u| resids[*u as usize]).sum();
-
         // Reg Paths divides by N to get a mean, but Karypis does *not*.
 
-        // step 3: update with soft-thresholded weight update
+        // step 1: sum the residuals *without* each entry's contribution
+        let mut upd = 0.0;
+        for u in nz_rows {
+            let u = *u as usize;
+            upd += resids[u] + cur_w;
+        }
+
+        // step 2: update with soft-thresholded weight update
         let new = self.soft_thresh(upd, nz_rows.len() as f64);
         let diff = new - cur_w;
         weights[j] = new;
 
-        // step 4: put *new* weight contribution back into residual
+        // step 3: update residuals
         for u in nz_rows {
             let u = *u as usize;
-            resids[u] -= new;
+            resids[u] -= diff;
         }
 
         diff.abs()
