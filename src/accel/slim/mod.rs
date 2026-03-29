@@ -11,7 +11,7 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use log::*;
-use pyo3::prelude::*;
+use pyo3::{exceptions::PyValueError, prelude::*};
 use rayon::prelude::*;
 
 use crate::{
@@ -32,6 +32,7 @@ struct SLIMOptions {
 
 struct SLIMWorkspace<'a> {
     options: SLIMOptions,
+    ui_matrix: &'a CSRStructure<i64>,
     iu_matrix: &'a CSRStructure<i64>,
     n_users: usize,
     n_items: usize,
@@ -53,14 +54,27 @@ pub fn register_slim(parent: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction]
 fn train_slim<'py>(
     py: Python<'py>,
+    ui_matrix: PyArrowType<ArrayData>,
     iu_matrix: PyArrowType<ArrayData>,
     l1_reg: f64,
     l2_reg: f64,
     max_iters: u32,
     progress: Bound<'py, PyAny>,
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
+    let ui_matrix = make_array(ui_matrix.0);
+    let ui_matrix = CSRStructure::<i64>::from_arrow(ui_matrix)?;
     let iu_matrix = make_array(iu_matrix.0);
     let iu_matrix = CSRStructure::<i64>::from_arrow(iu_matrix)?;
+
+    if ui_matrix.n_rows != iu_matrix.n_cols {
+        return Err(PyValueError::new_err("user count mismatch"));
+    }
+    if ui_matrix.n_cols != iu_matrix.n_rows {
+        return Err(PyValueError::new_err("item count mismatch"));
+    }
+    if ui_matrix.nnz() != iu_matrix.nnz() {
+        return Err(PyValueError::new_err("rating count mismatch"));
+    }
 
     let progress = ProgressHandle::from_input(progress);
 
@@ -70,15 +84,14 @@ fn train_slim<'py>(
         max_iters,
     };
 
-    let n_items = iu_matrix.n_rows;
-    debug!("computing similarities for {n_items} items");
-    let collector = ArrowCSRConsumer::new(n_items);
+    debug!("computing similarity rows");
+    let collector = ArrowCSRConsumer::new(ui_matrix.n_cols);
 
-    let range = 0..n_items;
+    let range = 0..ui_matrix.n_cols;
     let chunks = progress.process_iter(py, range.into_par_iter(), move |iter| {
         let chunks = maybe_fuse(iter)
             .map_init(
-                || SLIMWorkspace::create(&iu_matrix, &options),
+                || SLIMWorkspace::create(&ui_matrix, &iu_matrix, &options),
                 SLIMWorkspace::compute_column,
             )
             .drive_unindexed(collector);
@@ -90,11 +103,16 @@ fn train_slim<'py>(
 }
 
 impl<'a> SLIMWorkspace<'a> {
-    fn create(iu_matrix: &'a CSRStructure<i64>, options: &SLIMOptions) -> Self {
-        let n_items = iu_matrix.n_rows;
-        let n_users = iu_matrix.n_cols;
+    fn create(
+        ui_matrix: &'a CSRStructure<i64>,
+        iu_matrix: &'a CSRStructure<i64>,
+        options: &SLIMOptions,
+    ) -> Self {
+        let n_items = ui_matrix.n_cols;
+        let n_users = ui_matrix.n_rows;
         SLIMWorkspace {
             options: *options,
+            ui_matrix,
             iu_matrix,
             n_users,
             n_items,

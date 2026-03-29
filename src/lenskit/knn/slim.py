@@ -73,6 +73,7 @@ class SLIMScorer(Component, Trainable):
 
         with item_progress("SLIM vectors", ui_matrix.dimension) as pb:
             weights = _slim_accel.train_slim(
+                ui_matrix,
                 iu_matrix,
                 self.config.l1_reg,
                 self.config.l2_reg,
