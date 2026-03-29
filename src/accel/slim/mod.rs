@@ -171,9 +171,11 @@ impl<'a> SLIMWorkspace<'a> {
         for j in 0..self.n_items {
             if j != item {
                 let j_users = self.iu_matrix.row_cols(j);
-                let di = self.cd_single(j, j_users, weights, resids);
-                if di > dmax {
-                    dmax = di;
+                if !j_users.is_empty() {
+                    let di = self.cd_single(j, j_users, weights, resids);
+                    if di > dmax {
+                        dmax = di;
+                    }
                 }
             }
         }
