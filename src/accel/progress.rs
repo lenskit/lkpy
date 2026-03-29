@@ -69,32 +69,45 @@ impl ProgressHandle {
         let cancel = adapter.canceller();
         let caller = thread::current();
 
-        thread::scope(move |scope| {
-            let handle = scope.spawn(move || {
-                let result = proc(adapter);
-                caller.unpark();
-                result
-            });
+        py.detach(move || {
+            thread::scope(move |scope| {
+                let handle = scope.spawn(move || {
+                    let result = proc(adapter);
+                    caller.unpark();
+                    result
+                });
 
-            while !handle.is_finished() {
-                py.detach(|| thread::park_timeout(UPDATE_TIMEOUT));
-                if let Err(e) = py.check_signals() {
-                    debug!("caught Python signal, cancelling");
-                    cancel.cancel();
-                    return Err(e);
-                }
-                let n = counter.get();
-                if let Err(e) = self.update(py, n) {
-                    cancel.cancel();
-                    return Err(e);
-                }
-            }
+                let mut err = Ok(());
 
-            debug!("waiting for thread to join");
-            match handle.join() {
-                Ok(r) => r,
-                Err(_) => Err(PyRuntimeError::new_err("worker thread panicked")),
-            }
+                while err.is_ok() && !handle.is_finished() {
+                    thread::park_timeout(UPDATE_TIMEOUT);
+                    err = Python::attach(|py| {
+                        if let Err(e) = py.check_signals() {
+                            debug!("caught Python signal, cancelling");
+                            cancel.cancel();
+                            return Err(e);
+                        }
+                        let n = counter.get();
+                        if let Err(e) = self.update(py, n) {
+                            cancel.cancel();
+                            return Err(e);
+                        }
+                        Ok(())
+                    });
+                }
+
+                debug!("waiting for thread to join");
+                match handle.join() {
+                    Ok(Err(e)) => {
+                        if let Err(e2) = err {
+                            error!("status update failed: {}", e2);
+                        }
+                        Err(e)
+                    }
+                    Ok(Ok(r)) => err.map(|_| r),
+                    Err(_) => Err(PyRuntimeError::new_err("worker thread panicked")),
+                }
+            })
         })
     }
 
