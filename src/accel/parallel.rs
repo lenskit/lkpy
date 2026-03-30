@@ -13,11 +13,6 @@ use rayon::{current_num_threads, iter::ParallelIterator, ThreadPoolBuilder};
 
 #[pyfunction]
 pub fn init_accel_pool(n_threads: usize) -> PyResult<()> {
-    if log_enabled!(Level::Info) {
-        eprintln!("log enabled");
-    } else {
-        eprintln!("log disabled");
-    }
     debug!(
         "initializing accelerator thread pool with {} threads",
         n_threads

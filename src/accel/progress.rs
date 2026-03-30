@@ -12,7 +12,7 @@ use log::*;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::{intern, prelude::*, types::PyDict};
 use rayon::iter::ParallelIterator;
-use rayon_cancel::CancelAdapter;
+use rayon_cancel::{CancelAdapter, CountHandle};
 
 const UPDATE_TIMEOUT: Duration = Duration::from_millis(200);
 
@@ -23,6 +23,10 @@ const UPDATE_TIMEOUT: Duration = Duration::from_millis(200);
 pub struct ProgressHandle {
     pb: Option<Py<PyAny>>,
     count: usize,
+}
+
+trait ProgressCounter {
+    fn get_total(&self) -> usize;
 }
 
 impl ProgressHandle {
@@ -67,35 +71,8 @@ impl ProgressHandle {
         let adapter = CancelAdapter::new(iter);
         let counter = adapter.counter();
         let cancel = adapter.canceller();
-        let caller = thread::current();
 
-        thread::scope(move |scope| {
-            let handle = scope.spawn(move || {
-                let result = proc(adapter);
-                caller.unpark();
-                result
-            });
-
-            while !handle.is_finished() {
-                py.detach(|| thread::park_timeout(UPDATE_TIMEOUT));
-                if let Err(e) = py.check_signals() {
-                    debug!("caught Python signal, cancelling");
-                    cancel.cancel();
-                    return Err(e);
-                }
-                let n = counter.get();
-                if let Err(e) = self.update(py, n) {
-                    cancel.cancel();
-                    return Err(e);
-                }
-            }
-
-            debug!("waiting for thread to join");
-            match handle.join() {
-                Ok(r) => r,
-                Err(_) => Err(PyRuntimeError::new_err("worker thread panicked")),
-            }
-        })
+        self.run_with_progress(py, &counter, || cancel.cancel(), || proc(adapter))
     }
 
     /// Process an iterator, with progress, thread-detach, and interrupt checks.
@@ -112,42 +89,78 @@ impl ProgressHandle {
     {
         let adapter = CancelAdapter::new(iter);
         let cancel = adapter.canceller();
-        let caller = thread::current();
         let rc = AtomicUsize::new(0);
 
+        self.run_with_progress(py, &rc, || cancel.cancel(), || proc(adapter, &rc))
+    }
+
+    /// run a thread in the background, monitoring progress and issuing cancels.
+    fn run_with_progress<'py, R, C, X, F>(
+        &self,
+        py: Python<'py>,
+        counter: C,
+        cancel: X,
+        proc: F,
+    ) -> PyResult<R>
+    where
+        R: Send,
+        C: ProgressCounter + Send + Sync,
+        X: Fn() -> () + Send,
+        F: FnOnce() -> PyResult<R> + Send,
+    {
+        let caller = thread::current();
+
         py.detach(move || {
-            thread::scope(|scope| {
-                let handle = scope.spawn(|| {
-                    let result = proc(adapter, &rc);
-                    debug!("iteration finished, unparking caller");
+            thread::scope(move |scope| {
+                let handle = scope.spawn(move || {
+                    let result = proc();
                     caller.unpark();
                     result
                 });
 
-                let rv = Python::attach(|py| {
-                    while !handle.is_finished() {
-                        py.detach(|| thread::park_timeout(UPDATE_TIMEOUT));
+                let mut err = Ok(());
+
+                while err.is_ok() && !handle.is_finished() {
+                    thread::park_timeout(UPDATE_TIMEOUT);
+                    err = Python::attach(|py| {
                         if let Err(e) = py.check_signals() {
                             debug!("caught Python signal, cancelling");
-                            cancel.cancel();
+                            cancel();
                             return Err(e);
                         }
-                        let n = rc.load(Ordering::Relaxed);
+                        let n = counter.get_total();
                         if let Err(e) = self.update(py, n) {
-                            debug!("failed to update progress bar, cancelling");
-                            cancel.cancel();
+                            cancel();
                             return Err(e);
                         }
-                    }
-                    Ok(())
-                });
+                        Ok(())
+                    });
+                }
 
                 debug!("waiting for thread to join");
                 match handle.join() {
-                    Ok(r) => rv.map(|_| r).flatten(),
+                    Ok(Err(e)) => {
+                        if let Err(e2) = err {
+                            error!("status update failed: {}", e2);
+                        }
+                        Err(e)
+                    }
+                    Ok(Ok(r)) => err.map(|_| r),
                     Err(_) => Err(PyRuntimeError::new_err("worker thread panicked")),
                 }
             })
         })
+    }
+}
+
+impl ProgressCounter for &CountHandle {
+    fn get_total(&self) -> usize {
+        self.get()
+    }
+}
+
+impl ProgressCounter for &AtomicUsize {
+    fn get_total(&self) -> usize {
+        self.load(Ordering::Relaxed)
     }
 }
