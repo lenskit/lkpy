@@ -34,4 +34,4 @@ def test_slim_trainer(ml_ds: Dataset):
 class TestSLIM(ScorerTests):
     component = SLIMScorer
     config = SLIMConfig(max_iters=10)
-    expected_ndcg = (0.01, 0.2)
+    expected_ndcg = (0.2, 0.4)
