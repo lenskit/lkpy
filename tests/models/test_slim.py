@@ -23,7 +23,7 @@ def test_slim_trainer(ml_ds: Dataset):
     ui_matrix = ml_ds.interactions().matrix().csr_structure(format="arrow")
     iu_matrix = ui_matrix.transpose()
 
-    result = _slim_accel.train_slim(ui_matrix, iu_matrix, 0.005, 0.01, 10, None)
+    result = _slim_accel.train_slim(ui_matrix, iu_matrix, 0.005, 0.01, 10, 100, None)
     result = pa.chunked_array(result).combine_chunks()
     result = SparseRowArray.from_array(result)
     assert isinstance(result, SparseRowArray)
