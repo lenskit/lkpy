@@ -28,6 +28,10 @@ _log = get_logger(__name__)
 
 
 class SLIMConfig(BaseModel):
+    """
+    Hyperparameters for SLIM/fsSLIM (:class:`SlimScorer`).
+    """
+
     l1_reg: PositiveFloat = 0.005
     """
     L₁ regularization strength for SLIM.
@@ -38,7 +42,7 @@ class SLIMConfig(BaseModel):
     """
     max_iters: PositiveInt = 50
     """
-    Maximum iterations per column.
+    Maximum coordinate descent iterations per column.
     """
     max_nbrs: PositiveInt | None = None
     """
@@ -50,10 +54,12 @@ class SLIMConfig(BaseModel):
 class SLIMScorer(Component, Trainable):
     """
     Item scorer using Sparse LInear Methods (SLIM).  SLIM was described for
-    recommendation by :cite:t`ningSLIMSparseLinear2011`.  This implementation
-    closely follows the paper, with some reference to `libslim`_ for
-    computational details.  It uses coodrinate descent with soft thresholding
-    to estimate the SLIM weight matrix.
+    recommendation by :cite:t`ningSLIMSparseLinear2011`.  This scorer supports
+    both SLIM and fsSLIM variants (by setting :attr:`SLIMConfig.max_nbrs`).
+
+    This implementation closely follows the paper, with some reference to
+    `libslim`_ for computational details.  It uses coodrinate descent with soft
+    thresholding to estimate the SLIM weight matrix.
 
     .. _libslim: https://github.com/KarypisLab/SLIM/tree/master/src/libslim
     """
