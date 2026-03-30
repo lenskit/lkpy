@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 //! Sparse Linear Methods for recommendation.
+use std::time::Instant;
 
 use arrow::{
     array::{make_array, Array, ArrayData},
@@ -20,13 +21,14 @@ use crate::{
     sparse::{ArrowCSRConsumer, CSRStructure, CSR},
 };
 
-const EPSILON: f64 = 1.0e-12;
-const OPT_TOLERANCE: f64 = 1e-3;
+type FP = f32;
+const EPSILON: FP = 1.0e-12;
+const OPT_TOLERANCE: FP = 1e-3;
 
 #[derive(Debug, Clone, Copy)]
 struct SLIMOptions {
-    l1_reg: f64,
-    l2_reg: f64,
+    l1_reg: FP,
+    l2_reg: FP,
     max_iters: u32,
 }
 
@@ -56,8 +58,8 @@ fn train_slim<'py>(
     py: Python<'py>,
     ui_matrix: PyArrowType<ArrayData>,
     iu_matrix: PyArrowType<ArrayData>,
-    l1_reg: f64,
-    l2_reg: f64,
+    l1_reg: FP,
+    l2_reg: FP,
     max_iters: u32,
     progress: Bound<'py, PyAny>,
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
@@ -133,7 +135,8 @@ impl<'a> SLIMWorkspace<'a> {
     /// as I can tell.  We follow the implementation's direction here (which is
     /// also simpler).
     #[inline(never)] // a lot of work is in here, let's make profiling easeir
-    fn compute_column(&mut self, item: usize) -> Vec<(i32, f32)> {
+    fn compute_column(&mut self, item: usize) -> Vec<(i32, FP)> {
+        let start = Instant::now();
         // get the active users for this item — indices where target vector is 1
         let i_users = self.iu_matrix.row_cols(item);
 
@@ -145,6 +148,40 @@ impl<'a> SLIMWorkspace<'a> {
         // user who rated. we will aslo pre-compute lists of active items —
         // items that are never co-rated with the target item will have zero
         // weight.
+        let active = self.prep_resid_and_active(item, &i_users, &mut resids);
+
+        // iteratively apply coordinate descent until we converge
+        let n_iters = self.run_cd(item, &mut weights, &mut resids, &active);
+
+        // sparsify weights for final result
+        let mut res: Vec<_> = weights
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, v)| {
+                if v >= EPSILON {
+                    Some((i as i32, v as FP))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let ms = Instant::now().duration_since(start).as_secs_f64() * 1000.0;
+        debug!(
+            "column {} trained with {} neighbors in {} iters ({:.1}ms) with {} nonzero entries",
+            item,
+            active.len(),
+            n_iters,
+            ms,
+            res.len()
+        );
+        res.shrink_to_fit();
+
+        // and we're done!
+        res
+    }
+
+    #[inline(never)]
+    fn prep_resid_and_active(&self, item: usize, i_users: &[i32], resids: &mut [FP]) -> Vec<usize> {
         let mut act_mask = vec![false; self.n_items];
         let mut active = Vec::with_capacity(self.n_items / 4);
 
@@ -161,10 +198,20 @@ impl<'a> SLIMWorkspace<'a> {
             }
         }
 
-        // iteratively apply coordinate descent until we converge
+        active
+    }
+
+    #[inline(never)]
+    fn run_cd(
+        &mut self,
+        item: usize,
+        weights: &mut [FP],
+        resids: &mut [FP],
+        active: &[usize],
+    ) -> u32 {
         let mut n_iters = self.options.max_iters;
         for it in 0..n_iters {
-            let max_upd = self.cd_round(&mut weights, &mut resids, &active);
+            let max_upd = self.cd_round(weights, resids, active);
             trace!("column {} iter {}: max update {}", item, it + 1, max_upd);
 
             if max_upd <= OPT_TOLERANCE {
@@ -173,32 +220,11 @@ impl<'a> SLIMWorkspace<'a> {
             }
         }
 
-        // sparsify weights for final result
-        let mut res: Vec<_> = weights
-            .into_iter()
-            .enumerate()
-            .filter_map(|(i, v)| {
-                if v >= EPSILON {
-                    Some((i as i32, v as f32))
-                } else {
-                    None
-                }
-            })
-            .collect();
-        debug!(
-            "column {}  trained in {} iters with {} nonzero entries",
-            item,
-            n_iters,
-            res.len()
-        );
-        res.shrink_to_fit();
-
-        // and we're done!
-        res
+        n_iters
     }
 
     /// Do one round of coordinate descent, returning the maximum coordinate change.
-    fn cd_round(&mut self, weights: &mut [f64], resids: &mut [f64], active: &[usize]) -> f64 {
+    fn cd_round(&mut self, weights: &mut [FP], resids: &mut [FP], active: &[usize]) -> FP {
         let mut dmax = 0.0;
         for j in active {
             let j_users = self.iu_matrix.row_cols(*j);
@@ -216,9 +242,9 @@ impl<'a> SLIMWorkspace<'a> {
         &mut self,
         j: usize,
         nz_rows: &[i32],
-        weights: &mut [f64],
-        resids: &mut [f64],
-    ) -> f64 {
+        weights: &mut [FP],
+        resids: &mut [FP],
+    ) -> FP {
         let cur_w = weights[j];
         // Reg Paths divides by N to get a mean, but Karypis does *not*.
 
@@ -230,7 +256,7 @@ impl<'a> SLIMWorkspace<'a> {
         }
 
         // step 2: update with soft-thresholded weight update
-        let new = self.soft_thresh(upd, nz_rows.len() as f64);
+        let new = self.soft_thresh(upd, nz_rows.len() as FP);
         let diff = new - cur_w;
         weights[j] = new;
 
@@ -243,7 +269,7 @@ impl<'a> SLIMWorkspace<'a> {
         diff.abs()
     }
 
-    fn soft_thresh(&self, val: f64, sqnorm: f64) -> f64 {
+    fn soft_thresh(&self, val: FP, sqnorm: FP) -> FP {
         if val >= self.options.l1_reg {
             let num = val - self.options.l1_reg;
             let den = sqnorm + self.options.l2_reg;
