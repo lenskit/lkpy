@@ -148,10 +148,6 @@ impl<'a> SLIMWorkspace<'a> {
         let mut weights = vec![0.0; self.n_items];
         let mut resids = vec![0.0; self.n_users];
 
-        // since our weights are initialized to zero, residuals are -1 for every
-        // user who rated. we will aslo pre-compute lists of active items —
-        // items that are never co-rated with the target item will have zero
-        // weight.
         let active = self.prep_resid_and_active(item, &i_users, &mut resids);
 
         // iteratively apply coordinate descent until we converge
@@ -184,12 +180,21 @@ impl<'a> SLIMWorkspace<'a> {
         res
     }
 
+    /// Initialize residuals and compute the list of active items (items whose
+    /// coefficient may be nonzero for this target item).
+    ///
+    /// Active items are determined by traversing the user-item graph, because
+    /// an item that is never co-rated with the target item has no basis for a
+    /// nonzero coefficient.  If fsSLIM is enabled, residuals are further
+    /// limited to the top *k* most-similar items (by cosine similarity).
     #[inline(never)]
     fn prep_resid_and_active(&self, item: usize, i_users: &[i32], resids: &mut [FP]) -> Vec<usize> {
         let mut path_counts = vec![0; self.n_items];
         let mut active = Vec::with_capacity(self.n_items / 4);
 
-        // resid: rᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all wᵢⱼ are initially 0
+        // Residuals are defined by rᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all wᵢⱼ are initially 0,
+        // so the residual is just 1 where the user rated the target item and 0
+        // elsewhere.
         for u in i_users {
             let u = *u as usize;
             resids[u] = 1.0;
@@ -207,6 +212,8 @@ impl<'a> SLIMWorkspace<'a> {
         if let Some(k) = self.options.max_nbrs {
             if k < active.len() {
                 debug!("limiting column {} to {} active neighbors", item, k);
+                // co-rating count is the numerator of cosine, so we just need
+                // the denominators to sort the items & pick the top K.
                 let i_norm = (i_users.len() as f64).sqrt();
                 active.sort_by_key(|j| {
                     let j_norm = (self.iu_matrix.row_nnz(*j) as f64).sqrt();
