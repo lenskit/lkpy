@@ -12,7 +12,7 @@ import lazy_loader as lazy
 
 __getattr__, __dir__, __all__ = lazy.attach(
     __name__,
-    submodules=["item", "user", "ease"],
+    submodules=["item", "user", "ease", "slim"],
     submod_attrs={
         "item": ["ItemKNNScorer", "ItemKNNConfig"],
         "user": ["UserKNNScorer", "UserKNNConfig"],
