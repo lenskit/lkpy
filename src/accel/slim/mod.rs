@@ -12,6 +12,7 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use log::*;
+use ordered_float::NotNan;
 use pyo3::{exceptions::PyValueError, prelude::*};
 use rayon::prelude::*;
 
@@ -30,6 +31,7 @@ struct SLIMOptions {
     l1_reg: FP,
     l2_reg: FP,
     max_iters: u32,
+    max_nbrs: Option<usize>,
 }
 
 struct SLIMWorkspace<'a> {
@@ -61,6 +63,7 @@ fn train_slim<'py>(
     l1_reg: FP,
     l2_reg: FP,
     max_iters: u32,
+    max_nbrs: Option<usize>,
     progress: Bound<'py, PyAny>,
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
     let ui_matrix = make_array(ui_matrix.0);
@@ -84,6 +87,7 @@ fn train_slim<'py>(
         l1_reg,
         l2_reg,
         max_iters,
+        max_nbrs,
     };
 
     debug!("computing similarity rows");
@@ -182,7 +186,7 @@ impl<'a> SLIMWorkspace<'a> {
 
     #[inline(never)]
     fn prep_resid_and_active(&self, item: usize, i_users: &[i32], resids: &mut [FP]) -> Vec<usize> {
-        let mut act_mask = vec![false; self.n_items];
+        let mut path_counts = vec![0; self.n_items];
         let mut active = Vec::with_capacity(self.n_items / 4);
 
         // resid: rᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all wᵢⱼ are initially 0
@@ -191,10 +195,25 @@ impl<'a> SLIMWorkspace<'a> {
             resids[u] = 1.0;
             for j in self.ui_matrix.row_cols(u) {
                 let j = *j as usize;
-                if j != item && !act_mask[j] {
-                    active.push(j);
-                    act_mask[j] = true;
+                if j != item {
+                    if path_counts[j] == 0 {
+                        active.push(j);
+                    }
+                    path_counts[j] += 1;
                 }
+            }
+        }
+
+        if let Some(k) = self.options.max_nbrs {
+            if k < active.len() {
+                debug!("limiting column {} to {} active neighbors", item, k);
+                let i_norm = (i_users.len() as f64).sqrt();
+                active.sort_by_key(|j| {
+                    let j_norm = (self.iu_matrix.row_nnz(*j) as f64).sqrt();
+                    NotNan::new(-(path_counts[*j] as f64) / (i_norm * j_norm))
+                        .expect("NaN similarity")
+                });
+                active.resize(k, 0);
             }
         }
 

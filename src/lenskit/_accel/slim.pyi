@@ -9,5 +9,6 @@ def train_slim(
     l1_reg: float,
     l2_reg: float,
     max_iters: int,
+    max_nbrs: int | None,
     progress: Progress | None,
 ) -> Sequence[SparseRowArray]: ...

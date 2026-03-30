@@ -40,6 +40,11 @@ class SLIMConfig(BaseModel):
     """
     Maximum iterations per column.
     """
+    max_nbrs: PositiveInt | None = None
+    """
+    Maximum neighbors (features) for each item.  Setting this to a positive
+    integer enables fsSLIM (with item cosine selection).
+    """
 
 
 class SLIMScorer(Component, Trainable):
@@ -78,6 +83,7 @@ class SLIMScorer(Component, Trainable):
                 self.config.l1_reg,
                 self.config.l2_reg,
                 self.config.max_iters,
+                self.config.max_nbrs,
                 pb,
             )
         weights = pa.chunked_array(weights).combine_chunks()

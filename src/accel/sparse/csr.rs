@@ -84,6 +84,12 @@ pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
         let (start, end) = self.extent(row);
         &self.col_inds().values()[start..end]
     }
+
+    /// Get the number of nonzero entries for a row.
+    fn row_nnz(&self, row: usize) -> usize {
+        let (start, end) = self.extent(row);
+        end - start
+    }
 }
 
 /// Extract a CSR structure with either 32 or 64-bit indices.

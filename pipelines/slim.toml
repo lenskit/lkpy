@@ -6,3 +6,6 @@ base = "std:topn"
 
 [components.scorer]
 class = "lenskit.knn.SLIMScorer"
+
+[components.scorer.config]
+max_nbrs = 500
