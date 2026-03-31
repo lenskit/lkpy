@@ -32,15 +32,15 @@ class SLIMConfig(BaseModel):
     Hyperparameters for SLIM/fsSLIM (:class:`SlimScorer`).
     """
 
-    l1_reg: PositiveFloat = 0.005
+    l1_reg: PositiveFloat = 1.0
     """
     L₁ regularization strength for SLIM.
     """
-    l2_reg: PositiveFloat = 0.01
+    l2_reg: PositiveFloat = 1.0
     """
     L₂ regularization strength for SLIM.
     """
-    max_iters: PositiveInt = 50
+    max_iters: PositiveInt = 100
     """
     Maximum coordinate descent iterations per column.
     """
