@@ -57,9 +57,24 @@ class SLIMScorer(Component, Trainable):
     recommendation by :cite:t`ningSLIMSparseLinear2011`.  This scorer supports
     both SLIM and fsSLIM variants (by setting :attr:`SLIMConfig.max_nbrs`).
 
-    This implementation closely follows the paper, with some reference to
+    SLIM operates by learning an elastic-net regression for each item,
+    predicting whether the user will interact with that item based on the other
+    items they have interacted with.
+
+    This implementation closely follows the paper with some reference to
     `libslim`_ for computational details.  It uses coodrinate descent with soft
-    thresholding to estimate the SLIM weight matrix.
+    thresholding :cite:p:`friedmanRegularizationPathsGeneralized2010` to
+    estimate the SLIM weight matrix.
+
+    .. note::
+
+        The coordinate descent method of
+        :cite:t:`friedmanRegularizationPathsGeneralized2010` operates on
+        standardized predictor variables, with a hint that standardization can
+        be inlined to the optimization logic for sparse problems.  However, they
+        do not provide details for how to do that inlining, and the original
+        SLIM implementation from the Karypis lab does not appear to center the
+        predictors.  Therefore, this implementation also does not center them.
 
     .. _libslim: https://github.com/KarypisLab/SLIM/tree/master/src/libslim
     """
