@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -17,6 +17,7 @@ mod funksvd;
 mod indirect_hashing;
 mod knn;
 mod progress;
+mod slim;
 mod sparse;
 
 /// Entry point for LensKit accelerator module.
@@ -26,6 +27,7 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     knn::register_knn(m)?;
     als::register_als(m)?;
     data::register_data(m)?;
+    slim::register_slim(m)?;
 
     m.add_class::<funksvd::FunkSVDTrainer>()?;
     m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
