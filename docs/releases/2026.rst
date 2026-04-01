@@ -74,6 +74,7 @@ New Features
 - Added support for parallel batch inference using thread pools on free-threaded
   Python (:issue:`921`, :pr:`1025`).
 - Added LightGCN support to FlexMF (:issue:`1019`, :pr:`1033`).
+- Added SLIM and fsSLIM to :mod:`lenskit.knn` (:issue:`894`, :pr:`896`).
 
 Performance Changes
 -------------------
