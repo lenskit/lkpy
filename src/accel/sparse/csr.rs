@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -83,6 +83,12 @@ pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
     fn row_cols(&self, row: usize) -> &[i32] {
         let (start, end) = self.extent(row);
         &self.col_inds().values()[start..end]
+    }
+
+    /// Get the number of nonzero entries for a row.
+    fn row_nnz(&self, row: usize) -> usize {
+        let (start, end) = self.extent(row);
+        end - start
     }
 }
 
