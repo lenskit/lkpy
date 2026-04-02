@@ -41,7 +41,6 @@ them need to be installed separately.
 
     lenskit.basic
     lenskit.stochastic
-    lenskit.knn
     lenskit.als
     lenskit.flexmf
     lenskit.sklearn
@@ -50,6 +49,11 @@ them need to be installed separately.
     lenskit.hpf
     lenskit.graphs
 
+.. toctree::
+    :caption: Components and Models
+    :hidden:
+
+    knn
 
 Batch Inference and Evaluation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

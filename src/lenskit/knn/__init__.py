@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-k-NN recommender models.
+*k*-NN recommender models.
 """
 
 import lazy_loader as lazy
