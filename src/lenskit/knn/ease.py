@@ -45,8 +45,8 @@ class EASEScorer(Component[ItemList], Trainable):
     Embarrassingly shallow autoencoder
     :cite:p:`steckEmbarrassinglyShallowAutoencoders2019`.
 
-    In addition to its configuation, this component also uses a training
-    environment variable:
+    In addition to its configuation, this component also uses a :ref:`training
+    environment variable <training-config>` :envvar:`LK_EASE_SOLVER`.
 
     .. envvar:: LK_EASE_SOLVER
 

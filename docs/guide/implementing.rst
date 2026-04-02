@@ -206,10 +206,11 @@ Configuring Training
 Most options for training, such as the number of epochs or the loss function,
 should be set through the component's configuration.
 
-Some components need options that don't affect the semantics of the model or
-training, and may be environment-specific.  For example, :class:`EASE
-<lenskit.knn.EASEScorer>` supports both PyTorch and SciPy matrix inversion
-routines.
+Some components support additional options that don't affect the semantics of
+the model or training, and may be environment-specific.  For example,
+:class:`EASE <lenskit.knn.EASEScorer>` supports both PyTorch and SciPy matrix
+inversion routines, with the ideal option depending both on the data set and
+whether the system has a GPU.
 
 Such options can be exposed via *environment variables* (e.g.
 :envvar:`LK_EASE_SOLVER`). If your component has such options, access them
