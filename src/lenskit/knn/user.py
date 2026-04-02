@@ -296,6 +296,8 @@ class UserKNNScorer(Component[ItemList], Trainable):
 class UserRatings(NamedTuple):
     """
     Dense user ratings.
+
+    :meta private:
     """
 
     index: int | None
