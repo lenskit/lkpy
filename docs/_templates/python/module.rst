@@ -171,9 +171,16 @@ Exported Aliases
 ----------------
 
 {% for exp in reexports %}
+{% if exp.type == "function" %}
+{% set exp_role = "func" %}
+{% elif exp.type == "exception" %}
+{% set exp_role = "exc" %}
+{% else %}
+{% set exp_role = exp.type %}
+{% endif %}
 .. py:{{exp.type}}:: {{exp.id}}
 
-    Re-exported alias for :py:{{exp.type}}:`{{exp.obj.original_path}}`.
+    Re-exported alias for :py:{{exp_role}}:`{{exp.obj.original_path}}`.
 
 {%+ endfor %}
 {% endif %}
