@@ -31,6 +31,8 @@ from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
+__all__ = ["ItemKNNConfig", "ItemKNNScorer"]
+
 _log = get_logger(__name__)
 MAX_BLOCKS = 1024
 

@@ -24,6 +24,7 @@ from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline.components import Component
 from lenskit.training import Trainable, TrainingOptions
 
+__all__ = ["SLIMConfig", "SLIMScorer"]
 _log = get_logger(__name__)
 
 
