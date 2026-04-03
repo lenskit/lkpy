@@ -103,7 +103,7 @@ Connecting with LensKit
     :hidden:
 
     guide/index
-    api/index
+    api-ng/index
     releases/index
     Research <research/index>
     catalogs

@@ -58,7 +58,8 @@ test = [
 ]
 doc = [
   "packaging >=25.0",
-  "sphinx >=4.2",
+  "sphinx >=9.0",
+  "sphinx-autoapi ~=3.8",
   "sphinxext-opengraph >=0.5",
   "sphinxcontrib-bibtex >=2.0",
   "pydata-sphinx-theme ~=0.16.0",
