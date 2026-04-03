@@ -36,7 +36,7 @@ struct PyLogger {
     channel: ArcSwapOption<LogMeet>,
 }
 
-#[pyclass]
+#[pyclass(module = "lenskit._accel")]
 pub struct AccelLogListener {
     channel: crossbeam_channel::Receiver<LogMsg>,
 }

@@ -35,7 +35,7 @@ struct FunkSVDTrainingData {
 }
 
 /// Train FunkSVD models.
-#[pyclass]
+#[pyclass(module = "lenskit._accel")]
 pub struct FunkSVDTrainer {
     config: FunkSVDConfig,
     data: FunkSVDTrainingData,

@@ -27,7 +27,7 @@ use crate::indirect::hashing::content_string::StringContentArray;
 use crate::indirect::hashing::{IndirectHashTable, PositionLookup};
 
 /// Arrow-based ID index.
-#[pyclass]
+#[pyclass(module = "lenskit._accel.data")]
 pub struct IDIndex {
     /// The array of IDs.
     ids: Arc<dyn Array>,
