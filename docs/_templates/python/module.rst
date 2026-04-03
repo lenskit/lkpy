@@ -138,6 +138,7 @@ Functions
 
 
             {% endif %}
+
             {% set this_page_children = visible_children|rejectattr("type", "in", own_page_types)|list %}
             {% if this_page_children %}
 {{ obj.type|title }} Contents
@@ -162,4 +163,17 @@ Functions
    {{ obj_item.render()|indent(3) }}
       {% endfor %}
    {% endif %}
+{% endif %}
+
+{% set reexports = obj.children|selectattr("imported")|rejectattr("display")|list %}
+{% if reexports %}
+Exported Aliases
+----------------
+
+{% for exp in reexports %}
+.. py:{{exp.type}}:: {{exp.id}}
+
+    Re-exported alias for :py:{{exp.type}}:`{{exp.obj.original_path}}`.
+
+{%+ endfor %}
 {% endif %}

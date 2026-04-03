@@ -197,10 +197,10 @@ def skip_alias_imports(app, what, name, obj, skip, options):
     if name in ("lenskit.__main__", "lenskit.cli"):
         return True
 
-    # if obj.imported:
-    #     path = obj.obj.get("original_path")
-    #     if "._" not in path:
-    #         return True
+    if obj.imported:
+        path = obj.obj.get("original_path")
+        if "._" not in path:
+            return True
 
     return skip
 
