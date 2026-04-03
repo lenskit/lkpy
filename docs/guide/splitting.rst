@@ -97,10 +97,10 @@ We provide several holdout implementations, implemented as classes that take
 the holdout's configuration (e.g. the number of test ratings per user) and
 return callable objects to do the holdout:
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
-    ~lenskit.splitting.SampleN
-    ~lenskit.splitting.SampleFrac
-    ~lenskit.splitting.LastN
-    ~lenskit.splitting.LastFrac
+    lenskit.splitting.SampleN
+    lenskit.splitting.SampleFrac
+    lenskit.splitting.LastN
+    lenskit.splitting.LastFrac

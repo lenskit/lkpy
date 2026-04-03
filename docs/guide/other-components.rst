@@ -7,7 +7,7 @@ but a few that are useful in assembling useful pipelines include:
 Candidate Selectors
 ~~~~~~~~~~~~~~~~~~~
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
     lenskit.basic.TrainingItemsCandidateSelector
@@ -19,7 +19,7 @@ LensKit pipelines use a history lookup component to obtain user profile data
 when the recommender is called with only a user ID, so they do not need to
 repeat that logic in each component.
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
     lenskit.basic.UserTrainingHistoryLookup

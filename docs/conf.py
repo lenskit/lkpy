@@ -56,7 +56,6 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "old/*",
-    "api/*",
 ]
 nb_execution_mode = "off"
 
@@ -136,6 +135,7 @@ autoapisummary_generate = False
 autoapisummary_imported_members = False
 autoapisummary_ignore_module_all = True
 
+autoapi_file_patterns = ["*.pyi", "*.py"]
 autoapi_dirs = ["../src/lenskit"]
 autoapi_root = "api"
 autoapi_template_dir = "_templates"
@@ -197,10 +197,10 @@ def skip_alias_imports(app, what, name, obj, skip, options):
     if name in ("lenskit.__main__", "lenskit.cli"):
         return True
 
-    if obj.imported:
-        path = obj.obj.get("original_path")
-        if "._" not in path:
-            return True
+    # if obj.imported:
+    #     path = obj.obj.get("original_path")
+    #     if "._" not in path:
+    #         return True
 
     return skip
 

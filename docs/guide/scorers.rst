@@ -18,7 +18,7 @@ scorers, but using a model optimized with a rank-based loss function.
 Baseline Scorers
 ~~~~~~~~~~~~~~~~
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
     lenskit.basic.BiasScorer
@@ -27,7 +27,7 @@ Baseline Scorers
 Classical Collaborative Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
     lenskit.knn.ItemKNNScorer
@@ -47,7 +47,7 @@ Utility Scorers
 These scorers are used to compose more sophisticated pipelines, usually
 involving multiple pipelines.
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
     lenskit.basic.FallbackScorer

@@ -32,12 +32,12 @@ List and Set Metrics
 These metrics just look at the recommendation list and do not consider the rank
 positions of items within it.
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
-    ~lenskit.metrics.Hit
-    ~lenskit.metrics.Precision
-    ~lenskit.metrics.Recall
+    lenskit.metrics.Hit
+    lenskit.metrics.Precision
+    lenskit.metrics.Recall
 
 Ranked List Metrics
 -------------------
@@ -46,13 +46,13 @@ These metrics treat the recommendation list as a ranked list of items that may
 or may not be relevant; some also support different item utilities (e.g. ratings
 or graded relevance scores).
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
-    ~lenskit.metrics.RecipRank
-    ~lenskit.metrics.RBP
-    ~lenskit.metrics.NDCG
-    ~lenskit.metrics.DCG
+    lenskit.metrics.RecipRank
+    lenskit.metrics.RBP
+    lenskit.metrics.NDCG
+    lenskit.metrics.DCG
 
 Beyond Accuracy
 ---------------
@@ -61,7 +61,7 @@ These metrics measure **non-accuracy** properties of recommendation lists, such
 as popularity/obscurity or diversity.
 
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
-    ~lenskit.metrics.MeanPopRank
+    lenskit.metrics.MeanPopRank
