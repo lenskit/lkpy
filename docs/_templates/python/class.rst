@@ -17,7 +17,7 @@
    {% endif %}
 .. py:{{ obj.type }}:: {% if is_own_page %}{{ obj.id }}{% else %}{{ obj.short_name }}{% endif %}{% if obj.type_params %}[{{ obj.type_params }}]{% endif %}{% if obj.args %}({{ obj.args }}){% endif %}
 
-   {%+ if obj.imported and obj.original_path != obj.id %}:canonical: {{ obj.original_path }}{% endif %}
+   {%+ if obj.imported and obj.obj.original_path != obj.id %}:canonical: {{ obj.obj.original_path }}{% endif %}
 
    {% for (args, return_annotation) in obj.overloads %}
       {{ " " * (obj.type | length) }}   {{ obj.short_name }}{% if args %}({{ args }}){% endif %}
