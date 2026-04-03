@@ -131,13 +131,13 @@ autodoc_type_aliases = {
     "IDSequence": "lenskit.data.types.IDSequence",
 }
 
-# autosummary_generate_overwrite = False
-autosummary_generate = False
-autosummary_imported_members = False
-autosummary_ignore_module_all = True
+# autoapisummary_generate_overwrite = False
+autoapisummary_generate = False
+autoapisummary_imported_members = False
+autoapisummary_ignore_module_all = True
 
 autoapi_dirs = ["../src/lenskit"]
-autoapi_root = "api-ng"
+autoapi_root = "api"
 autoapi_template_dir = "_templates"
 autoapi_options = [
     "members",

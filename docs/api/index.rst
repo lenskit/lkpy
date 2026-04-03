@@ -7,7 +7,9 @@ classes, etc.
 Core Abstractions
 ~~~~~~~~~~~~~~~~~
 
-.. autosummary::
+.. autoapisummary::
+
+    lenskit
     lenskit.data
     lenskit.pipeline
     lenskit.diagnostics
@@ -20,40 +22,43 @@ Core Abstractions
     :caption: Core
     :hidden:
 
-    data
-    pipeline
-    operations
-    diagnostics
-    training
-    state
-    config
+    lenskit/index
+    lenskit/data/index
+    lenskit/pipeline/index
+    lenskit/operations/index
+    lenskit/diagnostics/index
+    lenskit/training/index
+    lenskit/state/index
+    lenskit/config/index
 
 Components and Models
 ~~~~~~~~~~~~~~~~~~~~~
 
-These packages provide various recommendation components and models.  Many of
-them need to be installed separately.
+These packages provide various recommendation components and models provided
+as first-party implementations by LensKit.
 
-.. autosummary::
-    :toctree: .
+.. autoapisummary::
     :caption: Components
-    :recursive:
 
-    lenskit.basic
-    lenskit.stochastic
     lenskit.als
+    lenskit.basic
     lenskit.flexmf
-    lenskit.sklearn
     lenskit.funksvd
-    lenskit.implicit
-    lenskit.hpf
-    lenskit.graphs
+    lenskit.knn
+    lenskit.sklearn
+    lenskit.stochastic
 
 .. toctree::
-    :caption: Components and Models
+    :caption: Components
     :hidden:
 
-    knn
+    lenskit/als/index
+    lenskit/basic/index
+    lenskit/flexmf/index
+    lenskit/funksvd/index
+    lenskit/knn/index
+    lenskit/sklearn/index
+    lenskit/stochastic/index
 
 Batch Inference and Evaluation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,7 +67,7 @@ These package provide evaluation metrics and analysis and batch-inference
 support. The evaluation code is not directly linked to the rest of LensKit and
 can be used to evaluate the output of any recommender system implementation.
 
-.. autosummary::
+.. autoapisummary::
 
     lenskit.batch
     lenskit.metrics
@@ -73,10 +78,30 @@ can be used to evaluate the output of any recommender system implementation.
     :caption: Evaluation
     :hidden:
 
-    batch
-    metrics
-    splitting
-    lenskit.tuning
+    lenskit/batch/index
+    lenskit/metrics/index
+    lenskit/splitting/index
+    lenskit/tuning/index
+
+Add-On Components
+~~~~~~~~~~~~~~~~~
+
+These packages contain component implementations that wrap other libraries.
+
+.. autoapisummary::
+
+    lenskit.implicit
+    lenskit.hpf
+    lenskit.graphs
+
+.. toctree::
+    :caption: Add-Ons
+    :hidden:
+
+    lenskit/implicit/index
+    lenskit/hpf/index
+    lenskit/graphs/index
+
 
 Implementation Helpers
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -84,10 +109,7 @@ Implementation Helpers
 These modules provide various utilities and helpers used to implement LensKit,
 and may be useful in building new models and components for LensKit.
 
-.. autosummary::
-    :toctree: .
-    :caption: Implementation Helpers
-    :recursive:
+.. autoapisummary::
 
     lenskit.logging
     lenskit.math
@@ -97,3 +119,17 @@ and may be useful in building new models and components for LensKit.
     lenskit.testing
     lenskit.torch
     lenskit._accel
+
+.. toctree::
+    :hidden:
+    :caption: Implementation Helpers
+
+    lenskit/logging/index
+    lenskit/math/index
+    lenskit/parallel/index
+    lenskit/random/index
+    lenskit/stats/index
+    lenskit/testing/index
+    lenskit/torch/index
+
+.. lenskit/_accel/index
