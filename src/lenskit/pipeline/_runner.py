@@ -11,7 +11,7 @@ Pipeline runner logic.
 # pyright: strict
 # pyright: reportPrivateUsage=false
 from dataclasses import dataclass
-from typing import Any, Literal, TypeAlias, TypeVar
+from typing import Any, Literal
 
 import structlog
 
@@ -25,8 +25,11 @@ from .components import ComponentInput, component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
 
 _log = get_logger(__name__)
-T = TypeVar("T")
-State: TypeAlias = Literal["pending", "in-progress", "finished", "failed"]
+
+type State = Literal["pending", "in-progress", "finished", "failed"]
+"""
+Allowed states for a pipeline component.
+"""
 
 
 class PipelineRunner:
