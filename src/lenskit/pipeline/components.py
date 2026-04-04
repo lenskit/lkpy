@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
-from typing import get_args
+from typing import TypeVar, get_args
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
@@ -281,7 +281,12 @@ def component_return_type[COut](
         raise TypeError("invalid component " + repr(component))
 
     types = get_type_hints(function)
-    return types.get("return", None)
+    typ = types.get("return", None)
+    if isinstance(typ, TypeVar):
+        warnings.warn(f"component {component} has unresolved return type")
+        return None
+
+    return typ
 
 
 def fallback_on_none[T](primary: T | None, fallback: Lazy[T]) -> T:
