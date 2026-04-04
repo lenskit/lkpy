@@ -9,9 +9,9 @@ from contextvars import ContextVar
 from typing import Any
 
 from lenskit.diagnostics import PipelineWarning
+from lenskit.lazy import Lazy
 from lenskit.logging import get_logger
 from lenskit.pipeline import PipelineBuilder
-from lenskit.pipeline._types import Lazy, T
 from lenskit.pipeline.components import ComponentInput
 from lenskit.pipeline.nodes import ComponentInstanceNode
 

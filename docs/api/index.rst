@@ -111,6 +111,7 @@ and may be useful in building new models and components for LensKit.
 
 .. autoapisummary::
 
+    lenskit.lazy
     lenskit.logging
     lenskit.math
     lenskit.parallel
@@ -124,6 +125,7 @@ and may be useful in building new models and components for LensKit.
     :hidden:
     :caption: Implementation Helpers
 
+    lenskit/lazy/index
     lenskit/logging/index
     lenskit/math/index
     lenskit/parallel/index

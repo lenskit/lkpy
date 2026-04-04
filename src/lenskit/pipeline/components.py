@@ -33,8 +33,9 @@ from typing_extensions import (
 )
 
 from lenskit.diagnostics import PipelineWarning
+from lenskit.lazy import Lazy
 
-from ._types import Lazy, TypecheckWarning, is_compatible_data
+from ._types import TypecheckWarning, is_compatible_data
 
 P = ParamSpec("P")
 T = TypeVar("T")
