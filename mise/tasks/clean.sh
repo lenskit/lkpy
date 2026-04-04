@@ -28,14 +28,10 @@ if _want_clean build; then
 fi
 
 if _want_clean docs; then
-    if [[ -n "$(git status -u --porcelain)" ]]; then
-        echo "Git status is not clean, cannot clean docs." >&2
-        exit 3
-    fi
     echo "cleaning build/site" 2>&1
     rm -rf build/site
     echo "cleaning generated doc files"
-    git clean -xf docs src
+    rm -rf docs/api/lenskit/
 fi
 
 if _want_clean logs; then

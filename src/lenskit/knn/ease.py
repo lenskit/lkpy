@@ -24,6 +24,7 @@ from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
+__all__ = ["EASEConfig", "EASEScorer"]
 _log = get_logger(__name__)
 
 MIN_SCIPY_VERSION = Version("1.17")
@@ -45,8 +46,8 @@ class EASEScorer(Component[ItemList], Trainable):
     Embarrassingly shallow autoencoder
     :cite:p:`steckEmbarrassinglyShallowAutoencoders2019`.
 
-    In addition to its configuation, this component also uses a training
-    environment variable:
+    In addition to its configuation, this component also uses a :ref:`training
+    environment variable <training-config>` :envvar:`LK_EASE_SOLVER`.
 
     .. envvar:: LK_EASE_SOLVER
 

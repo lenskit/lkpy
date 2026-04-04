@@ -58,7 +58,8 @@ test = [
 ]
 doc = [
   "packaging >=25.0",
-  "sphinx >=4.2",
+  "sphinx >=9.0",
+  "sphinx-autoapi ~=3.8",
   "sphinxext-opengraph >=0.5",
   "sphinxcontrib-bibtex >=2.0",
   "pydata-sphinx-theme ~=0.16.0",
@@ -67,6 +68,7 @@ doc = [
   "sphinxcontrib-mermaid ~=2.0",
   "sphinx-copybutton>=0.5.2",
   "sphinx-new-tab-link>=0.8.0",
+  { include-group = "package" },
 ]
 demo = [
   "notebook >=6",

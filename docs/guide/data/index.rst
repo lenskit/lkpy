@@ -167,9 +167,9 @@ Creating Datasets
 Several functions and classes can create a :class:`Dataset` from different input
 data sources.
 
-.. autosummary::
-    DatasetBuilder
-    from_interactions_df
+.. autoapisummary::
+    lenskit.data.DatasetBuilder
+    lenskit.data.from_interactions_df
 
 Loading Common Datasets
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -177,8 +177,8 @@ Loading Common Datasets
 LensKit also provides support for loading several common data sets directly from
 their source files.
 
-.. autosummary::
-    load_movielens
+.. autoapisummary::
+    lenskit.data.load_movielens
 
 Saving Datasets
 ~~~~~~~~~~~~~~~
@@ -187,10 +187,10 @@ LensKit has a native dataset format to which datasets can be saved and loaded.
 This format fully represents the internal data structures.  See the following
 methods to use it:
 
-.. autosummary::
-    Dataset.save
-    Dataset.load
-    DatasetBuilder.save
+.. autoapisummary::
+    lenskit.data.Dataset.save
+    lenskit.data.Dataset.load
+    lenskit.data.DatasetBuilder.save
 
 .. admonition:: Compatibility
     :class: note

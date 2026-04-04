@@ -10,10 +10,18 @@ from os import fspath
 from pathlib import Path
 
 from packaging.version import Version
+from sphinx.application import Sphinx
+from sphinx.util.logging import getLogger
 
-from lenskit._version import lenskit_version  # noqa: PLC2701
+CONF_DIR = Path(__file__).parent
+SRC_DIR = CONF_DIR.parent / "src"
 
-sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
+sys.path.append(fspath((Path(__file__).parent / "_ext").resolve()))
+sys.path.insert(0, fspath(SRC_DIR.resolve()))
+
+from lenskit._version import lenskit_version  # noqa: PLC2701, E402
+
+_log = getLogger("sphinx.lenskit")
 
 project = "LensKit"
 copyright = "2018–2025 Drexel University, Boise State University, and collaborators"
@@ -40,6 +48,7 @@ extensions = [
     "sphinxcontrib.mermaid",
     "sphinx_copybutton",
     "sphinx_new_tab_link",
+    "autoapi.extension",
     "lk_stability",
 ]
 
@@ -98,6 +107,7 @@ html_theme_options = {
     "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
     "footer_start": ["copyright", "version", "disclaimer", "counter"],
     "footer_end": [],
+    "show_toc_level": 2,
     # "github_user": "lenskit",
     # 'github_repo': 'lkpy',
     # 'travis_button': False,
@@ -123,9 +133,26 @@ autodoc_type_aliases = {
     "RNGInput": "lenskit.random.RNGInput",
     "IDSequence": "lenskit.data.types.IDSequence",
 }
-# autosummary_generate_overwrite = False
-autosummary_imported_members = False
-autosummary_ignore_module_all = True
+
+# autoapisummary_generate_overwrite = False
+autoapisummary_generate = False
+autoapisummary_imported_members = False
+autoapisummary_ignore_module_all = True
+
+autoapi_file_patterns = ["*.pyi", "*.py"]
+autoapi_dirs = ["../src/lenskit"]
+autoapi_root = "api"
+autoapi_template_dir = "_templates"
+autoapi_options = [
+    "members",
+    "show-inheritance",
+    "special-members",
+    "show-module-summary",
+    "imported-members",
+    "undoc-members",
+]
+autoapi_add_toctree_entry = False
+autoapi_keep_files = True
 
 # customize doc parsing
 napoleon_custom_sections = [("Stability", "returns_style")]
@@ -166,3 +193,22 @@ extlinks = {
     "pr": ("https://github.com/lenskit/lkpy/pull/%s", "⛙ %s"),
     "user": ("https://github.com/%s", "@%s"),
 }
+
+
+def skip_alias_imports(app, what, name, obj, skip, options):
+    _log.verbose("inspecting doc member: %s %s", what, name)
+
+    if name in ("lenskit.__main__", "lenskit.cli"):
+        return True
+
+    if obj.imported:
+        path = obj.obj.get("original_path")
+        if "._" not in path:
+            return True
+
+    return skip
+
+
+def setup(app: Sphinx):
+    app.connect("autoapi-skip-member", skip_alias_imports)
+    pass

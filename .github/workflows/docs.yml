@@ -36,7 +36,7 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv sync --all-extras --no-default-groups --group doc
+          uv sync --only-group doc
 
       - id: docs
         name: "📚 Build documentation site"

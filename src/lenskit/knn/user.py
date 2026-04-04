@@ -31,6 +31,7 @@ from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
+__all__ = ["UserKNNConfig", "UserKNNScorer"]
 _log = get_logger(__name__)
 
 
@@ -296,6 +297,8 @@ class UserKNNScorer(Component[ItemList], Trainable):
 class UserRatings(NamedTuple):
     """
     Dense user ratings.
+
+    :meta private:
     """
 
     index: int | None
