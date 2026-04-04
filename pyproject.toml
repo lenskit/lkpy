@@ -68,6 +68,7 @@ doc = [
   "sphinxcontrib-mermaid ~=2.0",
   "sphinx-copybutton>=0.5.2",
   "sphinx-new-tab-link>=0.8.0",
+  { include-group = "package" },
 ]
 demo = [
   "notebook >=6",

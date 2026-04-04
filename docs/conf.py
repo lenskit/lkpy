@@ -13,11 +13,15 @@ from packaging.version import Version
 from sphinx.application import Sphinx
 from sphinx.util.logging import getLogger
 
-from lenskit._version import lenskit_version  # noqa: PLC2701
+CONF_DIR = Path(__file__).parent
+SRC_DIR = CONF_DIR.parent / "src"
+
+sys.path.append(fspath((Path(__file__).parent / "_ext").resolve()))
+sys.path.insert(0, fspath(SRC_DIR.resolve()))
+
+from lenskit._version import lenskit_version  # noqa: PLC2701, E402
 
 _log = getLogger("sphinx.lenskit")
-
-sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
 
 project = "LensKit"
 copyright = "2018–2025 Drexel University, Boise State University, and collaborators"

@@ -1779,6 +1779,8 @@ dev = [
     { name = "zstandard" },
 ]
 doc = [
+    { name = "lazy-loader" },
+    { name = "maturin" },
     { name = "myst-nb" },
     { name = "packaging" },
     { name = "pydata-sphinx-theme" },
@@ -1910,6 +1912,8 @@ dev = [
     { name = "zstandard", specifier = ">=0.23.0" },
 ]
 doc = [
+    { name = "lazy-loader", specifier = ">=0.4" },
+    { name = "maturin", specifier = "~=1.10" },
     { name = "myst-nb", specifier = ">=0.13" },
     { name = "packaging", specifier = ">=25.0" },
     { name = "pydata-sphinx-theme", specifier = "~=0.16.0" },
