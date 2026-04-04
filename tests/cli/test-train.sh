@@ -1,3 +1,5 @@
+set -eo pipefail
+
 data="$TEST_WORK/ml-data"
 out="$TEST_WORK/als.pkl.gz"
 
