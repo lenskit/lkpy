@@ -36,6 +36,7 @@ from .components import (
     ComponentConstructor,
     PipelineFunction,
     fallback_on_none,
+    is_component_class,
 )
 from .config import PipelineConfig, PipelineHook
 from .nodes import (
@@ -730,8 +731,8 @@ class PipelineBuilder:
                 # ignore special nodes in first pass
                 continue
 
-            ctor = import_path_string(comp.code)
-            if isinstance(ctor, type) and issubclass(ctor, Component):
+            ctor: Any = import_path_string(comp.code)
+            if is_component_class(ctor):
                 cfg = ctor.validate_config(comp.config)
             else:
                 cfg = None

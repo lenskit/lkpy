@@ -13,7 +13,6 @@ from importlib import import_module
 from types import FunctionType, GenericAlias, NoneType, UnionType
 from typing import (
     Any,
-    TypeAlias,
     TypeVar,
     Union,
     _GenericAlias,  # type: ignore # noqa: PLC2701
@@ -25,12 +24,7 @@ import numpy as np
 
 from lenskit.diagnostics import PipelineWarning, TypecheckWarning
 
-T = TypeVar("T", covariant=True)
-"""
-General type variable for generic container types or inputs.
-"""
-
-TypeExpr: TypeAlias = type | UnionType
+type TypeExpr = type | UnionType
 """
 Type for (resolved) type expressions.
 

@@ -48,7 +48,7 @@ class PipelineCache:
     def __init__(self):
         self._cache = {}
 
-    def _make_key(self, ctor: ComponentConstructor[Any], config: object | None):
+    def _make_key(self, ctor: ComponentConstructor[Any, Any], config: object | None):
         name = make_importable_path(ctor)  # type: ignore
         if config is not None:
             config = TypeAdapter[Any](ctor.config_class()).dump_python(config, mode="json")
@@ -56,15 +56,15 @@ class PipelineCache:
 
         return PipelineCacheKey(name, ctor, config)
 
-    def get_cached(self, ctor: ComponentConstructor[Any], config: object | None):
+    def get_cached(self, ctor: ComponentConstructor[Any, Any], config: object | None):
         key = self._make_key(ctor, object)
         return self._cache.get(key, None)
 
-    def cache(self, ctor: ComponentConstructor[Any], config: object | None, instance: object):
+    def cache(self, ctor: ComponentConstructor[Any, Any], config: object | None, instance: object):
         key = self._make_key(ctor, object)
         self._cache[key] = instance
 
-    def get_instance(self, ctor: ComponentConstructor[Any], config: object | None):
+    def get_instance(self, ctor: ComponentConstructor[Any, Any], config: object | None):
         """
         Get a component instance from the cache, creating if it necessry.
         """

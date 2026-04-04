@@ -21,12 +21,8 @@ from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
     Any,
     Callable,
-    Generic,
     Mapping,
-    ParamSpec,
     Protocol,
-    TypeAlias,
-    TypeVar,
     get_origin,
     get_type_hints,
     runtime_checkable,
@@ -37,22 +33,7 @@ from lenskit.lazy import Lazy
 
 from ._types import TypecheckWarning, is_compatible_data
 
-P = ParamSpec("P")
-T = TypeVar("T")
-CFG = TypeVar("CFG")
-CArgs = ParamSpec("CArgs", default=...)
-"""
-Argument type for a component.  It is difficult to actually specify this, but
-using this default parameter spec allows :class:`Component` subclasses to
-typecheck by declaring the base class :meth:`~Component.__call__` to have
-unknown parameters.
-"""
-# COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
-COut = TypeVar("COut", covariant=True, default=Any)
-"""
-Return type for a component.
-"""
-PipelineFunction: TypeAlias = Callable[..., COut]
+type PipelineFunction[COut] = Callable[..., COut]
 """
 Pure-function interface for pipeline functions.
 """
@@ -72,7 +53,7 @@ class ComponentInput:
 
 
 @runtime_checkable
-class ComponentConstructor(Protocol, Generic[CFG, COut]):
+class ComponentConstructor[CFG, COut](Protocol):
     """
     Protocol for component constructors.
     """
@@ -84,7 +65,7 @@ class ComponentConstructor(Protocol, Generic[CFG, COut]):
     def validate_config(self, data: Any = None) -> CFG | None: ...
 
 
-class Component(ABC, Generic[COut, CArgs]):
+class Component[COut](ABC):
     """
     Base class for pipeline component objects.  Any component that is not just a
     function should extend this class.
@@ -212,7 +193,7 @@ class Component(ABC, Generic[COut, CArgs]):
             return None
 
     @abstractmethod
-    def __call__(self, *args: CArgs.args, **kwargs: CArgs.kwargs) -> COut:  # pragma: nocover
+    def __call__(self, *args: ..., **kwargs: ...) -> COut:  # pragma: nocover
         """
         Run the pipeline's operation and produce a result.  This is the key
         method for components to implement.
@@ -243,7 +224,7 @@ class Placeholder(Component[Any]):
         raise NotImplementedError("attempted to invoke placeholder component")
 
 
-def component_inputs(
+def component_inputs[COut](
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
     *,
     warn_on_missing: bool = True,
@@ -289,9 +270,9 @@ def component_inputs(
     return inputs
 
 
-def component_return_type(
+def component_return_type[COut](
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
-) -> type | None:
+) -> type[COut] | None:
     if isinstance(component, FunctionType):
         function = component
     elif hasattr(component, "__call__"):
@@ -303,7 +284,7 @@ def component_return_type(
     return types.get("return", None)
 
 
-def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:
+def fallback_on_none[T](primary: T | None, fallback: Lazy[T]) -> T:
     """
     Fallback to a second component if the primary input is `None`.
 
@@ -314,3 +295,14 @@ def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:
         return primary
     else:
         return fallback.get()
+
+
+def is_component_class(obj: Any) -> bool:
+    """
+    Check if the provided object is a component class.
+    """
+
+    if isinstance(obj, type) and issubclass(obj, Component):
+        return True
+    else:  # pragma: nocover
+        return isinstance(obj, ComponentConstructor)
