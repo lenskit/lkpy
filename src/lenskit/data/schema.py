@@ -113,6 +113,10 @@ class AllowableTroolean(Enum):
 
 
 class AttrLayout(Enum):
+    """
+    Possible layouts for entity attributes.
+    """
+
     SCALAR = "scalar"
     """
     Scalar (non-list, non-vector) attribute value.
