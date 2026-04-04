@@ -11,6 +11,7 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 from lenskit.diagnostics import PipelineError, PipelineWarning
+from lenskit.lazy import Lazy
 
 from ._builder import PipelineBuilder
 from ._cache import PipelineCache
@@ -19,7 +20,6 @@ from ._hooks import ComponentInputHook
 from ._impl import CloneMethod, Pipeline
 from ._profiling import PipelineProfiler, ProfileSink
 from ._state import PipelineState
-from ._types import Lazy
 from .components import (
     Component,
     ComponentConstructor,

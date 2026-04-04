@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pytest import warns
 
 from lenskit.diagnostics import TypecheckWarning
-from lenskit.pipeline._types import Lazy
+from lenskit.lazy import Lazy
 from lenskit.pipeline.components import Component, component_inputs, component_return_type
 
 

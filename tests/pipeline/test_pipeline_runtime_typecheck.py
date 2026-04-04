@@ -6,8 +6,8 @@
 
 from pytest import raises
 
+from lenskit.lazy import Lazy
 from lenskit.pipeline import PipelineBuilder
-from lenskit.pipeline._types import Lazy
 
 
 def proc_hello(msg: str) -> str:

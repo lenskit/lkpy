@@ -11,7 +11,7 @@ Pipeline runner logic.
 # pyright: strict
 # pyright: reportPrivateUsage=false
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeAlias, TypeVar
+from typing import Any, Literal, TypeAlias, TypeVar
 
 import structlog
 
@@ -189,9 +189,10 @@ class PipelineRunner:
 
 
 @dataclass(eq=False)
-class DeferredRun(Generic[T]):
+class DeferredRun[T]:
     """
-    Implementation of :class:`Lazy` for deferred runs in a pipeline runner.
+    Implementation of :class:`~lenskit.lazy.Lazy` for deferred runs in a
+    pipeline runner.
 
     Stability:
         Internal
