@@ -1851,7 +1851,7 @@ requires-dist = [
     { name = "threadpoolctl", specifier = ">=3.0" },
     { name = "torch", specifier = "~=2.4" },
     { name = "torch-geometric", marker = "extra == 'gnn'", specifier = "~=2.6" },
-    { name = "typing-extensions", specifier = "~=4.12" },
+    { name = "typing-extensions", specifier = "~=4.15" },
     { name = "xopen", specifier = "~=2.0" },
 ]
 provides-extras = ["funksvd", "gnn", "hpf", "implicit", "notebook", "ray", "sklearn", "tune"]

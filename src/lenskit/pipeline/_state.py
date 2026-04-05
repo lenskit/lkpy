@@ -6,7 +6,7 @@
 
 # pyright: strict
 from collections.abc import Mapping
-from typing import Any, Iterator
+from typing import Any, Iterator, cast
 
 from .config import PipelineMeta
 
@@ -86,7 +86,7 @@ class PipelineState(Mapping[str, Any]):
         if key in self._state:
             return True
         if key in self._aliases:
-            return self._aliases[key] in self
+            return self._aliases[cast(str, key)] in self
         else:
             return False
 

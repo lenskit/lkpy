@@ -20,7 +20,7 @@ license = "MIT"
 license-files = ["LICENSE.md"]
 dynamic = ["version"]
 dependencies = [
-  "typing-extensions ~=4.12",
+  "typing-extensions ~=4.15",
   "pandas >=2.3,<4",
   "pyarrow >=20,!=21.*",
   "numpy >=2.0",

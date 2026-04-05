@@ -15,18 +15,15 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
-from typing import get_args
+from typing import TypeVar, get_args
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
     Any,
     Callable,
-    Generic,
     Mapping,
-    ParamSpec,
     Protocol,
-    TypeAlias,
-    TypeVar,
+    get_annotations,
     get_origin,
     get_type_hints,
     runtime_checkable,
@@ -37,22 +34,7 @@ from lenskit.lazy import Lazy
 
 from ._types import TypecheckWarning, is_compatible_data
 
-P = ParamSpec("P")
-T = TypeVar("T")
-CFG = TypeVar("CFG")
-CArgs = ParamSpec("CArgs", default=...)
-"""
-Argument type for a component.  It is difficult to actually specify this, but
-using this default parameter spec allows :class:`Component` subclasses to
-typecheck by declaring the base class :meth:`~Component.__call__` to have
-unknown parameters.
-"""
-# COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
-COut = TypeVar("COut", covariant=True, default=Any)
-"""
-Return type for a component.
-"""
-PipelineFunction: TypeAlias = Callable[..., COut]
+type PipelineFunction[COut] = Callable[..., COut]
 """
 Pure-function interface for pipeline functions.
 """
@@ -72,7 +54,7 @@ class ComponentInput:
 
 
 @runtime_checkable
-class ComponentConstructor(Protocol, Generic[CFG, COut]):
+class ComponentConstructor[CFG, COut](Protocol):
     """
     Protocol for component constructors.
     """
@@ -84,7 +66,7 @@ class ComponentConstructor(Protocol, Generic[CFG, COut]):
     def validate_config(self, data: Any = None) -> CFG | None: ...
 
 
-class Component(ABC, Generic[COut, CArgs]):
+class Component[COut](ABC):
     """
     Base class for pipeline component objects.  Any component that is not just a
     function should extend this class.
@@ -212,7 +194,7 @@ class Component(ABC, Generic[COut, CArgs]):
             return None
 
     @abstractmethod
-    def __call__(self, *args: CArgs.args, **kwargs: CArgs.kwargs) -> COut:  # pragma: nocover
+    def __call__(self, *args: ..., **kwargs: ...) -> COut:  # pragma: nocover
         """
         Run the pipeline's operation and produce a result.  This is the key
         method for components to implement.
@@ -243,7 +225,7 @@ class Placeholder(Component[Any]):
         raise NotImplementedError("attempted to invoke placeholder component")
 
 
-def component_inputs(
+def component_inputs[COut](
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
     *,
     warn_on_missing: bool = True,
@@ -256,7 +238,7 @@ def component_inputs(
     else:
         raise TypeError("invalid component " + repr(component))
 
-    types = get_type_hints(function)
+    types = _get_types(function)
     sig = signature(function)
 
     inputs: dict[str, ComponentInput] = {}
@@ -289,9 +271,9 @@ def component_inputs(
     return inputs
 
 
-def component_return_type(
+def component_return_type[COut](
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
-) -> type | None:
+) -> type[COut] | None:
     if isinstance(component, FunctionType):
         function = component
     elif hasattr(component, "__call__"):
@@ -299,11 +281,17 @@ def component_return_type(
     else:
         raise TypeError("invalid component " + repr(component))
 
-    types = get_type_hints(function)
-    return types.get("return", None)
+    types = _get_types(function)
+
+    typ = types.get("return", None)
+    if isinstance(typ, TypeVar):
+        warnings.warn(f"component {component} has unresolved return type", PipelineWarning)
+        return None
+
+    return typ
 
 
-def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:
+def fallback_on_none[T](primary: T, fallback: Lazy[T]) -> T:
     """
     Fallback to a second component if the primary input is `None`.
 
@@ -314,3 +302,25 @@ def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:
         return primary
     else:
         return fallback.get()
+
+
+def is_component_class(obj: Any) -> bool:
+    """
+    Check if the provided object is a component class.
+    """
+
+    if isinstance(obj, type) and issubclass(obj, Component):
+        return True
+    else:  # pragma: nocover
+        return isinstance(obj, ComponentConstructor)
+
+
+def _get_types(func: Any) -> dict[str, Any]:
+    "Compatibility helper to get type hints"
+    try:
+        return get_type_hints(func)
+    except NameError:
+        warnings.warn(
+            "get_type_hints failed, using fallback (fixed in Python 3.12.5)", RuntimeWarning
+        )
+        return get_annotations(func, eval_str=True)

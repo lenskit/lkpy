@@ -21,7 +21,6 @@ from typing_extensions import (
     Literal,
     Mapping,
     TypeAlias,
-    TypeVar,
     overload,
 )
 
@@ -47,13 +46,6 @@ if TYPE_CHECKING:
 
 _log = get_logger(__name__)
 
-# common type var for quick use
-T = TypeVar("T")
-T1 = TypeVar("T1")
-T2 = TypeVar("T2")
-T3 = TypeVar("T3")
-T4 = TypeVar("T4")
-T5 = TypeVar("T5")
 
 NAMESPACE_LITERAL_DATA = uuid5(NAMESPACE_URL, "https://ns.lenskit.org/literal-data/")
 CloneMethod: TypeAlias = Literal["config", "pipeline-config"]
@@ -159,7 +151,7 @@ class Pipeline:
     @overload
     def node(self, node: str, *, missing: Literal["none"] | None) -> Node[object] | None: ...
     @overload
-    def node(self, node: Node[T]) -> Node[T]: ...
+    def node[T](self, node: Node[T]) -> Node[T]: ...
     def node(
         self, node: str | Node[Any], *, missing: Literal["error", "none"] | None = "error"
     ) -> Node[object] | None:
@@ -387,19 +379,21 @@ class Pipeline:
     @overload
     def run(self, nodes: tuple[str, ...], /, **kwargs: object) -> tuple[object, ...]: ...
     @overload
-    def run(self, node: Node[T], /, **kwargs: object) -> T: ...
+    def run[T](self, node: Node[T], /, **kwargs: object) -> T: ...
     @overload
-    def run(self, nodes: tuple[Node[T1], Node[T2]], /, **kwargs: object) -> tuple[T1, T2]: ...
+    def run[T1, T2](
+        self, nodes: tuple[Node[T1], Node[T2]], /, **kwargs: object
+    ) -> tuple[T1, T2]: ...
     @overload
-    def run(
+    def run[T1, T2, T3](
         self, nodes: tuple[Node[T1], Node[T2], Node[T3]], /, **kwargs: object
     ) -> tuple[T1, T2, T3]: ...
     @overload
-    def run(
+    def run[T1, T2, T3, T4](
         self, nodes: tuple[Node[T1], Node[T2], Node[T3], Node[T4]], /, **kwargs: object
     ) -> tuple[T1, T2, T3, T4]: ...
     @overload
-    def run(
+    def run[T1, T2, T3, T4, T5](
         self,
         nodes: tuple[Node[T1], Node[T2], Node[T3], Node[T4], Node[T5]],
         /,

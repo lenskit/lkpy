@@ -4,6 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+"""
+Node objects used to represent pipelines internally.  It is very rare
+for client code to need to work with the types in this module.
+
+Stability:
+    Internal
+"""
+
 # pyright: strict
 from __future__ import annotations
 
@@ -12,7 +20,6 @@ from collections.abc import Mapping
 from typing import Any, cast
 
 from pydantic import JsonValue
-from typing_extensions import Generic, TypeVar
 
 from .components import (
     Component,
@@ -23,13 +30,8 @@ from .components import (
     component_return_type,
 )
 
-# Nodes are (conceptually) immutable data containers, so Node[U] can be assigned
-# to Node[T] if U ≼ T.
-ND = TypeVar("ND", covariant=True)
-CFG = TypeVar("CFG", contravariant=True, bound=object)
 
-
-class Node(Generic[ND]):
+class Node[T]:
     """
     Representation of a single node in a :class:`Pipeline`.
 
@@ -52,7 +54,7 @@ class Node(Generic[ND]):
         return f"<{self.__class__.__name__} {self.name}>"
 
 
-class InputNode(Node[ND], Generic[ND]):
+class InputNode[T](Node[T]):
     """
     An input node.
 
@@ -61,7 +63,7 @@ class InputNode(Node[ND], Generic[ND]):
     """
 
 
-class LiteralNode(Node[ND], Generic[ND]):
+class LiteralNode[T](Node[T]):
     """
     A node storing a literal value.
 
@@ -70,15 +72,15 @@ class LiteralNode(Node[ND], Generic[ND]):
     """
 
     __match_args__ = ("name", "value")
-    value: ND
+    value: T
     "The value associated with this node"
 
-    def __init__(self, name: str, value: ND, *, types: set[type] | None = None):
+    def __init__(self, name: str, value: T, *, types: set[type] | None = None):
         super().__init__(name, types=types)
         self.value = value
 
 
-class ComponentNode(Node[ND], Generic[ND]):
+class ComponentNode[T](Node[T]):
     """
     A node storing a component.  This is an abstract node class; see subclasses
     :class:`ComponentConstructorNode` and `ComponentInstanceNode`.
@@ -91,15 +93,15 @@ class ComponentNode(Node[ND], Generic[ND]):
         super().__init__(name)
 
     @staticmethod
-    def create(
+    def create[CFG](
         name: str,
-        comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
+        comp: ComponentConstructor[CFG, T] | Component[T] | PipelineFunction[T],
         config: CFG | Mapping[str, JsonValue] | None = None,
-    ) -> ComponentNode[ND]:
+    ) -> ComponentNode[T]:
         if isinstance(comp, Component):
-            return ComponentInstanceNode(name, cast(Component[ND], comp))
+            return ComponentInstanceNode(name, cast(Component[T], comp))
         elif isinstance(comp, ComponentConstructor):
-            comp = cast(ComponentConstructor[CFG, ND], comp)
+            comp = cast(ComponentConstructor[CFG, T], comp)
             return ComponentConstructorNode(name, comp, comp.validate_config(config))
         elif isinstance(comp, type):
             return ComponentConstructorNode(name, comp, None)  # type: ignore
@@ -112,12 +114,14 @@ class ComponentNode(Node[ND], Generic[ND]):
         raise NotImplementedError()
 
 
-class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
+class ComponentConstructorNode[T](ComponentNode[T]):
     __match_args__ = ("name", "constructor", "config")
-    constructor: ComponentConstructor[Any, ND]
+    constructor: ComponentConstructor[Any, T]
     config: object | None
 
-    def __init__(self, name: str, constructor: ComponentConstructor[CFG, ND], config: CFG | None):
+    def __init__[CFG](
+        self, name: str, constructor: ComponentConstructor[CFG, T], config: CFG | None
+    ):
         super().__init__(name)
         self.constructor = constructor
         self.config = config
@@ -129,15 +133,15 @@ class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
         return component_inputs(self.constructor)
 
 
-class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
+class ComponentInstanceNode[T](ComponentNode[T]):
     __match_args__ = ("name", "component")
 
-    component: Component[ND] | PipelineFunction[ND]
+    component: Component[T] | PipelineFunction[T]
 
     def __init__(
         self,
         name: str,
-        component: Component[ND] | PipelineFunction[ND],
+        component: Component[T] | PipelineFunction[T],
     ):
         super().__init__(name)
         self.component = component

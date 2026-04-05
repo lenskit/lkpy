@@ -20,7 +20,7 @@ from pathlib import Path
 from types import UnionType
 from uuid import NAMESPACE_URL, uuid5
 
-from typing_extensions import Any, Literal, TypeVar, cast, overload
+from typing_extensions import Any, Literal, cast, overload
 
 from lenskit.config import load_config_data
 from lenskit.diagnostics import PipelineError, PipelineWarning
@@ -36,10 +36,10 @@ from .components import (
     ComponentConstructor,
     PipelineFunction,
     fallback_on_none,
+    is_component_class,
 )
 from .config import PipelineConfig, PipelineHook
 from .nodes import (
-    ND,
     ComponentConstructorNode,
     ComponentInstanceNode,
     ComponentNode,
@@ -50,14 +50,6 @@ from .nodes import (
 
 _log = get_logger(__name__)
 
-CFG = TypeVar("CFG")
-# common type var for quick use
-T = TypeVar("T")
-T1 = TypeVar("T1")
-T2 = TypeVar("T2")
-T3 = TypeVar("T3")
-T4 = TypeVar("T4")
-T5 = TypeVar("T5")
 
 NAMESPACE_LITERAL_DATA = uuid5(NAMESPACE_URL, "https://ns.lenskit.org/literal-data/")
 
@@ -155,7 +147,7 @@ class PipelineBuilder:
     @overload
     def node(self, node: str, *, missing: Literal["none"] | None) -> Node[object] | None: ...
     @overload
-    def node(self, node: Node[T]) -> Node[T]: ...
+    def node[T](self, node: Node[T]) -> Node[T]: ...
     def node(
         self, node: str | Node[Any], *, missing: Literal["error", "none"] | None = "error"
     ) -> Node[object] | None:
@@ -187,7 +179,7 @@ class PipelineBuilder:
         else:
             raise KeyError(f"node {node}")
 
-    def create_input(self, name: str, *types: type[T] | UnionType | None) -> Node[T]:
+    def create_input[T](self, name: str, *types: type[T] | UnionType | None) -> Node[T]:
         """
         Create an input node for the pipeline.  Pipelines expect their inputs to
         be provided when they are run.
@@ -223,7 +215,7 @@ class PipelineBuilder:
         self._nodes[name] = node
         return node
 
-    def literal(self, value: T, *, name: str | None = None) -> LiteralNode[T]:
+    def literal[T](self, value: T, *, name: str | None = None) -> LiteralNode[T]:
         """
         Create a literal node (a node with a fixed value).
 
@@ -309,30 +301,30 @@ class PipelineBuilder:
         self._aliases[alias] = node
 
     @overload
-    def add_component(
+    def add_component[CFG, T](
         self,
         name: str,
-        cls: ComponentConstructor[CFG, ND],
+        cls: ComponentConstructor[CFG, T],
         config: CFG = None,
         /,
         **inputs: Node[Any],
-    ) -> Node[ND]: ...
+    ) -> Node[T]: ...
     @overload
-    def add_component(
+    def add_component[T](
         self,
         name: str,
-        instance: Component[ND] | PipelineFunction[ND],
+        instance: Component[T] | PipelineFunction[T],
         /,
         **inputs: Node[Any] | object,
-    ) -> Node[ND]: ...
-    def add_component(
+    ) -> Node[T]: ...
+    def add_component[CFG, T](
         self,
         name: str,
-        comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
+        comp: ComponentConstructor[CFG, T] | Component[T] | PipelineFunction[T],
         config: CFG | None = None,
         /,
         **inputs: Node[Any] | object,
-    ) -> Node[ND]:
+    ) -> Node[T]:
         """
         Add a component and connect it into the graph.
 
@@ -364,7 +356,7 @@ class PipelineBuilder:
                     PipelineWarning,
                 )
 
-        node = ComponentNode[ND].create(name, comp, config)
+        node = ComponentNode[T].create(name, comp, config)
         if node.types is None:
             warnings.warn(f"cannot determine return type of component {comp}", TypecheckWarning)
         self._nodes[name] = node
@@ -374,30 +366,30 @@ class PipelineBuilder:
         return node
 
     @overload
-    def replace_component(
+    def replace_component[CFG, T](
         self,
-        name: str | Node[ND],
-        cls: ComponentConstructor[CFG, ND],
+        name: str | Node[T],
+        cls: ComponentConstructor[CFG, T],
         config: CFG = None,
         /,
         **inputs: Node[Any],
-    ) -> Node[ND]: ...
+    ) -> Node[T]: ...
     @overload
-    def replace_component(
+    def replace_component[T](
         self,
-        name: str | Node[ND],
-        instance: Component[ND] | PipelineFunction[ND],
+        name: str | Node[T],
+        instance: Component[T] | PipelineFunction[T],
         /,
         **inputs: Node[Any] | object,
-    ) -> Node[ND]: ...
-    def replace_component(
+    ) -> Node[T]: ...
+    def replace_component[CFG, T](
         self,
-        name: str | Node[ND],
-        comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
+        name: str | Node[T],
+        comp: ComponentConstructor[CFG, T] | Component[T] | PipelineFunction[T],
         config: CFG | None = None,
         /,
         **inputs: Node[Any] | object,
-    ) -> Node[ND]:
+    ) -> Node[T]:
         """
         Replace a component in the graph.  The new component must have a type
         that is compatible with the old component.  Both input and output connections
@@ -417,7 +409,7 @@ class PipelineBuilder:
         if isinstance(name, Node):
             name = name.name
 
-        node = ComponentNode[ND].create(name, comp, config)
+        node = ComponentNode[T].create(name, comp, config)
         self._nodes[name] = node
 
         self.connect(node, **inputs)
@@ -730,8 +722,8 @@ class PipelineBuilder:
                 # ignore special nodes in first pass
                 continue
 
-            ctor = import_path_string(comp.code)
-            if isinstance(ctor, type) and issubclass(ctor, Component):
+            ctor: Any = import_path_string(comp.code)
+            if is_component_class(ctor):
                 cfg = ctor.validate_config(comp.config)
             else:
                 cfg = None
@@ -767,7 +759,7 @@ class PipelineBuilder:
                     "loaded pipeline config does not match hash", PipelineWarning, stacklevel=2
                 )
 
-    def use_first_of(self, name: str, primary: Node[T | None], fallback: Node[T]) -> Node[T]:
+    def use_first_of[T](self, name: str, primary: Node[T | None], fallback: Node[T]) -> Node[T]:
         """
         Ergonomic method to create a new node that returns the result of its
         ``input`` if it is provided and not ``None``, and otherwise returns the
@@ -834,7 +826,7 @@ class PipelineBuilder:
             run_hooks=cast(RunHooks, self._run_hooks),
         )
 
-    def _instantiate(self, node: Node[ND], cache: PipelineCache | None = None) -> Node[ND]:
+    def _instantiate[T](self, node: Node[T], cache: PipelineCache | None = None) -> Node[T]:
         match node:
             case ComponentConstructorNode(name, constructor, config):
                 if cache is None:
