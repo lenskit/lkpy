@@ -34,7 +34,7 @@ For an example, let's start with importing things to run a quick batch:
     >>> from lenskit.batch import recommend
     >>> from lenskit.data import load_movielens
     >>> from lenskit.splitting import sample_users, SampleN
-    >>> from lenskit.metrics import RunAnalysis, RBP
+    >>> from lenskit.metrics import MeasurementCollector, RBP
 
 Load and split some data:
 
@@ -58,13 +58,11 @@ Generate recommendations:
 
 And measure their results:
 
-    >>> ra = RunAnalysis()
-    >>> ra.add_metric(RBP())
-    >>> scores = ra.measure(recs, split.test)
-    >>> scores.list_summary()    # doctest: +ELLIPSIS
-              mean    median     std
-    metric
-    RBP    0.06...   0.02... 0.07...
+    >>> collect = MeasurementCollector()
+    >>> collect.add_metric(RBP())
+    >>> collect.measure(recs, split.test)
+    >>> collect.summary_metrics()    # doctest: +ELLIPSIS
+    { ... "RBP.mean": "0.06...", ... }
 
 
 The :py:func:`predict` function works similarly, but for rating predictions.

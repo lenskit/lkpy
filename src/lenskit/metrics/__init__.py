@@ -8,6 +8,7 @@
 Metrics for evaluating recommender outputs.
 """
 
+import warnings
 from typing import Callable
 
 from lenskit.data import ItemList
@@ -77,6 +78,24 @@ __all__ = [
 
 
 def call_metric[**P](
+    metric: Metric | MetricFunction | Callable[P, Metric],
+    outs: ItemList,
+    test: ItemList | None = None,
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> MetricResult | None:
+    """
+    Deprecated alias for :func:`measure_list`.
+
+    .. deprecated:: 2026.1
+
+        Use :func:`measure_list`.
+    """
+    warnings.warn("call_metric is deprecated, use measure_list instead", DeprecationWarning)
+    return measure_list(metric, outs, test, *args, **kwargs)
+
+
+def measure_list[**P](
     metric: Metric | MetricFunction | Callable[P, Metric],
     outs: ItemList,
     test: ItemList | None = None,

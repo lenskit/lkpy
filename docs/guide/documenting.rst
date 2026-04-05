@@ -86,22 +86,20 @@ Reporting Metrics
 ~~~~~~~~~~~~~~~~~
 
 Reporting the metrics themselves is relatively straightforward.  The
-:py:meth:`lenskit.bulk.RunAnalysis.measure` method returns a results object
-contianing the metrics for individual lists, the global metrics, and easy access
-(through :meth:`~lenskit.bulk.RunAnalysis.list_summary`) to summary statistics
-of per-list metrics, optionally grouped by keys such as model name.
+:py:meth:`lenskit.eval.MeasurementCollector.list_metrics` and
+:py:meth:`lenskit.eval.MeasurementCollector.summary_metrics` methods return the
+individual list metrics or overall summaries for a set of lists.
 
 The following code will produce a table of algorithm scores for hit rate, NDCG
 and MRR, assuming that your algorithm identifier is in a column named ``model``
 and the target list length is in ``N``::
 
-    rla = RunAnalysis()
-    rla.add_metric(Hit(n=N))
-    rla.add_metric(NDCG(n=N))
-    rla.add_metric(RecipRank(n=N))
-    results = rla.measure(recs, test)
-    # group by agorithm
-    model_metrics = results.list_summary('model')
+    mc = MeasurementCollector()
+    mc.add_metric(Hit(n=N))
+    mc.add_metric(NDCG(n=N))
+    mc.add_metric(RecipRank(n=N))
+    mc.measure(recs, test)
+    mc.list_metrics()
 
 You can then use :py:meth:`pandas.DataFrame.to_latex` to convert ``algo_scores``
 to a LaTeX table to include in your paper.

@@ -94,6 +94,9 @@ Performance Changes
 Minor Changes
 -------------
 
+- :func:`lenskit.metrics.call_metric` has been renamed to
+  :func:`~lenskit.metrics.measure_list`, and the old name preserved as a
+  deprecated alias.
 - Pipeline type-checking for `ArrayLike` component inputs no longer works, due to
   a breaking change in NumPy 2.4.  No LensKit components used `ArrayLike` as an
   input or output data type.
