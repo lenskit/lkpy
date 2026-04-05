@@ -23,6 +23,7 @@ from typing_extensions import (
     Callable,
     Mapping,
     Protocol,
+    get_annotations,
     get_origin,
     get_type_hints,
     runtime_checkable,
@@ -237,7 +238,7 @@ def component_inputs[COut](
     else:
         raise TypeError("invalid component " + repr(component))
 
-    types = get_type_hints(function)
+    types = _get_types(function)
     sig = signature(function)
 
     inputs: dict[str, ComponentInput] = {}
@@ -280,14 +281,7 @@ def component_return_type[COut](
     else:
         raise TypeError("invalid component " + repr(component))
 
-    try:
-        types = get_type_hints(function)
-    except NameError:
-        warnings.warn(
-            "cannot extract types due to Python bug (fixed in Python 3.12.5 or newer)",
-            RuntimeWarning,
-        )
-        return None
+    types = _get_types(function)
 
     typ = types.get("return", None)
     if isinstance(typ, TypeVar):
@@ -319,3 +313,14 @@ def is_component_class(obj: Any) -> bool:
         return True
     else:  # pragma: nocover
         return isinstance(obj, ComponentConstructor)
+
+
+def _get_types(func: Any) -> dict[str, Any]:
+    "Compatibility helper to get type hints"
+    try:
+        return get_type_hints(func)
+    except NameError:
+        warnings.warn(
+            "get_type_hints failed, using fallback (fixed in Python 3.12.5)", RuntimeWarning
+        )
+        return get_annotations(func, eval_str=True)
