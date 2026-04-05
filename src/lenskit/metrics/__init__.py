@@ -8,11 +8,11 @@
 Metrics for evaluating recommender outputs.
 """
 
-from typing import Callable, ParamSpec
+from typing import Callable
 
 from lenskit.data import ItemList
 
-from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
+from ._base import GlobalMetric, ListMetric, Metric, MetricFunction, MetricResult, MetricVal
 from ._collect import MeasurementCollector
 from ._quick import quick_measure_model
 from .basic import ListLength, TestItemCount
@@ -42,6 +42,8 @@ from .reranking import least_item_promoted, rank_biased_overlap
 __all__ = [
     "Metric",
     "MetricFunction",
+    "MetricResult",
+    "MetricVal",
     "MeasurementCollector",
     "ListMetric",
     "GlobalMetric",
@@ -73,24 +75,20 @@ __all__ = [
     "RankBiasedEntropy",
 ]
 
-P = ParamSpec("P")
 
-
-def call_metric(
-    metric: ListMetric | MetricFunction | Callable[P, ListMetric],
+def call_metric[**P](
+    metric: Metric | MetricFunction | Callable[P, Metric],
     outs: ItemList,
     test: ItemList | None = None,
     *args: P.args,
     **kwargs: P.kwargs,
-) -> float:
+) -> MetricResult | None:
     """
-    Call a metric, instantiating it if necessary.  This intended to be a quick
-    convenience when you just need to call a metric with its default settings
-    and don't want to mess around with object/class distinctions.  You usually
-    don't actually want to use it.
+    Call a metric to measure a list, instantiating it if necessary.  This
+    intended to be a quick convenience when you just need to call a metric with
+    its default settings and don't want to mess around with object/class
+    distinctions.  You usually don't actually want to use it.
 
-    Supports both the base :class:`Metric` protocol and the extensions in
-    :class:`PredictMetric`.
 
     Args:
         metric:
@@ -106,8 +104,9 @@ def call_metric(
     if isinstance(metric, type):
         metric = metric(*args, **kwargs)
 
-    if isinstance(metric, ListMetric):
-        return metric.measure_list(outs, test)  # type: ignore
+    if isinstance(metric, Metric):
+        x = metric.measure_list(outs, test)  # type: ignore
+        return metric.extract_list_metrics(x)
     elif isinstance(metric, Callable):
         return metric(outs, test)  # type: ignore
     else:  # pragma: nocover

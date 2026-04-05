@@ -47,7 +47,8 @@ Breaking Changes
   when adding metrics.
 - :class:`~lenskit.metrics.RunAnalysis` is deprecated, and no longer supports
   explicit defaults or global metrics.  Use
-  :class:`~lenskit.metrics.MeasurementCollector` instead.
+  :class:`~lenskit.metrics.MeasurementCollector` instead.  Its global metric
+  columns have also changed in some cases.
 - Stopped providing wheels for macOS on Intel.  Users who still need to run
   LensKit on Intel-based Macs should use the Conda packages (available in conda-forge and
   `prefix.dev`_).
