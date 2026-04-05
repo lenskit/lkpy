@@ -46,6 +46,9 @@ class GiniBase(RankingMetricBase):
         else:
             self.item_vocab = items
 
+    def create_accumulator(self):
+        return GiniAccumulator(len(self.item_vocab))
+
 
 class ListGini(GiniBase):
     """

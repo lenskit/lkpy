@@ -49,6 +49,8 @@ Breaking Changes
   explicit defaults or global metrics.  Use
   :class:`~lenskit.metrics.MeasurementCollector` instead.  Its global metric
   columns have also changed in some cases.
+- :class:`~lenskit.metrics.ListGini` and :class:`~lenskit.metrics.ExposureGini`
+  now require an item vocabulary or dataset as input.
 - Stopped providing wheels for macOS on Intel.  Users who still need to run
   LensKit on Intel-based Macs should use the Conda packages (available in conda-forge and
   `prefix.dev`_).
