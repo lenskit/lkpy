@@ -53,7 +53,7 @@ test = [
   "pytest-cov >=2.12",
   "pytest-benchmark ~=5.1",
   "pytest-retry ~=1.7",
-  "hypothesis >=6.16",
+  "hypothesis ~=6.67",
   "pyyaml >=5.0",
 ]
 doc = [

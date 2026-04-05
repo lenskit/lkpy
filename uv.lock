@@ -1870,7 +1870,7 @@ dev = [
     { name = "cibuildwheel", specifier = "~=2.23" },
     { name = "coverage", specifier = ">=5" },
     { name = "docopt-ng", specifier = ">=0.9.0" },
-    { name = "hypothesis", specifier = ">=6.16" },
+    { name = "hypothesis", specifier = "~=6.67" },
     { name = "ipython", specifier = ">=7" },
     { name = "lazy-loader", specifier = ">=0.4" },
     { name = "line-profiler" },
@@ -1941,7 +1941,7 @@ scripting = [
     { name = "tomlkit", specifier = "~=0.14.0" },
 ]
 test = [
-    { name = "hypothesis", specifier = ">=6.16" },
+    { name = "hypothesis", specifier = "~=6.67" },
     { name = "pytest", specifier = ">=8.2,<10" },
     { name = "pytest-benchmark", specifier = "~=5.1" },
     { name = "pytest-cov", specifier = ">=2.12" },
