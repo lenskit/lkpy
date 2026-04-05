@@ -23,12 +23,6 @@ def test_bulk_measure_function(ml_ratings: pd.DataFrame):
     bms.add_metric(ListLength(), "length")
     bms.add_metric(RMSE)
 
-    class DummyGlobalMetric(GlobalMetric):
-        def measure_run(self, output, test):
-            return None
-
-    bms.add_metric(DummyGlobalMetric(), label="global_metric", default=123.0)
-
     data = ItemListCollection.from_df(
         ml_ratings.rename(columns={"rating": "score"}), USER_COMPAT_COLUMN, ITEM_COMPAT_COLUMN
     )
@@ -40,10 +34,6 @@ def test_bulk_measure_function(ml_ratings: pd.DataFrame):
     stats = metrics.list_summary()
     assert stats.loc["length", "mean"] == approx(ml_ratings["user_id"].value_counts().mean())
     assert stats.loc["RMSE", "mean"] == approx(0)
-
-    # check global fallback metric
-    global_metrics = metrics.global_metrics()
-    assert global_metrics["global_metric"] == 123.0
 
 
 def test_recs(demo_recs):
@@ -61,8 +51,8 @@ def test_recs(demo_recs):
     scores = metrics.list_metrics()
     stats = metrics.list_summary()
     print(stats)
-    for m in bms.metrics:
-        assert stats.loc[m.label, "mean"] == approx(scores[m.label].mean())
+    for m in bms.collector.metric_names:
+        assert stats.loc[m, "mean"] == approx(scores[m].mean())
 
 
 def test_duplicate_metric(demo_recs):
@@ -96,6 +86,6 @@ def test_recs_multi(demo_recs):
     scores = metrics.list_metrics()
     stats = metrics.list_summary("rep")
     print(stats)
-    for m in bms.metrics:
-        assert stats.loc[(1, m.label), "mean"] == approx(scores.loc[1, m.label].mean())
-        assert stats.loc[(2, m.label), "mean"] == approx(scores.loc[2, m.label].mean())
+    for m in bms.collector.metric_names:
+        assert stats.loc[(1, m), "mean"] == approx(scores.loc[1, m].mean())
+        assert stats.loc[(2, m), "mean"] == approx(scores.loc[2, m].mean())

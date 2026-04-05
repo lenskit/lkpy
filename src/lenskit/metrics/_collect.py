@@ -96,6 +96,13 @@ class MeasurementCollector:
         for state in self._metrics:
             state.accumulator = state.metric.create_accumulator()
 
+    @property
+    def metric_names(self) -> list[str]:
+        """
+        Get the list of metric names.
+        """
+        return [m.label for m in self._metrics]
+
     def add_metric(
         self,
         metric: Metric | MetricFunction | type[Metric],
@@ -173,12 +180,9 @@ class MeasurementCollector:
         if no_test_count:
             _log.warning("could not find test data for %d lists", no_test_count)
 
-    def list_metrics(self, fill_missing: bool = True) -> pd.DataFrame:
+    def list_metrics(self) -> pd.DataFrame:
         """
         Get the per-list metric results as a DataFrame.
-
-        Args:
-            fill_missing: If True, fill missing values with metric defaults.
 
         Returns:
             DataFrame with one row per list and one column per metric.
