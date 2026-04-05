@@ -54,7 +54,7 @@ test = [
   "pytest-benchmark ~=5.1",
   "pytest-retry ~=1.7",
   "hypothesis >=6.16",
-  "pyyaml ~=6.0",
+  "pyyaml >=5.0",
 ]
 doc = [
   "packaging >=25.0",

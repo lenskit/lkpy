@@ -1894,7 +1894,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
     { name = "pytest-retry", specifier = "~=1.7" },
-    { name = "pyyaml", specifier = "~=6.0" },
+    { name = "pyyaml", specifier = ">=5.0" },
     { name = "ruff", specifier = ">=0.2" },
     { name = "scipy-stubs", specifier = ">=1.14.1.6" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14" },
@@ -1947,7 +1947,7 @@ test = [
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
     { name = "pytest-retry", specifier = "~=1.7" },
-    { name = "pyyaml", specifier = "~=6.0" },
+    { name = "pyyaml", specifier = ">=5.0" },
 ]
 
 [[package]]
