@@ -162,8 +162,7 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv sync --only-group=test
-          uv pip install --resolution=lowest-direct '.[sklearn,hpf,implicit,funksvd]'
+          uv pip install --resolution=lowest-direct --group=test '.[sklearn,hpf,implicit,funksvd]'
         env:
           CC: gcc
 
@@ -215,8 +214,7 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv sync --only-group=test
-          uv pip install --resolution=lowest-direct .
+          uv pip install --resolution=lowest-direct --group=test .
 
       - name: 🔍 Inspect environment
         run: |
