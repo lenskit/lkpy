@@ -8,8 +8,6 @@
 Basic set statistics.
 """
 
-import numpy as np
-
 from lenskit.data.items import ItemList
 
 from ._base import ListMetric, Metric
@@ -28,9 +26,6 @@ class ListLength(ListMetric):
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         return len(recs)
 
-    def summarize(self, values):
-        return float(np.mean(values))
-
 
 class TestItemCount(Metric):
     """
@@ -42,5 +37,5 @@ class TestItemCount(Metric):
 
     label = "TestItemCount"  # type: ignore
 
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         return len(test)

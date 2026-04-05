@@ -4,13 +4,17 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+# pyright: strict
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Protocol
-
-import numpy as np
-import pyarrow as pa
+from typing import Any, ClassVar, Mapping, Protocol, override
 
 from lenskit.data import ItemList, ItemListCollection
+from lenskit.data.accum import (
+    Accumulator,
+    AccumulatorFactory,
+    ValueStatAccumulator,
+    ValueStatistics,
+)
 
 
 class MetricFunction(Protocol):
@@ -20,7 +24,7 @@ class MetricFunction(Protocol):
     def __call__(self, output: ItemList, test: ItemList, /) -> float: ...
 
 
-class Metric(ABC):
+class Metric[L, S: float | Mapping[str, float | int | object]](ABC, AccumulatorFactory[L, S]):
     """
     Base class for LensKit metrics.  Individual metrics need to implement a
     sub-interface, such as :class:`ListMetric` and/or :class:`GlobalMetric`.
@@ -28,9 +32,15 @@ class Metric(ABC):
     This class defines the interface for metrics. Subclasses should implement
     the `measure_list` method to compute metric values.
 
-    The `summarize()` method has a default implementation that computes the
-    mean of the per-list metric values, but subclasses can override it to provide
+    The `summarize()` method has a default implementation that computes the mean
+    of the per-list metric values, but subclasses can override it to provide
     more appropriate summary statistics.
+
+    .. versionchanged:: 2026.1
+
+        Removed the ``summarize`` method in favor of requiring metrics to
+        implement :class:`AccumulatorFactory` to allow metric-controlled
+        accumulation.
 
     Stability:
         Full
@@ -39,9 +49,9 @@ class Metric(ABC):
 
         For simplicity in the analysis code, you cannot simply implement the
         properties of this class on an arbitrary class in order to implement a
-        metric with all available behavior such as labeling and defaults;
-        you must actually extend this class. This requirement may be relaxed
-        in the future.
+        metric with all available behavior such as labeling and defaults; you
+        must actually extend this class. This requirement may be relaxed in the
+        future.
 
     The default value to impute when computing statistics over missing values.
     If ``None``, no imputation is done (necessary for metrics like RMSE, where
@@ -60,7 +70,7 @@ class Metric(ABC):
         return f"Metric {self.label}"
 
     @abstractmethod
-    def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
+    def measure_list(self, output: ItemList, test: ItemList, /) -> L:
         """
         Compute measurements for a single list.
 
@@ -71,7 +81,7 @@ class Metric(ABC):
         """
         raise NotImplementedError()  # pragma: no cover
 
-    def extract_list_metrics(self, data: Any, /) -> float | dict[str, float] | None:
+    def extract_list_metrics(self, data: L, /) -> float | dict[str, float] | None:
         """
         Extract per-list metric(s) from intermediate measurement data.
 
@@ -83,28 +93,27 @@ class Metric(ABC):
         return None
 
     @abstractmethod
-    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> dict[str, float]:
+    def create_accumulator(self) -> Accumulator[L, S]:  # pragma: nocov
         """
-        Aggregate intermediate values into summary statistics.
+        Creaet an accumulator to aggregate per-list measurements into summary
+        metrics.
 
-        Returns:
-            A dictionary of summary statistics.
+        Each result from :meth:`measure_list` is passed to
+        :meth:`Accumulator.add`.
         """
-        raise NotImplementedError()  # pragma: no cover
+        raise NotImplementedError()
 
 
-class ListMetric(Metric):
+class ListMetric(Metric[float, ValueStatistics]):
     """
-    Base class for metrics that measure individual recommendation (or
-    prediction) lists, and whose results may be aggregated to compute overall
-    metrics.
+    Base class for metrics defined on individual recommendation outputs.  This
+    is the most common type of metric.
 
     For prediction metrics, this is *macro-averaging*.
 
-    Default behavior:
-        Implements `summarize()` by averaging per-list results (mean, ignoring NaNs).
-
-    This class implements the Metric interface in terms of the measure_list method.
+    Metrics based on this class implement :meth:`measure_list` to compute a
+    single numeric value for each list, and the accumulated result will be basic
+    statistical summaries of those values.
 
     Stability:
         Full
@@ -113,45 +122,18 @@ class ListMetric(Metric):
     default: ClassVar[float | None] = 0.0
 
     @abstractmethod
-    def measure_list(self, output: ItemList, test: ItemList, /) -> float:
-        """
-        Compute the metric value for a single result list.
+    def measure_list(self, output: ItemList, test: ItemList, /) -> float: ...
 
-        Individual metric classes need to implement this method.
-        """
-        raise NotImplementedError()  # pragma: no cover
-
+    @override
     def extract_list_metrics(self, data: Any, /) -> float:
         """
         Return the given per-list metric result.
         """
         return data
 
-    def summarize(
-        self, values: list[Any] | pa.Array | pa.ChunkedArray, /
-    ) -> dict[str, float | None]:
-        """
-        Summarize per-list metric values
-
-        Returns:
-            A dictionary containing mean, median, and std.
-        """
-        if isinstance(values, (pa.Array, pa.ChunkedArray)):
-            values = values.to_pylist()
-
-        numeric_values = [
-            float(v) for v in values if isinstance(v, (int, float, np.integer, np.floating))
-        ]
-
-        if not numeric_values:
-            return {"mean": None, "median": None, "std": None}
-
-        arr = np.array(numeric_values, dtype=np.float64)
-        return {
-            "mean": float(np.mean(arr)),
-            "median": float(np.median(arr)),
-            "std": float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0,
-        }
+    @override
+    def create_accumulator(self) -> ValueStatAccumulator:
+        return ValueStatAccumulator()
 
 
 class GlobalMetric:
