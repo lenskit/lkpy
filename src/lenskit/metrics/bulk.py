@@ -122,6 +122,11 @@ class RunAnalysis:
     This class now uses :class:`MetricAccumulator` internally to separate
     accumulation from looping, while maintaining the same external interface.
 
+    .. versionchanged:: 2026.1
+
+        Global metric outputs from this class have changed column names in some
+        cases, to simplify logic.
+
     .. deprecated:: 2026.1
 
         This class is deprecated in favor of directly using
