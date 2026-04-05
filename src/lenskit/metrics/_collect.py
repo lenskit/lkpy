@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Any
@@ -15,6 +14,7 @@ import pandas as pd
 
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.data.accum import Accumulator
+from lenskit.logging import get_logger, item_progress
 
 from ._base import (
     FunctionMetric,
@@ -25,7 +25,7 @@ from ._base import (
     MetricVal,
 )
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 @dataclass
@@ -54,8 +54,8 @@ class MeasurementCollector:
     """
     Collect metric measurements over multiple recommendation lists.
 
-    This class separates metric collection and aggregation from the main
-    evaluation loop.
+    This class automates collecting metric values and translating accumulated
+    summaries into data frames.
 
     .. versionchanged:: 2026.1
 
@@ -67,12 +67,15 @@ class MeasurementCollector:
 
     _metrics: list[MetricState]
     _list_records: list[dict[str, float | int | object]]
-    _key_fields: list[str]
+    key_fields: list[str]
+    """
+    Columns naming the keys of measured lists.
+    """
 
     def __init__(self):
         self._metrics = []
         self._list_records = []
-        self._key_fields = []
+        self.key_fields = []
 
     def empty_copy(self):
         """
@@ -88,7 +91,7 @@ class MeasurementCollector:
         """
         Remove all collected data from this collector.
         """
-        self._key_fields = []
+        self.key_fields = []
         self._list_records = []
         for state in self._metrics:
             state.accumulator = state.metric.create_accumulator()
@@ -123,8 +126,8 @@ class MeasurementCollector:
             **keys:
                 Identifying keys for this list (e.g., user_id).
         """
-        if not self._key_fields:
-            self._key_fields = list(keys.keys())
+        if not self.key_fields:
+            self.key_fields = list(keys.keys())
 
         rec = dict(keys)
         for state in self._metrics:
@@ -134,6 +137,41 @@ class MeasurementCollector:
             _add_values(rec, state.label, lv)
 
         self._list_records.append(rec)
+
+    def measure_collection(
+        self, outputs: ItemListCollection, test: ItemListCollection, **keys: Any
+    ):
+        """
+        Measure a collection of item lists against truth data.
+
+        Args:
+            outputs:
+                The item lists to measure.
+            test:
+                Test data item lists.
+            keys:
+                Additional keys to label measurements from these lists.
+        """
+
+        _log.debug("measuring %d metrics for %d output lists", len(self._metrics), len(outputs))
+        no_test_count = 0
+        with item_progress("Measuring", len(outputs)) as pb:
+            for key, out in outputs:
+                key_kwargs = keys | dict(zip(outputs.key_fields, key))
+                list_test = test.lookup_projected(key)
+
+                if out is None:
+                    out = ItemList()
+
+                if list_test is None:
+                    no_test_count += 1
+                    list_test = ItemList([])
+
+                self.measure_list(out, list_test, **key_kwargs)
+                pb.update()
+
+        if no_test_count:
+            _log.warning("could not find test data for %d lists", no_test_count)
 
     def list_metrics(self, fill_missing: bool = True) -> pd.DataFrame:
         """
@@ -147,14 +185,19 @@ class MeasurementCollector:
         """
 
         df = pd.DataFrame.from_records(self._list_records)
-        if self._key_fields:
-            df.set_index(self._key_fields, inplace=True, drop=True)
+        if self.key_fields:
+            df.set_index(self.key_fields, inplace=True, drop=True)
 
         return df
 
     def summary_metrics(self) -> dict[str, float]:
         """
         Compute summary statistics by calling each metric's summarize() method.
+
+        .. note::
+
+            This returns *overall* summaries — summaries are not collected
+            separately for different calls to :meth:`measure_collection`.
 
         Returns:
             A dictionary with flattened metric results.

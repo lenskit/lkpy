@@ -133,7 +133,7 @@ def test_accumulator_key_fields(keys, expected_names):
     acc = MeasurementCollector()
     acc.add_metric(ListLength())
     acc.measure_list(ItemList([1, 2]), ItemList([2]), **keys)
-    assert acc._key_fields == expected_names
+    assert acc.key_fields == expected_names
     metrics = acc.list_metrics()
     assert set(metrics.index.names) == set(expected_names)
 
