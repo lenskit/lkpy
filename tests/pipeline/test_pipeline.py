@@ -256,6 +256,10 @@ def test_chain_component_names():
     pipe = pipe.build()
     assert pipe.component_names() == ["incr", "triple"]
 
+    dn = pipe.default_node
+    assert dn is not None
+    assert dn.name == "triple"
+
 
 def test_simple_graph():
     pipe = PipelineBuilder()
