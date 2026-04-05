@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import pandas as pd
@@ -28,7 +28,7 @@ from ._base import (
 _log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass
 class MetricState:
     """
     Internal class for storing metrics with their configuration and
@@ -73,6 +73,25 @@ class MeasurementCollector:
         self._metrics = []
         self._list_records = []
         self._key_fields = []
+
+    def empty_copy(self):
+        """
+        Create a copy of this measurement collector with no collected data.
+        """
+        copy = MeasurementCollector()
+        copy._metrics = [
+            replace(m, accumulator=m.metric.create_accumulator()) for m in self._metrics
+        ]
+        return copy
+
+    def reset(self):
+        """
+        Remove all collected data from this collector.
+        """
+        self._key_fields = []
+        self._list_records = []
+        for state in self._metrics:
+            state.accumulator = state.metric.create_accumulator()
 
     def add_metric(
         self,
