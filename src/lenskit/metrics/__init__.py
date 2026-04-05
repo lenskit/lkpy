@@ -74,13 +74,6 @@ __all__ = [
 ]
 
 P = ParamSpec("P")
-MetricAccumulator = MeasurementCollector
-"""
-Deprecated alias for :class:`MeasurementCollector`.
-
-.. deprecated:: 2025.5
-    Use the new name.
-"""
 
 
 def call_metric(

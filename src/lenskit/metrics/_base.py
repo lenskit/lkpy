@@ -16,6 +16,9 @@ from lenskit.data.accum import (
     ValueStatistics,
 )
 
+type MetricVal = float | int | object
+type MetricResult = MetricVal | Mapping[str, MetricVal]
+
 
 class MetricFunction(Protocol):
     "Interface for per-list metrics implemented as simple functions."
@@ -24,7 +27,7 @@ class MetricFunction(Protocol):
     def __call__(self, output: ItemList, test: ItemList, /) -> float: ...
 
 
-class Metric[L, S: float | Mapping[str, float | int | object]](ABC, AccumulatorFactory[L, S]):
+class Metric[L, S: MetricResult](ABC, AccumulatorFactory[L, S]):
     """
     Base class for LensKit metrics.  Individual metrics need to implement a
     sub-interface, such as :class:`ListMetric` and/or :class:`GlobalMetric`.
@@ -81,7 +84,7 @@ class Metric[L, S: float | Mapping[str, float | int | object]](ABC, AccumulatorF
         """
         raise NotImplementedError()  # pragma: no cover
 
-    def extract_list_metrics(self, data: L, /) -> float | dict[str, float] | None:
+    def extract_list_metrics(self, data: L, /) -> MetricResult | None:
         """
         Extract per-list metric(s) from intermediate measurement data.
 
@@ -134,6 +137,18 @@ class ListMetric(Metric[float, ValueStatistics]):
     @override
     def create_accumulator(self) -> ValueStatAccumulator:
         return ValueStatAccumulator()
+
+
+class FunctionMetric(ListMetric):
+    """
+    Wrapper for list metrics implemented as bare functions.
+    """
+
+    def __init__(self, function: MetricFunction):
+        self._function = function
+
+    def measure_list(self, output: ItemList, test: ItemList, /) -> float:
+        return self._function(output, test)
 
 
 class GlobalMetric:
