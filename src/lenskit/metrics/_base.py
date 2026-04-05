@@ -107,7 +107,7 @@ class Metric[L, S: MetricResult](ABC, AccumulatorFactory[L, S]):
         raise NotImplementedError()
 
 
-class ListMetric(Metric[float, ValueStatistics]):
+class ListMetric(Metric[float | None, ValueStatistics]):
     """
     Base class for metrics defined on individual recommendation outputs.  This
     is the most common type of metric.
@@ -125,7 +125,7 @@ class ListMetric(Metric[float, ValueStatistics]):
     default: ClassVar[float | None] = 0.0
 
     @abstractmethod
-    def measure_list(self, output: ItemList, test: ItemList, /) -> float: ...
+    def measure_list(self, output: ItemList, test: ItemList, /) -> float | None: ...
 
     @override
     def extract_list_metrics(self, data: Any, /) -> float:
@@ -146,6 +146,10 @@ class FunctionMetric(ListMetric):
 
     def __init__(self, function: MetricFunction):
         self._function = function
+
+    @property
+    def label(self) -> str:
+        return self._function.__name__  # type: ignore
 
     def measure_list(self, output: ItemList, test: ItemList, /) -> float:
         return self._function(output, test)
