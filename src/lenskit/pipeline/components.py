@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
-from typing import TypeVar, get_args, overload
+from typing import TypeVar, get_args
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
@@ -288,9 +288,8 @@ def component_return_type[COut](
 
     return typ
 
-@overload
-def fallback_on_none[T](primary: T | None, fallback: Lazy[T]) -> T: ...
-def fallback_on_none(primary: Any, fallback: Lazy[Any]) -> Any:
+
+def fallback_on_none[T](primary: T, fallback: Lazy[T]) -> T:
     """
     Fallback to a second component if the primary input is `None`.
 
