@@ -49,7 +49,7 @@ Configure and train the model:
 
 Generate recommendations:
 
-    >>> recs = recommend(pop_pipe, split.test.keys(), n_jobs=1)
+    >>> recs = recommend(pop_pipe, split.test.keys())
     >>> recs.to_df()
               user_id  item_id     score  rank
     0 ...                                    1
@@ -60,9 +60,9 @@ And measure their results:
 
     >>> collect = MeasurementCollector()
     >>> collect.add_metric(RBP())
-    >>> collect.measure(recs, split.test)
+    >>> collect.measure_collection(recs, split.test)
     >>> collect.summary_metrics()    # doctest: +ELLIPSIS
-    { ... "RBP.mean": "0.06...", ... }
+    { ... 'RBP.mean': 0.06..., ... }
 
 
 The :py:func:`predict` function works similarly, but for rating predictions.
