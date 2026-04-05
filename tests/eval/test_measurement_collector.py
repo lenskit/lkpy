@@ -15,7 +15,7 @@ from pytest import approx, fixture, mark, raises
 from lenskit.basic import PopScorer
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.metrics import NDCG, Recall
-from lenskit.metrics._base import FunctionMetric, GlobalMetric, ListMetric, Metric
+from lenskit.metrics._base import FunctionMetric, ListMetric, Metric
 from lenskit.metrics._collect import MeasurementCollector, _wrap_metric
 from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
@@ -151,25 +151,6 @@ def test_custom_labels():
     acc = MeasurementCollector()
     acc.add_metric(ListLength(), label="CustomLength")
     assert acc._metrics[0].label == "CustomLength"
-
-
-# global, callable, scalar metrics
-
-
-@mark.skip("global metrics disabled")
-def test_global_metric():
-    class DummyGlobalMetric(GlobalMetric):
-        label = "dummy_global"
-
-        def measure_run(self, run, test):
-            return 42.0
-
-    acc = MeasurementCollector()
-    acc.add_metric(DummyGlobalMetric())
-    result = acc._metrics[0].measure_run(ItemListCollection([]), ItemListCollection([]))
-    assert result == 42.0
-    # assert acc._metrics[0].is_global
-    # assert not acc._metrics[0].is_listwise
 
 
 def test_callable_metric():

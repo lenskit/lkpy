@@ -8,7 +8,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Mapping, Protocol, override
 
-from lenskit.data import ItemList, ItemListCollection
+from lenskit.data import ItemList
 from lenskit.data.accum import (
     Accumulator,
     AccumulatorFactory,
@@ -29,8 +29,8 @@ class MetricFunction(Protocol):
 
 class Metric[L, S: MetricResult](ABC, AccumulatorFactory[L, S]):
     """
-    Base class for LensKit metrics.  Individual metrics need to implement a
-    sub-interface, such as :class:`ListMetric` and/or :class:`GlobalMetric`.
+    Base class for LensKit metrics.  Simple metrics that compute a single value
+    for a list should extend :class:`ListMetric`.
 
     This class defines the interface for metrics. Subclasses should implement
     the `measure_list` method to compute metric values.
@@ -153,23 +153,3 @@ class FunctionMetric(ListMetric):
 
     def measure_list(self, output: ItemList, test: ItemList, /) -> float:
         return self._function(output, test)
-
-
-class GlobalMetric:
-    """
-    Base class for metrics that measure entire runs at a time.
-
-    For prediction metrics, this is *micro-averaging*.
-
-    Stability:
-        Full
-    """
-
-    @abstractmethod
-    def measure_run(self, output: ItemListCollection, test: ItemListCollection, /) -> float:
-        """
-        Compute a metric value for an entire run.
-
-        Individual metric classes need to implement this method.
-        """
-        raise NotImplementedError()  # pragma: no cover

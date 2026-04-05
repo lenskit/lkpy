@@ -42,7 +42,8 @@ Breaking Changes
   is now decomposed. All metrics based on listwise measurements or intermediate
   results should directly extend from ``Metric`` or :class:`~lenskit.metrics.ListMetric`.
   (:pr:`983`)
-- ``GlobalMetric`` no longer inherits from ``Metric``, and may be removed in a future release.
+- ``GlobalMetric`` has been removed. Code needing to compute global metrics
+  should directly compute over item lists.
 - :class:`~lenskit.metrics.MeasurementCollector` no longer supports defaults
   when adding metrics.
 - :class:`~lenskit.metrics.RunAnalysis` is deprecated, and no longer supports

@@ -18,7 +18,6 @@ from lenskit.logging import get_logger, item_progress
 
 from ._base import (
     FunctionMetric,
-    GlobalMetric,
     Metric,
     MetricFunction,
     MetricResult,
@@ -41,13 +40,6 @@ class MetricState:
     metric: Metric
     accumulator: Accumulator[Any, MetricResult]
     label: str
-
-    def measure_run(self, run: ItemListCollection, test: ItemListCollection) -> float:
-        """Only global metrics support run-level measurement."""
-        if isinstance(self.metric, GlobalMetric):
-            return self.metric.measure_run(run, test)
-        else:
-            raise TypeError(f"metric {self.metric} does not support global measurement")
 
 
 class MeasurementCollector:

@@ -10,7 +10,6 @@ from pytest import approx, raises
 
 from lenskit.data import ItemListCollection
 from lenskit.data.adapt import ITEM_COMPAT_COLUMN, USER_COMPAT_COLUMN
-from lenskit.metrics._base import GlobalMetric
 from lenskit.metrics.basic import ListLength
 from lenskit.metrics.bulk import RunAnalysis
 from lenskit.metrics.predict import RMSE
