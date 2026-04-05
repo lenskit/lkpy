@@ -280,10 +280,18 @@ def component_return_type[COut](
     else:
         raise TypeError("invalid component " + repr(component))
 
-    types = get_type_hints(function)
+    try:
+        types = get_type_hints(function)
+    except NameError:
+        warnings.warn(
+            "cannot extract types due to Python bug (fixed in Python 3.12.5 or newer)",
+            RuntimeWarning,
+        )
+        return None
+
     typ = types.get("return", None)
     if isinstance(typ, TypeVar):
-        warnings.warn(f"component {component} has unresolved return type")
+        warnings.warn(f"component {component} has unresolved return type", PipelineWarning)
         return None
 
     return typ
