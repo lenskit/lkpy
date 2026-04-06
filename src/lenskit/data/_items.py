@@ -31,7 +31,7 @@ from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataWarning
 
 from ._arrow import get_indexer
-from .checks import check_1d
+from ._checks import check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence, NPVector
 from .vocab import Vocabulary
