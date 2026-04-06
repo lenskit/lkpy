@@ -31,8 +31,8 @@ from lenskit.logging import get_logger
 from ._container import DataContainer
 from ._entities import EntitySet
 from ._items import ItemList
+from ._relationships import MatrixRelationshipSet, RelationshipSet
 from .matrix import CSRStructure
-from .relationships import MatrixRelationshipSet, RelationshipSet
 from .schema import DataSchema, id_col_name
 from .types import ID, LAYOUT
 from .vocab import Vocabulary

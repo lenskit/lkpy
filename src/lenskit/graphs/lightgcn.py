@@ -21,9 +21,16 @@ from typing_extensions import Literal, Self
 
 from lenskit import logging
 from lenskit.config.common import EmbeddingSizeMixin
-from lenskit.data import BatchedRange, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
+from lenskit.data import (
+    BatchedRange,
+    Dataset,
+    ItemList,
+    MatrixRelationshipSet,
+    QueryInput,
+    RecQuery,
+    Vocabulary,
+)
 from lenskit.data.matrix import COOStructure
-from lenskit.data.relationships import MatrixRelationshipSet
 from lenskit.logging.progress._dispatch import item_progress
 from lenskit.pipeline.components import Component
 from lenskit.torch import inference_mode

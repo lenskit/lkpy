@@ -16,10 +16,11 @@ from ._adapt import from_interactions_df
 from ._attributes import EntityAttribute
 from ._batches import BatchedRange
 from ._builder import DatasetBuilder
-from ._dataset import Dataset, MatrixRelationshipSet, RelationshipSet
+from ._dataset import Dataset
 from ._entities import EntitySet
 from ._items import ItemList
 from ._query import QueryInput, QueryItemSource, RecQuery
+from ._relationships import MatrixRelationshipSet, RelationshipSet
 from .amazon import load_amazon_ratings
 from .collection import (
     GenericKey,
