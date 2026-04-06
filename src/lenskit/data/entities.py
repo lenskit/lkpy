@@ -17,7 +17,7 @@ from typing_extensions import Any, overload
 
 from lenskit.logging import get_logger
 
-from .attributes import AttributeSet, attr_set
+from ._attributes import AttributeSet, attr_set
 from .schema import EntitySchema
 from .types import IDArray, IDSequence
 from .vocab import Vocabulary

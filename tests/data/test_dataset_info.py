@@ -17,7 +17,7 @@ import pyarrow as pa
 from pytest import approx, mark
 
 from lenskit.data import Dataset
-from lenskit.data.attributes import (
+from lenskit.data._attributes import (
     ListAttributeSet,
     ScalarAttributeSet,
     SparseAttributeSet,

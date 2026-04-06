@@ -10,7 +10,7 @@ import numpy as np
 import pyarrow as pa
 from scipy.sparse import csr_array
 
-from lenskit.data.attributes import (
+from lenskit.data._attributes import (
     ListAttributeSet,
     ScalarAttributeSet,
     SparseAttributeSet,
