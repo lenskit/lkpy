@@ -21,8 +21,8 @@ from numpy.typing import NDArray
 from typing_extensions import Callable, Literal, TypeAlias, override
 
 from lenskit.data import ItemList
+from lenskit.data._adapt import ITEM_COMPAT_COLUMN, normalize_columns
 from lenskit.data.accum import ValueStatAccumulator
-from lenskit.data.adapt import ITEM_COMPAT_COLUMN, normalize_columns
 from lenskit.data.types import AliasedColumn
 
 from ._base import Metric

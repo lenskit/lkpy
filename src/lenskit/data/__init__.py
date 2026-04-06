@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from lenskit.diagnostics import FieldError
 
+from ._adapt import from_interactions_df
 from ._items import ItemList
-from .adapt import from_interactions_df
 from .amazon import load_amazon_ratings
 from .attributes import AttributeSet
 from .batches import BatchIter
