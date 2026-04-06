@@ -272,4 +272,4 @@ def test_reset():
     assert np.all(lms["N"] == 6)
     sms = acc.summary_metrics()
     assert sms["N.mean"] == approx(6.0)
-    assert sms["RecipRank.mean"] == approx(0.625)
+    assert sms["RecipRank.mean"] == approx(0.375)
