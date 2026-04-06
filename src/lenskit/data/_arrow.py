@@ -17,7 +17,7 @@ import pyarrow.compute as pc
 import torch
 from typing_extensions import Callable, Literal, overload
 
-from .mtarray import MTArray
+from ._mtarray import MTArray
 
 type Selector[A] = Callable[[MTArray | A | None], A | None]
 
