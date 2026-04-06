@@ -11,7 +11,7 @@ from pathlib import Path
 
 from pytest import mark, skip
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.data.matrix import SparseRowArray
 from lenskit.logging import get_logger
 from lenskit.testing import ml_test_dir

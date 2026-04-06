@@ -27,13 +27,12 @@ from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import csr_array, sparray
 
 from lenskit._accel import data as _data_accel
-from lenskit.data.matrix import SparseRowArray
-from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
 from ._container import DataContainer
-from .dataset import Dataset
+from ._dataset import Dataset
+from .matrix import SparseRowArray
 from .schema import (
     AllowableTroolean,
     AttrLayout,
@@ -46,6 +45,7 @@ from .schema import (
     num_col_name,
 )
 from .types import ID, NPID, CoreID, IDSequence  # noqa: F401
+from .vocab import Vocabulary
 
 _log = get_logger(__name__)
 

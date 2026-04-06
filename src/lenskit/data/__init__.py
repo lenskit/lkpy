@@ -16,6 +16,7 @@ from ._adapt import from_interactions_df
 from ._attributes import EntityAttribute
 from ._batches import BatchedRange
 from ._builder import DatasetBuilder
+from ._dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
 from ._items import ItemList
 from .amazon import load_amazon_ratings
 from .collection import (
@@ -27,7 +28,6 @@ from .collection import (
     QueryIDKey,
     UserIDKey,
 )
-from .dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
 from .matrix import COOStructure, CSRStructure
 from .movielens import load_movielens, load_movielens_df
 from .msweb import load_ms_web

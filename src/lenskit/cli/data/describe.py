@@ -12,8 +12,8 @@ import click
 from rich.console import Console
 from rich.markdown import Markdown
 
+from lenskit.data import Dataset
 from lenskit.data.amazon import load_amazon_ratings
-from lenskit.data.dataset import Dataset
 from lenskit.data.movielens import load_movielens
 from lenskit.data.summary import save_stats
 from lenskit.logging import get_logger

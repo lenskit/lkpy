@@ -16,10 +16,9 @@ import pyarrow.parquet as pq
 
 from pytest import mark, raises, warns
 
-from lenskit.data import ItemList, QueryIDKey
+from lenskit.data import Dataset, ItemList, QueryIDKey
 from lenskit.data.collection import ItemListCollection, MutableItemListCollection, UserIDKey
 from lenskit.data.collection._keys import create_key, project_key
-from lenskit.data.dataset import Dataset
 from lenskit.diagnostics import DataWarning
 from lenskit.testing import DemoRecs, demo_recs
 

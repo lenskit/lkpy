@@ -10,8 +10,7 @@ import numpy as np
 import pandas as pd
 from typing_extensions import Literal, override
 
-from lenskit.data import ItemList
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset, ItemList
 
 from ._base import ListMetric, RankingMetricBase
 

@@ -40,7 +40,7 @@ from ..types import ID, Column
 from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
 
 if TYPE_CHECKING:
-    from ..dataset import Dataset
+    from .._dataset import Dataset
 
 _log = get_logger(__name__)
 
