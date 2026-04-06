@@ -179,6 +179,14 @@ class PipelineBuilder:
         else:
             raise KeyError(f"node {node}")
 
+    @property
+    def default_node(self) -> Node[Any] | None:
+        "Get the default node for this pipeline."
+        if self._default is None:
+            return None
+        else:
+            return self.node(self._default)
+
     def create_input[T](self, name: str, *types: type[T] | UnionType | None) -> Node[T]:
         """
         Create an input node for the pipeline.  Pipelines expect their inputs to
