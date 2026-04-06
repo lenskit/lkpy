@@ -159,9 +159,6 @@ class MeasurementCollector:
                 key_kwargs = keys | dict(zip(outputs.key_fields, key))
                 list_test = test.lookup_projected(key)
 
-                if out is None:
-                    out = ItemList()
-
                 if list_test is None:
                     no_test_count += 1
                     list_test = ItemList([])
@@ -228,12 +225,7 @@ def _wrap_metric(
     assert isinstance(m, Metric), f"invalid type for metric {m}"
 
     if label is None:
-        if isinstance(m, Metric):
-            wl = m.label
-        elif isinstance(m, type):
-            wl = m.__name__  # type: ignore
-        else:
-            wl = type(m).__name__
+        wl = m.label
     else:
         wl = label
 

@@ -14,10 +14,9 @@ from pytest import approx, fixture, mark, raises
 
 from lenskit.basic import PopScorer
 from lenskit.data import ItemList, ItemListCollection
-from lenskit.metrics import NDCG, Recall
+from lenskit.metrics import NDCG, ListLength, Recall, RecipRank
 from lenskit.metrics._base import FunctionMetric, ListMetric, Metric
 from lenskit.metrics._collect import MeasurementCollector, _wrap_metric
-from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
 
 _log = logging.getLogger(__name__)
@@ -247,3 +246,30 @@ def test_some_lists_none():
 
     summary = acc.summary_metrics()
     assert summary["test.mean"] == 2
+
+
+def test_reset():
+    acc = MeasurementCollector()
+    acc.add_metric(ListLength())
+    acc.add_metric(RecipRank())
+
+    acc.measure_list(ItemList([1, 2, 3, 4, 5]), ItemList([4]))
+    acc.measure_list(ItemList([5, 4, 3, 2, 1]), ItemList([1]))
+
+    lms = acc.list_metrics()
+    assert len(lms) == 2
+    assert np.all(lms["N"] == 5)
+    sms = acc.summary_metrics()
+    assert sms["N.mean"] == approx(5.0)
+    assert sms["RecipRank.mean"] == approx(0.225)
+
+    acc.reset()
+    acc.measure_list(ItemList([1, 2, 3, 4, 5, 10]), ItemList([2]))
+    acc.measure_list(ItemList([5, 4, 3, 2, 1, 10]), ItemList([2]))
+
+    lms = acc.list_metrics()
+    assert len(lms) == 2
+    assert np.all(lms["N"] == 6)
+    sms = acc.summary_metrics()
+    assert sms["N.mean"] == approx(6.0)
+    assert sms["RecipRank.mean"] == approx(0.625)
