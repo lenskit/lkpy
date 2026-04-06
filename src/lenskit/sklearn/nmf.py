@@ -19,9 +19,8 @@ from sklearn.decomposition import non_negative_factorization
 from typing_extensions import Literal, override
 
 from lenskit.config.common import EmbeddingSizeMixin
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import NPMatrix
-from lenskit.data.vocab import Vocabulary
 from lenskit.logging import Stopwatch, get_logger
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions

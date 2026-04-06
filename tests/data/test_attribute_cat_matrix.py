@@ -16,9 +16,9 @@ from lenskit.data._attributes import (
     EntitySparseAttribute,
     EntityVectorAttribute,
 )
+from lenskit.data._vocab import Vocabulary
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.schema import AttrLayout, ColumnSpec
-from lenskit.data.vocab import Vocabulary
 
 
 def test_scalar_cat_matrix():

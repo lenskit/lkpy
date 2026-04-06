@@ -18,8 +18,7 @@ import hypothesis.strategies as st
 from hypothesis import given, settings
 from pytest import mark, raises, warns
 
-from lenskit.data import Dataset, ItemList
-from lenskit.data.vocab import Vocabulary
+from lenskit.data import Dataset, ItemList, Vocabulary
 from lenskit.diagnostics import DataWarning
 from lenskit.testing import integer_ids
 

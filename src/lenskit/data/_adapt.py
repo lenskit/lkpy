@@ -27,8 +27,8 @@ import pandas as pd
 
 from ._builder import DatasetBuilder
 from ._dataset import Dataset
+from ._vocab import Vocabulary
 from .types import ID, AliasedColumn, Column, IDSequence
-from .vocab import Vocabulary
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
 MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]

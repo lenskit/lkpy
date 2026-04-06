@@ -33,8 +33,8 @@ from lenskit.diagnostics import DataWarning
 from ._arrow import get_indexer
 from ._checks import check_1d
 from ._mtarray import MTArray, MTGenericArray
+from ._vocab import Vocabulary
 from .types import IDArray, IDSequence, NPVector
-from .vocab import Vocabulary
 
 type ILIndexer = (
     np.ndarray[tuple[int], np.dtype[np.bool_]]

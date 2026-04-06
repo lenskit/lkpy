@@ -18,9 +18,9 @@ from typing_extensions import Any, overload
 from lenskit.logging import get_logger
 
 from ._attributes import EntityAttribute, attr_set
+from ._vocab import Vocabulary
 from .schema import EntitySchema
 from .types import IDArray, IDSequence
-from .vocab import Vocabulary
 
 _log = get_logger(__name__)
 

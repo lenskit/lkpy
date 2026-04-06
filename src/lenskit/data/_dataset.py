@@ -32,10 +32,10 @@ from ._container import DataContainer
 from ._entities import EntitySet
 from ._items import ItemList
 from ._relationships import MatrixRelationshipSet, RelationshipSet
+from ._vocab import Vocabulary
 from .matrix import CSRStructure
 from .schema import DataSchema, id_col_name
 from .types import ID, LAYOUT
-from .vocab import Vocabulary
 
 _log = get_logger(__name__)
 

@@ -27,10 +27,10 @@ from lenskit.logging import get_logger, item_progress
 from lenskit.random import random_generator
 
 from ._items import ItemList
+from ._vocab import Vocabulary
 from .matrix import COOStructure, CSRStructure, SparseRowArray, fast_col_cooc
 from .schema import RelationshipSchema, id_col_name, num_col_name
 from .types import ID, LAYOUT, NPMatrix
-from .vocab import Vocabulary
 
 if TYPE_CHECKING:
     from .collection import ItemListCollection

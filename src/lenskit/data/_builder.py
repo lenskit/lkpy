@@ -32,6 +32,7 @@ from lenskit.logging import get_logger
 
 from ._container import DataContainer
 from ._dataset import Dataset
+from ._vocab import Vocabulary
 from .matrix import SparseRowArray
 from .schema import (
     AllowableTroolean,
@@ -45,7 +46,6 @@ from .schema import (
     num_col_name,
 )
 from .types import ID, NPID, CoreID, IDSequence  # noqa: F401
-from .vocab import Vocabulary
 
 _log = get_logger(__name__)
 

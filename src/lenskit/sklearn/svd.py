@@ -21,8 +21,7 @@ from typing_extensions import Literal, override
 
 from lenskit.basic import BiasModel, Damping
 from lenskit.config.common import EmbeddingSizeMixin
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
-from lenskit.data.vocab import Vocabulary
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.logging import Stopwatch, get_logger
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions

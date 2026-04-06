@@ -25,11 +25,11 @@ from typing_extensions import Any
 
 from lenskit.torch import safe_tensor
 
+from ._vocab import Vocabulary
 from .matrix import SparseIndexListType, SparseRowArray, SparseRowType, normalize_matrix
 from .repr import object_repr
 from .schema import AttrLayout, ColumnSpec
 from .types import IDArray
-from .vocab import Vocabulary
 
 
 def attr_set(

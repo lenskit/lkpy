@@ -9,7 +9,7 @@ import pandas as pd
 import pyarrow as pa
 
 from lenskit._accel import data
-from lenskit.data.vocab import Vocabulary
+from lenskit.data import Vocabulary
 
 
 def test_empty():
