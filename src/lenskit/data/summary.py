@@ -21,7 +21,7 @@ from structlog.stdlib import BoundLogger
 from lenskit.data.matrix import SparseRowType
 from lenskit.logging import get_logger
 
-from .container import DataContainer
+from ._container import DataContainer
 from .dataset import Dataset
 from .schema import AttrLayout, ColumnSpec
 

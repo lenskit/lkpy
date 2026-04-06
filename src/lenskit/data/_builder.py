@@ -32,7 +32,7 @@ from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
-from .container import DataContainer
+from ._container import DataContainer
 from .dataset import Dataset
 from .schema import (
     AllowableTroolean,

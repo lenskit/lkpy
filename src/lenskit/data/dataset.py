@@ -28,8 +28,8 @@ from typing_extensions import Any, Literal, TypeAlias, TypedDict, TypeVar, overl
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
 
+from ._container import DataContainer
 from ._items import ItemList
-from .container import DataContainer
 from .entities import EntitySet
 from .matrix import CSRStructure
 from .relationships import MatrixRelationshipSet, RelationshipSet

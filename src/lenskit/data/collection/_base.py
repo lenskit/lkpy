@@ -33,8 +33,8 @@ from lenskit.logging import get_logger
 
 from .._arrow import explode_column
 from .._builder import DatasetBuilder
+from .._container import DataContainer
 from .._items import ItemList
-from ..container import DataContainer
 from ..repr import object_repr
 from ..types import ID, Column
 from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
