@@ -38,8 +38,10 @@ Breaking Changes
 - The ``AttributeSet`` class has been renamed to
   :class:`~lenskit.data.EntityAttribute` (:issue:`946`), to better clarify its
   design and role.
-- LensKit now requires Python 3.12 or newer, along with NumPy 2.x, Pandas 2.3 or
-  newer, and SciPy 1.13 or newer (see :ref:`dep-policy`, :pr:`954`).
+- LensKit now requires Python 3.12.5 or newer, along with NumPy 2.x, Pandas 2.3
+  or newer, and SciPy 1.13 or newer (see :ref:`dep-policy`, :pr:`954`).  Earlier
+  versions of Python 3.12 have a bug in the standard library that affects
+  LensKit.
 - We no longer publish 32-bit binary wheels.
 - Removed ``DecomposedMetric``, as the :class:`~lenskit.metrics.Metric` interface
   is now decomposed. All metrics based on listwise measurements or intermediate
