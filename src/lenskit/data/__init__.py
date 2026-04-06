@@ -18,7 +18,6 @@ from ._batches import BatchedRange
 from ._builder import DatasetBuilder
 from ._dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
 from ._items import ItemList
-from ._mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
 from .amazon import load_amazon_ratings
 from .collection import (
     GenericKey,
@@ -59,10 +58,6 @@ __all__ = [
     "load_movielens_df",
     "load_amazon_ratings",
     "load_ms_web",
-    "MTArray",
-    "MTFloatArray",
-    "MTGenericArray",
-    "MTIntArray",
     "Vocabulary",
     "RecQuery",
     "QueryInput",
