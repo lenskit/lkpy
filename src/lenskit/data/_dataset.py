@@ -29,8 +29,8 @@ from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
 
 from ._container import DataContainer
+from ._entities import EntitySet
 from ._items import ItemList
-from .entities import EntitySet
 from .matrix import CSRStructure
 from .relationships import MatrixRelationshipSet, RelationshipSet
 from .schema import DataSchema, id_col_name
