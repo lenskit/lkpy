@@ -9,20 +9,20 @@ Arrow utility functions.
 """
 
 from functools import partial
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import torch
-from typing_extensions import Callable, Literal, TypeAlias, TypeVar, overload
+from typing_extensions import Callable, Literal, overload
 
 from .mtarray import MTArray
 
-A = TypeVar("A", bound=pa.Array, default=pa.Array)
-Selector: TypeAlias = Callable[[MTArray | A | None], A | None]
+type Selector[A] = Callable[[MTArray | A | None], A | None]
 
 
-def get_indexer(sel) -> Selector:
+def get_indexer(sel) -> Selector[Any]:
     """
     Get a selector that will apply the specified indexer.  This allows
     one indexer to be applied to multiple arrays.
@@ -62,10 +62,10 @@ def arrow_to_format(array: pa.Array, format: Literal["arrow", "numpy", "torch"])
 
 
 @overload
-def arrow_slice(sel: slice, array: MTArray | A) -> A: ...
+def arrow_slice[A](sel: slice, array: MTArray | A) -> A: ...
 @overload
-def arrow_slice(sel: slice, array: MTArray | A | None) -> A | None: ...
-def arrow_slice(sel: slice, array: MTArray | A | None) -> A | None:
+def arrow_slice[A](sel: slice, array: MTArray | A | None) -> A | None: ...
+def arrow_slice[A](sel: slice, array: MTArray | A | None) -> A | None:
     """
     Slice an Arrow array.
     """
@@ -90,10 +90,10 @@ def arrow_slice(sel: slice, array: MTArray | A | None) -> A | None:
 
 
 @overload
-def arrow_take(sel: pa.Int32Array, array: MTArray | A) -> A: ...
+def arrow_take[A](sel: pa.Int32Array, array: MTArray | A) -> A: ...
 @overload
-def arrow_take(sel: pa.Int32Array, array: MTArray | A | None) -> A | None: ...
-def arrow_take(sel: pa.Int32Array, array: MTArray | A | None) -> A | None:
+def arrow_take[A](sel: pa.Int32Array, array: MTArray | A | None) -> A | None: ...
+def arrow_take[A](sel: pa.Int32Array, array: MTArray | A | None) -> A | None:
     """
     Select from an Arrow array by integer indices.
     """
@@ -107,10 +107,10 @@ def arrow_take(sel: pa.Int32Array, array: MTArray | A | None) -> A | None:
 
 
 @overload
-def arrow_filter(sel: pa.BooleanArray, array: MTArray | A) -> A: ...
+def arrow_filter[A](sel: pa.BooleanArray, array: MTArray | A) -> A: ...
 @overload
-def arrow_filter(sel: pa.BooleanArray, array: MTArray | A | None) -> A | None: ...
-def arrow_filter(sel: pa.BooleanArray, array: MTArray | A | None) -> A | None:
+def arrow_filter[A](sel: pa.BooleanArray, array: MTArray | A | None) -> A | None: ...
+def arrow_filter[A](sel: pa.BooleanArray, array: MTArray | A | None) -> A | None:
     """
     Select from an Arrow array by integer indices.
     """
