@@ -11,10 +11,10 @@ import pyarrow as pa
 from scipy.sparse import csr_array
 
 from lenskit.data._attributes import (
-    ListAttributeSet,
-    ScalarAttributeSet,
-    SparseAttributeSet,
-    VectorAttributeSet,
+    EntityListAttribute,
+    EntityScalarAttribute,
+    EntitySparseAttribute,
+    EntityVectorAttribute,
 )
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.schema import AttrLayout, ColumnSpec
@@ -28,7 +28,7 @@ def test_scalar_cat_matrix():
 
     spec = ColumnSpec(layout=AttrLayout.SCALAR)
     vocab = Vocabulary(pa.array([1, 2, 3]))
-    attr_set = ScalarAttributeSet("attr", spec, table, vocab, None)
+    attr_set = EntityScalarAttribute("attr", spec, table, vocab, None)
 
     matrix, cat_vocab = attr_set.cat_matrix(normalize="unit")
     assert isinstance(matrix, csr_array)
@@ -43,7 +43,7 @@ def test_list_cat_matrix():
 
     spec = ColumnSpec(layout=AttrLayout.LIST)
     vocab = Vocabulary(pa.array([1, 2, 3], type=pa.int32()))
-    attr_set = ListAttributeSet("attr", spec, table, vocab, None)
+    attr_set = EntityListAttribute("attr", spec, table, vocab, None)
 
     matrix, cat_vocab = attr_set.cat_matrix(normalize="distribution")
     assert isinstance(matrix, csr_array)
@@ -64,7 +64,7 @@ def test_vector_cat_matrix():
 
     spec = ColumnSpec(layout=AttrLayout.VECTOR, vector_size=3)
     vocab = Vocabulary(pa.array([0, 1, 2, 3, 4]))
-    attr_set = VectorAttributeSet("attr", spec, table, vocab, None)
+    attr_set = EntityVectorAttribute("attr", spec, table, vocab, None)
 
     matrix, cat_vocab = attr_set.cat_matrix()
     assert isinstance(matrix, np.ndarray)
@@ -87,7 +87,7 @@ def test_sparse_cat_matrix():
     table = pa.Table.from_arrays([sra], names=["attr"])
     spec = ColumnSpec(layout=AttrLayout.SPARSE)
     vocab = Vocabulary(pa.array([1, 2, 3]))
-    attr_set = SparseAttributeSet("attr", spec, table, vocab, None)
+    attr_set = EntitySparseAttribute("attr", spec, table, vocab, None)
 
     matrix, cat_vocab = attr_set.cat_matrix(normalize="unit")
 
@@ -117,7 +117,7 @@ def test_sparse_vocab_cat_matrix():
 
     spec = ColumnSpec(layout=AttrLayout.SPARSE)
     entity_vocab = Vocabulary(pa.array([1, 2, 3]))  # entity vocabulary
-    attr_set = SparseAttributeSet("attr", spec, table, entity_vocab, None)
+    attr_set = EntitySparseAttribute("attr", spec, table, entity_vocab, None)
 
     matrix, cat_vocab = attr_set.cat_matrix(normalize="unit")
 

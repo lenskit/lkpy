@@ -35,6 +35,9 @@ Breaking Changes
 - Many submodules (such as most modules under :mod:`lenskit.pipeline`) have been
   renamed to be private modules.  Code importing from their original locations
   will need to be updated to import from the higher-level module (:issue:`947`).
+- The ``AttributeSet`` class has been renamed to
+  :class:`~lenskit.data.EntityAttribute` (:issue:`946`), to better clarify its
+  design and role.
 - LensKit now requires Python 3.12 or newer, along with NumPy 2.x, Pandas 2.3 or
   newer, and SciPy 1.13 or newer (see :ref:`dep-policy`, :pr:`954`).
 - We no longer publish 32-bit binary wheels.

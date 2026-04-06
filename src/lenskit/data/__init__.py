@@ -13,7 +13,7 @@ from __future__ import annotations
 from lenskit.diagnostics import FieldError
 
 from ._adapt import from_interactions_df
-from ._attributes import AttributeSet
+from ._attributes import EntityAttribute
 from ._items import ItemList
 from .amazon import load_amazon_ratings
 from .batches import BatchIter
@@ -41,7 +41,7 @@ __all__ = [
     "EntitySet",
     "RelationshipSet",
     "MatrixRelationshipSet",
-    "AttributeSet",
+    "EntityAttribute",
     "DatasetBuilder",
     "FieldError",
     "CSRStructure",

@@ -17,7 +17,7 @@ from typing_extensions import Any, overload
 
 from lenskit.logging import get_logger
 
-from ._attributes import AttributeSet, attr_set
+from ._attributes import EntityAttribute, attr_set
 from .schema import EntitySchema
 from .types import IDArray, IDSequence
 from .vocab import Vocabulary
@@ -116,7 +116,7 @@ class EntitySet:
         """
         return self.arrow().to_pandas()
 
-    def attribute(self, name: str) -> AttributeSet:
+    def attribute(self, name: str) -> EntityAttribute:
         """
         Get values of an attribute for the entites in this entity set.
         """
