@@ -28,7 +28,6 @@ from .collection import (
     QueryIDKey,
     UserIDKey,
 )
-from .matrix import COOStructure, CSRStructure
 from .movielens import load_movielens, load_movielens_df
 from .msweb import load_ms_web
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
@@ -44,8 +43,6 @@ __all__ = [
     "EntityAttribute",
     "DatasetBuilder",
     "FieldError",
-    "CSRStructure",
-    "COOStructure",
     "from_interactions_df",
     "ID",
     "NPID",
