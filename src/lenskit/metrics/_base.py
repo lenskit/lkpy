@@ -96,7 +96,7 @@ class Metric[L, S: MetricResult](ABC, AccumulatorFactory[L, S]):
         return None
 
     @abstractmethod
-    def create_accumulator(self) -> Accumulator[L, S]:  # pragma: nocov
+    def create_accumulator(self) -> Accumulator[L, S]:  # pragma: no cover
         """
         Creaet an accumulator to aggregate per-list measurements into summary
         metrics.
