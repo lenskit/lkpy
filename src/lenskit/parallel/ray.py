@@ -15,7 +15,7 @@ import os
 import pickle
 from collections import deque
 from collections.abc import Callable, Generator, Iterable, Iterator
-from typing import Any, TypeVar, overload
+from typing import Any, overload
 
 import torch
 
@@ -37,8 +37,6 @@ try:
 except ImportError:
     _ray_imported = False
 
-
-T = TypeVar("T")
 
 BATCH_SIZE = 200
 _serializers_registered = False
