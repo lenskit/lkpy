@@ -14,8 +14,7 @@ import pandas as pd
 from pytest import approx, fixture, mark, skip
 
 from lenskit import batch, operations
-from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
-from lenskit.data.builder import DatasetBuilder
+from lenskit.data import Dataset, DatasetBuilder, ItemList, RecQuery, from_interactions_df
 from lenskit.logging import get_logger
 from lenskit.metrics import quick_measure_model
 from lenskit.parallel.ray import ray_available

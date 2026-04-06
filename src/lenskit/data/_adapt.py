@@ -25,7 +25,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from .builder import DatasetBuilder
+from ._builder import DatasetBuilder
 from .dataset import Dataset
 from .types import ID, AliasedColumn, Column, IDSequence
 from .vocab import Vocabulary

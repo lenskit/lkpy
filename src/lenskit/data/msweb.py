@@ -17,7 +17,7 @@ from xopen import xopen
 
 from lenskit.logging import get_logger
 
-from .builder import DatasetBuilder
+from ._builder import DatasetBuilder
 from .collection import ItemListCollection
 from .dataset import Dataset
 

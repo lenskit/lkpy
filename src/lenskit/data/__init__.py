@@ -15,9 +15,9 @@ from lenskit.diagnostics import FieldError
 from ._adapt import from_interactions_df
 from ._attributes import EntityAttribute
 from ._batches import BatchedRange
+from ._builder import DatasetBuilder
 from ._items import ItemList
 from .amazon import load_amazon_ratings
-from .builder import DatasetBuilder
 from .collection import (
     GenericKey,
     ItemListCollection,

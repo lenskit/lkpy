@@ -32,8 +32,8 @@ from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
 
 from .._arrow import explode_column
+from .._builder import DatasetBuilder
 from .._items import ItemList
-from ..builder import DatasetBuilder
 from ..container import DataContainer
 from ..repr import object_repr
 from ..types import ID, Column
