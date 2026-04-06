@@ -183,6 +183,11 @@ class Pipeline:
         else:
             raise KeyError(node)
 
+    @property
+    def default_node(self) -> Node[Any] | None:
+        "Get the default node for this pipeline."
+        return self._default
+
     def component_names(self) -> list[str]:
         """
         Get the component names (in topological order).
