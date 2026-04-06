@@ -28,7 +28,7 @@ There are two ways to directly call a prediction accuracy metric:
 
 * Pass a single item list with scores and a ``rating`` field.
 
-For evaluation, you will usually want to use :class:`~lenskit.metrics.RunAnalysis`,
+For evaluation, you will usually want to use :class:`~lenskit.metrics.MeasurementCollector`,
 which takes care of calling the prediction metric for you.
 
 Missing Data

@@ -7,12 +7,10 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-import pyarrow as pa
-import pyarrow.compute as pc
+from numpy.typing import NDArray
 from typing_extensions import override
 
-from lenskit.data import Dataset, ItemList
+from lenskit.data import Dataset, ItemList, Vocabulary
 from lenskit.logging import get_logger
 from lenskit.stats import gini
 
@@ -25,24 +23,31 @@ _log = get_logger(__name__)
 class GiniBase(RankingMetricBase):
     """
     Base class for Gini diversity / popularity concentration metrics.
+
+    Args:
+        n:
+            The maximum recommendation list length.
+        items:
+            The item vocabulary or a dataset from which to extract the items.
     """
 
-    item_count: int
+    item_vocab: Vocabulary
 
     def __init__(
         self,
         n: int | None = None,
         *,
         k: int | None = None,
-        items: int | pd.Series | pd.DataFrame | Dataset,
+        items: Vocabulary | Dataset,
     ):
         super().__init__(n, k=k)
-        if isinstance(items, int):
-            self.item_count = items
-        elif isinstance(items, Dataset):
-            self.item_count = items.item_count
+        if isinstance(items, Dataset):
+            self.item_vocab = items.items
         else:
-            self.item_count = len(items)
+            self.item_vocab = items
+
+    def create_accumulator(self):
+        return GiniAccumulator(len(self.item_vocab))
 
 
 class ListGini(GiniBase):
@@ -56,30 +61,17 @@ class ListGini(GiniBase):
         n:
             The maximum recommendation list length.
         items:
-            The total number of items, a data frame or series of item data, or a
-            dataset. If a frame or series is provided, its length will be used
-            as the number of items.  If a dataset is provided, its item count
-            will be used.
+            The item vocabulary or a dataset from which to extract the items.
 
     Stability:
         Caller
     """
 
     @override
-    def measure_list(self, output: ItemList, test):
+    def measure_list(self, output: ItemList, test) -> tuple[NDArray[np.int32], float]:
         recs = self.truncate(output)
-        return recs.ids(format="arrow")
-
-    @override
-    def summarize(self, values: list[pa.Array] | pa.ChunkedArray, /):
-        log = _log.bind(metric=self.label, item_count=self.item_count)
-        log.debug("aggregating for %d lists", len(values))
-        chunked = pa.chunked_array(values)
-        vc_tbl = pc.value_counts(chunked)
-        log.debug("found %d distinct items", len(vc_tbl))
-        counts = np.zeros(self.item_count, np.int32)
-        counts[: len(vc_tbl)] = np.asarray(vc_tbl.field("counts"), dtype=np.int32)
-        return gini(counts)
+        ids = recs.numbers(vocabulary=self.item_vocab)
+        return (ids, 1.0)
 
 
 class ExposureGini(GiniBase):
@@ -93,10 +85,7 @@ class ExposureGini(GiniBase):
         n:
             The maximum recommendation list length.
         items:
-            The total number of items, a data frame or series of item data, or a
-            dataset. If a frame or series is provided, its length will be used
-            as the number of items.  If a dataset is provided, its item count
-            will be used.
+            The item vocabulary or a dataset from which to extract the items.
         weight:
             The rank weighting model to use.  Defaults to
             :class:`GeometricRankWeight` with the specified patience parameter.
@@ -112,27 +101,32 @@ class ExposureGini(GiniBase):
         n: int | None = None,
         *,
         k: int | None = None,
-        items: int | pd.Series | pd.DataFrame | Dataset,
+        items: Vocabulary | Dataset,
         weight: RankWeight = GeometricRankWeight(),
     ):
         super().__init__(n=n, k=k, items=items)
         self.weight = weight
 
     @override
-    def measure_list(self, output: ItemList, test):
+    def measure_list(self, output: ItemList, test) -> tuple[NDArray[np.int32], NDArray[np.float64]]:
         recs = self.truncate(output)
-        weights = self.weight.weight(np.arange(1, len(recs) + 1))
-        return (recs.ids(format="arrow"), pa.array(weights, type=pa.float32()))
+        ids = recs.numbers(vocabulary=self.item_vocab)
+        weights = self.weight.weight(np.arange(1, len(recs) + 1, dtype=np.int32))
+        return (ids, weights)
 
-    @override
-    def summarize(self, values: list[tuple[pa.Array, pa.FloatArray]]):
-        log = _log.bind(metric=self.label, item_count=self.item_count)
-        log.debug("aggregating for %d lists", len(values))
-        table = pa.Table.from_batches(
-            pa.RecordBatch.from_arrays([iv, ev], ["item_id", "exposure"]) for (iv, ev) in values
-        )
-        exp_tbl = table.group_by("item_id").aggregate([("exposure", "sum")])
-        log.debug("found %d distinct items", exp_tbl.num_rows)
-        exp = np.zeros(self.item_count, np.float32)
-        exp[: exp_tbl.num_rows] = np.asarray(exp_tbl.column("exposure_sum"), dtype=np.float32)
-        return gini(exp)
+
+class GiniAccumulator:
+    n_items: int
+    totals: np.ndarray[tuple[int], np.dtype[np.float64]]
+
+    def __init__(self, n: int):
+        self.n_items = n
+        self.totals = np.zeros(n)
+
+    def add(self, value: tuple[NDArray[np.int32], NDArray[np.float32] | float]) -> None:
+        items, values = value
+        self.totals[items] += values
+
+    def accumulate(self) -> float:
+        dist = self.totals / self.totals.sum()
+        return gini(dist)

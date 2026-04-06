@@ -42,7 +42,16 @@ Breaking Changes
   is now decomposed. All metrics based on listwise measurements or intermediate
   results should directly extend from ``Metric`` or :class:`~lenskit.metrics.ListMetric`.
   (:pr:`983`)
-- ``GlobalMetric`` no longer inherits from ``Metric``, and may be removed in a future release.
+- ``GlobalMetric`` has been removed. Code needing to compute global metrics
+  should directly compute over item lists.
+- :class:`~lenskit.metrics.MeasurementCollector` no longer supports defaults
+  when adding metrics.
+- :class:`~lenskit.metrics.RunAnalysis` is deprecated, and no longer supports
+  explicit defaults or global metrics.  Use
+  :class:`~lenskit.metrics.MeasurementCollector` instead.  Its global metric
+  columns have also changed in some cases.
+- :class:`~lenskit.metrics.ListGini` and :class:`~lenskit.metrics.ExposureGini`
+  now require an item vocabulary or dataset as input.
 - Stopped providing wheels for macOS on Intel.  Users who still need to run
   LensKit on Intel-based Macs should use the Conda packages (available in conda-forge and
   `prefix.dev`_).
@@ -86,6 +95,9 @@ Performance Changes
 Minor Changes
 -------------
 
+- :func:`lenskit.metrics.call_metric` has been renamed to
+  :func:`~lenskit.metrics.measure_list`, and the old name preserved as a
+  deprecated alias.
 - Pipeline type-checking for `ArrayLike` component inputs no longer works, due to
   a breaking change in NumPy 2.4.  No LensKit components used `ArrayLike` as an
   input or output data type.
