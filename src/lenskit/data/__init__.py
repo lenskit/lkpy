@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from lenskit.diagnostics import FieldError
 
+from ._items import ItemList
 from .adapt import from_interactions_df
 from .amazon import load_amazon_ratings
 from .attributes import AttributeSet
@@ -27,7 +28,6 @@ from .collection import (
     UserIDKey,
 )
 from .dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
-from .items import ItemList
 from .matrix import COOStructure, CSRStructure
 from .movielens import load_movielens, load_movielens_df
 from .msweb import load_ms_web

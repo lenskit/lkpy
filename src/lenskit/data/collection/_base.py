@@ -31,10 +31,10 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
 
+from .._items import ItemList
 from ..arrow import explode_column
 from ..builder import DatasetBuilder
 from ..container import DataContainer
-from ..items import ItemList
 from ..repr import object_repr
 from ..types import ID, Column
 from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key

@@ -36,7 +36,7 @@ from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence, NPVector
 from .vocab import Vocabulary
 
-ILIndexer = (
+type ILIndexer = (
     np.ndarray[tuple[int], np.dtype[np.bool_]]
     | NPVector[np.integer]
     | Sequence[int]

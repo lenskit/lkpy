@@ -17,7 +17,7 @@ from hypothesis import given, settings
 
 from lenskit.basic import PopScorer
 from lenskit.basic.topn import TopNRanker
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 
 _log = logging.getLogger(__name__)
 

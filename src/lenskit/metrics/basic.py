@@ -8,7 +8,7 @@
 Basic set statistics.
 """
 
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 
 from ._base import ListMetric, Metric
 
