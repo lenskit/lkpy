@@ -18,8 +18,6 @@ from typing import (
     Iterable,
     Literal,
     Optional,
-    TypeAlias,
-    TypeVar,
 )
 
 import numpy as np
@@ -30,13 +28,8 @@ from ._dataset import Dataset
 from ._vocab import Vocabulary
 from .types import ID, AliasedColumn, Column, IDSequence
 
-DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
-MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
-MAT_AGG: TypeAlias = Literal["count", "sum", "mean", "first", "last"]
-LAYOUT: TypeAlias = Literal["csr", "coo"]
-ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
+type ACTION_FIELDS = Literal["ratings", "timestamps"] | str
 
-K = TypeVar("K")
 _log = logging.getLogger(__name__)
 
 

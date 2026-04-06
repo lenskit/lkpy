@@ -45,7 +45,7 @@ from .schema import (
     id_col_name,
     num_col_name,
 )
-from .types import ID, NPID, CoreID, IDSequence  # noqa: F401
+from .types import ID, NPID, IDSequence  # noqa: F401
 
 _log = get_logger(__name__)
 
