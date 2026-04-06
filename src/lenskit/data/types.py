@@ -12,7 +12,7 @@ Basic data types used in data representations.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import NamedTuple
+from typing import Generic, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -56,6 +56,7 @@ IDSequence: TypeAlias = """
     """
 "Sequences of identifiers."
 
+_UIPT = TypeVar("_UIPT")
 V = TypeVar("V", bound=np.number[Any], default=np.float32)
 NPMatrix: TypeAlias = np.ndarray[tuple[int, int], np.dtype[V]]
 NPVector: TypeAlias = np.ndarray[tuple[int], np.dtype[V]]
@@ -86,13 +87,13 @@ Column: TypeAlias = str | AliasedColumn
 
 
 @dataclass(frozen=True)
-class UIPair[T]:
+class UIPair(Generic[_UIPT]):
     """
     A user-item pair of values.
     """
 
-    user: T
-    item: T
+    user: _UIPT
+    item: _UIPT
 
 
 class Extent(NamedTuple):
