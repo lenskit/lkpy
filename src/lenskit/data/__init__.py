@@ -26,6 +26,7 @@ from ._collection import (
     UserIDKey,
     key_dict,
 )
+from ._container import DataContainer
 from ._dataset import Dataset
 from ._entities import EntitySet
 from ._items import ItemList
@@ -39,11 +40,12 @@ from .types import ID, NPID, FeedbackType
 
 __all__ = [
     "Dataset",
+    "DatasetBuilder",
+    "DataContainer",
     "EntitySet",
     "RelationshipSet",
     "MatrixRelationshipSet",
     "EntityAttribute",
-    "DatasetBuilder",
     "FieldError",
     "from_interactions_df",
     "ID",
