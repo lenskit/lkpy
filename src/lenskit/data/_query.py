@@ -19,7 +19,10 @@ import numpy as np
 from ._items import ItemList
 from .types import ID
 
-QueryItemSource: TypeAlias = Literal["history", "session", "context"]
+type QueryItemSource = Literal["history", "session", "context"]
+"""
+Valid sources for query items.
+"""
 
 
 @dataclass

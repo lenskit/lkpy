@@ -12,7 +12,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 from pytest import skip
 
-from lenskit.data.query import RecQuery
+from lenskit.data import RecQuery
 from lenskit.random import derivable_rng, load_seed, make_seed
 
 

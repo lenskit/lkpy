@@ -7,8 +7,7 @@
 import numpy as np
 from pydantic import BaseModel
 
-from lenskit.data import ItemList
-from lenskit.data.query import QueryInput, RecQuery
+from lenskit.data import ItemList, QueryInput, RecQuery
 from lenskit.pipeline import Component
 from lenskit.random import DerivableSeed, RNGFactory, derivable_rng
 
