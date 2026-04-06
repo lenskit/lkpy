@@ -33,7 +33,7 @@ from .schema import RelationshipSchema, id_col_name, num_col_name
 from .types import ID, LAYOUT, NPMatrix
 
 if TYPE_CHECKING:
-    from .collection import ItemListCollection
+    from ._collection import ItemListCollection
 
 _log = get_logger(__name__)
 
@@ -854,7 +854,7 @@ class MatrixRelationshipSet(RelationshipSet):
         """
         Get the rows as an item list collection.
         """
-        from .collection import ListILC
+        from ._collection import ListILC
 
         if self.col_type != "item":
             raise RuntimeError("row_items() only valid for item-column matrices")

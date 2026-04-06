@@ -18,8 +18,8 @@ from xopen import xopen
 from lenskit.logging import get_logger
 
 from ._builder import DatasetBuilder
+from ._collection import ItemListCollection
 from ._dataset import Dataset
-from .collection import ItemListCollection
 
 _log = get_logger(__name__)
 
