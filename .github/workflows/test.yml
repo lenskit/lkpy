@@ -157,7 +157,7 @@ jobs:
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.12"
+          python-version: "3.12.5"
           activate-environment: true
 
       - name: 📦 Set up Python dependencies
@@ -209,7 +209,7 @@ jobs:
       - name: 🕶️ Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.12"
+          python-version: "3.12.5"
           activate-environment: true
 
       - name: 📦 Set up Python dependencies
