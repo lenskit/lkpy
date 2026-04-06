@@ -14,7 +14,7 @@ from lenskit.diagnostics import FieldError
 
 from ._adapt import from_interactions_df
 from ._attributes import EntityAttribute
-from ._batches import BatchIter
+from ._batches import BatchedRange
 from ._items import ItemList
 from .amazon import load_amazon_ratings
 from .builder import DatasetBuilder
@@ -69,5 +69,5 @@ __all__ = [
     "Vocabulary",
     "RecQuery",
     "QueryInput",
-    "BatchIter",
+    "BatchedRange",
 ]

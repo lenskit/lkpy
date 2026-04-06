@@ -22,7 +22,7 @@ _log = get_logger(__name__)
 
 
 @dataclass
-class BatchIter:
+class BatchedRange:
     """
     Iterator over a range by batches.
 

@@ -21,7 +21,7 @@ from typing_extensions import Literal, Self
 
 from lenskit import logging
 from lenskit.config.common import EmbeddingSizeMixin
-from lenskit.data import BatchIter, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
+from lenskit.data import BatchedRange, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.matrix import COOStructure
 from lenskit.data.relationships import MatrixRelationshipSet
 from lenskit.logging.progress._dispatch import item_progress
@@ -257,7 +257,7 @@ class LightGCNTrainer(ModelTrainer):
         perm = np.require(self.rng.permutation(self.coo.nnz), dtype=np.int32)
         perm_t = torch.from_numpy(perm).to(self.device)
 
-        batches = BatchIter(self.coo.nnz, config.batch_size)
+        batches = BatchedRange(self.coo.nnz, config.batch_size)
 
         tot_loss = torch.tensor(0.0).to(self.device)
         avg_loss = np.nan
