@@ -12,7 +12,7 @@ import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given
 
-from lenskit.data.arrow import arrow_to_format
+from lenskit.data._arrow import arrow_to_format
 
 
 @given(nph.arrays(dtype=nph.floating_dtypes(endianness="="), shape=nph.array_shapes(max_dims=1)))

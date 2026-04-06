@@ -30,7 +30,7 @@ from typing_extensions import (
 from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataWarning
 
-from .arrow import get_indexer
+from ._arrow import get_indexer
 from .checks import check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence, NPVector

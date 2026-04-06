@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-Arryw utility functions.
+Arrow utility functions.
 """
 
 from functools import partial

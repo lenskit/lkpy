@@ -31,8 +31,8 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
 
+from .._arrow import explode_column
 from .._items import ItemList
-from ..arrow import explode_column
 from ..builder import DatasetBuilder
 from ..container import DataContainer
 from ..repr import object_repr
