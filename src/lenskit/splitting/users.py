@@ -18,7 +18,7 @@ from lenskit.logging import item_progress
 from lenskit.random import RNGInput, random_generator
 
 from ._holdout import HoldoutMethod
-from .split import TTSplit
+from ._split import TTSplit
 
 _log = logging.getLogger(__name__)
 

@@ -26,7 +26,7 @@ from lenskit.pipeline import Component, Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
 from lenskit.random import make_seed
-from lenskit.splitting.split import TTSplit
+from lenskit.splitting import TTSplit
 from lenskit.state import ParameterContainer
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 

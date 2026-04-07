@@ -15,7 +15,7 @@ import pandas as pd
 from lenskit.data import Dataset, DatasetBuilder, ItemListCollection, UserIDKey
 from lenskit.random import RNGInput, random_generator
 
-from .split import TTSplit
+from ._split import TTSplit
 
 _log = logging.getLogger(__name__)
 
