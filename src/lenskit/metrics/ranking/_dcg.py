@@ -45,6 +45,11 @@ class NDCG(ListMetric, RankingMetricBase):
         \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
         \\end{align*}
 
+    .. note::
+        Negative gains are clipped to zero before computing NDCG.
+        This keeps the metric bounded between 0 and 1 and prevents cases where
+        negative gains can lead to misleading positive scores due to
+        cancellation effects.
     Args:
         n:
             The maximum recommendation list length to consider (longer lists are
