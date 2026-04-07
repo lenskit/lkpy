@@ -14,8 +14,7 @@ import pandas as pd
 import pytest
 
 from lenskit.data import Dataset, from_interactions_df
-from lenskit.splitting import SampleFrac, SampleN
-from lenskit.splitting.users import crossfold_users, sample_users
+from lenskit.splitting import SampleFrac, SampleN, crossfold_users, sample_users
 
 
 def test_crossfold_users(ml_ds: Dataset):
