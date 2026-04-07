@@ -12,8 +12,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import coo_array
 
-from lenskit.data import Dataset
-from lenskit.data.adapt import from_interactions_df
+from lenskit.data import Dataset, from_interactions_df
 
 
 def test_basic_cooc(ml_ds: Dataset, rng: np.random.Generator):

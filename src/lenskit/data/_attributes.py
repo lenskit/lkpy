@@ -25,11 +25,11 @@ from typing_extensions import Any
 
 from lenskit.torch import safe_tensor
 
+from ._vocab import Vocabulary
 from .matrix import SparseIndexListType, SparseRowArray, SparseRowType, normalize_matrix
 from .repr import object_repr
 from .schema import AttrLayout, ColumnSpec
 from .types import IDArray
-from .vocab import Vocabulary
 
 
 def attr_set(
@@ -37,23 +37,27 @@ def attr_set(
 ):
     match spec.layout:
         case AttrLayout.SCALAR:
-            return ScalarAttributeSet(name, spec, table, vocab, rows)
+            return EntityScalarAttribute(name, spec, table, vocab, rows)
         case AttrLayout.LIST:
-            return ListAttributeSet(name, spec, table, vocab, rows)
+            return EntityListAttribute(name, spec, table, vocab, rows)
         case AttrLayout.VECTOR:
-            return VectorAttributeSet(name, spec, table, vocab, rows)
+            return EntityVectorAttribute(name, spec, table, vocab, rows)
         case AttrLayout.SPARSE:
-            return SparseAttributeSet(name, spec, table, vocab, rows)
+            return EntitySparseAttribute(name, spec, table, vocab, rows)
         case _:  # pragma: nocover
             raise ValueError(f"unsupported layout {spec.layout}")
 
 
-class AttributeSet(ABC):
+class EntityAttribute(ABC):
     """
-    Base class for attributes associated with entities.
+    Base class for an attribute associated with an entity class.  This class
+    effectively represents a _column_ of a data table of entities: the attribute
+    values for one or more entities.  In that regard, it is similar to a Pandas
+    series: it records entity IDs/numbers, like an index, and associated
+    attribute values.
 
-    This is the general interface for attribute sets.  Not all access methods
-    are supported for all layouts.
+    This is the general interface for all entity attributes.  Not all access
+    methods are supported for all layouts.
 
     Stability:
         caller
@@ -105,7 +109,7 @@ class AttributeSet(ABC):
 
     def ids(self) -> IDArray:
         """
-        Get the entity IDs for the rows in this attribute's values.
+        Get the entity IDs for this collection of entities.
         """
         if self._selected is None:
             return self._vocab.ids()
@@ -123,7 +127,7 @@ class AttributeSet(ABC):
 
     def numbers(self) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         """
-        Get the entity numbers for the rows in this attribute's values.
+        Get the entity numbers for the attributes
         """
         if self._selected is None:
             return np.arange(self._table.num_rows, dtype=np.int32)
@@ -247,7 +251,7 @@ class AttributeSet(ABC):
             return len(self._vocab)
 
 
-class ScalarAttributeSet(AttributeSet):
+class EntityScalarAttribute(EntityAttribute):
     _cat_vocab: Vocabulary | None = None
 
     @property
@@ -326,7 +330,7 @@ class ScalarAttributeSet(AttributeSet):
         return self._lk_object_repr().string()
 
 
-class ListAttributeSet(AttributeSet):
+class EntityListAttribute(EntityAttribute):
     _cat_vocab: Vocabulary | None = None
 
     @property
@@ -404,7 +408,7 @@ class ListAttributeSet(AttributeSet):
         return self._lk_object_repr().string()
 
 
-class VectorAttributeSet(AttributeSet):
+class EntityVectorAttribute(EntityAttribute):
     _names: list[str] | None = None
     _size: int | None = None
     _cat_vocab: Vocabulary | None = None
@@ -544,7 +548,7 @@ class VectorAttributeSet(AttributeSet):
         return self._lk_object_repr().string()
 
 
-class SparseAttributeSet(AttributeSet):
+class EntitySparseAttribute(EntityAttribute):
     _names: list[str] | None = None
     _cat_vocab: Vocabulary | None = None
 

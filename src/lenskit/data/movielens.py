@@ -24,8 +24,8 @@ from scipy.sparse import coo_array
 
 from lenskit.logging import get_logger
 
-from .builder import DatasetBuilder
-from .dataset import Dataset
+from ._builder import DatasetBuilder
+from ._dataset import Dataset
 
 _log = get_logger(__name__)
 

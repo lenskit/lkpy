@@ -31,16 +31,16 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
 
-from ..arrow import explode_column
-from ..builder import DatasetBuilder
-from ..container import DataContainer
-from ..items import ItemList
+from .._arrow import explode_column
+from .._builder import DatasetBuilder
+from .._container import DataContainer
+from .._items import ItemList
 from ..repr import object_repr
 from ..types import ID, Column
-from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
+from ._keys import KL, GenericKey, create_key_type, key_dict, key_fields, project_key
 
 if TYPE_CHECKING:
-    from ..dataset import Dataset
+    from .._dataset import Dataset
 
 _log = get_logger(__name__)
 
@@ -111,8 +111,20 @@ class ItemListCollection(Generic[KL], ABC):
         else:
             self._key_class = create_key_type(*key)  # type: ignore
 
+    @overload
     @staticmethod
-    def empty(key: type[K] | Sequence[str], *, index: bool = True) -> MutableItemListCollection[K]:
+    def empty[K: GenericKey](
+        key: type[K], *, index: bool = True
+    ) -> MutableItemListCollection[K]: ...
+    @overload
+    @staticmethod
+    def empty(
+        key: Sequence[str], *, index: bool = True
+    ) -> MutableItemListCollection[GenericKey]: ...
+    @staticmethod
+    def empty[K: GenericKey](
+        key: type[K] | Sequence[str], *, index: bool = True
+    ) -> MutableItemListCollection[K]:
         """
         Create a new empty, mutable item list collection.
         """
@@ -122,7 +134,7 @@ class ItemListCollection(Generic[KL], ABC):
 
     @overload
     @staticmethod
-    def from_dict(
+    def from_dict[K: GenericKey](
         data: Mapping[GenericKey | ID, ItemList], key: type[K]
     ) -> ItemListCollection[K]: ...
     @overload
@@ -131,7 +143,7 @@ class ItemListCollection(Generic[KL], ABC):
         data: Mapping[GenericKey | ID, ItemList], key: Sequence[str] | str | None = None
     ) -> ItemListCollection[GenericKey]: ...
     @staticmethod
-    def from_dict(
+    def from_dict[K: GenericKey](
         data: Mapping[GenericKey | ID, ItemList],
         key: type[K] | Sequence[str] | str | None = None,
     ) -> ItemListCollection[GenericKey]:
@@ -147,7 +159,9 @@ class ItemListCollection(Generic[KL], ABC):
 
     @staticmethod
     def from_df(
-        df: pd.DataFrame, key: type[K] | Sequence[Column] | Column | None = None, *others: Column
+        df: pd.DataFrame,
+        key: type[GenericKey] | Sequence[Column] | Column | None = None,
+        *others: Column,
     ) -> MutableItemListCollection[Any]:
         """
         Create an item list collection from a data frame.
@@ -339,24 +353,24 @@ class ItemListCollection(Generic[KL], ABC):
         path: PathLike[str] | list[PathLike[str]],
         *,
         layout: Literal["native"] = "native",
-    ) -> ItemListCollection: ...
+    ) -> ItemListCollection[GenericKey]: ...
     @overload
     @classmethod
-    def load_parquet(
+    def load_parquet[K: GenericKey](
         cls,
         path: PathLike[str] | list[PathLike[str]],
         key: type[K] | Sequence[Column] | Column,
         *,
         layout: Literal["flat"],
-    ) -> ItemListCollection: ...
+    ) -> ItemListCollection[K]: ...
     @classmethod
-    def load_parquet(
+    def load_parquet[K: GenericKey](
         cls,
         path: PathLike[str] | list[PathLike[str]],
         key: type[K] | Sequence[Column] | Column | None = None,
         *,
         layout: Literal["native", "flat"] = "native",
-    ) -> ItemListCollection:
+    ) -> ItemListCollection[GenericKey]:
         """
         Load this item list from a Parquet file.
 
@@ -577,7 +591,7 @@ class ItemListCollector(Protocol):
         raise NotImplementedError()
 
 
-class MutableItemListCollection(ItemListCollector, ItemListCollection[K], Generic[K]):
+class MutableItemListCollection[K: GenericKey](ItemListCollector, ItemListCollection[K]):
     """
     Intersection type of :class:`ItemListCollection` and
     :class:`ItemListCollector`.

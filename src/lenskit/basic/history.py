@@ -17,8 +17,7 @@ import numpy as np
 import pandas as pd
 from typing_extensions import override
 
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
-from lenskit.data.dataset import MatrixRelationshipSet
+from lenskit.data import Dataset, ItemList, MatrixRelationshipSet, QueryInput, RecQuery
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger, trace
 from lenskit.pipeline import Component

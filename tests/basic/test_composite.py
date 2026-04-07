@@ -16,8 +16,7 @@ from pytest import approx
 from lenskit.basic import BiasScorer
 from lenskit.basic.composite import FallbackScorer
 from lenskit.basic.history import KnownRatingScorer
-from lenskit.data import Dataset
-from lenskit.data.items import ItemList
+from lenskit.data import Dataset, ItemList
 from lenskit.data.types import ID
 from lenskit.operations import predict, score
 from lenskit.pipeline import Pipeline, PipelineBuilder, RecPipelineBuilder

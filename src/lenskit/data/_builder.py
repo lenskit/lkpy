@@ -16,7 +16,7 @@ import json
 import warnings
 from collections.abc import Mapping, Sequence
 from os import PathLike
-from typing import Any, Literal, TypeAlias, TypeVar, overload
+from typing import Any, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -27,13 +27,13 @@ from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import csr_array, sparray
 
 from lenskit._accel import data as _data_accel
-from lenskit.data.matrix import SparseRowArray
-from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
-from .container import DataContainer
-from .dataset import Dataset
+from ._container import DataContainer
+from ._dataset import Dataset
+from ._vocab import Vocabulary
+from .matrix import SparseRowArray
 from .schema import (
     AllowableTroolean,
     AttrLayout,
@@ -45,21 +45,18 @@ from .schema import (
     id_col_name,
     num_col_name,
 )
-from .types import ID, NPID, CoreID, IDSequence  # noqa: F401
+from .types import ID, NPID, IDSequence  # noqa: F401
 
 _log = get_logger(__name__)
 
-NPT = TypeVar("NPT", bound=np.generic)
-NPArray1D: TypeAlias = np.ndarray[tuple[int], np.dtype[NPT]]
+type TableInput = pd.DataFrame | pa.Table | dict[str, NDArray[Any]]
+type RelationshipEntities = Sequence[str] | Mapping[str, str | None]
 
-TableInput: TypeAlias = pd.DataFrame | pa.Table | dict[str, NDArray[Any]]
-RelationshipEntities: TypeAlias = Sequence[str] | Mapping[str, str | None]
-
-DuplicateAction: TypeAlias = Literal["update", "error", "overwrite"]
+type DuplicateAction = Literal["update", "error", "overwrite"]
 """
 Action to take on duplicate entities.
 """
-MissingEntityAction: TypeAlias = Literal["insert", "filter", "error"]
+type MissingEntityAction = Literal["insert", "filter", "error"]
 """
 Action to take when a relationship references a missing entity.
 """

@@ -10,8 +10,7 @@ from typing import Literal
 import numpy as np
 from scipy.special import softmax
 
-from lenskit.data import ItemList
-from lenskit.data.query import QueryInput, RecQuery
+from lenskit.data import ItemList, QueryInput, RecQuery
 from lenskit.data.types import NPVector
 from lenskit.pipeline import Component
 from lenskit.random import DerivableSeed, RNGFactory, derivable_rng

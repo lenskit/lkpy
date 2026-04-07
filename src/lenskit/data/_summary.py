@@ -18,11 +18,11 @@ from humanize import metric, naturalsize
 from prettytable import PrettyTable, TableStyle
 from structlog.stdlib import BoundLogger
 
-from lenskit.data.matrix import SparseRowType
 from lenskit.logging import get_logger
 
-from .container import DataContainer
-from .dataset import Dataset
+from ._container import DataContainer
+from ._dataset import Dataset
+from .matrix import SparseRowType
 from .schema import AttrLayout, ColumnSpec
 
 _log = get_logger(__name__)

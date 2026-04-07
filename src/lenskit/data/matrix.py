@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-Matrix layouts.
+Classes for working with matrix data.
 """
 
 # pyright: basic

@@ -18,25 +18,18 @@ from typing import (
     Iterable,
     Literal,
     Optional,
-    TypeAlias,
-    TypeVar,
 )
 
 import numpy as np
 import pandas as pd
 
-from .builder import DatasetBuilder
-from .dataset import Dataset
+from ._builder import DatasetBuilder
+from ._dataset import Dataset
+from ._vocab import Vocabulary
 from .types import ID, AliasedColumn, Column, IDSequence
-from .vocab import Vocabulary
 
-DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
-MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
-MAT_AGG: TypeAlias = Literal["count", "sum", "mean", "first", "last"]
-LAYOUT: TypeAlias = Literal["csr", "coo"]
-ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
+type ACTION_FIELDS = Literal["ratings", "timestamps"] | str
 
-K = TypeVar("K")
 _log = logging.getLogger(__name__)
 
 
@@ -165,7 +158,12 @@ def from_interactions_df(
         dsb.add_entities("item", items)
 
     dsb.add_interactions(
-        "rating", df, entities=["user", "item"], missing=missing, allow_repeats=False, default=True
+        class_name,
+        df,
+        entities=["user", "item"],
+        missing=missing,
+        allow_repeats=False,
+        default=True,
     )
 
     return dsb.build()

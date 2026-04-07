@@ -28,14 +28,14 @@ from typing_extensions import Any, Literal, TypeAlias, TypedDict, TypeVar, overl
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
 
-from .container import DataContainer
-from .entities import EntitySet
-from .items import ItemList
+from ._container import DataContainer
+from ._entities import EntitySet
+from ._items import ItemList
+from ._relationships import MatrixRelationshipSet, RelationshipSet
+from ._vocab import Vocabulary
 from .matrix import CSRStructure
-from .relationships import MatrixRelationshipSet, RelationshipSet
 from .schema import DataSchema, id_col_name
 from .types import ID, LAYOUT
-from .vocab import Vocabulary
 
 _log = get_logger(__name__)
 

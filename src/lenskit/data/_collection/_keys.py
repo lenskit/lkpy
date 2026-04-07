@@ -19,7 +19,11 @@ from typing_extensions import (
 
 from ..types import ID
 
-GenericKey: TypeAlias = tuple[ID, ...]
+type GenericKey = tuple[ID, ...]
+"""
+A generic collection key with no bounds or type information.
+"""
+
 K = TypeVar("K", bound=tuple, default=GenericKey)
 """
 Fixed key type.

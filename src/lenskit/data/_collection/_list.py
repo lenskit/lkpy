@@ -14,8 +14,8 @@ import pyarrow as pa
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
 
-from ..adapt import Column, column_name, normalize_columns
-from ..items import ItemList
+from .._adapt import Column, column_name, normalize_columns
+from .._items import ItemList
 from ..repr import object_repr
 from ._base import ItemListCollection, MutableItemListCollection
 from ._keys import ID, GenericKey, K, Ko, create_key_type, key_dict, key_fields

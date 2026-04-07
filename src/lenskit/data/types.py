@@ -12,12 +12,28 @@ Basic data types used in data representations.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import NamedTuple
+from typing import Generic, NamedTuple
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from typing_extensions import Any, Generic, Literal, Sequence, TypeAlias, TypeVar
+from typing_extensions import Any, Literal, Sequence, TypeAlias, TypeVar
+
+__all__ = [
+    "FeedbackType",
+    "ID",
+    "NPID",
+    "IDArray",
+    "IDSequence",
+    "NPMatrix",
+    "NPVector",
+    "DF_FORMAT",
+    "MAT_FORMAT",
+    "LAYOUT",
+    "AliasedColumn",
+    "UIPair",
+    "Extent",
+]
 
 FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
@@ -40,16 +56,14 @@ IDSequence: TypeAlias = """
     """
 "Sequences of identifiers."
 
+_UIPT = TypeVar("_UIPT")
 V = TypeVar("V", bound=np.number[Any], default=np.float32)
 NPMatrix: TypeAlias = np.ndarray[tuple[int, int], np.dtype[V]]
 NPVector: TypeAlias = np.ndarray[tuple[int], np.dtype[V]]
 
-T = TypeVar("T")
-
-DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
-MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
-MAT_AGG: TypeAlias = Literal["count", "sum", "mean", "first", "last"]
-LAYOUT: TypeAlias = Literal["csr", "coo"]
+type DF_FORMAT = Literal["numpy", "pandas", "torch"]
+type MAT_FORMAT = Literal["scipy", "torch", "pandas", "structure"]
+type LAYOUT = Literal["csr", "coo"]
 
 
 @dataclass
@@ -73,13 +87,13 @@ Column: TypeAlias = str | AliasedColumn
 
 
 @dataclass(frozen=True)
-class UIPair(Generic[T]):
+class UIPair(Generic[_UIPT]):
     """
     A user-item pair of values.
     """
 
-    user: T
-    item: T
+    user: _UIPT
+    item: _UIPT
 
 
 class Extent(NamedTuple):

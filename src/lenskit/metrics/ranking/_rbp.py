@@ -7,7 +7,7 @@
 import numpy as np
 from typing_extensions import override
 
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 
 from ._base import ListMetric, RankingMetricBase
 from ._weighting import GeometricRankWeight, RankWeight

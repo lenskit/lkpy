@@ -74,7 +74,7 @@ class DataContainer:
         """
         Save the data to disk.
         """
-        from .summary import save_stats
+        from ._summary import save_stats
 
         path = Path(path)
         log = _log.bind(name=self.schema.name, path=str(path))

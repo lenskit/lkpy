@@ -22,9 +22,8 @@ from scipy.sparse import csr_array
 from typing_extensions import NamedTuple, Optional, override
 
 from lenskit._accel import knn
-from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
+from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
-from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger
 from lenskit.parallel.config import ensure_parallel_init

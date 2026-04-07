@@ -11,7 +11,7 @@ import numpy as np
 
 from pytest import mark, raises
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
 from lenskit.testing import ml_test_dir
 

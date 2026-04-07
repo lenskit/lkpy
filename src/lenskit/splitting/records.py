@@ -12,8 +12,7 @@ from typing import Iterator, overload
 import numpy as np
 import pandas as pd
 
-from lenskit.data import Dataset, ItemListCollection, UserIDKey
-from lenskit.data.builder import DatasetBuilder
+from lenskit.data import Dataset, DatasetBuilder, ItemListCollection, UserIDKey
 from lenskit.random import RNGInput, random_generator
 
 from .split import TTSplit

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Literal, Protocol, overload, override, runtime
 
 import numpy as np
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.logging import get_logger, item_progress
 from lenskit.pipeline.components import Component
 from lenskit.random import RNGInput, random_generator

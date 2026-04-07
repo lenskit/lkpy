@@ -10,8 +10,7 @@ import pandas as pd
 from pydantic import JsonValue
 
 from lenskit import Pipeline, predict, recommend
-from lenskit.data import GenericKey, ItemList, ItemListCollection
-from lenskit.data.collection import key_dict
+from lenskit.data import GenericKey, ItemList, ItemListCollection, key_dict
 from lenskit.logging import Task, get_logger, item_progress
 from lenskit.metrics import (
     DCG,
