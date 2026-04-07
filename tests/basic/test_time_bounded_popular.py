@@ -11,8 +11,7 @@ import numpy as np
 import pandas as pd
 
 from lenskit.basic import popularity
-from lenskit.data import from_interactions_df
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList, from_interactions_df
 from lenskit.testing import ScorerTests
 
 ts = datetime(year=2024, month=1, day=1)

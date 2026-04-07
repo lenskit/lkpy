@@ -17,7 +17,7 @@ import hypothesis.strategies as st
 from hypothesis import HealthCheck, assume, given, settings
 
 from lenskit.basic.random import RandomSelector
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 from lenskit.testing import scored_lists
 
 _log = logging.getLogger(__name__)

@@ -14,8 +14,7 @@ import torch
 from pytest import approx, raises
 
 from lenskit.basic import BiasModel, BiasScorer
-from lenskit.data import Dataset, from_interactions_df
-from lenskit.data.items import ItemList
+from lenskit.data import Dataset, ItemList, from_interactions_df
 from lenskit.operations import predict, recommend
 from lenskit.pipeline import Pipeline, PipelineBuilder, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests

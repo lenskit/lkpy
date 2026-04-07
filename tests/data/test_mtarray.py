@@ -13,7 +13,7 @@ import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import assume, given
 
-from lenskit.data.mtarray import MTArray, MTIntArray
+from lenskit.data._mtarray import MTArray, MTIntArray
 
 
 @given(

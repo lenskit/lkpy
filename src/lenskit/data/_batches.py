@@ -22,12 +22,12 @@ _log = get_logger(__name__)
 
 
 @dataclass
-class BatchIter:
+class BatchedRange:
     """
-    Iterator over batches of a collection size.
+    Iterator over a range by batches.
 
-    The length of this collection is the number of batches,
-    and iterating over it yields batch extents.
+    The length of this collection is the number of batches, and iterating over
+    it yields batch extents.
     """
 
     n: int

@@ -11,7 +11,7 @@ import hypothesis.strategies as st
 from hypothesis import given
 from pytest import raises
 
-from lenskit.data.checks import check_1d, check_type
+from lenskit.data._checks import check_1d, check_type
 
 
 @given(nph.arrays(nph.scalar_dtypes(), nph.array_shapes(min_dims=1, max_dims=1)))

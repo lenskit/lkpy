@@ -17,8 +17,7 @@ import pyarrow as pa
 
 from pytest import mark
 
-from lenskit.data import DatasetBuilder
-from lenskit.data.adapt import from_interactions_df
+from lenskit.data import DatasetBuilder, from_interactions_df
 from lenskit.data.movielens import load_movielens_df
 from lenskit.logging import get_logger
 

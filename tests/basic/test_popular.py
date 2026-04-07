@@ -7,7 +7,7 @@
 import pandas as pd
 
 from lenskit.basic import PopScorer
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 simple_df = pd.DataFrame(

@@ -26,14 +26,14 @@ from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger, item_progress
 from lenskit.random import random_generator
 
-from .items import ItemList
+from ._items import ItemList
+from ._vocab import Vocabulary
 from .matrix import COOStructure, CSRStructure, SparseRowArray, fast_col_cooc
 from .schema import RelationshipSchema, id_col_name, num_col_name
 from .types import ID, LAYOUT, NPMatrix
-from .vocab import Vocabulary
 
 if TYPE_CHECKING:
-    from .collection import ItemListCollection
+    from ._collection import ItemListCollection
 
 _log = get_logger(__name__)
 
@@ -854,7 +854,7 @@ class MatrixRelationshipSet(RelationshipSet):
         """
         Get the rows as an item list collection.
         """
-        from .collection import ListILC
+        from ._collection import ListILC
 
         if self.col_type != "item":
             raise RuntimeError("row_items() only valid for item-column matrices")

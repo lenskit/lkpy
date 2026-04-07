@@ -9,7 +9,7 @@ import pandas as pd
 
 from pytest import raises, warns
 
-from lenskit.data.adapt import normalize_columns
+from lenskit.data._adapt import normalize_columns
 from lenskit.data.types import AliasedColumn
 
 SCROLLS = pd.DataFrame(

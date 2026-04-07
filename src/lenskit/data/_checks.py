@@ -9,7 +9,7 @@
 # pyright: strict
 from __future__ import annotations
 
-from typing import Any, Literal, Protocol, TypeVar, overload
+from typing import Any, Literal, Protocol, overload
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,12 +20,8 @@ class HasShape(Protocol):
     def shape(self) -> tuple[int, ...]: ...
 
 
-A = TypeVar("A", bound=HasShape)
-NPT = TypeVar("NPT", bound=np.generic)
-
-
 @overload
-def check_1d(
+def check_1d[A: HasShape](
     arr: A,
     size: int | None = None,
     *,
@@ -39,7 +35,7 @@ def check_1d(
     *,
     error: Literal["return"],
 ) -> bool: ...
-def check_1d(
+def check_1d[A: HasShape](
     arr: A,
     size: int | None = None,
     *,
@@ -97,19 +93,19 @@ def check_1d(
 
 
 @overload
-def check_type(
+def check_type[NPT: np.generic](
     arr: NDArray[Any],
     *types: type[NPT],
     label: str = "array",
     error: Literal["raise"] = "raise",
 ) -> NDArray[NPT]: ...
 @overload
-def check_type(
+def check_type[NPT: np.generic](
     arr: NDArray[Any],
     *types: type[NPT],
     error: Literal["return"],
 ) -> bool: ...
-def check_type(
+def check_type[NPT: np.generic](
     arr: NDArray[Any],
     *types: type[NPT],
     label: str = "array",

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import click
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.logging import get_logger
 from lenskit.splitting import sample_records, split_global_time, split_temporal_fraction
 

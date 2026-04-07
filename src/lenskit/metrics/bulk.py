@@ -10,12 +10,10 @@ import logging
 import warnings
 from typing import TypeVar
 
-import numpy as np
 import pandas as pd
 
-from lenskit.data import ItemList, ItemListCollection
+from lenskit.data import ItemListCollection
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import item_progress
 from lenskit.metrics import MeasurementCollector
 
 from ._base import Metric, MetricFunction
@@ -28,6 +26,11 @@ K2 = TypeVar("K2", bound=tuple)
 class RunAnalysisResult:
     """
     Results of a bulk metric computation.
+
+    .. deprecated:: 2026.1
+
+        This class is deprecated in favor of directly using
+        :class:`~lenskit.metrics.MeasurementCollector`.
 
     Stability:
         Caller
@@ -119,6 +122,16 @@ class RunAnalysis:
     This class now uses :class:`MetricAccumulator` internally to separate
     accumulation from looping, while maintaining the same external interface.
 
+    .. versionchanged:: 2026.1
+
+        Global metric outputs from this class have changed column names in some
+        cases, to simplify logic.
+
+    .. deprecated:: 2026.1
+
+        This class is deprecated in favor of directly using
+        :class:`~lenskit.metrics.MeasurementCollector`.
+
     Args:
         metrics:
             A list of metrics; you can also add them with :meth:`add_metric`,
@@ -128,10 +141,20 @@ class RunAnalysis:
         Caller
     """
 
+    collector: MeasurementCollector
+    """
+    The measurement collector for this analysis.
+    """
+    _defaults: dict[str, float]
+
     def __init__(self, *metrics: Metric):
-        self._accumulator = MeasurementCollector()
+        warnings.warn(
+            "RunAnalysis is deprectated, use MeasurementCollector instead", DeprecationWarning
+        )
+        self.collector = MeasurementCollector()
+        self._defaults = {}
         for metric in metrics:
-            self._accumulator.add_metric(metric)
+            self.collector.add_metric(metric)
 
     def add_metric(
         self,
@@ -153,17 +176,9 @@ class RunAnalysis:
                 recommendations. If unset, obtains from the metric's ``default``
                 attribute (if specified).
         """
-        self._accumulator.add_metric(metric, label, default)
-
-    @property
-    def metrics(self) -> list:
-        """
-        The list of metrics to compute.
-
-        .. deprecated:: 2025.4
-            Access metrics through the accumulator interface instead.
-        """
-        return self._accumulator.metrics
+        self.collector.add_metric(metric, label)
+        if default is not None:
+            self._defaults[self.collector._metrics[-1].label] = default
 
     def compute(
         self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
@@ -182,66 +197,14 @@ class RunAnalysis:
         """
         Measure a set of outputs against a set of test data.
         """
-        self._accumulator._validate_setup()
 
-        if len(outputs.key_fields) > 1:
-            index = pd.MultiIndex.from_tuples(outputs.keys())
-            index.names = list(outputs.key_fields)
-        else:
-            index = pd.Index([k[0] for k in outputs.keys()])
-            index.name = outputs.key_fields[0]
+        copy = self.collector.empty_copy()
+        copy._validate_setup()
 
-        n = len(outputs)
-        _log.debug("measuring %d metrics for %d output lists", len(self._accumulator.metrics), n)
+        copy.measure_collection(outputs, test)
 
-        no_test_count = 0
-        with item_progress("Measuring", n) as pb:
-            for key, out in outputs:
-                key_kwargs = dict(zip(outputs.key_fields, key))
-                list_test = test.lookup_projected(key)
-                if out is None or (list_test is None and not out):
-                    continue
-                elif list_test is None:
-                    no_test_count += 1
-                    list_test = ItemList([])
-                self._accumulator.measure_list(out, list_test, **key_kwargs)
-                pb.update()
+        res = RunAnalysisResult(
+            copy.list_metrics(), pd.Series(copy.summary_metrics()), self._defaults
+        )
 
-        if no_test_count:
-            _log.warning("could not find test data for %d lists", no_test_count)
-
-        list_results = self._accumulator.list_metrics(fill_missing=False)
-
-        global_metrics = [m for m in self._accumulator.metrics if m.is_global]
-
-        _log.debug("computing %d global metrics", len(global_metrics))
-
-        global_results = {}
-        for metric_wrapper in global_metrics:
-            result = metric_wrapper.measure_run(outputs, test)
-
-            if result is None and metric_wrapper.default is not None:
-                result = metric_wrapper.default
-
-            if result is not None:
-                global_results[metric_wrapper.label] = result
-
-        summary_results = self._accumulator.summary_metrics()
-        for key, value in summary_results.items():
-            if "." in key:
-                base_metric = key.split(".", 1)[0]
-                if base_metric not in global_results:
-                    global_results[base_metric] = value
-            else:
-                if key not in global_results:
-                    global_results[key] = value
-
-        global_results = pd.Series(global_results, dtype=np.float64)
-
-        defaults = {
-            metric_wrapper.label: metric_wrapper.default
-            for metric_wrapper in self._accumulator.metrics
-            if metric_wrapper.default is not None
-        }
-
-        return RunAnalysisResult(list_results, global_results, defaults)
+        return res

@@ -30,13 +30,13 @@ from typing_extensions import (
 from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataWarning
 
-from .arrow import get_indexer
-from .checks import check_1d
-from .mtarray import MTArray, MTGenericArray
+from ._arrow import get_indexer
+from ._checks import check_1d
+from ._mtarray import MTArray, MTGenericArray
+from ._vocab import Vocabulary
 from .types import IDArray, IDSequence, NPVector
-from .vocab import Vocabulary
 
-ILIndexer = (
+type ILIndexer = (
     np.ndarray[tuple[int], np.dtype[np.bool_]]
     | NPVector[np.integer]
     | Sequence[int]

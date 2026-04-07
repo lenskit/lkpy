@@ -12,6 +12,8 @@ and instructions on using these metrics.
 from __future__ import annotations
 
 import logging
+from math import sqrt
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -19,10 +21,11 @@ from numpy.typing import NDArray
 from typing_extensions import Callable, Literal, TypeAlias, override
 
 from lenskit.data import ItemList
-from lenskit.data.adapt import ITEM_COMPAT_COLUMN, normalize_columns
+from lenskit.data._adapt import ITEM_COMPAT_COLUMN, normalize_columns
+from lenskit.data.accum import ValueStatAccumulator
 from lenskit.data.types import AliasedColumn
 
-from ._base import ListMetric, Metric
+from ._base import Metric
 
 _log = logging.getLogger(__name__)
 
@@ -108,7 +111,7 @@ class PredictMetric(Metric):
         return pred_s, rate_s
 
 
-class RMSE(PredictMetric, ListMetric):
+class RMSE(PredictMetric):
     """
     Compute RMSE (root mean squared error).  This is computed as:
 
@@ -125,14 +128,23 @@ class RMSE(PredictMetric, ListMetric):
     """
 
     @override
-    def measure_list(self, predictions: ItemList, test: ItemList | None = None, /) -> float:
+    def measure_list(
+        self, predictions: ItemList, test: ItemList | None = None, /
+    ) -> tuple[float, int]:
         ps, ts = self.align_scores(predictions, test)
         err = ps - ts
         err *= err
-        return np.sqrt(np.mean(err))
+        return np.sum(err), np.sum(np.isfinite(err))
+
+    def extract_list_metrics(self, data: tuple[float, int]):
+        val, n = data
+        return sqrt(val / n)
+
+    def create_accumulator(self):
+        return AvgErrorAccumulator(root=True)
 
 
-class MAE(PredictMetric, ListMetric):
+class MAE(PredictMetric):
     """
     Compute MAE (mean absolute error).  This is computed as:
 
@@ -149,7 +161,47 @@ class MAE(PredictMetric, ListMetric):
     """
 
     @override
-    def measure_list(self, predictions: ItemList, test: ItemList | None = None, /) -> float:
+    def measure_list(
+        self, predictions: ItemList, test: ItemList | None = None, /
+    ) -> tuple[float, int]:
         ps, ts = self.align_scores(predictions, test)
         err = ps - ts
-        return np.mean(np.abs(err)).item()
+        return np.sum(np.abs(err)), np.sum(np.isfinite(err))
+
+    def extract_list_metrics(self, data: tuple[float, int]):
+        val, n = data
+        return val / n
+
+    def create_accumulator(self):
+        return AvgErrorAccumulator(root=False)
+
+
+class AvgErrorAccumulator:
+    _root: bool
+    _singles: ValueStatAccumulator
+    _total_val: float
+    _total_n: int
+
+    def __init__(self, root: bool = False):
+        self._root = root
+        self._singles = ValueStatAccumulator()
+        self._total_val = 0.0
+        self._total_n = 0
+
+    def add(self, value: tuple[float, int]):
+        val, n = value
+        self._total_val += val
+        self._total_n += n
+
+        x = val / n
+        if self._root:
+            x = sqrt(x)
+        self._singles.add(x)
+
+    def accumulate(self) -> dict[str, float]:
+        stats = self._singles.accumulate()
+        x = self._total_val / self._total_n
+        if self._root:
+            x = sqrt(x)
+
+        return cast(dict[str, float], stats) | {"global": x}

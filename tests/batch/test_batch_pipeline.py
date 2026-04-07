@@ -15,7 +15,7 @@ from pytest import approx, fixture, mark, skip, warns
 from lenskit.basic import BiasScorer, PopScorer
 from lenskit.batch import BatchPipelineRunner, predict, recommend, score
 from lenskit.data import Dataset, ItemList, UserIDKey, from_interactions_df
-from lenskit.data.adapt import normalize_interactions_df
+from lenskit.data._adapt import normalize_interactions_df
 from lenskit.diagnostics import DataWarning
 from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
 from lenskit.parallel.ray import ray_available

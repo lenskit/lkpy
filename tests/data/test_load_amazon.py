@@ -13,8 +13,7 @@ import pyarrow.compute as pc
 
 from pytest import mark
 
-from lenskit.data import load_amazon_ratings
-from lenskit.data.vocab import Vocabulary
+from lenskit.data import Vocabulary, load_amazon_ratings
 
 AZ_NAME = os.environ.get("LK_TEST_AZ_SET", "Video_Games")
 

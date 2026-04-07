@@ -9,8 +9,7 @@ from typing import Literal
 
 import click
 
-from lenskit.data import ItemListCollection
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset, ItemListCollection
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 

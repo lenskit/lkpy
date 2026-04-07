@@ -7,7 +7,7 @@
 import numpy as np
 import pandas as pd
 
-from lenskit.data.adapt import from_interactions_df
+from lenskit.data import from_interactions_df
 
 
 def test_item_subset(rng: np.random.Generator, ml_ratings: pd.DataFrame):

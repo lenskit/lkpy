@@ -13,8 +13,7 @@ import pyarrow as pa
 
 from pytest import approx, raises, warns
 
-from lenskit.data import DatasetBuilder
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset, DatasetBuilder
 from lenskit.data.schema import AllowableTroolean, DataSchema
 from lenskit.diagnostics import DataError, DataWarning
 

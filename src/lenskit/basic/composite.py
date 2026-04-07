@@ -10,7 +10,7 @@ import logging
 
 import numpy as np
 
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 from lenskit.pipeline import Component, Lazy
 
 _logger = logging.getLogger(__name__)
