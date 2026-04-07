@@ -165,6 +165,7 @@ jobs:
           uv pip install --resolution=lowest-direct --group=test '.[sklearn,hpf,implicit,funksvd]'
         env:
           CC: gcc
+          DONT_SET_MARCH: 1
 
       - name: 🔍 Inspect environment
         run: |
@@ -271,6 +272,8 @@ jobs:
         run: |
           uv sync --all-extras --no-default-groups --group test
           uv pip install optuna
+        env:
+          DONT_SET_MARCH: 1
 
       - name: Cache ML data
         uses: actions/cache@v4
