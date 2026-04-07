@@ -45,6 +45,11 @@ class NDCG(ListMetric, RankingMetricBase):
         \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
         \\end{align*}
 
+    .. note::
+        Negative gains are clipped to zero before computing NDCG.
+        This keeps the metric bounded between 0 and 1 and prevents cases where
+        negative gains can lead to misleading positive scores due to
+        cancellation effects.
     Args:
         n:
             The maximum recommendation list length to consider (longer lists are
@@ -105,12 +110,16 @@ class NDCG(ListMetric, RankingMetricBase):
             gains = test.field(self.gain, "pandas", index="ids")
             if gains is None:
                 raise KeyError(f"test items have no field {self.gain}")
+            gains = gains.clip(lower=0)
             if self.n:
                 gains = gains.nlargest(n=self.n)
             else:
                 gains = gains.sort_values(ascending=False)
             iweight = self.weight.weight(np.arange(1, len(gains) + 1))
             ideal = np.dot(gains.values, iweight).item()  # type: ignore
+
+            if ideal == 0:
+                return 0.0
 
         else:
             realized = _binary_dcg(recs, test, self.weight)
@@ -200,6 +209,8 @@ def _graded_dcg(
     gains = test.field(field, "pandas", index="ids")
     if gains is None:
         raise KeyError(f"test items have no field {field}")
+
+    gains = gains.clip(lower=0)
 
     ranks = recs.ranks(format="pandas")
     if ranks is None:

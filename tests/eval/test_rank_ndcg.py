@@ -110,3 +110,17 @@ def test_ndcg_alt_discount(items, n):
         e.add_note(f"recs: {recs}")
         e.add_note(f"truth: {truth}")
         raise e
+
+
+@mark.parametrize(
+    "ratings, expected_ndcg",
+    [
+        ([-1, -2, -3, -4, -5], 0.0),  # all negative
+        ([-6, -2, 3, 1, -3], 0.5982),  # mixed
+    ],
+)
+def test_ndcg_negative_gains(ratings, expected_ndcg):
+    recs = ItemList([1, 2, 3, 4, 5], ordered=True)
+    truth = ItemList([1, 2, 3, 4, 5], rating=ratings)
+    val = call_metric(NDCG, recs, truth, gain="rating")
+    assert val == approx(expected_ndcg, rel=1e-3)
