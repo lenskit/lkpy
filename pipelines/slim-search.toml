@@ -1,0 +1,13 @@
+[search]
+method = "optuna"
+max_points = 30
+list_length = 1000
+metric = "RBP"
+
+[space.scorer]
+max_nbrs = { type = "int", min = 100, max = 5000, scale = "log" }
+l1_reg = { type = "float", min = 0.01, max = 100, scale = "log" }
+l2_reg = { type = "float", min = 0.01, max = 100, scale = "log" }
+
+[pipeline]
+file = "slim.toml"
