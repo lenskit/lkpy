@@ -14,7 +14,7 @@ import pandas as pd
 import pytest
 
 from lenskit.data import Dataset
-from lenskit.splitting.records import crossfold_records, sample_records
+from lenskit.splitting._records import crossfold_records, sample_records
 
 
 def test_crossfold_records(ml_ds: Dataset):

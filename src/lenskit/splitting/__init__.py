@@ -13,7 +13,7 @@ import numpy as np
 from lenskit.data import Dataset
 
 from ._holdout import HoldoutMethod, LastFrac, LastN, SampleFrac, SampleN
-from .records import crossfold_records, sample_records
+from ._records import crossfold_records, sample_records
 from .split import TTSplit
 from .temporal import split_global_time, split_temporal_fraction
 from .users import crossfold_users, sample_users
