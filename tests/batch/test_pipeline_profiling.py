@@ -13,7 +13,7 @@ from pytest import mark
 from lenskit.basic import BiasScorer
 from lenskit.batch import BatchPipelineRunner
 from lenskit.pipeline import PipelineProfiler, topn_pipeline
-from lenskit.splitting.split import TTSplit
+from lenskit.splitting import TTSplit
 
 from .test_batch_pipeline import MLB, ml_split, mlb
 

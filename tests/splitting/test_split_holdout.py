@@ -14,7 +14,7 @@ import pandas as pd
 import pytest
 
 from lenskit.data import Dataset
-from lenskit.splitting.holdout import LastFrac, LastN, SampleFrac, SampleN
+from lenskit.splitting import LastFrac, LastN, SampleFrac, SampleN
 
 
 def test_sample_n(ml_ds: Dataset):

@@ -17,8 +17,8 @@ from lenskit.data import NPID, Dataset, DatasetBuilder, ItemListCollection, User
 from lenskit.logging import item_progress
 from lenskit.random import RNGInput, random_generator
 
-from .holdout import HoldoutMethod
-from .split import TTSplit
+from ._holdout import HoldoutMethod
+from ._split import TTSplit
 
 _log = logging.getLogger(__name__)
 

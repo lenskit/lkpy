@@ -10,7 +10,7 @@ from typing import Sequence, overload
 from lenskit.data import Dataset, DatasetBuilder, ItemListCollection
 from lenskit.logging import get_logger
 
-from .split import TTSplit
+from ._split import TTSplit
 
 _log = get_logger(__name__)
 
