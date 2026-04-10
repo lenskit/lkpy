@@ -20,7 +20,7 @@ from typing import Any, overload
 import torch
 
 from lenskit.logging import get_logger
-from lenskit.logging.worker import WorkerContext, WorkerLogConfig
+from lenskit.logging.multiprocess import WorkerContext, WorkerLogConfig
 
 from .config import (
     effective_cpu_count,

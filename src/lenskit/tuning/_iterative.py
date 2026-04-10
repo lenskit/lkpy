@@ -21,7 +21,7 @@ from structlog.stdlib import BoundLogger
 
 from lenskit.batch import BatchPipelineRunner
 from lenskit.logging import Task, get_logger
-from lenskit.logging.worker import send_task
+from lenskit.logging.multiprocess import send_task
 from lenskit.pipeline import Component, Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode

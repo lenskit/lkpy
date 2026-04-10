@@ -13,7 +13,7 @@ from __future__ import annotations
 from pydantic_core import to_json
 
 from lenskit.logging import Task, get_logger
-from lenskit.logging.worker import send_task
+from lenskit.logging.multiprocess import send_task
 from lenskit.pipeline import Pipeline
 from lenskit.random import make_seed
 from lenskit.training import TrainingOptions
