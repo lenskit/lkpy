@@ -23,8 +23,8 @@ from structlog.dev import RichTracebackFormatter
 
 from ._accel import update_log_level
 from ._console import ConsoleHandler, console, setup_console
-from .processors import filter_exceptions, format_timestamp, log_warning, remove_internal
-from .tracing import activate_tracing, lenskit_filtering_logger
+from ._processors import filter_exceptions, format_timestamp, log_warning, remove_internal
+from ._tracing import activate_tracing, lenskit_filtering_logger
 
 LVL_TRACE = 5
 CORE_PROCESSORS = [

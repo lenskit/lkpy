@@ -31,15 +31,15 @@ from structlog.typing import EventDict
 
 from lenskit.logging.progress._base import Progress
 
+from .._config import CORE_PROCESSORS, active_logging_config, log_warning
 from .._limit import RateLimit
+from .._processors import add_process_info
 from .._proxy import get_logger
-from ..config import CORE_PROCESSORS, active_logging_config, log_warning
-from ..processors import add_process_info
+from .._tracing import lenskit_filtering_logger
 from ..progress import set_progress_impl
 
 # from ..progress._worker import ProgressMessage
 from ..tasks import Task
-from ..tracing import lenskit_filtering_logger
 from ._protocol import (
     LogChannel,
     MsgAuthenticator,
@@ -76,7 +76,7 @@ class WorkerLogConfig:
         if _active_context is not None:
             return _active_context.config
         elif from_monitor:
-            from ..monitor import get_monitor
+            from .._monitor import get_monitor
 
             mon = get_monitor()
             if mon.log_address is None:

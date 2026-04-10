@@ -23,9 +23,9 @@ import requests
 from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, SerializeAsAny
 from typing_extensions import Literal
 
+from ._formats import friendly_duration
 from ._proxy import get_logger
-from .formats import friendly_duration
-from .resource import ResourceMeasurement, reset_linux_hwm
+from ._resource import ResourceMeasurement, reset_linux_hwm
 
 _log = get_logger(__name__)
 _active_tasks: list[Task] = []
@@ -254,7 +254,7 @@ class Task(BaseModel, extra="allow"):
             and self._refresh_id is None
             and self._final_meter is None
         ):
-            from lenskit.logging.monitor import get_monitor
+            from lenskit.logging._monitor import get_monitor
 
             mon = get_monitor()
             self._refresh_id = mon.add_refreshable(self)
@@ -285,7 +285,7 @@ class Task(BaseModel, extra="allow"):
 
         _active_tasks.append(self)
         if self._save_file:
-            from lenskit.logging.monitor import get_monitor
+            from lenskit.logging._monitor import get_monitor
 
             mon = get_monitor()
             self._refresh_id = mon.add_refreshable(self)
@@ -303,7 +303,7 @@ class Task(BaseModel, extra="allow"):
 
         with self._lock:
             if self._refresh_id is not None:
-                from lenskit.logging.monitor import get_monitor
+                from lenskit.logging._monitor import get_monitor
 
                 mon = get_monitor()
                 mon.remove_refreshable(self._refresh_id)

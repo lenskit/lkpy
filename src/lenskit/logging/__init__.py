@@ -8,14 +8,15 @@
 Logging, progress, and resource records.
 """
 
+from ._config import LoggingConfig, basic_logging, notebook_logging
 from ._console import console, stdout_console
+from ._formats import friendly_duration
 from ._proxy import get_logger
-from .config import LoggingConfig, basic_logging, notebook_logging
-from .formats import friendly_duration
+from ._resource import ResourceMeasurement
+from ._stopwatch import Stopwatch
+from ._tracing import Tracer, get_tracer, trace
 from .progress import Progress, item_progress, set_progress_impl
-from .stopwatch import Stopwatch
 from .tasks import Task
-from .tracing import Tracer, get_tracer, trace
 
 __all__ = [
     "LoggingConfig",
@@ -25,6 +26,7 @@ __all__ = [
     "item_progress",
     "set_progress_impl",
     "Task",
+    "ResourceMeasurement",
     "get_logger",
     "get_tracer",
     "trace",

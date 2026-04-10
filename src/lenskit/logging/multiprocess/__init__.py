@@ -4,6 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+"""
+Multiprocess logging support for Ray integration.  Most code doesn't need to
+touch this.
+
+Stability:
+    Internal
+"""
+
 from ._monitor import Monitor, get_monitor
 from ._records import RecordSink
 from ._worker import WorkerContext, WorkerLogConfig, send_task

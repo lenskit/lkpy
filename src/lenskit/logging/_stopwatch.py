@@ -13,7 +13,7 @@ from __future__ import annotations
 import time
 from contextlib import contextmanager
 
-from .formats import friendly_duration
+from ._formats import friendly_duration
 
 
 class Stopwatch:

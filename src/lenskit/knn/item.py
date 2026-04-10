@@ -26,7 +26,7 @@ from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, 
 from lenskit.data.matrix import SparseRowArray
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger, item_progress, trace
-from lenskit.logging.resource import cur_memory, max_memory
+from lenskit.logging._resource import cur_memory, max_memory
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions

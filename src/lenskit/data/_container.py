@@ -17,8 +17,7 @@ import pyarrow as pa
 from pyarrow.parquet import read_table, write_table
 
 from lenskit._accel import data as _data_accel
-from lenskit.logging import get_logger
-from lenskit.logging.stopwatch import Stopwatch
+from lenskit.logging import Stopwatch, get_logger
 
 from .schema import DataSchema
 
