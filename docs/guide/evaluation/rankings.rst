@@ -15,11 +15,18 @@ list and a test rating list, both as :py:class:`item lists
 <lenskit.data.ItemList>`; most metrics require the recommendation item list to
 be :py:attr:`~lenskit.data.ItemList.ordered`.
 
-All LensKit ranking metrics take `k` as a constructor argument to control the
+All LensKit ranking metrics take ``n`` as a constructor argument to control the
 list of the length that is considered; this allows multiple measurements (e.g.
 HR@5 and HR@10) to be computed from a single set of rankings.
 
+.. versionchanged:: 2026.1
+
+    The argument for the list length has changed from ``k`` to ``n``, for
+    consistency across LensKit.  ``k`` is kept as a deprecated alias until
+    2027.1.
+
 .. versionchanged:: 2025.1
+
     The top-N accuracy metric interface has changed to use item lists, and to
     be simpler to implement.
 
