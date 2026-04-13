@@ -4,8 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import warnings
-
 from lenskit.data import ItemList
 
 from .._base import ListMetric, Metric
@@ -18,12 +16,14 @@ class RankingMetricBase(Metric):
     Base class for most ranking metrics, implementing an ``n`` parameter for
     truncation.
 
+    .. versionchanged:: 2026.1
+
+        Removed deprecated ``k`` alias for ``n``.
+
     Args:
         n:
             Specify the length cutoff for rankings. Rankings longer than this
             will be truncated prior to measurement.
-        k:
-            Deprecated alias for ``n``.
 
     Stability:
         Caller
@@ -32,12 +32,7 @@ class RankingMetricBase(Metric):
     n: int | None = None
     "The maximum length of rankings to consider."
 
-    def __init__(self, n: int | None = None, *, k: int | None = None):
-        if n is None:
-            if k is not None:
-                warnings.warn("k= is deprecated, use n=", DeprecationWarning)
-                n = k
-
+    def __init__(self, n: int | None = None):
         if n is not None and n < 0:
             raise ValueError("n must be positive or None")
         self.n = n

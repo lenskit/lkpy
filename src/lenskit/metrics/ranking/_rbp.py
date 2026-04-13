@@ -104,13 +104,12 @@ class RBP(ListMetric, RankingMetricBase):
         self,
         n: int | None = None,
         *,
-        k: int | None = None,
         weight: RankWeight | None = None,
         patience: float = 0.85,
         normalize: bool = False,
         weight_field: str | None = None,
     ):
-        super().__init__(n, k=k)
+        super().__init__(n)
         self.patience = patience
         if weight is None and weight_field is None:
             weight = GeometricRankWeight(patience)

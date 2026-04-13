@@ -51,10 +51,9 @@ class MeanPopRank(ListMetric, RankingMetricBase):
         data: Dataset,
         *,
         n: int | None = None,
-        k: int | None = None,
         count: Literal["users", "interactions"] = "users",
     ):
-        super().__init__(n, k=k)
+        super().__init__(n)
         stats = data.item_stats()
         match count:
             case "users":
