@@ -125,7 +125,7 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
         scores = np.full(len(items), np.nan)
         scores[iidx >= 0] = Xsel
 
-        biases, _ub = self.bias.compute_for_items(items, query.user_id, query.user_items)
+        biases, _ub = self.bias.compute_for_items(items, query.user_id, query.query_items)
         scores += biases
 
         return ItemList(items, scores=scores)
