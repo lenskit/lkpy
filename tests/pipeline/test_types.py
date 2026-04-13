@@ -22,7 +22,7 @@ from numpy.typing import ArrayLike, NDArray
 
 from pytest import mark, warns
 
-from lenskit.data import Dataset, MatrixRelationshipSet, RelationshipSet
+from lenskit.data import MatrixRelationshipSet, QueryInput, RecQuery, RelationshipSet
 from lenskit.pipeline._types import (
     TypecheckWarning,
     import_path_string,
@@ -208,3 +208,13 @@ def test_is_instance_proto():
 
 def test_is_subclass_proto():
     assert is_instance_or_subclass(list, Sequence)
+
+
+def test_query_subtype():
+    assert is_compatible_type(RecQuery, QueryInput)
+
+
+def test_query_valid():
+    query = RecQuery(47)
+    assert is_compatible_data(query, RecQuery)
+    assert is_compatible_data(query, QueryInput)
