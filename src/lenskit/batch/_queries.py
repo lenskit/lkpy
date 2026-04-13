@@ -6,7 +6,7 @@
 
 import warnings
 from collections.abc import Iterable, Iterator, Mapping, Sized
-from typing import Any, NamedTuple
+from typing import Any, Literal, NamedTuple, TypedDict
 
 import pandas as pd
 
@@ -18,7 +18,34 @@ from lenskit.data import (
     QueryIDKey,
     RecQuery,
     UserIDKey,
+    key_dict,
 )
+from lenskit.diagnostics import DataWarning
+
+
+class BatchRecRequest(TypedDict, total=False):
+    """
+    Full recommendation request for evaluation, including candidate items.
+    """
+
+    query: RecQuery
+    "Recommendation query."
+    user_id: ID
+    "User ID (ignored if :attr:`query` is specified)."
+    query_id: ID
+    "Query ID (ignored if :attr:`query` is specified, defaults to user ID)."
+    items: ItemList
+    "The items to score or possibly recommend."
+    candidates: ItemList
+    """
+    Candidate items for the recommendations.  Overrides :attr:`items` for
+    top-*N* recommendation.
+    """
+    test_items: ItemList
+    """
+    Test items for the recommendation query.  Overrides :attr:`items` for
+    scoring or rating prediction.
+    """
 
 
 class BatchRequest(NamedTuple):
@@ -28,6 +55,83 @@ class BatchRequest(NamedTuple):
 
     query: RecQuery
     items: ItemList | None = None
+
+
+class TestRequestAdapter(Iterable[BatchRecRequest], Sized):
+    """
+    Wrapper for an item list collection that interprets it as a collection of
+    test requests.  Iterating over this collection will yield the requests in
+    the same order they are in the underlying item list collection.
+
+    The ``user_id`` and ``query_id`` key fields, if present are used to
+    construct the recommendation queries.  The item lists themselves are
+    interpreted as  directed by the ``items_as`` option:
+
+    ``test``
+        Items are used as test items (e.g., the items for which to predict
+        ratings), but **not** candidates.
+
+    ``candidates``
+        Items are used as candidate lists.
+
+    ``both``
+        Items are used as both test items and candidates.
+
+    ``None``
+        Items are excluded.
+
+    .. seealso::
+
+        :ref:`batch-queries`, :class:`~lenskit.batch.BatchRecRequest`
+
+    Args:
+        lists:
+            The item list collection.
+        items_as:
+            Where to put the item lists in the request.
+    Warns:
+        DataWarning:
+            If the item list collection cannot be used to construct usable
+            requests.
+    """
+
+    lists: ItemListCollection
+    item_use: Literal["test", "candidates", "both"] | None
+
+    def __init__(
+        self,
+        lists: ItemListCollection,
+        *,
+        items_as: Literal["test", "candidates", "both"] | None = "test",
+    ):
+        if "user_id" not in lists.key_fields:
+            warnings.warn(
+                "user_id is not in test data keys, requests unlikely to be usable",
+                DataWarning,
+                stacklevel=2,
+            )
+        self.lists = lists
+        self.item_use = items_as
+
+    def __len__(self):
+        return len(self.lists)
+
+    def __iter__(self) -> Iterator[BatchRecRequest]:
+        for key, items in self.lists.items():
+            kd = key_dict(key)
+            req: BatchRecRequest = {}
+            if uid := kd.get("user_id"):
+                req["query_id"] = req["user_id"] = uid
+            if qid := kd.get("query_id"):
+                req["query_id"] = qid
+            match self.item_use:
+                case "test":
+                    req["test_items"] = items
+                case "candidates":
+                    req["candidates"] = items
+                case "both":
+                    req["items"] = items
+            yield req
 
 
 def normalize_query_input(

@@ -15,12 +15,6 @@ By default, the batch facilities operate in parallel over the test users; this
 can be controlled by environment variables (see :ref:`parallel-config`) or
 through an ``n_jobs`` keyword argument to the various functions and classes.
 
-.. admonition:: Import Protection
-    :class: important
-
-    Scripts using batch pipeline operations must be *protected*; see
-    :ref:`parallel-protecting`.
-
 Simple Runs
 ~~~~~~~~~~~
 
@@ -80,36 +74,28 @@ wrappers around a more general facility, the :py:class:`BatchPipelineRunner`.
 Batch Queries
 ~~~~~~~~~~~~~
 
-.. py:currentmodule:: lenskit.data
-
 The batch inference functions and methods (:func:`~lenskit.batch.recommend`,
-:meth:`~lenskit.batch.BatchPipelineRunner.run`, etc.) accept multiple types of
-input to specify the set of users or test items.
+:meth:`~lenskit.batch.BatchPipelineRunner.run`, etc.) batch recommendation
+requests in the following formats:
 
-* An iterable (e.g. list) of recommendation queries (as :class:`RecQuery`
-  objects).  The queries must have at least one of :attr:`RecQuery.query_id` and
-  :attr:`RecQuery.user_id` set, so that the output can be properly indexed.
-  Queries should all have the identification method (i.e., all queries have a
-  ``query_id``, or all queries have only a ``user_id``).
+* An iterable of identifiers, which are taken to be user IDs and used as both the
+  :attr:`~lenskit.data.RecQuery.user_id` and the
+  :attr:`~lenskit.data.RecQuery.query_id` to make otherwise-empty
+  :attr:`queries <lenskit.data.RecQuery>`.
 
-* An iterable of 2-element ``(query, items)`` tuples.  The query is a
-  :class:`RecQuery` as in the previous method, and the items is an :class:`ItemList`
-  containing the candidate items (for recommendation) or the items to score (for
-  prediction and scoring).  This is the most general form of input.
+* An iterable of :attr:`~lenskit.data.RecQuery` objects, specifying the
+  recommendation queries.
 
-* An iterable (e.g. list) of user IDs.  These are passed as
-  :attr:`RecQuery.user_id`, and the resulting outputs are mapped to  ID.
+* An iterable of dictionaries, each of which conforms to
+  :class:`~lenskit.batch.BatchRecRequest`.
 
-* An :class:`ItemListCollection`.  At least one field of the collection key
-  should be ``user_id``, and these user IDs are used as the query user IDs. The
-  item lists themselves are used as in the tuple method above. Results are
-  indexed by the entire key.
+* An :class:`~lenskit.data.ItemListCollection`, which is translated to a
+  collection of recommendation requests with :class:`TestRequestAdapter`.  This
+  translation extracts user and query IDs from the item list keys, and uses the
+  item lists themselves as test items for rating prediction (and uses default
+  candidate sets for recommendation).
 
-* A mapping (dictionary) of IDs to item lists.  This behaves like the item
-  list collection; the IDs are taken to be user IDs.
+.. versionchanged:: 2026.1
 
-* A :class:`pandas.DataFrame`, which is converted to an item list collection.
-
-.. deprecated:: 2025.6
-
-    Mappings and data frames are deprecated in favor of other input types.
+    Restricted the batch inputs to the types above, in order to make input
+    clearer and more explicit.
