@@ -113,7 +113,7 @@ mid-stream unless absolutely necessary and clearly-communicated.
 
 As of 2026, these versions are:
 
-*   Python 3.11
+*   Python 3.12
 *   Pandas 2.3
 *   NumPy 2.0
 *   SciPy 1.13.0
