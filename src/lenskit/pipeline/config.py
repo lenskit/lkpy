@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import pickle
+import re
 import warnings
 from collections import OrderedDict
 from hashlib import sha256
@@ -30,6 +31,25 @@ from ._hooks import HookEntry
 from ._types import make_importable_path
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
+
+VALID_NAME = re.compile(r"^[\w.@%!*?-]+$", re.UNICODE)
+
+
+def check_name(name: str, *, what: str = "node", allow_reserved: bool = False):
+    """
+    Check that a name is valid.
+
+    Raises:
+        ValueError:
+            If the specified name is not valid.
+    """
+
+    if not VALID_NAME.match(name):
+        raise ValueError(f"invalid {what} name “{name}”")
+    if name.startswith("_") and not allow_reserved:
+        raise ValueError(
+            f"invalid {what} name “{name}”, names beginning with “_” are reserved by LensKit"
+        )
 
 
 class PipelineHook(BaseModel):

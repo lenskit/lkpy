@@ -38,7 +38,7 @@ from .components import (
     fallback_on_none,
     is_component_class,
 )
-from .config import PipelineConfig, PipelineHook
+from .config import PipelineConfig, PipelineHook, check_name
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
@@ -208,6 +208,7 @@ class PipelineBuilder:
             ValueError:
                 a node with the specified ``name`` already exists.
         """
+        check_name(name, what="input")
         self._check_available_name(name)
 
         rts: set[type[T | None]] = set()
@@ -234,6 +235,8 @@ class PipelineBuilder:
         if name is None:
             lit = config.PipelineLiteral.represent(value)
             name = str(uuid5(NAMESPACE_LITERAL_DATA, lit.model_dump_json()))
+        else:
+            check_name(name)
         node = LiteralNode(name, value, types=set([type(value)]))
         self._nodes[name] = node
         return node
@@ -300,6 +303,7 @@ class PipelineBuilder:
             ValueError:
                 if the alias is already used as an alias or node name.
         """
+        check_name(alias, what="alias")
         node = self.node(node)
         if replace:
             if alias in self._nodes:
@@ -355,6 +359,7 @@ class PipelineBuilder:
         """
         from lenskit.training import Trainable
 
+        check_name(name, what="component")
         self._check_available_name(name)
 
         if hasattr(comp, "train"):
@@ -417,6 +422,7 @@ class PipelineBuilder:
         if isinstance(name, Node):
             name = name.name
 
+        check_name(name, what="component")
         node = ComponentNode[T].create(name, comp, config)
         self._nodes[name] = node
 
