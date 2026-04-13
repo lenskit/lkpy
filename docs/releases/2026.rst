@@ -74,6 +74,8 @@ Breaking Changes
   (:pr:`1052`).
 - Removed the ``n`` option to :func:`~lenskit.pipeline.predict_pipeline`
   (:issue:`835`).
+- Removed the deprecated ``k=`` alias for the ``n=`` option in ranking metrics
+  (:issue:`889`, :pr:`1073`).
 - Removed the deprecated unrated and all-items candidate selectors, in favor of
   :class:`~lenskit.basic.TrainingItemsCandidateSelector` (:issue:`935`).
 
