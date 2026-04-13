@@ -88,8 +88,8 @@ Deprecations
 - ``AllTrainingItemsCandidateSelector`` is deprecated in favor of
   :class:`~lenskit.basic.TrainingItemCandidateSelector` with suitable
   configuration.
-- :attr:`lenskit.data.RecQuery.user_items` is deprecated in favor of
-  :class:`~lenskit.data.RecQuery.history_items`.
+- ``RecQuery.user_items`` is deprecated in favor of
+  :attr:`~lenskit.data.RecQuery.history_items`.
 - Removed fixed defaults for ``row_entity`` and ``col_entity`` on
   :meth:`~lenskit.dataset.RelationshipSet.matrix`, now defaulting to the first
   and last entities involved in the relationship.  This does not change anything
