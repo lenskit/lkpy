@@ -10,7 +10,7 @@ from typing import Generator, NamedTuple
 import numpy as np
 import pandas as pd
 
-from pytest import approx, fixture, mark, skip, warns
+from pytest import approx, fixture, mark, raises, skip, warns
 
 from lenskit.basic import BiasScorer, PopScorer
 from lenskit.batch import BatchPipelineRunner, predict, recommend, score
@@ -52,7 +52,7 @@ def ml_split(ml_100k: pd.DataFrame) -> Generator[TTSplit, None, None]:
 
 
 def test_predict_single(mlb: MLB):
-    res = predict(mlb.pipeline, {1: ItemList([31])})
+    res = predict(mlb.pipeline, [{"user_id": 1, "items": ItemList([31])}])
 
     assert len(res) == 1
     uid, result = next(iter(res))
@@ -67,7 +67,7 @@ def test_predict_single(mlb: MLB):
 
 
 def test_score_single(mlb: MLB):
-    res = score(mlb.pipeline, {1: ItemList([31])})
+    res = score(mlb.pipeline, [{"user_id": 1, "items": ItemList([31])}])
 
     assert len(res) == 1
     uid, result = next(iter(res))
@@ -176,16 +176,5 @@ def test_bias_df(ml_split: TTSplit):
     runner = BatchPipelineRunner()
     runner.recommend()
 
-    with warns(DataWarning):
-        results = runner.run(pipeline, ml_split.test.to_df())
-
-    recs = results.output("recommendations")
-    ra = RunAnalysis()
-    ra.add_metric(NDCG())
-    ra.add_metric(RBP())
-    rec_acc = ra.measure(recs, ml_split.test)
-    ras = rec_acc.list_summary()
-    print(ras)
-
-    assert ras.loc["RBP", "mean"] > 0
-    assert ras.loc["NDCG", "mean"] > 0
+    with raises(TypeError):
+        _results = runner.run(pipeline, ml_split.test.to_df())

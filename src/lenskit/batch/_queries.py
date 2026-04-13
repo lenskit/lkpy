@@ -11,6 +11,8 @@ from collections.abc import Iterable, Iterator, Mapping, Sized
 from dataclasses import dataclass
 from typing import Literal, TypedDict
 
+import pandas as pd
+
 from lenskit.data import (
     ID,
     GenericKey,
@@ -170,6 +172,10 @@ def normalize_query_input(
     if isinstance(queries, ItemListCollection):
         kt = queries.key_type
         queries = TestRequestAdapter(queries)
+    elif isinstance(queries, Mapping):
+        raise TypeError("mappings are no longer a supported batch input")
+    elif isinstance(queries, pd.DataFrame):
+        raise TypeError("data frames are no longer a supported batch input")
 
     n = None
     if isinstance(queries, Sized):
