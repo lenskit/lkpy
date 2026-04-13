@@ -65,6 +65,7 @@ jobs:
     needs: [sdist]
     runs-on: ${{ matrix.plat.host }}
     strategy:
+      fail-fast: false
       matrix:
         plat:
           - host: ubuntu-22.04
