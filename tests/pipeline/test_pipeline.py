@@ -101,6 +101,40 @@ def test_alias():
         pipe.create_input("person", bytes)
 
 
+def test_invalid_input_name():
+    pipe = PipelineBuilder()
+
+    with raises(ValueError, match=r"invalid input name.*reserved"):
+        pipe.create_input("_user", int, str)
+
+    with raises(ValueError, match=r"invalid input name"):
+        pipe.create_input("user 7", int, str)
+
+
+def test_invalid_component_name():
+    pipe = PipelineBuilder()
+    user = pipe.create_input("user", int, str)
+
+    def incr(x: int) -> int:
+        return x + 1
+
+    with raises(ValueError, match=r"invalid component name.*reserved"):
+        pipe.add_component("_incr", incr, x=user)
+
+
+def test_invalid_node_alias():
+    pipe = PipelineBuilder()
+    user = pipe.create_input("user", int, str)
+
+    def incr(x: int) -> int:
+        return x + 1
+
+    inode = pipe.add_component("incr", incr, x=user)
+
+    with raises(ValueError, match=r"invalid alias.*reserved"):
+        pipe.alias("_incr", inode)
+
+
 def test_component_type():
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
