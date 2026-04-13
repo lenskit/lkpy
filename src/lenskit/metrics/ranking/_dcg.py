@@ -78,12 +78,11 @@ class NDCG(ListMetric, RankingMetricBase):
         self,
         n: int | None = None,
         *,
-        k: int | None = None,
         weight: RankWeight = LogRankWeight(),
         discount: Discount | None = None,
         gain: str | None = None,
     ):
-        super().__init__(n, k=k)
+        super().__init__(n)
         self.weight = weight
         self.discount = discount
         if discount is not None:
@@ -174,12 +173,11 @@ class DCG(ListMetric, RankingMetricBase):
         self,
         n: int | None = None,
         *,
-        k: int | None = None,
         weight: RankWeight = LogRankWeight(),
         discount: Discount | None = None,
         gain: str | None = None,
     ):
-        super().__init__(n, k=k)
+        super().__init__(n)
         self.weight = weight
         self.discount = discount
         if discount is not None:

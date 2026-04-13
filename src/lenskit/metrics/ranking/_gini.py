@@ -37,10 +37,9 @@ class GiniBase(RankingMetricBase):
         self,
         n: int | None = None,
         *,
-        k: int | None = None,
         items: Vocabulary | Dataset,
     ):
-        super().__init__(n, k=k)
+        super().__init__(n)
         if isinstance(items, Dataset):
             self.item_vocab = items.items
         else:
@@ -100,11 +99,10 @@ class ExposureGini(GiniBase):
         self,
         n: int | None = None,
         *,
-        k: int | None = None,
         items: Vocabulary | Dataset,
         weight: RankWeight = GeometricRankWeight(),
     ):
-        super().__init__(n=n, k=k, items=items)
+        super().__init__(n=n, items=items)
         self.weight = weight
 
     @override
