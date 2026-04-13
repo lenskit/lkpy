@@ -16,7 +16,7 @@ def test_empty():
     query = RecQuery()
     assert query.user_id is None
     assert query.history_items is None
-    assert query.user_items is None
+    assert query.history_items is None
     assert query.session_items is None
     assert query.context_items is None
 
@@ -26,19 +26,7 @@ def test_history_items():
     query = RecQuery.create(items)
     assert query.user_id is None
     assert query.history_items == items
-    assert query.user_items == items
-    assert query.session_items is None
-    assert query.context_items is None
-    assert query.query_items == items
-
-
-def test_deprecated_user_items():
-    items = ItemList(ITEMS, vocabulary=VOCAB)
-    with warns(DeprecationWarning):
-        query = RecQuery(user_items=items)
-    assert query.user_id is None
     assert query.history_items == items
-    assert query.user_items == items
     assert query.session_items is None
     assert query.context_items is None
     assert query.query_items == items
@@ -49,7 +37,7 @@ def test_session_items():
     query = RecQuery(session_items=items)
     assert query.user_id is None
     assert query.history_items is None
-    assert query.user_items is None
+    assert query.history_items is None
     assert query.session_items == items
     assert query.context_items is None
     assert query.query_items == items
@@ -60,7 +48,7 @@ def test_context_items():
     query = RecQuery(context_items=items)
     assert query.user_id is None
     assert query.history_items is None
-    assert query.user_items is None
+    assert query.history_items is None
     assert query.session_items is None
     assert query.context_items == items
     assert query.query_items == items
@@ -77,7 +65,7 @@ def test_context_items_override():
     )
     assert query.user_id is None
     assert query.history_items == h_il
-    assert query.user_items == h_il
+    assert query.history_items == h_il
     assert query.session_items == s_il
     assert query.context_items == c_il
     assert query.query_items == c_il
@@ -92,7 +80,7 @@ def test_session_items_override():
     )
     assert query.user_id is None
     assert query.history_items == h_il
-    assert query.user_items == h_il
+    assert query.history_items == h_il
     assert query.session_items == s_il
     assert query.context_items is None
     assert query.query_items == s_il
@@ -110,7 +98,7 @@ def test_combined_query_items():
     )
     assert query.user_id is None
     assert query.history_items == h_il
-    assert query.user_items == h_il
+    assert query.history_items == h_il
     assert query.session_items == s_il
     assert query.context_items == c_il
     assert query.query_items is not None

@@ -87,7 +87,6 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
         if query.history_items is None:
             trace(log, "looking up user history")
             query.history_items = self.interactions.row_items(query.user_id)
-            query.user_items = query.history_items
             if query.history_items is not None:
                 log.debug("fetched %d history items", len(query.history_items))
             else:
@@ -138,8 +137,8 @@ class KnownRatingScorer(Component[ItemList], Trainable):
 
         # figure out what scores we start with
         ilist = None
-        if self.config.source == "query" and query.user_items is not None:
-            ilist = query.user_items
+        if self.config.source == "query" and query.query_items is not None:
+            ilist = query.query_items
 
         elif (
             self.config.source == "training"

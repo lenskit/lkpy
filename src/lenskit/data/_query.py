@@ -8,9 +8,9 @@
 Recommendation queries.
 """
 
+# pyright: strict
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
@@ -78,16 +78,6 @@ class RecQuery:
     The list of items to return from :meth:`query_items`.
     """
 
-    user_items: ItemList | None = None
-    """
-    Deprecated alias for :attr:`history_items`.
-
-    .. deprecated:: 2025.6
-
-        Use :attr:`history_items` instead.  This property will be removed in
-        LensKit 2026.1.
-    """
-
     query_id: ID | None = None
     """
     An identifier for this query.
@@ -95,13 +85,6 @@ class RecQuery:
     Query identifiers are used for things like mapping batch recommendation
     outputs to their inputs.
     """
-
-    def __post_init__(self):
-        if self.user_items is None:
-            self.user_items = self.history_items
-        elif self.history_items is None:
-            warnings.warn("user_items is deprecated, use history_items", DeprecationWarning, 2)
-            self.history_items = self.user_items
 
     @classmethod
     def create(cls, data: QueryInput) -> RecQuery:

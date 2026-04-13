@@ -115,7 +115,7 @@ class SLIMScorer(Component, Trainable):
         self.items = data.items
 
     def __call__(self, query: RecQuery, items: ItemList) -> ItemList:
-        u_items = query.user_items
+        u_items = query.query_items
         if u_items is None:
             warnings.warn("no user history available", DataWarning)
             return ItemList(items, scores=np.nan)

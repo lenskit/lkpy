@@ -14,7 +14,7 @@ Queries are represented by the :class:`.RecQuery` class, and can have any or all
 of the following components:
 
 - A user ID (:attr:`RecQuery.user_id`)
-- A user's historical items (:attr:`RecQuery.user_items`)
+- A user's historical items (:attr:`RecQuery.history_items`)
 
 .. admonition:: Future Work
     :class: note
