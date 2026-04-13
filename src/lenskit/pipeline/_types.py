@@ -13,6 +13,7 @@ from importlib import import_module
 from types import FunctionType, GenericAlias, NoneType, UnionType
 from typing import (
     Any,
+    TypeAliasType,
     TypeVar,
     Union,
     _GenericAlias,  # type: ignore # noqa: PLC2701
@@ -24,7 +25,7 @@ import numpy as np
 
 from lenskit.diagnostics import PipelineWarning, TypecheckWarning
 
-type TypeExpr = type | UnionType
+type TypeExpr = type | UnionType | TypeAliasType
 """
 Type for (resolved) type expressions.
 
@@ -75,6 +76,10 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
         all of the targets, and ``True`` otherwise.
     """
     for target in targets:
+        # resolve type aliases
+        if isinstance(target, TypeAliasType):
+            target = target.__value__
+
         # try a straight subclass check first, but gracefully handle incompatible types
         try:
             if issubclass(typ, target):
@@ -125,6 +130,10 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
         all of the targets, and ``True`` otherwise.
     """
     for target in targets:
+        # resolve type aliases
+        if isinstance(target, TypeAliasType):
+            target = target.__value__
+
         # try a straight subclass check first, but gracefully handle incompatible types
         try:
             if isinstance(obj, target):
