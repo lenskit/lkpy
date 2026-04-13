@@ -112,7 +112,7 @@ def test_bias_batch(ml_split: TTSplit, ncpus: int | None):
     runner.recommend()
     runner.predict()
 
-    results = runner.run(pipeline, ml_split.test)
+    results = runner.run(pipeline, ml_split.test_requests)
 
     preds = results.output("predictions")
 
@@ -153,7 +153,7 @@ def test_pop_batch_recommend(ml_split: TTSplit, ncpus: int | None):
     runner = BatchPipelineRunner(n_jobs=ncpus, use_ray=use_ray)
     runner.recommend()
 
-    results = runner.run(pipeline, ml_split.test)
+    results = runner.run(pipeline, ml_split.test_requests)
 
     recs = results.output("recommendations")
     ra = RunAnalysis()
