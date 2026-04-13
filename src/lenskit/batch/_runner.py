@@ -30,14 +30,14 @@ from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import get_parallel_config, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler, ProfileSink
 
-from ._queries import BatchRequest, normalize_query_input
+from ._queries import ResolvedBatchRequest, normalize_query_input
 from ._results import BatchResultRow, BatchResults
 
 _log = get_logger(__name__)
 
-ItemSource: TypeAlias = None | Literal["test-items"]
+ItemSource: TypeAlias = None | Literal["test-items", "candidates"]
 """
-Types of items that can be returned.
+Source for the ``items`` input to the recommendation pipeline.
 """
 
 
@@ -51,9 +51,15 @@ class InvocationSpec:
     name: str
     "A name for this invocation."
     components: dict[str, str]
-    "The names of pipeline components to measure and return, mapped to their output names."
+    """
+    The names of pipeline components to measure and return, mapped to their
+    output names.
+    """
     items: ItemSource = None
-    "The target or candidate items (if any) to provide to the recommender."
+    """
+    The target or candidate items (if any) to provide to the recommender (as the
+    ``items`` input).
+    """
     extra_inputs: dict[str, Any] = field(default_factory=dict)
     "Additional inputs to pass to the pipeline."
 
@@ -253,7 +259,10 @@ class BatchPipelineRunner:
         return results
 
     def _run_results(
-        self, pipeline: Pipeline, profiler: ProfileSink | None, queries: Iterable[BatchRequest]
+        self,
+        pipeline: Pipeline,
+        profiler: ProfileSink | None,
+        queries: Iterable[ResolvedBatchRequest],
     ) -> Generator[BatchResultRow]:
         if self.use_ray:
             from ._ray import ray_results
@@ -277,7 +286,7 @@ class BatchPipelineRunner:
         self,
         pipeline: Pipeline,
         profiler: ProfileSink | None,
-        queries: Iterable[BatchRequest],
+        queries: Iterable[ResolvedBatchRequest],
     ) -> Generator[BatchResultRow]:
         for query in queries:
             yield run_pipeline(pipeline, self.invocations, profiler, query)
@@ -286,7 +295,7 @@ class BatchPipelineRunner:
         self,
         pipeline: Pipeline,
         profiler: ProfileSink | None,
-        queries: Iterable[BatchRequest],
+        queries: Iterable[ResolvedBatchRequest],
     ) -> Generator[BatchResultRow]:
         assert isinstance(self.n_jobs, int)
         func = partial(run_pipeline, pipeline, self.invocations, profiler)
@@ -305,13 +314,14 @@ def run_pipeline(
     pipeline: Pipeline,
     invocations: list[InvocationSpec],
     profiler: ProfileSink | None,
-    req: BatchRequest,
+    req: ResolvedBatchRequest,
 ) -> BatchResultRow:
-    query, test_items = req
-    if query.query_id is not None:
-        key = QueryIDKey(query.query_id)
-    elif query.user_id is not None:
-        key = UserIDKey(query.user_id)
+    if isinstance(req.query.query_id, tuple):
+        key = req.query.query_id
+    elif req.query.query_id is not None:
+        key = QueryIDKey(req.query.query_id)
+    elif req.query.user_id is not None:
+        key = UserIDKey(req.query.user_id)
     else:
         raise RuntimeError("query must have one of query_id, user_id")
 
@@ -319,10 +329,12 @@ def run_pipeline(
 
     _log.debug("running pipeline", name=pipeline.name, key=key)
     for inv in invocations:
-        inputs: dict[str, Any] = {"query": query}
+        inputs: dict[str, Any] = {"query": req.query}
         match inv.items:
-            case "test-items" if test_items is not None:
-                inputs["items"] = test_items
+            case "test-items" if req.test_items is not None:
+                inputs["items"] = req.test_items
+            case "candidates" if req.candidates is not None:
+                inputs["items"] = req.candidates
 
         inputs.update(inv.extra_inputs)
 

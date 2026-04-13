@@ -18,7 +18,7 @@ import pandas as pd
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, RecQuery, UserIDKey
 from lenskit.pipeline import Pipeline, PipelineProfiler
 
-from ._queries import BatchRecRequest, TestRequestAdapter
+from ._queries import BatchInput, BatchRecRequest, TestRequestAdapter
 from ._results import BatchResults
 from ._runner import BatchPipelineRunner, InvocationSpec
 
@@ -26,6 +26,7 @@ __all__ = [
     "BatchPipelineRunner",
     "BatchResults",
     "BatchRecRequest",
+    "BatchInput",
     "TestRequestAdapter",
     "InvocationSpec",
     "predict",

@@ -83,7 +83,7 @@ class RecQuery:
     The list of items to return from :meth:`query_items`.
     """
 
-    query_id: ID | None = None
+    query_id: ID | tuple[ID, ...] | None = None
     """
     An identifier for this query.
 
