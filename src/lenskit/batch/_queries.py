@@ -4,11 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from __future__ import annotations
+
 import warnings
 from collections.abc import Iterable, Iterator, Mapping, Sized
-from typing import Any, Literal, NamedTuple, TypedDict
-
-import pandas as pd
+from dataclasses import dataclass
+from typing import Literal, TypedDict
 
 from lenskit.data import (
     ID,
@@ -22,20 +23,36 @@ from lenskit.data import (
 )
 from lenskit.diagnostics import DataWarning
 
+type BatchInput = (
+    Iterable[BatchRecRequest]
+    | Iterable[RecQuery]
+    | Iterable[ID | GenericKey]
+    | ItemListCollection[GenericKey]
+)
+"""
+Allowed input types for batch inference routines.
+"""
+
 
 class BatchRecRequest(TypedDict, total=False):
     """
-    Full recommendation request for evaluation, including candidate items.
+    Full recommendation request for batch inference, including candidate items.
+
+    Stability:
+        Full
     """
 
     query: RecQuery
     "Recommendation query."
     user_id: ID
     "User ID (ignored if :attr:`query` is specified)."
-    query_id: ID
+    query_id: ID | GenericKey
     "Query ID (ignored if :attr:`query` is specified, defaults to user ID)."
     items: ItemList
-    "The items to score or possibly recommend."
+    """
+    The items to score or possibly recommend. It is usually better to supply
+    :attr:`candidates` and/or :attr:`test_items`.
+    """
     candidates: ItemList
     """
     Candidate items for the recommendations.  Overrides :attr:`items` for
@@ -48,13 +65,19 @@ class BatchRecRequest(TypedDict, total=False):
     """
 
 
-class BatchRequest(NamedTuple):
+@dataclass
+class ResolvedBatchRequest:
     """
-    A single request for the batch inference runner.
+    A single request for the batch inference runner, with fully-resolved
+    defaults.
+
+    Stability:
+        Internal
     """
 
     query: RecQuery
-    items: ItemList | None = None
+    test_items: ItemList | None = None
+    candidates: ItemList | None = None
 
 
 class TestRequestAdapter(Iterable[BatchRecRequest], Sized):
@@ -64,7 +87,8 @@ class TestRequestAdapter(Iterable[BatchRecRequest], Sized):
     the same order they are in the underlying item list collection.
 
     The ``user_id`` and ``query_id`` key fields, if present are used to
-    construct the recommendation queries.  The item lists themselves are
+    construct the recommendation queries.  If there is no ``query_id`` field,
+    then the entire key is used as a query ID.  The item lists themselves are
     interpreted as  directed by the ``items_as`` option:
 
     ``test``
@@ -93,6 +117,8 @@ class TestRequestAdapter(Iterable[BatchRecRequest], Sized):
         DataWarning:
             If the item list collection cannot be used to construct usable
             requests.
+    Stability:
+        Caller
     """
 
     lists: ItemListCollection
@@ -121,9 +147,11 @@ class TestRequestAdapter(Iterable[BatchRecRequest], Sized):
             kd = key_dict(key)
             req: BatchRecRequest = {}
             if uid := kd.get("user_id"):
-                req["query_id"] = req["user_id"] = uid
+                req["user_id"] = uid
             if qid := kd.get("query_id"):
                 req["query_id"] = qid
+            else:
+                req["query_id"] = key
             match self.item_use:
                 case "test":
                     req["test_items"] = items
@@ -135,31 +163,13 @@ class TestRequestAdapter(Iterable[BatchRecRequest], Sized):
 
 
 def normalize_query_input(
-    queries: Iterable[RecQuery]
-    | Iterable[tuple[RecQuery, ItemList]]
-    | Iterable[ID | GenericKey]
-    | ItemListCollection[GenericKey]
-    | Mapping[ID, ItemList]
-    | pd.DataFrame,
-) -> tuple[type[Any], Iterable[BatchRequest], int | None]:
-    if isinstance(queries, pd.DataFrame):
-        warnings.warn(
-            "use an item list collection instead of a DataFrame (LKW-BATCHIN)",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        queries = ItemListCollection.from_df(queries)
-
-    elif isinstance(queries, Mapping):
-        warnings.warn(
-            "query mappings are ambiguous and deprecated, use query lists (LKW-BATCHIN)",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        queries = ItemListCollection.from_dict(queries, "user_id")  # type: ignore
+    queries: BatchInput,
+) -> tuple[type[GenericKey], Iterable[ResolvedBatchRequest], int | None]:
+    kt = None
 
     if isinstance(queries, ItemListCollection):
-        return queries.key_type, _ilc_queries(queries), len(queries)
+        kt = queries.key_type
+        queries = TestRequestAdapter(queries)
 
     n = None
     if isinstance(queries, Sized):
@@ -171,10 +181,12 @@ def normalize_query_input(
     except StopIteration:
         return tuple, [], 0
 
-    fbr = _make_br(q_first)
-    if fbr.query.query_id is not None:
+    q_first = _resolve_batch_request(q_first)
+    if isinstance(q_first.query.query_id, tuple):
+        kt = type(q_first.query.query_id)
+    elif q_first.query.query_id is not None:
         kt = QueryIDKey
-    elif fbr.query.user_id is not None:
+    elif q_first.query.user_id is not None:
         kt = UserIDKey
     else:
         raise ValueError("query must have one of query_id, user_id")
@@ -182,43 +194,37 @@ def normalize_query_input(
     return kt, _iter_queries(q_first, q_iter), n
 
 
-def _ilc_queries(queries: ItemListCollection):
-    for q, items in queries.items():
-        query = RecQuery(
-            user_id=getattr(q, "user_id", None),
-            query_id=getattr(q, "query_id", None),
-        )
-        yield BatchRequest(query, items)
-
-
 def _iter_queries(
-    first: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey,
-    rest: Iterator[RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey],
-) -> Iterable[BatchRequest]:
-    yield _make_br(first)
+    first: ResolvedBatchRequest,
+    rest: Iterable[BatchRecRequest] | Iterable[RecQuery] | Iterable[ID | GenericKey],
+) -> Iterable[ResolvedBatchRequest]:
+    yield first
     for item in rest:
-        yield _make_br(item)
+        yield _resolve_batch_request(item)
 
 
-def _make_br(q: RecQuery | tuple[RecQuery, ItemList] | ID | GenericKey) -> BatchRequest:
+def _resolve_batch_request(q: RecQuery | ID | GenericKey | BatchRecRequest) -> ResolvedBatchRequest:
     if isinstance(q, RecQuery):
-        return BatchRequest(q)
+        return ResolvedBatchRequest(query=q)
     elif isinstance(q, tuple):
-        if isinstance(q[0], RecQuery):
-            q, items = q
-            return BatchRequest(q, items)  # type: ignore
-        elif hasattr(q, "user_id"):
-            # we have a named tuple with user IDs
-            q = RecQuery(user_id=getattr(q, "user_id"))
-            return BatchRequest(q)
-        else:
-            warnings.warn(
-                "bare tuples are ambiguous and will be unsupported in 2026 (LKW-BATCHIN)",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-            q = RecQuery(user_id=q)  # type: ignore
-            return BatchRequest(q)
+        user_id = getattr(q, "user_id", None)
+        query_id = getattr(q, "query_id", q)
+        return ResolvedBatchRequest(RecQuery(user_id=user_id, query_id=query_id))
+    elif isinstance(q, Mapping):
+        query = q.get("query", None)
+        if query is None:
+            query = RecQuery(user_id=q.get("user_id"), query_id=q.get("query_id"))
+
+        rq = ResolvedBatchRequest(query=query)
+        if (items := q.get("candidates")) is not None:
+            rq.candidates = items
+        if (items := q.get("test_items")) is not None:
+            rq.test_items = items
+        if (items := q.get("items")) is not None:
+            if rq.candidates is None:
+                rq.candidates = items
+            if rq.test_items is None:
+                rq.test_items = items
+        return rq
     else:
-        q = RecQuery(user_id=q)
-        return BatchRequest(q)
+        return ResolvedBatchRequest(RecQuery(user_id=q))
