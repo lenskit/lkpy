@@ -12,7 +12,7 @@ Recommendation queries.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TypeAlias
+from typing import Literal
 
 import numpy as np
 
@@ -22,6 +22,11 @@ from .types import ID
 type QueryItemSource = Literal["history", "session", "context"]
 """
 Valid sources for query items.
+"""
+
+type QueryInput = RecQuery | ID | ItemList | None
+"""
+Types that can be converted to a query by :meth:`RecQuery.create`.
 """
 
 
@@ -177,9 +182,3 @@ class RecQuery:
                 return self.history_items
             case _:  # pragma: nocover
                 raise ValueError(f"unsupported item source {source}")
-
-
-QueryInput: TypeAlias = RecQuery | ID | ItemList | None
-"""
-Types that can be converted to a query by :meth:`RecQuery.create`.
-"""
