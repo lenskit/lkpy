@@ -48,7 +48,7 @@ def test_history_correct(rng: np.random.Generator, ml_ds: Dataset, random_pipe: 
         query = random_pipe.run("history-lookup", query=uid)
         assert isinstance(query, RecQuery)
         assert query.user_id == uid
-        user_items = query.user_items
+        user_items = query.history_items
         assert isinstance(user_items, ItemList)
         assert len(user_items) == len(train_items)
         assert set(user_items.ids()) == set(train_items.ids())

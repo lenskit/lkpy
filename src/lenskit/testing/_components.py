@@ -240,7 +240,7 @@ class ScorerTests(TrainingTests):
 
         item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
-        q = RecQuery(user_id=u, user_items=u_row)
+        q = RecQuery(user_id=u, history_items=u_row)
         scored = self.invoke_scorer(trained_pipeline, query=q, items=items)
         assert np.all(scored.numbers() == item_nums)
         assert np.all(scored.ids() == items.ids())
@@ -256,7 +256,7 @@ class ScorerTests(TrainingTests):
 
         item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
-        q = RecQuery(user_items=u_row)
+        q = RecQuery(history_items=u_row)
         scored = self.invoke_scorer(trained_pipeline, query=q, items=items)
         assert np.all(scored.numbers() == item_nums)
         assert np.all(scored.ids() == items.ids())
