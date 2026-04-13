@@ -28,6 +28,8 @@ Breaking Changes
   The pipeline builder will issue a warning if a component implements
   :meth:`~lenskit.training.Trainable.train` but not
   :meth:`~lenskit.training.Trainable.is_trained`.
+- Pipeline components and inputs now have restrictions on their names, and cannot
+  have names beginning with ``_``.  See :ref:`pipeline-names` for details.
 - Pipeline configurations serialized with previous versions **cannot** be
   re-loaded in LensKit 2026, due to moves of module paths.  Import path
   canonicalization (:issue:`948`) reduces the risk of such breakage in future
