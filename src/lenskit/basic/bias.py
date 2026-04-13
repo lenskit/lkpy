@@ -338,7 +338,7 @@ class BiasScorer(Component[ItemList], Trainable):
             query:
                 The recommendation query.  If the query has an item list with
                 ratings, those ratings are used to compute a new bias instead of
-                using the user's recorded bias.
+                using the user's historical bias.
             items:
                 The items to score.
         Returns:
@@ -346,7 +346,7 @@ class BiasScorer(Component[ItemList], Trainable):
         """
         query = RecQuery.create(query)
 
-        scores, _bias = self.model.compute_for_items(items, query.user_id, query.user_items)
+        scores, _bias = self.model.compute_for_items(items, query.user_id, query.query_items)
         return ItemList(items, scores=scores)
 
 

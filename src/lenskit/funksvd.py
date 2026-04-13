@@ -216,7 +216,7 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
 
         scores = np.full((len(items),), np.nan, dtype=np.float64)
         scores[item_mask] = i_feats @ u_feat
-        biases, _ub = self.bias.compute_for_items(items, user_id, query.user_items)
+        biases, _ub = self.bias.compute_for_items(items, user_id, query.history_items)
         scores += biases
 
         return ItemList(items, scores=scores)

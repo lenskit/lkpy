@@ -256,7 +256,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
 
         index = self.users.number(query.user_id, missing=None)
 
-        if query.user_items is None:
+        if query.query_items is None:
             if index is None:
                 _log.warning("user %s has no ratings and none provided", query.user_id)
                 return None
@@ -269,16 +269,16 @@ class UserKNNScorer(Component[ItemList], Trainable):
             else:
                 umean = 0
             return UserRatings(index, row, umean)
-        elif len(query.user_items) == 0:
+        elif len(query.query_items) == 0:
             return None
         else:
             _log.debug("using provided item history")
             ratings = np.zeros(len(self.items), dtype=np.float32)
-            ui_nos = query.user_items.numbers(missing="negative", vocabulary=self.items)
+            ui_nos = query.query_items.numbers(missing="negative", vocabulary=self.items)
             ui_mask = ui_nos >= 0
 
             if self.config.explicit:
-                urv = query.user_items.field("rating")
+                urv = query.query_items.field("rating")
                 if urv is None:
                     _log.warning("user %s has items but no ratings", query.user_id)
                     return None
