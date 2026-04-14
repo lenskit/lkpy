@@ -50,7 +50,7 @@ class SearchConfig(BaseModel):
     """
     The length of recommendation lists to use.
     """
-    num_cpus: int | Literal["threads", "all-threads"] = "threads"
+    num_cpus: int | Literal["threads", "backend-threads", "all-threads"] = "threads"
     """
     The number of CPUs to request from Ray Tune.
     """

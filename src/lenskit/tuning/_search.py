@@ -217,6 +217,8 @@ class PipelineTuner:
 
         match self.spec.search.num_cpus:
             case "threads":
+                tune_cpus = paracfg.num_threads or 1
+            case "backend-threads":
                 tune_cpus = paracfg.num_backend_threads or 1
             case "all-threads":
                 tune_cpus = paracfg.total_threads
