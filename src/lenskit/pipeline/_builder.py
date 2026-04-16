@@ -225,8 +225,10 @@ class PipelineBuilder:
                 rts.add(type(None))
             elif isinstance(t, UnionType):
                 rts |= set(typing.get_args(t))
-            else:
+            elif isinstance(t, type):
                 rts.add(t)
+            else:
+                raise TypeError(f"unsupported type form: {t}")
 
         node = InputNode[Any](name, types=rts)
         self._nodes[name] = node
