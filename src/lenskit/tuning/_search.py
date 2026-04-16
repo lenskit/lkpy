@@ -23,7 +23,7 @@ from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
 
 from lenskit.config import TuneSettings, lenskit_config
-from lenskit.data import Dataset, GenericKey, ItemListCollection
+from lenskit.data import Dataset, ItemListCollection
 from lenskit.logging import get_logger
 from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
@@ -58,7 +58,7 @@ class PipelineTuner:
     random_seed: np.random.SeedSequence
     iterative: bool
 
-    data: TTSplit[GenericKey]
+    data: TTSplit
     harness: Any
     tuner: ray.tune.Tuner
     """
