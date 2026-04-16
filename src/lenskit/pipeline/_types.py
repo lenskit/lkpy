@@ -80,6 +80,8 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
         # resolve type aliases
         if isinstance(target, TypeAliasType):
             target = target.__value__
+        if target == Any:
+            return True
 
         # try a straight subclass check first, but gracefully handle incompatible types
         try:
@@ -134,6 +136,8 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
         # resolve type aliases
         if isinstance(target, TypeAliasType):
             target = target.__value__
+        if target == Any:
+            return True
 
         # try a straight subclass check first, but gracefully handle incompatible types
         try:
