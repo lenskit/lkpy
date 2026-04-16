@@ -18,6 +18,7 @@ from graphlib import CycleError, TopologicalSorter
 from os import PathLike
 from pathlib import Path
 from types import UnionType
+from typing import TypeAliasType
 from uuid import NAMESPACE_URL, uuid5
 
 from typing_extensions import Any, Literal, cast, overload
@@ -187,7 +188,9 @@ class PipelineBuilder:
         else:
             return self.node(self._default)
 
-    def create_input[T](self, name: str, *types: type[T] | UnionType | None) -> Node[T]:
+    def create_input[T](
+        self, name: str, *types: type[T] | UnionType | TypeAliasType | None
+    ) -> Node[T]:
         """
         Create an input node for the pipeline.  Pipelines expect their inputs to
         be provided when they are run.
@@ -213,6 +216,8 @@ class PipelineBuilder:
 
         rts: set[type[T | None]] = set()
         for t in types:
+            if isinstance(t, TypeAliasType):
+                t = t.__value__
             if t is None:
                 rts.add(type(None))
             elif isinstance(t, UnionType):
