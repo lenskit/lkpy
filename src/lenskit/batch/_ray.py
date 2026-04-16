@@ -18,7 +18,7 @@ from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import TaskLimiter, ensure_cluster
 from lenskit.pipeline import Pipeline, ProfileSink
 
-from ._queries import BatchRequest
+from ._queries import ResolvedBatchRequest
 from ._results import BatchResultRow
 from ._runner import InvocationSpec, run_pipeline
 
@@ -29,7 +29,7 @@ def ray_results(
     pipeline: Pipeline,
     profiler: ProfileSink | None,
     invocations: list[InvocationSpec],
-    queries: Iterable[BatchRequest],
+    queries: Iterable[ResolvedBatchRequest],
     n_jobs: int,
     batch_size: int,
 ) -> Generator[BatchResultRow]:
@@ -58,6 +58,6 @@ def _run_batch(
     pipeline: Pipeline,
     invocations: list[InvocationSpec],
     profiler: ProfileSink | None,
-    requests: Sequence[BatchRequest],
+    requests: Sequence[ResolvedBatchRequest],
 ) -> list[BatchResultRow]:
     return [run_pipeline(pipeline, invocations, profiler, req) for req in requests]
