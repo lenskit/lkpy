@@ -7,7 +7,7 @@
 import numpy as np
 
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import assume, given, reproduce_failure
 from pytest import approx, mark
 
 from lenskit.data.accum import ValueStatAccumulator
@@ -37,6 +37,8 @@ def test_collect_one(x):
 
 @given(st.lists(st.floats(allow_infinity=False, allow_nan=False), min_size=2))
 def test_collect_list(xs):
+    assume(np.isfinite(np.sum(xs)))
+
     acc = ValueStatAccumulator()
     for i, x in enumerate(xs):
         assert len(acc) == i
