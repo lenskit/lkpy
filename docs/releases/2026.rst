@@ -76,6 +76,8 @@ Breaking Changes
   (:issue:`835`).
 - Removed the deprecated unrated and all-items candidate selectors, in favor of
   :class:`~lenskit.basic.TrainingItemsCandidateSelector` (:issue:`935`).
+- Several input types to batch inference are no longer supported, to reduce
+  ambiguity and implicit behavior (:issue:`958`, :pr:`1074`).
 
 .. _prefix.dev: https://prefix.dev/channels/lenskit/
 
