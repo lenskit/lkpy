@@ -7,30 +7,22 @@
 from __future__ import annotations
 
 import sys
-import warnings
 from collections.abc import Generator, Iterable, Sized
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Any, Literal, Mapping, TypeAlias, overload
-
-import pandas as pd
+from typing import Any, Literal, TypeAlias
 
 from lenskit.data import (
-    ID,
-    GenericKey,
-    ItemList,
-    ItemListCollection,
     QueryIDKey,
-    RecQuery,
     UserIDKey,
 )
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import get_parallel_config, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler, ProfileSink
 
-from ._queries import ResolvedBatchRequest, normalize_query_input
+from ._queries import BatchInput, ResolvedBatchRequest, normalize_query_input
 from ._results import BatchResultRow, BatchResults
 
 _log = get_logger(__name__)
@@ -161,43 +153,10 @@ class BatchPipelineRunner:
         """
         self.add_invocation(InvocationSpec("recommend", {component: output}, extra_inputs=extra))
 
-    @overload
     def run(
         self,
         pipeline: Pipeline,
-        queries: Iterable[RecQuery]
-        | Iterable[tuple[RecQuery, ItemList]]
-        | Iterable[ID | GenericKey]
-        | ItemListCollection[GenericKey]
-        | Mapping[ID, ItemList]
-        | pd.DataFrame,
-    ) -> BatchResults: ...
-    @overload
-    def run(
-        self,
-        pipeline: Pipeline,
-        *,
-        test_data: Iterable[ID | GenericKey]
-        | ItemListCollection[GenericKey]
-        | Mapping[ID, ItemList]
-        | pd.DataFrame,
-    ) -> BatchResults: ...
-    def run(
-        self,
-        pipeline: Pipeline,
-        queries: Iterable[RecQuery]
-        | Iterable[tuple[RecQuery, ItemList]]
-        | Iterable[ID | GenericKey]
-        | ItemListCollection[GenericKey]
-        | Mapping[ID, ItemList]
-        | pd.DataFrame
-        | None = None,
-        *,
-        test_data: Iterable[ID | GenericKey]
-        | ItemListCollection[GenericKey]
-        | Mapping[ID, ItemList]
-        | pd.DataFrame
-        | None = None,
+        queries: BatchInput,
     ) -> BatchResults:
         """
         Run the pipeline and return its results.
@@ -215,16 +174,9 @@ class BatchPipelineRunner:
                 for details on the various input formats.
 
         Returns:
-            The results, as a nested dictionary.  The outer dictionary maps
-            component output names to inner dictionaries of result data.
+            The batch results, mapping output names to item list collections of
+            outputs.
         """
-        if test_data is not None:  # pragma: nocover
-            if queries is not None:
-                raise RuntimeError("cannot specify both queries and test_data=")
-            queries = test_data
-            warnings.warn(
-                "the test_data parameter is renamed to queries", DeprecationWarning, stacklevel=2
-            )
 
         if queries is None:  # pragma: nocover
             raise RuntimeError("no queries specified")

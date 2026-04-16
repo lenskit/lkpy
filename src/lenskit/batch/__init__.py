@@ -10,12 +10,9 @@ Batch-run recommendation pipelines for evaluation.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Mapping
+from typing import overload
 
-import pandas as pd
-
-from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, RecQuery, UserIDKey
+from lenskit.data import GenericKey, ItemListCollection
 from lenskit.pipeline import Pipeline, PipelineProfiler
 
 from ._queries import BatchInput, BatchRecRequest, TestRequestAdapter
@@ -34,9 +31,25 @@ __all__ = [
 ]
 
 
+@overload
+def predict[K: GenericKey](
+    pipeline: Pipeline,
+    test: ItemListCollection[K],
+    *,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
+) -> ItemListCollection[K]: ...
+@overload
 def predict(
     pipeline: Pipeline,
-    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | pd.DataFrame,
+    test: BatchInput,
+    *,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
+) -> ItemListCollection[GenericKey]: ...
+def predict(
+    pipeline: Pipeline,
+    test: BatchInput,
     *,
     n_jobs: int | None = None,
     use_ray: bool | None = None,
@@ -62,12 +75,25 @@ def predict(
     return outs.output("predictions")  # type: ignore
 
 
+@overload
+def score[K: GenericKey](
+    pipeline: Pipeline,
+    test: ItemListCollection[K],
+    *,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
+) -> ItemListCollection[K]: ...
+@overload
 def score(
     pipeline: Pipeline,
-    test: Iterable[tuple[RecQuery, ItemList]]
-    | ItemListCollection[GenericKey]
-    | Mapping[ID, ItemList]
-    | pd.DataFrame,
+    test: BatchInput,
+    *,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
+) -> ItemListCollection[GenericKey]: ...
+def score(
+    pipeline: Pipeline,
+    test: BatchInput,
     *,
     n_jobs: int | None = None,
     use_ray: bool | None = None,
@@ -92,21 +118,38 @@ def score(
     return outs.output("scores")  # type: ignore
 
 
-def recommend(
+@overload
+def recommend[K: GenericKey](
     pipeline: Pipeline,
-    queries: Iterable[RecQuery]
-    | Iterable[tuple[RecQuery, ItemList]]
-    | Iterable[ID | GenericKey]
-    | ItemListCollection[GenericKey]
-    | Mapping[ID, ItemList]
-    | pd.DataFrame,
+    queries: ItemListCollection[K],
     n: int | None = None,
     *,
     n_jobs: int | None = None,
     use_ray: bool | None = None,
     profiler: PipelineProfiler | None = None,
     users=None,
-) -> ItemListCollection[UserIDKey]:
+) -> ItemListCollection[K]: ...
+@overload
+def recommend(
+    pipeline: Pipeline,
+    queries: BatchInput,
+    n: int | None = None,
+    *,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
+    profiler: PipelineProfiler | None = None,
+    users=None,
+) -> ItemListCollection[GenericKey]: ...
+def recommend(
+    pipeline: Pipeline,
+    queries: BatchInput,
+    n: int | None = None,
+    *,
+    n_jobs: int | None = None,
+    use_ray: bool | None = None,
+    profiler: PipelineProfiler | None = None,
+    users=None,
+) -> ItemListCollection[GenericKey]:
     """
     Convenience function to batch-generate recommendations from a pipeline. This
     is a batch version of :func:`lenskit.recommend`, and is a convenience
