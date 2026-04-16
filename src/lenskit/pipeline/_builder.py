@@ -21,7 +21,7 @@ from types import UnionType
 from typing import TypeAliasType
 from uuid import NAMESPACE_URL, uuid5
 
-from typing_extensions import Any, Literal, cast, overload
+from typing_extensions import Any, Literal, TypeForm, cast, overload
 
 from lenskit.config import load_config_data
 from lenskit.diagnostics import PipelineError, PipelineWarning
@@ -188,9 +188,12 @@ class PipelineBuilder:
         else:
             return self.node(self._default)
 
-    def create_input[T](
-        self, name: str, *types: type[T] | UnionType | TypeAliasType | None
-    ) -> Node[T]:
+    @overload
+    def create_input[T](self, name: str, *types: TypeForm[T] | None) -> Node[T]: ...
+    # TODO: remove second overload when typecheckers are sane
+    @overload
+    def create_input(self, name: str, *types: Any) -> Node[Any]: ...
+    def create_input[T](self, name: str, *types: TypeForm[T] | None) -> Node[T]:
         """
         Create an input node for the pipeline.  Pipelines expect their inputs to
         be provided when they are run.
