@@ -7,7 +7,8 @@ LensKit's evaluation support is based on post-processing the output of
 recommenders and predictors.  The `batch utilities`_ provide support for
 generating these outputs.
 
-We generally recommend using Jupyter_ notebooks for evaluation.
+We generally recommend using Jupyter_ notebooks or similar (e.g. Marimo_ or
+Quarto_) for evaluation.
 
 When writing recommender system evaluation results for publication, it's
 important to be precise about how exactly your metrics are being computed
@@ -16,6 +17,8 @@ function's documentation includes a mathematical definition of the metric.
 
 .. _batch utilities: batch.html
 .. _Jupyter: https://jupyter.org
+.. _Quarto: https://quarto.org
+.. _Marimo: https://docs.marimo.io
 
 .. toctree::
    :caption: Evaluation Topics

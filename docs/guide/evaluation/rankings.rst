@@ -19,6 +19,11 @@ All LensKit ranking metrics take ``n`` as a constructor argument to control the
 list of the length that is considered; this allows multiple measurements (e.g.
 HR@5 and HR@10) to be computed from a single set of rankings.
 
+Metrics can be used on their own, but it is usually easiest to use them with
+:class:`~lenskit.metrics.MeasurementCollector` to handle some of edge cases
+around data availability, etc., as well as to support metric-specific
+aggregation (see :ref:`eval-collection` for more details).
+
 .. versionchanged:: 2026.1
 
     The argument for the list length has changed from ``k`` to ``n``, for

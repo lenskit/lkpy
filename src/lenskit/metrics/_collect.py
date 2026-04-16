@@ -47,7 +47,8 @@ class MeasurementCollector:
     Collect metric measurements over multiple recommendation lists.
 
     This class automates collecting metric values and translating accumulated
-    summaries into data frames.
+    summaries into data frames.  See :ref:`eval-collection` for a more detailed
+    discussion of how to use this class.
 
     .. versionchanged:: 2026.1
 

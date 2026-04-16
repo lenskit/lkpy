@@ -10,9 +10,9 @@ There are no new major paradigm shifts, though — pipelines, datasets, and
 components work as they do in the 2025 series, but with more features, some
 rough corners polished off the interfaces, and hopefully fewer bugs.
 
-.. _2026.0.0:
+.. _2026.1.0:
 
-2026.0.0
+2026.1.0
 ~~~~~~~~
 
 Breaking Changes

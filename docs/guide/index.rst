@@ -48,6 +48,7 @@ guide to how to use LensKit for research, education, and other purposes.
     splitting
     batch
     evaluation/index
+    evaluation/collection
     documenting
 
 .. toctree::
