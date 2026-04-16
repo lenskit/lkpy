@@ -16,6 +16,8 @@ from lenskit.pipeline import PipelineBuilder, PipelineError
 from lenskit.pipeline._types import TypecheckWarning
 from lenskit.pipeline.nodes import InputNode, Node
 
+type TK = int | str
+
 
 def test_init_empty():
     pipe = PipelineBuilder()
@@ -33,6 +35,23 @@ def test_create_input():
 
     assert len(pipe.nodes()) == 1
     assert pipe.node("user") is src
+
+
+def test_create_input_type_alias():
+    "create an input node"
+    pipe = PipelineBuilder()
+    src = pipe.create_input("user", TK)
+    assert_type(src, Node[int | str])
+    assert isinstance(src, InputNode)
+    assert src.name == "user"
+    assert src.types == set([int, str])
+
+    assert len(pipe.nodes()) == 1
+    assert pipe.node("user") is src
+
+    pipe = pipe.build()
+    assert len(pipe.nodes()) == 1
+    assert pipe.node("user") == src
 
 
 def test_lookup_optional():
