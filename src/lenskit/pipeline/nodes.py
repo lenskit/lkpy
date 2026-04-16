@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Mapping
+from types import UnionType
 from typing import Any, cast
 
 from pydantic import JsonValue
@@ -27,13 +28,16 @@ from .components import (
     ComponentInput,
     PipelineFunction,
     component_inputs,
-    component_return_type,
 )
 
 
 class Node[T]:
     """
     Representation of a single node in a :class:`Pipeline`.
+
+    .. versionchanged:: 2026.1
+
+        Removed the ``types`` attribute.
 
     Stability:
         Caller
@@ -43,12 +47,9 @@ class Node[T]:
 
     name: str
     "The name of this node."
-    types: set[type] | None
-    "The set of valid data types of this node, or None for no typechecking."
 
-    def __init__(self, name: str, *, types: set[type] | None = None):
+    def __init__(self, name: str):
         self.name = name
-        self.types = types
 
     def __str__(self) -> str:
         return f"<{self.__class__.__name__} {self.name}>"
@@ -61,6 +62,18 @@ class InputNode[T](Node[T]):
     Stability:
         Internal
     """
+
+    type: type[T] | UnionType
+    """
+    The data type of this input.
+    """
+
+    def __init__(self, name: str, *, type: type[T] | UnionType | None = None):
+        super().__init__(name)
+        if type is None:
+            self.type = Any  # type: ignore
+        else:
+            self.type = type
 
 
 class LiteralNode[T](Node[T]):
@@ -75,8 +88,8 @@ class LiteralNode[T](Node[T]):
     value: T
     "The value associated with this node"
 
-    def __init__(self, name: str, value: T, *, types: set[type] | None = None):
-        super().__init__(name, types=types)
+    def __init__(self, name: str, value: T):
+        super().__init__(name)
         self.value = value
 
 
@@ -88,9 +101,6 @@ class ComponentNode[T](Node[T]):
     Stability:
         Internal
     """
-
-    def __init__(self, name: str):
-        super().__init__(name)
 
     @staticmethod
     def create[CFG](
@@ -125,8 +135,6 @@ class ComponentConstructorNode[T](ComponentNode[T]):
         super().__init__(name)
         self.constructor = constructor
         self.config = config
-        if rt := component_return_type(constructor):
-            self.types = {rt}
 
     @property
     def inputs(self):
@@ -145,8 +153,6 @@ class ComponentInstanceNode[T](ComponentNode[T]):
     ):
         super().__init__(name)
         self.component = component
-        if rt := component_return_type(component):
-            self.types = {rt}
 
     @property
     def inputs(self):
