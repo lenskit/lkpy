@@ -88,7 +88,7 @@ def test_round_trip_input():
     i2 = p2.node("user")
     assert isinstance(i2, InputNode)
     assert i2.name == "user"
-    assert i2.types == {int, str}
+    assert i2.type == int | str
 
 
 def test_round_trip_optional_input():
@@ -103,7 +103,7 @@ def test_round_trip_optional_input():
     i2 = p2.node("user")
     assert isinstance(i2, InputNode)
     assert i2.name == "user"
-    assert i2.types == {int, str, NoneType}
+    assert i2.type == int | str | None
 
 
 def test_config_single_node():

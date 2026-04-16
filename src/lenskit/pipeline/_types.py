@@ -22,6 +22,7 @@ from typing import (
 )
 
 import numpy as np
+from typing_extensions import TypeForm
 
 from lenskit.diagnostics import PipelineWarning, TypecheckWarning
 
@@ -79,6 +80,8 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
         # resolve type aliases
         if isinstance(target, TypeAliasType):
             target = target.__value__
+        if target == Any:
+            return True
 
         # try a straight subclass check first, but gracefully handle incompatible types
         try:
@@ -133,6 +136,8 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
         # resolve type aliases
         if isinstance(target, TypeAliasType):
             target = target.__value__
+        if target == Any:
+            return True
 
         # try a straight subclass check first, but gracefully handle incompatible types
         try:
@@ -243,3 +248,8 @@ def import_path_string(tstr: str) -> Any:
 
         mod = import_module(mod_name)
         return getattr(mod, typ_name)
+
+
+def is_union_type(ty: TypeForm[Any]):
+    # TODO: update to 'isinstance' after Python 3.14 unification of types
+    return get_origin(ty) is Union or get_origin(ty) is UnionType

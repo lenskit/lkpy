@@ -11,6 +11,7 @@ Pipeline runner logic.
 # pyright: strict
 # pyright: reportPrivateUsage=false
 from dataclasses import dataclass
+from types import UnionType
 from typing import Any, Literal
 
 import structlog
@@ -95,20 +96,20 @@ class PipelineRunner:
         match node:
             case LiteralNode(name, value):
                 self.state[name] = value
-            case InputNode(name, types=types):
-                self._inject_input(name, types, required)
+            case InputNode(name, type=ty):
+                self._inject_input(name, ty, required)
             case ComponentInstanceNode():
                 self._run_component(node, required)
             case _:  # pragma: nocover
                 raise PipelineError(f"invalid node {node}")
 
-    def _inject_input(self, name: str, types: set[type] | None, required: bool) -> None:
+    def _inject_input(self, name: str, ty: type[Any] | UnionType, required: bool) -> None:
         val = self.inputs.get(name, None)
-        if val is None and required and types and not is_compatible_data(None, *types):
+        if val is None and required and not is_compatible_data(None, ty):
             raise PipelineError(f"input {name} not specified")
 
-        if val is not None and types and not is_compatible_data(val, *types):
-            raise TypeError(f"invalid data for input {name} (expected {types}, got {type(val)})")
+        if val is not None and not is_compatible_data(val, ty):
+            raise TypeError(f"invalid data for input {name} (expected {ty}, got {type(val)})")
 
         trace(self.log, "injecting input", name=name, value=val)
         self.state[name] = val

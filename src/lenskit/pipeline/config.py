@@ -18,7 +18,7 @@ import warnings
 from collections import OrderedDict
 from hashlib import sha256
 from types import FunctionType
-from typing import Annotated, Literal, Mapping
+from typing import Annotated, Literal, Mapping, get_args
 
 from annotated_types import Predicate
 from deepmerge import always_merger
@@ -28,7 +28,7 @@ from typing_extensions import Any, Self
 from lenskit.diagnostics import PipelineError, PipelineWarning
 
 from ._hooks import HookEntry
-from ._types import make_importable_path
+from ._types import is_union_type, make_importable_path
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
 
@@ -180,10 +180,15 @@ class PipelineInput(BaseModel):
 
     @classmethod
     def from_node(cls, node: InputNode[Any]) -> Self:
-        if node.types is not None:
-            types = {make_importable_path(t) for t in node.types}
-        else:
+        if node.type == Any:
             types = None
+        elif is_union_type(node.type):
+            types = set(get_args(node.type))
+        else:
+            types = {node.type}
+
+        if types is not None:
+            types = {make_importable_path(t) for t in types}
 
         return cls(name=node.name, types=types)
 

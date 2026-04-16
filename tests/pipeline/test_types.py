@@ -114,6 +114,14 @@ def test_numpy_scalar_typecheck2():
     assert is_compatible_data(np.int32(4270), np.integer[Any] | int)
 
 
+def test_compatible_any():
+    assert is_compatible_data(50, Any)
+
+
+def test_compatible_type_any():
+    assert is_compatible_type(int, Any)
+
+
 @mark.skip("broke with NumPy 2.4")
 def test_pandas_typecheck():
     assert is_compatible_data(pd.Series(["a", "b"]), ArrayLike)

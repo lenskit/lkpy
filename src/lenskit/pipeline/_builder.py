@@ -18,7 +18,7 @@ from graphlib import CycleError, TopologicalSorter
 from os import PathLike
 from pathlib import Path
 from types import UnionType
-from typing import TypeAliasType
+from typing import TypeAliasType, Union
 from uuid import NAMESPACE_URL, uuid5
 
 from typing_extensions import Any, Literal, TypeForm, cast, overload
@@ -31,7 +31,7 @@ from . import config
 from ._cache import PipelineCache
 from ._hooks import ComponentInputHook, HookEntry, RunHooks
 from ._impl import Pipeline
-from ._types import TypecheckWarning, import_path_string, is_instance_or_subclass
+from ._types import import_path_string, is_instance_or_subclass
 from .components import (
     Component,
     ComponentConstructor,
@@ -189,11 +189,11 @@ class PipelineBuilder:
             return self.node(self._default)
 
     @overload
-    def create_input[T](self, name: str, *types: TypeForm[T] | None) -> Node[T]: ...
-    # TODO: remove second overload when typecheckers are sane
+    def create_input[T](self, name: str, *types: TypeForm[T]) -> Node[T]: ...
+    # TODO: remove second overload when typecheckers properly implement TypeForm
     @overload
     def create_input(self, name: str, *types: Any) -> Node[Any]: ...
-    def create_input[T](self, name: str, *types: TypeForm[T] | None) -> Node[T]:
+    def create_input[T](self, name: str, *types: TypeForm[T] | None) -> Node[Any]:
         """
         Create an input node for the pipeline.  Pipelines expect their inputs to
         be provided when they are run.
@@ -217,20 +217,27 @@ class PipelineBuilder:
         check_name(name, what="input")
         self._check_available_name(name)
 
-        rts: set[type[T | None]] = set()
+        tys: set[type[Any]] = set()
         for t in types:
             if isinstance(t, TypeAliasType):
                 t = t.__value__
             if t is None:
-                rts.add(type(None))
+                tys.add(type(None))
             elif isinstance(t, UnionType):
-                rts |= set(typing.get_args(t))
+                tys |= set(typing.get_args(t))
             elif isinstance(t, type):
-                rts.add(t)
+                tys.add(t)
             else:
                 raise TypeError(f"unsupported type form: {t}")
 
-        node = InputNode[Any](name, types=rts)
+        ty: type[Any] | UnionType
+        if len(tys) == 1:
+            (ty,) = tys
+        elif tys:
+            ty = Union[*tys]
+        else:
+            ty = Any
+        node = InputNode[Any](name, type=ty)
         self._nodes[name] = node
         return node
 
@@ -247,7 +254,7 @@ class PipelineBuilder:
             name = str(uuid5(NAMESPACE_LITERAL_DATA, lit.model_dump_json()))
         else:
             check_name(name)
-        node = LiteralNode(name, value, types=set([type(value)]))
+        node = LiteralNode(name, value)
         self._nodes[name] = node
         return node
 
@@ -380,8 +387,6 @@ class PipelineBuilder:
                 )
 
         node = ComponentNode[T].create(name, comp, config)
-        if node.types is None:
-            warnings.warn(f"cannot determine return type of component {comp}", TypecheckWarning)
         self._nodes[name] = node
 
         self.connect(node, **inputs)
@@ -532,10 +537,8 @@ class PipelineBuilder:
 
         for node in self.nodes():
             match node:
-                case InputNode(name, types=types):
-                    if types is None:
-                        types = set[type]()
-                    clone.create_input(name, *types)
+                case InputNode(name, type=ty):
+                    clone.create_input(name, ty)
                 case LiteralNode(name, value):
                     clone._nodes[name] = LiteralNode(name, value)
                 case ComponentConstructorNode(name, comp, config):
