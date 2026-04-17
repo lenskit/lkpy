@@ -35,7 +35,7 @@ class FunkSVDConfig(EmbeddingSizeMixin, BaseModel):
     "Configuration for :class:`FunkSVDScorer`."
 
     embedding_size: PositiveInt = Field(
-        default=50, validation_alias=AliasChoices("embedding_size", "features")
+        default=64, validation_alias=AliasChoices("embedding_size", "features")
     )
     """
     Number of latent features.

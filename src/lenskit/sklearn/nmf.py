@@ -39,7 +39,7 @@ class NMFConfig(EmbeddingSizeMixin, BaseModel, extra="forbid"):
     beta_loss: Literal["frobenius", "kullback-leibler", "itakura-saito"] = "frobenius"
     max_iter: PositiveInt = Field(default=200, validation_alias=AliasChoices("max_iter", "epochs"))
     embedding_size: PositiveInt | None = Field(
-        default=None, validation_alias=AliasChoices("embedding_size", "n_components")
+        default=64, validation_alias=AliasChoices("embedding_size", "n_components")
     )
     alpha_W: float = 0.0
     alpha_H: float | Literal["same"] = "same"

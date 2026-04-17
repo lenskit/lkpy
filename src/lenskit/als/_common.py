@@ -38,7 +38,7 @@ class ALSConfig(EmbeddingSizeMixin, BaseModel):
     """
 
     embedding_size: PositiveInt = Field(
-        default=50, validation_alias=AliasChoices("embedding_size", "features")
+        default=64, validation_alias=AliasChoices("embedding_size", "features")
     )
     """
     The dimension of user and item embeddings (number of latent features to

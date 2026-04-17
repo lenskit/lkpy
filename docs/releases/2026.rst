@@ -30,6 +30,8 @@ Breaking Changes
   :meth:`~lenskit.training.Trainable.is_trained`.
 - Pipeline components and inputs now have restrictions on their names, and cannot
   have names beginning with ``_``.  See :ref:`pipeline-names` for details.
+- Default embedding sizes for all embedding-based models (matrix factorizers, etc.)
+  have changed to be 64 instead of 50 (:issue:`846`).
 - Pipeline configurations serialized with previous versions **cannot** be
   re-loaded in LensKit 2026, due to moves of module paths.  Import path
   canonicalization (:issue:`948`) reduces the risk of such breakage in future

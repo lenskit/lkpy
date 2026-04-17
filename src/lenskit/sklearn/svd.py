@@ -31,7 +31,7 @@ _log = get_logger(__name__)
 
 class BiasedSVDConfig(EmbeddingSizeMixin, BaseModel):
     embedding_size: int = Field(
-        default=50, validation_alias=AliasChoices("embedding_size", "features")
+        default=64, validation_alias=AliasChoices("embedding_size", "features")
     )
     """
     The dimension of user and item embeddings (number of latent features to
