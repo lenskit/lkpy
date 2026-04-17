@@ -35,14 +35,49 @@ Basic Principles
 ~~~~~~~~~~~~~~~~
 
 A single measurement collector collects metrics for recommendation lists in a
-**single run**: evaluating one pipeline on one test set.  The basic use pattern
-is as follows:
+**single run**: evaluating one pipeline on one test set.  The simple way to use
+a collector is as follows:
+
+1.  Create a :class:`MeasurementCollector`.
+2.  Add metrics to collector with :meth:`~MeasurementCollector.add_metric`.
+3.  Measure a run with :meth:`~MeasurementCollector.measure_run` to get both
+    summary metrics and per-list metrics.
+
+Example
+~~~~~~~
+
+If you have a dictionary of recommendation results in ``run_recs``, you can
+measure them with:
+
+.. code:: python
+
+    base_mc = MeasurementCollector()
+    base_mc.add_metric(NDCG(n=10))
+    base_mc.add_metric(RBP(n=10))
+    base_mc.add_metric(RecipRank(n=10))
+
+    run_list_metrics = {}
+    run_summaries = {}
+    for name, recs in run_recs.items():
+        result = mc.measure_run(recs, test)
+        run_summaries[name] = result.summary_metrics
+        run_list_metrics[name] = result.list_metrics
+
+    list_metrics = pd.concat(run_list_metrics, name=['recommender'])
+    metrics = pd.DataFrame.from_dict(run_summaries, orient="index")
+
+
+Advanced Usage
+~~~~~~~~~~~~~~
+
+The measurement collector is **stateful**, and can be used with state as follows:
 
 1.  Create a :class:`MeasurementCollector`.
 2.  Add metrics to collector with :meth:`~MeasurementCollector.add_metric`.
 3.  Measure individual lists and their corresponding truth with
-    :meth:`~MeasurementCollector.measure_list` or an entire collection of
-    recommendations with :meth:`~MeasurementCollector.measure_collection`.
+    :meth:`~MeasurementCollector.add_list_measurement` or an entire collection
+    of recommendations with
+    :meth:`~MeasurementCollector.add_collection_measurements`.
 4.  Obtain individual list metrics with
     :meth:`~MeasurementCollector.list_metrics` (returning data frame with one
     row per list), or aggregate metrics and summary statistics with
@@ -71,27 +106,3 @@ on the results.
     Further analysis can be done by collecting metric results (either summary or
     per-list) into larger data frames and analyzing with your preferred
     analytics library.
-
-Example
-~~~~~~~
-
-If you have a dictionary of recommendation results in ``run_recs``, you can
-measure them with:
-
-.. code:: python
-
-    base_mc = MeasurementCollector()
-    base_mc.add_metric(NDCG(n=10))
-    base_mc.add_metric(RBP(n=10))
-    base_mc.add_metric(RecipRank(n=10))
-
-    run_list_metrics = {}
-    run_summaries = {}
-    for name, recs in run_recs.items():
-        mc = base_mc.empty_copy()
-        mc.measure_collection(recs, test)
-        run_list_metrics[name] = mc.list_metrics()
-        run_summaries[name] = mc.summary_metrics()
-
-    list_metrics = pd.concat(run_list_metrics, name=['recommender'])
-    metrics = pd.DataFrame.from_dict(run_summaries, orient="index")

@@ -47,7 +47,7 @@ def test_accumulator_empty_and_unmeasured_defaults():
     assert not acc.summary_metrics()
 
     # measuring with no metrics
-    acc.measure_list(ItemList([1]), ItemList([1]), user="u1")
+    acc.add_list_measurement(ItemList([1]), ItemList([1]), user="u1")
     assert acc.list_metrics().empty
     assert not acc.summary_metrics()
 
@@ -59,8 +59,8 @@ def test_accumulator_measures_list_and_summary(sample_lists):
     acc = MeasurementCollector()
     acc.add_metric(ListLength())
 
-    acc.measure_list(sample_lists["recs1"], sample_lists["test1"], user="u1")
-    acc.measure_list(sample_lists["recs2"], sample_lists["test2"], user="u2")
+    acc.add_list_measurement(sample_lists["recs1"], sample_lists["test1"], user="u1")
+    acc.add_list_measurement(sample_lists["recs2"], sample_lists["test2"], user="u2")
 
     list_metrics = acc.list_metrics()
     summary = acc.summary_metrics()
@@ -74,9 +74,9 @@ def test_accumulator_empty_itemlists():
     acc = MeasurementCollector()
     acc.add_metric(ListLength())
 
-    acc.measure_list(ItemList([]), ItemList([1, 2]), user="u1")
-    acc.measure_list(ItemList([1, 2]), ItemList([]), user="u2")
-    acc.measure_list(ItemList([]), ItemList([]), user="u3")
+    acc.add_list_measurement(ItemList([]), ItemList([1, 2]), user="u1")
+    acc.add_list_measurement(ItemList([1, 2]), ItemList([]), user="u2")
+    acc.add_list_measurement(ItemList([]), ItemList([]), user="u3")
 
     metrics = acc.list_metrics()
     assert len(metrics) == 3
@@ -86,7 +86,7 @@ def test_accumulator_empty_itemlists():
 def test_list_metrics_no_key_fields():
     acc = MeasurementCollector()
     acc.add_metric(ListLength())
-    acc.measure_list(ItemList([1, 2]), ItemList([1]))
+    acc.add_list_measurement(ItemList([1, 2]), ItemList([1]))
     metrics = acc.list_metrics()
     assert len(metrics) == 1
     assert metrics.index.names == [None]
@@ -123,7 +123,7 @@ def test_wrap_metric_function_label():
 def test_accumulator_key_fields(keys, expected_names):
     acc = MeasurementCollector()
     acc.add_metric(ListLength())
-    acc.measure_list(ItemList([1, 2]), ItemList([2]), **keys)
+    acc.add_list_measurement(ItemList([1, 2]), ItemList([2]), **keys)
     assert acc.key_fields == expected_names
     metrics = acc.list_metrics()
     assert set(metrics.index.names) == set(expected_names)
@@ -181,7 +181,7 @@ def test_full_workflow_integration_improved(ml_ds):
     for user, truth_il in test_users:
         scores = scorer(ItemList(all_items, user=[user.user_id] * len(all_items)))
         recs_il = ItemList(scores.top_n(10), user=[user.user_id] * 10, ordered=True)
-        acc.measure_list(recs_il, truth_il, user=user.user_id)
+        acc.add_list_measurement(recs_il, truth_il, user=user.user_id)
 
     list_metrics = acc.list_metrics()
     summary = acc.summary_metrics()
@@ -235,9 +235,9 @@ def test_some_lists_none():
     acc = MeasurementCollector()
     acc.add_metric(TestMetric())
 
-    acc.measure_list(ItemList([3]), ItemList(), x=1)
-    acc.measure_list(ItemList([]), ItemList(), x=2)
-    acc.measure_list(ItemList([5, 20, 3]), ItemList(), x=3)
+    acc.add_list_measurement(ItemList([3]), ItemList(), x=1)
+    acc.add_list_measurement(ItemList([]), ItemList(), x=2)
+    acc.add_list_measurement(ItemList([5, 20, 3]), ItemList(), x=3)
 
     lms = acc.list_metrics()
     assert lms.loc[1, "test"] == 1
@@ -253,8 +253,8 @@ def test_reset():
     acc.add_metric(ListLength())
     acc.add_metric(RecipRank())
 
-    acc.measure_list(ItemList([1, 2, 3, 4, 5]), ItemList([4]))
-    acc.measure_list(ItemList([5, 4, 3, 2, 1]), ItemList([1]))
+    acc.add_list_measurement(ItemList([1, 2, 3, 4, 5]), ItemList([4]))
+    acc.add_list_measurement(ItemList([5, 4, 3, 2, 1]), ItemList([1]))
 
     lms = acc.list_metrics()
     assert len(lms) == 2
@@ -264,8 +264,8 @@ def test_reset():
     assert sms["RecipRank.mean"] == approx(0.225)
 
     acc.reset()
-    acc.measure_list(ItemList([1, 2, 3, 4, 5, 10]), ItemList([2]))
-    acc.measure_list(ItemList([5, 4, 3, 2, 1, 10]), ItemList([2]))
+    acc.add_list_measurement(ItemList([1, 2, 3, 4, 5, 10]), ItemList([2]))
+    acc.add_list_measurement(ItemList([5, 4, 3, 2, 1, 10]), ItemList([2]))
 
     lms = acc.list_metrics()
     assert len(lms) == 2
@@ -273,3 +273,33 @@ def test_reset():
     sms = acc.summary_metrics()
     assert sms["N.mean"] == approx(6.0)
     assert sms["RecipRank.mean"] == approx(0.375)
+
+
+def test_measure_run():
+    acc = MeasurementCollector()
+    acc.add_metric(ListLength())
+    acc.add_metric(RecipRank())
+
+    sms, lms = acc.measure_run(
+        ItemListCollection.from_dict(
+            {
+                1: ItemList([1, 2, 3, 4, 5]),
+                2: ItemList([5, 4, 3, 2, 1]),
+            },
+            key="user_id",
+        ),
+        ItemListCollection.from_dict(
+            {
+                1: ItemList([4]),
+                2: ItemList([1]),
+            },
+            key="user_id",
+        ),
+    )
+
+    assert len(lms) == 2
+    assert np.all(lms["N"] == 5)
+    assert sms["N.mean"] == approx(5.0)
+    assert sms["RecipRank.mean"] == approx(0.225)
+
+    assert len(acc.list_metrics()) == 0

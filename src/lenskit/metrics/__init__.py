@@ -14,7 +14,7 @@ from typing import Callable
 from lenskit.data import ItemList
 
 from ._base import ListMetric, Metric, MetricFunction, MetricResult, MetricVal
-from ._collect import MeasurementCollector
+from ._collect import MeasurementCollector, RunMetrics
 from ._quick import quick_measure_model
 from .basic import ListLength, TestItemCount
 from .bulk import RunAnalysis, RunAnalysisResult
@@ -46,6 +46,7 @@ __all__ = [
     "MetricResult",
     "MetricVal",
     "MeasurementCollector",
+    "RunMetrics",
     "ListMetric",
     "RankingMetricBase",
     "RunAnalysis",
