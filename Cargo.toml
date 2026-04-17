@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 log = { version = "^0.4", features = ["release_max_level_debug", "serde"] }
-pyo3 = { version = "^0.26", features = ["extension-module", "abi3-py312"] }
+pyo3 = { version = "^0.28", features = ["extension-module", "abi3-py312"] }
 thiserror = "^2"
 
 arc-swap = "^1.9"
@@ -20,7 +20,7 @@ crossbeam-channel = "^0.5"
 rayon = "^1.10"
 rayon-cancel = "^1.0"
 
-hashbrown = "^0.16"
+hashbrown = "^0.17"
 hex = "^0.4"
 ordered-float = "^5"
 rand = "^0.10"
@@ -31,10 +31,10 @@ sha1 = "^0.10"
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "^1.0"
 
-arrow = { version = "^57", features = ["pyarrow"], default-features = false }
-arrow-schema = { version = "^57", features = ["serde"] }
+arrow = { version = "^58", features = ["pyarrow"], default-features = false }
+arrow-schema = { version = "^58", features = ["serde"] }
 ndarray = { version = "^0.16", features = ["rayon"] }
-numpy = "^0.26"
+numpy = "^0.28"
 
 [dev-dependencies]
 ntest = "^0.9"

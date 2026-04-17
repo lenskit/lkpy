@@ -41,7 +41,7 @@ fn prim_tbl<T>(arr: &dyn Array) -> PyResult<Box<IndirectHashTable<PrimitiveConte
 where
     T: ArrowPrimitiveType,
     T::Native: Hash
-        + for<'a> FromPyObject<'a>
+        + for<'a, 'py> FromPyObject<'a, 'py>
         + for<'a> IntoPyObject<'a, Target = PyInt, Output = Bound<'a, PyInt>, Error = Infallible>,
 {
     let arr = PrimitiveContentArray::new(arr.as_primitive::<T>().clone());

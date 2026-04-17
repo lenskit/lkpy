@@ -53,7 +53,7 @@ impl FunkSVDTrainer {
         user_features: Bound<'py, PyArray2<f32>>,
         item_features: Bound<'py, PyArray2<f32>>,
     ) -> PyResult<Self> {
-        let config = FunkSVDConfig::extract_bound(&config)?;
+        let config = FunkSVDConfig::extract(config.as_borrowed())?;
 
         Ok(FunkSVDTrainer {
             config,

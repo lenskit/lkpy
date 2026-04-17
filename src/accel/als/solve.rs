@@ -44,7 +44,8 @@ pub struct POSV {
 
 impl POSV {
     pub fn load<'py>(py: Python<'py>) -> PyResult<POSV> {
-        let ptr = resolve_ffi_funptr(py, "scipy.linalg.cython_lapack", "sposv")?;
+        let ptr = resolve_ffi_funptr(py, "scipy.linalg.cython_lapack", "sposv",
+         "void (char *, int *, int *, __pyx_t_5scipy_6linalg_13cython_lapack_s *, int *, __pyx_t_5scipy_6linalg_13cython_lapack_s *, int *, int *)")?;
         Ok(POSV {
             // ugly but it's how we translate void* to a function pointer
             lapack_fn: unsafe { transmute_copy(&ptr) },

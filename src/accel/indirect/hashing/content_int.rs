@@ -47,7 +47,7 @@ impl<T> IndirectHashContent for PrimitiveContentArray<T>
 where
     T: ArrowPrimitiveType,
     T::Native: Hash
-        + for<'a> FromPyObject<'a>
+        + for<'a, 'py> FromPyObject<'a, 'py>
         + for<'a> IntoPyObject<'a, Target = PyInt, Output = Bound<'a, PyInt>, Error = Infallible>,
 {
     type Searcher<'a> = PrimSearcher<'a, T>;
