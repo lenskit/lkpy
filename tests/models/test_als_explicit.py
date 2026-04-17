@@ -12,7 +12,7 @@ import pandas as pd
 
 from pytest import approx, mark, skip
 
-from lenskit.als import BiasedMFScorer
+from lenskit.als import BiasedMFConfig, BiasedMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
 from lenskit.testing import BasicComponentTests, ScorerTests
@@ -37,6 +37,12 @@ class TestExplicitALS(BasicComponentTests, ScorerTests):
         assert np.all(copy.item_embeddings == orig.item_embeddings)
         assert np.all(copy.items.index == orig.items.index)
         assert np.all(copy.users.index == orig.users.index)
+
+
+def test_als_config():
+    cfg = BiasedMFConfig(embedding_size_exp=10, epochs=5)
+    assert cfg.embedding_size == 1024
+    assert cfg.epochs == 5
 
 
 def test_als_basic_build():
