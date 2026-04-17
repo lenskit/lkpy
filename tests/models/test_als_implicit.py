@@ -115,7 +115,7 @@ def test_als_predict_basic_for_new_ratings():
     algo = ImplicitMFScorer(features=20, epochs=10)
     algo.train(simple_ds)
 
-    query = RecQuery(15, ItemList([1, 2]))
+    query = RecQuery(user_id=15, history_items=ItemList([1, 2]))
     preds = algo(query, ItemList([3]))
 
     assert len(preds) == 1
@@ -141,7 +141,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     preds = preds.scores("pandas", index="ids")
     assert preds is not None
 
-    query = RecQuery(1, ItemList([1, 2], rating=[4.0, 5.0]))
+    query = RecQuery(user_id=1, history_items=ItemList([1, 2], rating=[4.0, 5.0]))
     new_preds = algo(query, ItemList([i]))
     new_preds = new_preds.scores("pandas", index="ids")
     assert new_preds is not None
@@ -195,7 +195,7 @@ def test_als_predict_for_new_users_with_new_ratings(rng: np.random.Generator, ml
 
         _log.debug("training data reconstruction:\n%s", nr_info)
 
-        query = RecQuery(-1, user_data)
+        query = RecQuery(history_items=user_data)
         new_preds = algo(query, items)
         new_preds = new_preds.scores("pandas", index="ids")
         assert new_preds is not None
@@ -241,7 +241,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
         _log.debug("user_features from fit: " + str(algo.user_embeddings[upos, :]))
 
         # get the user's rating series
-        query = RecQuery(-1, user_data)
+        query = RecQuery(history_items=user_data)
 
         new_recs = pipe.run("recommender", query=query)
         assert isinstance(new_recs, ItemList)
@@ -303,7 +303,7 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
 
     algo_no_user_features = ImplicitMFScorer(features=5, epochs=10, user_embeddings=False)
     algo_no_user_features.train(ml_ds)
-    query = RecQuery(u, user_data)
+    query = RecQuery(user_id=u, history_items=user_data)
     preds_no_user_features = algo_no_user_features(query, ItemList(items))
     preds_no_user_features = preds_no_user_features.scores("pandas", index="ids")
     assert preds_no_user_features is not None

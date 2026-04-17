@@ -88,7 +88,7 @@ def test_als_predict_basic_for_new_ratings():
     assert algo.bias is not None
     assert algo.bias.global_bias == approx(simple_df.rating.mean())
 
-    query = RecQuery(15, ItemList(item_ids=[1, 2], rating=[4.0, 5.0]))
+    query = RecQuery(user_id=15, history_items=ItemList(item_ids=[1, 2], rating=[4.0, 5.0]))
     preds = algo(query, items=ItemList([3]))
 
     assert len(preds) == 1
@@ -110,7 +110,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     preds = preds.scores("pandas", index="ids")
     assert preds is not None
 
-    query = RecQuery(-1, ItemList(item_ids=[1, 2], rating=[4.0, 5.0]))
+    query = RecQuery(user_id=-1, history_items=ItemList(item_ids=[1, 2], rating=[4.0, 5.0]))
 
     new_preds = algo(query=query, items=ItemList([i]))
     new_preds = new_preds.scores("pandas", index="ids")
@@ -143,7 +143,7 @@ def test_als_predict_for_new_users_with_new_ratings(rng, ml_ds: Dataset):
 
         _log.debug("user_features from fit: " + str(algo.user_embeddings[algo.users.number(u), :]))
 
-        query = RecQuery(-1, user_data)
+        query = RecQuery(user_id=-1, history_items=user_data)
         new_preds = algo(query=query, items=ItemList(items))
         assert np.all(new_preds.ids() == items)
 
@@ -208,7 +208,7 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
 
     _log.debug("user_features from fit: " + str(algo.user_embeddings[algo.users.number(u), :]))
 
-    query = RecQuery(-1, user_data)
+    query = RecQuery(user_id=-1, history_items=user_data)
     new_preds = algo_no_user_features(query, items=ItemList(items))
 
     _log.debug("preds: " + str(preds.scores()))

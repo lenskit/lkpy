@@ -158,7 +158,7 @@ def test_uu_predict_live_ratings(ml_ratings):
 
     ratings = ItemList.from_df(ml_ratings[ml_ratings.user_id == 4][["item_id", "rating"]])
 
-    query = RecQuery(20381, ratings)
+    query = RecQuery(user_id=20381, history_items=ratings)
     preds = algo(
         query=query,
         items=ItemList([1016, 2091]),

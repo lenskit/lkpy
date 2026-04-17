@@ -223,6 +223,6 @@ def test_query_subtype():
 
 
 def test_query_valid():
-    query = RecQuery(47)
+    query = RecQuery(user_id=47)
     assert is_compatible_data(query, RecQuery)
     assert is_compatible_data(query, QueryInput)
