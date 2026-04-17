@@ -54,7 +54,7 @@ And measure their results:
 
     >>> collect = MeasurementCollector()
     >>> collect.add_metric(RBP())
-    >>> collect.measure_collection(recs, split.test)
+    >>> collect.add_collection_measurements(recs, split.test)
     >>> collect.summary_metrics()    # doctest: +ELLIPSIS
     {... 'RBP.mean': 0.06..., ...}
 
