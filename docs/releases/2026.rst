@@ -82,6 +82,8 @@ Breaking Changes
   :class:`~lenskit.basic.TrainingItemsCandidateSelector` (:issue:`935`).
 - Several input types to batch inference are no longer supported, to reduce
   ambiguity and implicit behavior (:issue:`958`, :pr:`1074`).
+- Revised :class:`~lenskit.data.RecQuery` to only accept keyword arguments, and
+  removed the legacy ``user_items`` attribute.
 
 .. _prefix.dev: https://prefix.dev/channels/lenskit/
 

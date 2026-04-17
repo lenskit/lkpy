@@ -30,12 +30,16 @@ Types that can be converted to a query by :meth:`RecQuery.create`.
 """
 
 
-@dataclass
+@dataclass(kw_only=True)
 class RecQuery:
     """
     Representation of a the data available for a recommendation query.  This is
     generally the available inputs for a recommendation request *except* the set
     of candidate items.
+
+    .. versionchanged:: 2026.1
+
+        Made arguments keyword-only, and removed the historical ``user_items`` attribute.
 
     .. todo::
 
@@ -48,6 +52,14 @@ class RecQuery:
 
     Stability:
         Caller
+    """
+
+    query_id: ID | tuple[ID, ...] | None = None
+    """
+    An identifier for this query.
+
+    Query identifiers are used for things like mapping batch recommendation
+    outputs to their inputs.
     """
 
     user_id: ID | None = None
@@ -81,14 +93,6 @@ class RecQuery:
     query_source: QueryItemSource | set[QueryItemSource] | None = None
     """
     The list of items to return from :meth:`query_items`.
-    """
-
-    query_id: ID | tuple[ID, ...] | None = None
-    """
-    An identifier for this query.
-
-    Query identifiers are used for things like mapping batch recommendation
-    outputs to their inputs.
     """
 
     @classmethod
