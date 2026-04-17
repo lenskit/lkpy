@@ -12,6 +12,7 @@ Recommendation queries.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal
 
 import numpy as np
@@ -60,6 +61,17 @@ class RecQuery:
 
     Query identifiers are used for things like mapping batch recommendation
     outputs to their inputs.
+    """
+
+    query_time: datetime | None = None
+    """
+    The time at which the query is issued.
+
+    .. note::
+
+        No LensKit models or data processing code currently makes use of this,
+        but it is included for to support future time-aware modeling and replays
+        of historical data.
     """
 
     user_id: ID | None = None
