@@ -55,7 +55,7 @@ def test_training_selector_session(ml_ds: Dataset):
     row = ml_ds.user_row(100)
     session = ItemList(item_nums=np.arange(0, 10, 2), vocabulary=ml_ds.items)
     assert row is not None
-    cands = sel(query=RecQuery(100, history_items=row, session_items=session))
+    cands = sel(query=RecQuery(user_id=100, history_items=row, session_items=session))
 
     assert len(cands) <= ml_ds.item_count
     assert len(cands) == len(set(ml_ds.items.ids()) - set(session.ids()))
@@ -68,7 +68,7 @@ def test_training_selector_multi(ml_ds: Dataset):
     row = ml_ds.user_row(100)
     session = ItemList(item_nums=np.arange(0, 10, 2), vocabulary=ml_ds.items)
     assert row is not None
-    cands = sel(query=RecQuery(100, history_items=row, session_items=session))
+    cands = sel(query=RecQuery(user_id=100, history_items=row, session_items=session))
 
     assert len(cands) <= ml_ds.item_count
     assert len(cands) == len(set(ml_ds.items.ids()) - set(session.ids()) - set(row.ids()))

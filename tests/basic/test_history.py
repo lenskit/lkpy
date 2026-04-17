@@ -45,7 +45,7 @@ def test_lookup_no_override(ml_ds):
 
     user = ml_ds.users.id(100)
     ds_row = ml_ds.user_row(user)
-    query = RecQuery(user, ds_row[:-2])
+    query = RecQuery(user_id=user, history_items=ds_row[:-2])
     query = lookup(query)
 
     assert isinstance(query, RecQuery)
