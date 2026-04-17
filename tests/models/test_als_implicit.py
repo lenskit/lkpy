@@ -40,7 +40,7 @@ class TestImplicitALS(BasicComponentTests, ScorerTests):
 
 def test_config_defaults():
     cfg = ImplicitMFConfig()
-    assert cfg.embedding_size == 50
+    assert cfg.embedding_size == 64
 
 
 def test_config_es_alias():
