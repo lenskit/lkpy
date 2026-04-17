@@ -15,7 +15,6 @@ Core Abstractions
     lenskit.diagnostics
     lenskit.operations
     lenskit.training
-    lenskit.state
     lenskit.config
 
 .. toctree::
@@ -28,7 +27,6 @@ Core Abstractions
     lenskit/operations/index
     lenskit/diagnostics/index
     lenskit/training/index
-    lenskit/state/index
     lenskit/config/index
 
 Components and Models

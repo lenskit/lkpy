@@ -31,12 +31,12 @@ guide to how to use LensKit for research, education, and other purposes.
     data/datasets
 
 .. toctree::
-    :caption: Components
+    :caption: Components and Models
     :maxdepth: 1
 
     conventions
-    flexmf
     scorers
+    flexmf
     rankers
     other-components
     implementing

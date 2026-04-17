@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-Support code for managing model state.
+Support code for managing model state (not yet used).
 
 Many LensKit components are built on machine learning models of various forms.
 While :mod:`lenskit.training` provides support for training those models,

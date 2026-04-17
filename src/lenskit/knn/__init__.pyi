@@ -1,3 +1,7 @@
+"""
+k-nearest-neighbor models.
+"""
+
 from .ease import EASEConfig, EASEScorer
 from .item import ItemKNNConfig, ItemKNNScorer
 from .slim import SLIMConfig, SLIMScorer

@@ -36,6 +36,8 @@ Classical Collaborative Filters
     lenskit.knn.EASEScorer
     lenskit.als.BiasedMFScorer
     lenskit.als.ImplicitMFScorer
+    lenskit.flexmf.FlexMFExplicitScorer
+    lenskit.flexmf.FlexMFImplicitScorer
     lenskit.sklearn.svd.BiasedSVDScorer
     lenskit.funksvd.FunkSVDScorer
     lenskit.hpf.HPFScorer
@@ -45,7 +47,7 @@ Utility Scorers
 ~~~~~~~~~~~~~~~
 
 These scorers are used to compose more sophisticated pipelines, usually
-involving multiple pipelines.
+involving multiple scorers.
 
 .. autoapisummary::
     :nosignatures:

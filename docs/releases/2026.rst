@@ -15,8 +15,38 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 2026.1.0
 ~~~~~~~~
 
+This is the first major feature and update release of the 2026 series!  Key
+highlights:
+
+- The :class:`~lenskit.training.Trainable` protocol now has a method to query
+  whether a model has been trained, instead of relying on every trainable to
+  correctly implement skip-on-retrain logic.
+- Batch inference inputs are simplified and more explicit.
+- Cleanup of several deprecated interfaces, and simplifying the public module
+  hierarchy.
+- Dependency updates with SPEC0.
+- FlexMF is nearing stability, and will be stabilized in an upcoming 2026.x
+  point release.  It also supports LightGCN.
+- Updated default embedding sizes to a power of 2 (64) throughout LensKit.
+- Improved metric interface to better support complex metric aggregations. Some
+  automatic aggregation and analysis is no longer supported or will soon be
+  removed (:class:`~lenskit.metrics.RunAnalysis` is deprecated), in favor of
+  clear metric collection within a single run and letting the user aggregate
+  and summarize in whatever tool they prefer.
+
 Breaking Changes
 ----------------
+
+Major Breaking Changes
+......................
+
+These are the major changes that will affect users who are writing code to
+generate recommendations with LensKit, or implementing recommendation
+components.
+
+- Many submodules (such as most modules under :mod:`lenskit.pipeline`) have been
+  renamed to be private modules.  Code importing from their original locations
+  will need to be updated to import from the higher-level module (:issue:`947`).
 
 - The :class:`~lenskit.training.Trainable` protocol now has a separate method
   :meth:`~lenskit.training.Trainable.is_trained` to query if a component has
@@ -24,30 +54,53 @@ Breaking Changes
   components when :attr:`~lenskit.training.TrainingOptions.retrain` is ``False``
   has been moved from individual components to
   :meth:`lenskit.pipeline.Pipeline.train` (:issue:`1042`, :pr:`1044`).
+  Components that implement :class:`~lenskit.training.Trainable` need to
+  implement the new method as well.
 
   The pipeline builder will issue a warning if a component implements
   :meth:`~lenskit.training.Trainable.train` but not
   :meth:`~lenskit.training.Trainable.is_trained`.
-- Pipeline components and inputs now have restrictions on their names, and cannot
-  have names beginning with ``_``.  See :ref:`pipeline-names` for details.
+
 - Default embedding sizes for all embedding-based models (matrix factorizers,
   etc.) have changed to be 64 instead of 50, with the exception of
   :mod:`lenskit.implicit`, which continues to default to Implicit's defaults
   (:issue:`846`).
-- Pipeline configurations serialized with previous versions **cannot** be
-  re-loaded in LensKit 2026, due to moves of module paths.  Import path
-  canonicalization (:issue:`948`) reduces the risk of such breakage in future
-  releases.  Handwritten configurations will often still work.
-- Many submodules (such as most modules under :mod:`lenskit.pipeline`) have been
-  renamed to be private modules.  Code importing from their original locations
-  will need to be updated to import from the higher-level module (:issue:`947`).
-- The ``AttributeSet`` class has been renamed to
-  :class:`~lenskit.data.EntityAttribute` (:issue:`946`), to better clarify its
-  design and role.
+
+- :class:`~lenskit.metrics.RunAnalysis` is deprecated, and no longer supports
+  explicit defaults or global metrics.  Use
+  :class:`~lenskit.metrics.MeasurementCollector` instead.  Its global metric
+  columns have also changed in some cases.
+
 - LensKit now requires Python 3.12.5 or newer, along with NumPy 2.x, Pandas 2.3
   or newer, and SciPy 1.13 or newer (see :ref:`dep-policy`, :pr:`954`).  Earlier
   versions of Python 3.12 have a bug in the standard library that affects
   LensKit.
+
+- Stopped providing wheels for macOS on Intel.  Users who still need to run
+  LensKit on Intel-based Macs should use the Conda packages (available in
+  conda-forge and `prefix.dev`_).
+
+- Removed the deprecated unrated and all-items candidate selectors, in favor of
+  :class:`~lenskit.basic.TrainingItemsCandidateSelector` (:issue:`935`).
+
+- Several input types to batch inference are no longer supported, to reduce
+  ambiguity and implicit behavior (:issue:`958`, :pr:`1074`).
+
+Other Breaking Changes
+......................
+
+These changes are more minor, and won't directly affect most users who are using
+LensKit components and metrics as-is.
+
+- Pipeline components and inputs now have restrictions on their names, and cannot
+  have names beginning with ``_``.  See :ref:`pipeline-names` for details.
+- Pipeline configurations serialized with previous versions **cannot** be
+  re-loaded in LensKit 2026, due to moves of module paths.  Import path
+  canonicalization (:issue:`948`) reduces the risk of such breakage in future
+  releases.  Handwritten configurations will often still work.
+- The ``AttributeSet`` class has been renamed to
+  :class:`~lenskit.data.EntityAttribute` (:issue:`946`), to better clarify its
+  design and role.
 - We no longer publish 32-bit binary wheels.
 - Removed ``DecomposedMetric``, as the :class:`~lenskit.metrics.Metric` interface
   is now decomposed. All metrics based on listwise measurements or intermediate
@@ -57,15 +110,8 @@ Breaking Changes
   should directly compute over item lists.
 - :class:`~lenskit.metrics.MeasurementCollector` no longer supports defaults
   when adding metrics.
-- :class:`~lenskit.metrics.RunAnalysis` is deprecated, and no longer supports
-  explicit defaults or global metrics.  Use
-  :class:`~lenskit.metrics.MeasurementCollector` instead.  Its global metric
-  columns have also changed in some cases.
 - :class:`~lenskit.metrics.ListGini` and :class:`~lenskit.metrics.ExposureGini`
   now require an item vocabulary or dataset as input.
-- Stopped providing wheels for macOS on Intel.  Users who still need to run
-  LensKit on Intel-based Macs should use the Conda packages (available in conda-forge and
-  `prefix.dev`_).
 - Removed the deprecated ``lenskit.training.IterativeTraining`` base class in
   favor of :class:`lenskit.training.UsesTrainer`.
 - Component class members have been renamed to no longer use the Scikit-Learn
@@ -78,10 +124,6 @@ Breaking Changes
   (:pr:`1052`).
 - Removed the ``n`` option to :func:`~lenskit.pipeline.predict_pipeline`
   (:issue:`835`).
-- Removed the deprecated unrated and all-items candidate selectors, in favor of
-  :class:`~lenskit.basic.TrainingItemsCandidateSelector` (:issue:`935`).
-- Several input types to batch inference are no longer supported, to reduce
-  ambiguity and implicit behavior (:issue:`958`, :pr:`1074`).
 - Revised :class:`~lenskit.data.RecQuery` to only accept keyword arguments, and
   removed the legacy ``user_items`` attribute.
 

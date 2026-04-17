@@ -139,6 +139,7 @@ autoapisummary_generate = False
 autoapisummary_imported_members = False
 autoapisummary_ignore_module_all = True
 
+autoapi_own_page_level = "class"
 autoapi_file_patterns = ["*.pyi", "*.py"]
 autoapi_dirs = ["../src/lenskit"]
 autoapi_root = "api"
