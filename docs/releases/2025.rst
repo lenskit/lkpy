@@ -9,6 +9,13 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.8.0:
+
+2025.8.0
+~~~~~~~~
+
+- Add SLIM (:class:`~lenskit.knn.SLIMScorer`).
+
 .. _2025.7.0:
 
 2025.7.0
