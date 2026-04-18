@@ -201,7 +201,7 @@ class RunAnalysis:
         copy = self.collector.empty_copy()
         copy._validate_setup()
 
-        copy.measure_collection(outputs, test)
+        copy.add_collection_measurements(outputs, test)
 
         res = RunAnalysisResult(
             copy.list_metrics(), pd.Series(copy.summary_metrics()), self._defaults

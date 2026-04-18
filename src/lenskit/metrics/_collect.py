@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, NamedTuple
 
 import pandas as pd
 
@@ -25,6 +25,21 @@ from ._base import (
 )
 
 _log = get_logger(__name__)
+
+
+class RunMetrics(NamedTuple):
+    """
+    Results of measuring a single run in a metric collector.
+    """
+
+    summary_metrics: Mapping[str, MetricVal]
+    """
+    Overall summary metrics for the run.
+    """
+    list_metrics: pd.DataFrame
+    """
+    Metrics for each individual list in the run.
+    """
 
 
 @dataclass
@@ -114,7 +129,7 @@ class MeasurementCollector:
         wrapper = _wrap_metric(metric, label)
         self._metrics.append(wrapper)
 
-    def measure_list(self, output: ItemList, test: ItemList, **keys: Any):
+    def add_list_measurement(self, output: ItemList, test: ItemList, **keys: Any):
         """
         Measure a single list and accumulate the intermediate results.
 
@@ -138,7 +153,7 @@ class MeasurementCollector:
 
         self._list_records.append(rec)
 
-    def measure_collection(
+    def add_collection_measurements(
         self, outputs: ItemListCollection, test: ItemListCollection, **keys: Any
     ):
         """
@@ -164,11 +179,26 @@ class MeasurementCollector:
                     no_test_count += 1
                     list_test = ItemList([])
 
-                self.measure_list(out, list_test, **key_kwargs)
+                self.add_list_measurement(out, list_test, **key_kwargs)
                 pb.update()
 
         if no_test_count:
             _log.warning("could not find test data for %d lists", no_test_count)
+
+    def measure_run(self, outputs: ItemListCollection, test: ItemListCollection) -> RunMetrics:
+        """
+        Convenience method to measure a set of recommendations and return the
+        results.
+
+        The measurement collector must be empty.  The provided lists are
+        measured, but their measurements are **not** added to this collector.
+
+        This method is intended to free up users from the need to manage
+        collector state.
+        """
+        copy = self.empty_copy()
+        copy.add_collection_measurements(outputs, test)
+        return RunMetrics(copy.summary_metrics(), copy.list_metrics())
 
     def list_metrics(self) -> pd.DataFrame:
         """

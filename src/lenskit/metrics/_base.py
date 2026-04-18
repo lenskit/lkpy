@@ -17,7 +17,13 @@ from lenskit.data.accum import (
 )
 
 type MetricVal = float | int | object
+"""
+A single metric value.
+"""
 type MetricResult = MetricVal | Mapping[str, MetricVal]
+"""
+Results of a metric, either a single value or a dictionary of values.
+"""
 
 
 class MetricFunction(Protocol):
