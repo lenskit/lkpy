@@ -34,6 +34,11 @@ highlights:
   clear metric collection within a single run and letting the user aggregate
   and summarize in whatever tool they prefer.
 
+Additional changes are described here. See the `milestone
+<https://github.com/lenskit/lkpy/milestone/19>`_ `GitHub release
+<https://github.com/lenskit/lkpy/releases/tag/v2026.1.0>`_ for further
+change-level details.
+
 Breaking Changes
 ----------------
 
