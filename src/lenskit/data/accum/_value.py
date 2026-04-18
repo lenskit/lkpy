@@ -48,7 +48,9 @@ class ValueStatAccumulator(Accumulator[float | None, ValueStatistics]):
             return
 
         if self._n == len(self._values):
-            self._values.resize(self._n * 2)
+            vs = np.zeros_like(self._values, shape=self._n * 2)
+            vs[: self._n] = self._values[: self._n]
+            self._values = vs
         self._values[self._n] = value
         self._n += 1
 
