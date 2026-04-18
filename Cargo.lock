@@ -615,7 +615,7 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 
 [[package]]
 name = "lenskit"
-version = "2026.1.0-beta2"
+version = "2026.1.0"
 dependencies = [
  "arc-swap",
  "arrow",
