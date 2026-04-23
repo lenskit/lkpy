@@ -190,6 +190,22 @@ class EntityAttribute(ABC):
         """
         return self._spec.layout == AttrLayout.SPARSE
 
+    def value(self) -> Any:
+        """
+        If the attribute is for a single entity, get its value as a Python object.
+        """
+        n = len(self)
+        if n == 1:
+            return self.list()[0]
+        else:
+            raise ValueError(f"value() not defined for {n} values")
+
+    def list(self) -> list[Any]:
+        """
+        Get the attribute values as a Python list.
+        """
+        return self.arrow().to_pylist()
+
     def pandas(
         self, *, missing: Literal["null", "omit"] = "null"
     ) -> pd.Series | pd.DataFrame:  # pragma: nocover
