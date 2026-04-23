@@ -1140,6 +1140,9 @@ class ItemList:
     def __len__(self):
         return self._len
 
+    def __bool__(self):
+        return self._len > 0
+
     def __getitem__(self, sel: ILIndexer) -> ItemList:
         """
         Subset the item list.
