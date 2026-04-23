@@ -2,6 +2,7 @@
 k-nearest-neighbor models.
 """
 
+from .association import AssociationConfig, AssociationMethod, AssociationScorer
 from .ease import EASEConfig, EASEScorer
 from .item import ItemKNNConfig, ItemKNNScorer
 from .slim import SLIMConfig, SLIMScorer
@@ -16,4 +17,7 @@ __all__ = [
     "EASEConfig",
     "SLIMConfig",
     "SLIMScorer",
+    "AssociationConfig",
+    "AssociationMethod",
+    "AssociationScorer",
 ]
