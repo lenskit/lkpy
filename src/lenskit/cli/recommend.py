@@ -9,11 +9,12 @@ import sys
 from pathlib import Path
 
 import click
+from rich import print
 from xopen import xopen
 
 import lenskit.operations as ops
 from lenskit import batch
-from lenskit.data import Dataset, ItemList, ListILC, UserIDKey
+from lenskit.data import ID, Dataset, ItemList, ListILC, RecQuery, UserIDKey
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.pipeline import PipelineProfiler
 from lenskit.random import random_generator
@@ -37,7 +38,10 @@ _log = get_logger(__name__)
 @click.option("-d", "--dataset", metavar="DATA", type=Path, help="Use dataset DATA.")
 @click.option("-u", "--users-file", type=Path, metavar="FILE", help="Load list of users from FILE.")
 @click.option("--random-users", type=int, metavar="N", help="Recommend for N random users.")
-@click.option("--profile", type=Path, metavar="FILE", help="Profile profile inference.")
+@click.option("--profile", type=Path, metavar="FILE", help="Profile inference and save in FILE.")
+@click.option(
+    "--related-items", is_flag=True, help="interpret USERS as items, and recommend related items"
+)
 @click.argument("PIPE_FILE", type=Path)
 @click.argument("USERS", nargs=-1)
 def recommend(
@@ -51,6 +55,7 @@ def recommend(
     list_length: int | None,
     dataset: Path | None,
     profile: Path | None,
+    related_items: bool,
     pipe_file: Path,
     users: list,
 ):
@@ -91,24 +96,43 @@ def recommend(
         all_recs = batch.recommend(pipe, users, list_length, n_jobs=n_jobs, profiler=profiler)
     else:
         timer = Stopwatch(start=False)
-        all_recs = None if out_file is None else ListILC(UserIDKey)
+        all_recs = None
+        if out_file is not None:
+            if related_items:
+                all_recs = ListILC(["ref_item_id"])
+            else:
+                all_recs = ListILC(UserIDKey)
+
         with item_progress("user recommendations", len(users)) as pb:
             for user in users:
-                ulog = log.bind(user=user)
-                ulog.debug("generating single-user recommendations")
+                if related_items:
+                    ulog = log.bind(ref_item=user)
+                    ulog.debug("generating related product recommendation")
+                    query = RecQuery(context_items=ItemList([user]))
+                else:
+                    ulog = log.bind(user=user)
+                    ulog.debug("generating single-user recommendations")
+                    query = RecQuery(user_id=user)
+
                 with timer.measure(accumulate=True):
-                    recs = ops.recommend(pipe, user, list_length, profiler=profiler)
+                    recs = ops.recommend(pipe, query, list_length, profiler=profiler)
+
                 ulog.info(
-                    "recommended for user",
+                    "generated recommendation list",
                     length=len(recs),
                     time="{:.1f}ms".format(timer.elapsed(accumulated=False) * 1000),
                 )
 
                 if all_recs is not None:
-                    all_recs.add(recs, user_id=user)
+                    all_recs.add(recs, user)
 
                 if print_recs:
-                    print_recommendation_list(recs, data)
+                    print_recommendation_list(
+                        recs,
+                        data,
+                        user=None if related_items else user,
+                        ref_item=user if related_items else None,
+                    )
 
                 pb.update()
 
@@ -128,15 +152,28 @@ def recommend(
         all_recs.save_parquet(out_file)
 
 
-def print_recommendation_list(recs: ItemList, data: Dataset | None):
+def print_recommendation_list(
+    recs: ItemList, data: Dataset | None, ref_item: ID | None = None, user: ID | None = None
+):
+    ref_title = None
     titles = None
     if data is not None:
         items = data.entities("item")
         if "title" in items.attributes:
             titles = items.select(ids=recs.ids()).attribute("title").pandas()
+            if ref_item is not None:
+                ref_title = items.select(ids=[ref_item]).attribute("title").value()
+
+    if user is not None:
+        print("recommendations for user {}:".format(user))
+    elif ref_item is not None:
+        if ref_title is not None:
+            print("related items for item {} ([italic]{}[/italic]):".format(ref_item, ref_title))
+        else:
+            print("related items for item {}:".format(ref_item))
 
     for item in recs.ids():
         if titles is not None:
-            print("item {}: {}".format(item, titles.loc[item]))
+            print("  [bold]item {}[/bold]: [italic]{}[/italic]".format(item, titles.loc[item]))
         else:
-            print("item {}".format(item))
+            print("  [bold]item {}[/bold]".format(item))
