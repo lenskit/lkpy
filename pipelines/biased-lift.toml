@@ -1,0 +1,12 @@
+[meta]
+name = "biased-lift"
+
+[options]
+base = "std:topn"
+
+[components.scorer]
+class = "lenskit.knn.AssociationScorer"
+
+[components.scorer.config]
+method = "lift"
+damping = 20
