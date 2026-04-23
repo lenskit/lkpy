@@ -167,7 +167,7 @@ class Vocabulary:
         if pa.types.is_null(self._array.type):
             nums = pa.nulls(len(terms), type=pa.int32())
         else:
-            term_arr = pa.array(terms, type=self._array.type)  # type: ignore
+            term_arr = pa.array(terms)  # type: ignore
             nums = self._index.get_indexes(term_arr)  # type: ignore
 
         trace(self._log, "resolved %d IDs, %d invalid", len(terms), nums.null_count)
