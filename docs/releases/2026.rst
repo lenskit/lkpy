@@ -10,6 +10,18 @@ There are no new major paradigm shifts, though — pipelines, datasets, and
 components work as they do in the 2025 series, but with more features, some
 rough corners polished off the interfaces, and hopefully fewer bugs.
 
+.. _2026.2.0:
+
+2026.2.0
+~~~~~~~~
+
+Second release in the 2026 series, bringing a few smaller feature updates:
+
+- Added :meth:`~lenskit.data.EntityAttribute.list` and
+  :meth:`~lenskit.data.EntityAttribute.value` accessors to entity attributes.
+- Improved typecasting of entity IDs in :meth:`lenskit.data.Vocabulary.numbers`.
+- Added ``--releated-items`` option to the ``lenskit recommend`` command.
+
 .. _2026.1.0:
 
 2026.1.0
