@@ -2,6 +2,7 @@ set -eo pipefail
 
 data="$TEST_WORK/ml-data"
 out="$TEST_WORK/als.pkl.gz"
+recs="$TEST_WORK/recs.json"
 
 cat >>"$TEST_WORK/verify.py" <<EOF
 import pickle
@@ -27,3 +28,12 @@ run-lenskit train --config pipelines/als-explicit.toml -o "$out" "$data"
 
 require -f "$out"
 run-python "$TEST_WORK/verify.py" "$out"
+
+run-lenskit recommend -o "$recs" --json -n 10 "$out" 200
+require -f "$recs"
+
+n_users=$(jq 'length' <$recs)
+require "$n_users" == 1
+
+n_items=$(jq '.["200"] | length' <$recs)
+require "$n_items" == 10
