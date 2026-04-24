@@ -6,10 +6,11 @@
 
 import pickle
 import sys
+from json import dump as dump_json
 from pathlib import Path
 
 import click
-from rich import print
+from rich import print, print_json
 from xopen import xopen
 
 import lenskit.operations as ops
@@ -31,6 +32,7 @@ _log = get_logger(__name__)
     help="Output file for recommendations.",
 )
 @click.option("--print/--no-print", "print_recs", default=True, help="Print recommendations.")
+@click.option("--json", is_flag=True, help="Print and save recommendations in JSON.")
 @click.option("-n", "--list-length", type=int, help="Recommendation list length.")
 @click.option("--batch/--no-batch", "use_batch", default=False, help="Use batch.recommend.")
 @click.option("-j", "--process-count", type=int, help="Use specified number of worker processes.")
@@ -48,6 +50,7 @@ def recommend(
     out_file: Path,
     users_file: Path | None,
     print_recs: bool,
+    json: bool,
     use_batch: bool,
     process_count: int | None,
     use_ray: bool,
@@ -88,16 +91,13 @@ def recommend(
         profiler = PipelineProfiler(pipe, profile)
 
     if use_batch or use_ray or process_count is not None:
-        if use_ray:
-            n_jobs = "ray"
-        else:
-            n_jobs = process_count
-
-        all_recs = batch.recommend(pipe, users, list_length, n_jobs=n_jobs, profiler=profiler)
+        all_recs = batch.recommend(
+            pipe, users, list_length, n_jobs=process_count, profiler=profiler
+        )
     else:
         timer = Stopwatch(start=False)
         all_recs = None
-        if out_file is not None:
+        if out_file is not None or json:
             if related_items:
                 all_recs = ListILC(["ref_item_id"])
             else:
@@ -126,7 +126,7 @@ def recommend(
                 if all_recs is not None:
                     all_recs.add(recs, user)
 
-                if print_recs:
+                if print_recs and not json:
                     print_recommendation_list(
                         recs,
                         data,
@@ -146,14 +146,26 @@ def recommend(
     if profiler is not None:
         profiler.close()
 
+    if print_recs and json:
+        print_json(all_recs.to_json())
+
     if out_file is not None:
         assert all_recs is not None
         log.info("saving recommendations to %s", str(out_file), count=len(all_recs))
-        all_recs.save_parquet(out_file)
+        if json:
+            with open(out_file, "w") as jsf:
+                dump_json(all_recs.to_json_data(object=True), jsf)
+                jsf.write("\n")
+        else:
+            all_recs.save_parquet(out_file)
 
 
 def print_recommendation_list(
-    recs: ItemList, data: Dataset | None, ref_item: ID | None = None, user: ID | None = None
+    recs: ItemList,
+    data: Dataset | None,
+    *,
+    ref_item: ID | None = None,
+    user: ID | None = None,
 ):
     ref_title = None
     titles = None
