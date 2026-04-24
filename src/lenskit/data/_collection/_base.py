@@ -213,12 +213,8 @@ class ItemListCollection(Generic[KL], ABC):
                 DataWarning,
                 stacklevel=2,
             )
-        fields = list(self.key_fields)
-        return (
-            pd.concat({k: il.to_df(numbers=False) for (k, il) in self.items()}, names=fields)
-            .reset_index(fields)
-            .reset_index(drop=True)
-        )
+        tbl = self.to_arrow(layout="flat")
+        return tbl.to_pandas()
 
     def to_arrow(
         self, *, batch_size: int = 5000, layout: Literal["native", "flat"] = "native"

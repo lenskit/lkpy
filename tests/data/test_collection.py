@@ -408,7 +408,7 @@ def test_recs_df_expected_column(demo_recs: DemoRecs):
     rec_df = demo_recs.recommendations.to_df()
     print(rec_df)
     print(demo_recs.recommendations[0])
-    assert list(rec_df.columns) == ["user_id", "item_id", "score", "rank"]
+    assert list(rec_df.columns) == ["user_id", "item_id", "rank", "score"]
 
 
 def test_to_dataset(demo_recs: DemoRecs):
