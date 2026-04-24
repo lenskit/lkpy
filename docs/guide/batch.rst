@@ -45,8 +45,8 @@ Generate recommendations:
 
     >>> recs = recommend(pop_pipe, split.test.keys())
     >>> recs.to_df()
-              user_id  item_id     score  rank
-    0 ...                                    1
+              user_id  item_id     rank  score
+    0 ...                             1 ...
     ...
     [3000 rows x 4 columns]
 
