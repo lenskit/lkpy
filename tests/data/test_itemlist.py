@@ -16,7 +16,7 @@ import torch
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from pytest import mark, raises, warns
+from pytest import approx, mark, raises, warns
 
 from lenskit.data import Dataset, ItemList, Vocabulary
 from lenskit.diagnostics import DataWarning
@@ -1051,3 +1051,34 @@ def test_item_list_update_add_for_some_items():
     assert all(il.numbers() == base.numbers())
     assert il.vocabulary is VOCAB
     assert np.array_equal(il.scores(), [np.nan, 100, 200, 300, np.nan], equal_nan=True)
+
+
+def test_to_json():
+    il = ItemList(ITEMS, vocabulary=VOCAB)
+
+    data = il.to_json_data()
+    assert isinstance(data, list)
+    assert len(data) == len(il)
+    for i, row in enumerate(data):
+        assert row == {"item_id": ITEMS[i]}
+
+
+def test_to_json_numbers():
+    il = ItemList(ITEMS, vocabulary=VOCAB)
+
+    data = il.to_json_data(ids=False, numbers=True)
+    assert isinstance(data, list)
+    assert len(data) == len(il)
+    for i, row in enumerate(data):
+        assert row == {"item_num": i}
+
+
+def test_to_json_scores(rng: np.random.Generator):
+    scores = rng.random(len(ITEMS))
+    il = ItemList(ITEMS, vocabulary=VOCAB, scores=scores)
+
+    data = il.to_json_data()
+    assert isinstance(data, list)
+    assert len(data) == len(il)
+    for i, row in enumerate(data):
+        assert row == {"item_id": ITEMS[i], "score": approx(scores[i])}

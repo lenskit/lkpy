@@ -831,6 +831,19 @@ class ItemList:
         cols.update((k, v.numpy()) for (k, v) in self._fields.items() if k not in ("score", "rank"))
         return pd.DataFrame(cols)
 
+    def to_json_data(self, *, ids: bool = True, numbers: bool = False):
+        """
+        Convert this item list to JSON-compatible data.
+
+        .. note::
+
+            This is not a full round-trip serialization — the original item list
+            cannot be reconstructed from JSON.
+        """
+
+        tbl = self.to_arrow(ids=ids, numbers=numbers)
+        return tbl.to_pylist()
+
     @overload
     def to_arrow(
         self,
