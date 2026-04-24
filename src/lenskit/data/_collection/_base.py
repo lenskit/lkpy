@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
@@ -32,6 +33,7 @@ from pydantic import JsonValue
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
 
+from .._adapt import py_scalar
 from .._arrow import explode_column
 from .._builder import DatasetBuilder
 from .._container import DataContainer
@@ -258,10 +260,17 @@ class ItemListCollection(Generic[KL], ABC):
         if object:
             if len(self.key_fields) > 1:
                 raise ValueError("cannot convert multi-key collection to object JSON")
-            return {k[0]: items.to_json_data() for (k, items) in self.items()}
+            return {py_scalar(k[0]): items.to_json_data() for (k, items) in self.items()}
         else:
             tbl = self.to_arrow()
             return tbl.to_pylist()
+
+    def to_json(self, *, object: bool = False) -> str:
+        """
+        Convert this item list collection to JSON.  Wrapper around :meth:`to_json_data`.
+        """
+        data = self.to_json_data(object=object)
+        return json.dumps(data)
 
     @overload
     def to_dataset(

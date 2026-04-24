@@ -4,6 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import json
 import logging
 import pickle
 import warnings
@@ -448,6 +449,17 @@ def test_to_json_object(demo_recs: DemoRecs):
     assert len(arr) == len(demo_recs.recommendations)
     for uid, items in arr.items():
         il = demo_recs.recommendations.lookup(user_id=uid)
+        assert il is not None
+        assert len(items) == len(il)
+        assert np.all([i["item_id"] for i in items] == il.ids())
+
+
+def test_to_json_object_str(demo_recs: DemoRecs):
+    data = demo_recs.recommendations.to_json(object=True)
+    arr = json.loads(data)
+    assert len(arr) == len(demo_recs.recommendations)
+    for uid, items in arr.items():
+        il = demo_recs.recommendations.lookup(user_id=int(uid))
         assert il is not None
         assert len(items) == len(il)
         assert np.all([i["item_id"] for i in items] == il.ids())

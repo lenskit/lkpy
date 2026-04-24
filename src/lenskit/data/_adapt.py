@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-Adaptation code for dealing with legacy data layouts.
+Adaptation code for dealing with legacy data layouts and adapting data types.
 """
 
 # pyright: basic
@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import warnings
 from typing import (
+    Any,
     Collection,
     Iterable,
     Literal,
@@ -22,6 +23,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from ._builder import DatasetBuilder
 from ._dataset import Dataset
@@ -37,6 +39,18 @@ USER_COLUMN = "user_id"
 ITEM_COLUMN = "item_id"
 USER_COMPAT_COLUMN = AliasedColumn(USER_COLUMN, ["user"], warn=True)
 ITEM_COMPAT_COLUMN = AliasedColumn(ITEM_COLUMN, ["item"], warn=True)
+
+
+def py_scalar(x) -> Any:
+    """
+    Utility function to adapt data to a Python scalar.
+    """
+    if isinstance(x, np.generic):
+        return x.item()
+    elif isinstance(x, pa.Scalar):
+        return x.as_py()
+    else:
+        return x
 
 
 def column_name(col: Column) -> str:
