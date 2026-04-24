@@ -431,3 +431,23 @@ def test_to_dataset(demo_recs: DemoRecs):
 
     assert np.all(ds_user_counts == src_user_counts)
     assert np.all(ds_item_counts == src_item_counts)
+
+
+def test_to_json_array(demo_recs: DemoRecs):
+    arr = demo_recs.recommendations.to_json_data()
+    assert len(arr) == len(demo_recs.recommendations)
+    for i, row in enumerate(arr):
+        k, il = demo_recs.recommendations[i]
+        assert row["user_id"] == k.user_id
+        assert len(row["items"]) == len(il)
+        assert np.all([i["item_id"] for i in row["items"]] == il.ids())
+
+
+def test_to_json_object(demo_recs: DemoRecs):
+    arr = demo_recs.recommendations.to_json_data(object=True)
+    assert len(arr) == len(demo_recs.recommendations)
+    for uid, items in arr.items():
+        il = demo_recs.recommendations.lookup(user_id=uid)
+        assert il is not None
+        assert len(items) == len(il)
+        assert np.all([i["item_id"] for i in items] == il.ids())

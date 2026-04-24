@@ -27,6 +27,7 @@ from typing import (
 import pandas as pd
 import pyarrow as pa
 from pyarrow.parquet import ParquetDataset, ParquetWriter
+from pydantic import JsonValue
 
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
@@ -231,6 +232,36 @@ class ItemListCollection(Generic[KL], ABC):
                 The Arrow record batch size.
         """
         return pa.Table.from_batches(self.record_batches(batch_size=batch_size, layout=layout))
+
+    @overload
+    def to_json_data(self, *, object: Literal[True]) -> dict[ID, list[dict[str, JsonValue]]]: ...
+    @overload
+    def to_json_data(self, *, object: Literal[False] = False) -> list[dict[str, JsonValue]]: ...
+    @overload
+    def to_json_data(
+        self, *, object: bool
+    ) -> list[dict[str, JsonValue]] | dict[ID, list[dict[str, JsonValue]]]: ...
+    def to_json_data(
+        self, *, object: bool = False
+    ) -> list[dict[str, JsonValue]] | dict[ID, list[dict[str, JsonValue]]]:
+        """
+        Convert this item list collection to JSON-compatible data.
+
+        Args:
+            object:
+                If ``True``, construct as a dictionary whose keys are the item
+                list keys.  This mode is only supported when there is a single
+                key field.
+
+                If ``False``, return a list of objects.
+        """
+        if object:
+            if len(self.key_fields) > 1:
+                raise ValueError("cannot convert multi-key collection to object JSON")
+            return {k[0]: items.to_json_data() for (k, items) in self.items()}
+        else:
+            tbl = self.to_arrow()
+            return tbl.to_pylist()
 
     @overload
     def to_dataset(
