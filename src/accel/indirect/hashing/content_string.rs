@@ -10,8 +10,10 @@ use arrow::array::{
     make_array, Array, ArrayData, AsArray, GenericStringArray, OffsetSizeTrait, StringBuilder,
     StringViewArray,
 };
+use arrow::compute::cast;
 use arrow::pyarrow::PyArrowType;
 use arrow_schema::DataType;
+use log::*;
 use pyo3::exceptions::PyTypeError;
 use pyo3::types::PyAnyMethods;
 use rustc_hash::FxHasher;
@@ -71,10 +73,12 @@ impl<OS: OffsetSizeTrait> IndirectHashContent for StringContentArray<OS> {
                 DataType::Utf8View => Box::new(arr.as_string_view().clone()),
                 DataType::LargeUtf8 => Box::new(arr.as_string::<i64>().clone()),
                 t => {
-                    return Err(PyTypeError::new_err(format!(
-                        "unsupported array type {:?}",
-                        t
-                    )))
+                    trace!("converting search array from {}", t);
+                    let arr = cast(&arr, &DataType::Utf8)
+                        .map_err(|e| PyTypeError::new_err(format!("error casting arrays: {}", e)))?
+                        .as_string::<i32>()
+                        .clone();
+                    Box::new(arr)
                 }
             }
         } else {
