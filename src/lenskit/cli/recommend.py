@@ -147,7 +147,7 @@ def recommend(
         profiler.close()
 
     if print_recs and json:
-        print_json(all_recs.to_json())
+        print_json(all_recs.to_json(object=True))
 
     if out_file is not None:
         assert all_recs is not None
