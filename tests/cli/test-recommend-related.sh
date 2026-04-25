@@ -5,7 +5,7 @@ out="$TEST_WORK/lift.pkl.gz"
 recs="$TEST_WORK/recs.json"
 
 run-lenskit data convert --movielens "$ML_TEST_DIR" "$data"
-run-lenskit train --config pipelines/lift.toml -o "$out" "$data"
+run-lenskit train --config pipelines/biased-lift.toml -o "$out" "$data"
 
 require -f "$out"
 
@@ -15,5 +15,5 @@ require -f "$recs"
 n_users=$(jq 'length' <$recs)
 require "$n_users" == 1
 
-n_items=$(jq '.["200"] | length' <$recs)
+n_items=$(jq '.["4299"] | length' <$recs)
 require "$n_items" == 10
