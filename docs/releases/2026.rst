@@ -20,7 +20,13 @@ Second release in the 2026 series, bringing a few smaller feature updates:
 - Added :meth:`~lenskit.data.EntityAttribute.list` and
   :meth:`~lenskit.data.EntityAttribute.value` accessors to entity attributes.
 - Improved typecasting of entity IDs in :meth:`lenskit.data.Vocabulary.numbers`.
-- Added ``--releated-items`` option to the ``lenskit recommend`` command.
+- Added JSON export to :class:`~lenskit.data.ItemList` and
+  :class:`~lenskit.data.ItemListCollection` (:pr:`1089`).
+- Added ``--releated-items`` and ``--json`` options to the ``lenskit recommend``
+  command (:pr:`1087`).
+- Added a new scorer, :class:`lenskit.knn.AssociationScorer`, implementing
+  conditional probability and lift-based association rule recommendations for
+  both personalized and related-item recommendations (:issue:`930`, :pr:`1086`).
 
 .. _2026.1.0:
 
