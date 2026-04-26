@@ -22,7 +22,7 @@ from pydantic_core import to_json
 
 from lenskit.logging import Task, get_logger, stdout_console
 from lenskit.parallel.ray import init_cluster
-from lenskit.tuning import PipelineTuner, TuningSpec
+from lenskit.tuning import RayPipelineTuner, TuningSpec
 
 _log = get_logger(__name__)
 
@@ -97,7 +97,7 @@ def tune(
         init_cluster(global_logging=True)
 
     # set up the tuning controller
-    controller = PipelineTuner(spec, out)
+    controller = RayPipelineTuner(spec, out)
     if job_limit is not None:
         controller.settings.jobs = job_limit
     controller.set_data(training_data, tuning_data)
@@ -110,15 +110,15 @@ def tune(
             print(controller.spec.model_dump_json(indent=2), file=jsf)
 
         _log.info("starting hyperparameter search")
-        controller.run()
+        results = controller.run()
 
-    best = controller.best_result()
+    best = results.best_result()
     result_file = out / "result.json"
     result_json = to_json(best, indent=2)
     result_file.write_bytes(result_json + b"\n")
 
     if save_pipeline is not None:
-        pipe_json = controller.best_pipeline().model_dump_json(indent=2)
+        pipe_json = results.best_pipeline().model_dump_json(indent=2)
         save_pipeline.write_text(pipe_json + "\n")
 
     _log.info("finished hyperparameter search")
@@ -126,7 +126,7 @@ def tune(
     console.print("Best {} is [bold red]{:.3f}[/bold red]".format(metric, best[metric]))
     assert task.duration is not None
     line = "[bold magenta]{}[/bold magenta] trials took [bold cyan]{}[/bold cyan]".format(
-        len(controller.results),
+        len(results.results),
         precisedelta(task.duration),  # type: ignore
     )
     if task.system_power:

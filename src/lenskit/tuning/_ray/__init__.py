@@ -4,21 +4,9 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-"""
-Tune parameters using Ray Tune.
-"""
-
-from ._base import PipelineTuner
-from .spec import TuningSpec
-
-try:
-    from ._ray import RayPipelineTuner, RayTuneResults
-except ImportError:
-    pass
+from .search import RayPipelineTuner, RayTuneResults
 
 __all__ = [
-    "PipelineTuner",
-    "TuningSpec",
     "RayPipelineTuner",
     "RayTuneResults",
 ]
