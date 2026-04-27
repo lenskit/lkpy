@@ -6,7 +6,7 @@
 
 from pathlib import Path
 
-from lenskit.tuning import PipelineTuner
+from lenskit.tuning import RayPipelineTuner
 from lenskit.tuning.spec import TuningSpec
 
 
@@ -18,7 +18,7 @@ def test_tuner_spec():
 
 def test_tuner_space():
     spec = TuningSpec.load(Path("pipelines/iknn-explicit-search.toml"))
-    tuner = PipelineTuner(spec)
+    tuner = RayPipelineTuner(spec)
 
     space = tuner.search_space()
     assert space is not None
