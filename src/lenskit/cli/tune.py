@@ -43,9 +43,7 @@ _log = get_logger(__name__)
 @click.option("--random", "method", flag_value="random", help="use random search")
 @click.option("--hyperopt", "method", flag_value="hyperopt", help="use HyperOpt search")
 @click.option("--optuna", "method", flag_value="optuna", help="use Optuna search")
-@click.option(
-    "-j", "--job-limit", type=int, envvar="LK_TUNE_JOBS", help="limit for concurrent tuning jobs"
-)
+@click.option("-j", "--job-limit", type=int, help="limit for concurrent tuning jobs")
 @click.option(
     "--max-points", type=int, metavar="N", help="maximum number of configurations to test"
 )
