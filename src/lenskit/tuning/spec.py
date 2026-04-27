@@ -22,7 +22,7 @@ class SearchConfig(BaseModel):
     Configuration options for the hyperparameter search.
     """
 
-    method: Literal["optuna", "hyperopt", "random"] | None = None
+    method: Literal["tpe", "random", "hyperopt"] | None = None
     """
     The search method to use.
     """

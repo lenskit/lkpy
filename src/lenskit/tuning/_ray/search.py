@@ -119,7 +119,7 @@ class RayPipelineTuner(PipelineTuner):
         Create a Ray tuner for the search.
         """
         match self.spec.search.method:
-            case "optuna":
+            case "tpe":
                 return self._create_optuna_tuner()
             case "hyperopt":
                 return self._create_hyperopt_tuner()
