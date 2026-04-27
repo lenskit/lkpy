@@ -41,8 +41,19 @@ _log = get_logger(__name__)
     help="path to the tuning/validation data",
 )
 @click.option("--random", "method", flag_value="random", help="use random search")
-@click.option("--hyperopt", "method", flag_value="hyperopt", help="use HyperOpt search")
-@click.option("--optuna", "method", flag_value="optuna", help="use Optuna search")
+@click.option(
+    "--hyperopt", "method", flag_value="hyperopt", help="use HyperOpt search (requires Ray)"
+)
+@click.option(
+    "--optuna",
+    "method",
+    flag_value="optuna",
+    default="optuna",
+    help="use Optuna TPE search (default)",
+)
+@click.option(
+    "--ray", "use_ray", is_flag=True, help="use Ray Tune instead of the direct Optuna search"
+)
 @click.option("-j", "--job-limit", type=int, help="limit for concurrent tuning jobs")
 @click.option(
     "--max-points", type=int, metavar="N", help="maximum number of configurations to test"
@@ -60,9 +71,11 @@ _log = get_logger(__name__)
 @click.argument("SEARCH_SPEC", type=Path)
 @click.argument("OUT", type=Path)
 def tune(
+    *,
     search_spec: Path,
     out: Path,
     method: Literal["random", "hyperopt", "optuna"] | None,
+    use_ray: bool,
     max_points: int | None,
     job_limit: int | None,
     metric: str,

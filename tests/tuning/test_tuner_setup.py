@@ -8,7 +8,6 @@ from pathlib import Path
 
 from pytest import skip
 
-from lenskit.tuning import PipelineTuner
 from lenskit.tuning.spec import TuningSpec
 
 
