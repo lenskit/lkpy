@@ -26,7 +26,7 @@ from .spec import PipelineFile, TuningSpec
 _log = get_logger(__name__)
 
 
-class PipelineTuner(ABC):
+class BasePipelineTuner(ABC):
     """
     Base class for hyperparameter tuning.
 

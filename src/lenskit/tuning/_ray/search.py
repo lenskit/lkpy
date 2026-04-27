@@ -22,7 +22,7 @@ from lenskit.parallel.ray import ensure_cluster
 from lenskit.pipeline.config import PipelineConfig
 from lenskit.random import int_seed
 
-from .._base import PipelineTuner, TuneResults
+from .._base import BasePipelineTuner, TuneResults
 from ..spec import SearchSpace, TuningSpec
 from .iterative import IterativeEval
 from .job import TuningJobData
@@ -31,7 +31,7 @@ from .simple import SimplePointEval
 from .stopper import RelativePlateauStopper
 
 
-class RayPipelineTuner(PipelineTuner):
+class RayPipelineTuner(BasePipelineTuner):
     tuner: ray.tune.Tuner
 
     def setup(self):
