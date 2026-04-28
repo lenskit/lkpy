@@ -13,6 +13,7 @@ import optuna
 from optuna import Study, Trial
 from optuna.pruners import MedianPruner
 from optuna.storages.journal import JournalFileBackend, JournalStorage
+from optuna.study import StudyDirection
 from optuna.trial import TrialState
 from pydantic_core import to_json
 from structlog.stdlib import BoundLogger
@@ -43,6 +44,7 @@ class PipelineTuner(BasePipelineTuner):
         study = optuna.create_study(
             storage=JournalStorage(JournalFileBackend(fspath(self.out_dir / "optuna.log"))),
             pruner=MedianPruner(),
+            direction=StudyDirection.MINIMIZE if self.mode == "min" else StudyDirection.MAXIMIZE,
         )
         # TODO: add parallelism support
 
