@@ -11,7 +11,7 @@ from os import fspath
 
 import optuna
 from optuna import Study, Trial
-from optuna.pruners import MedianPruner
+from optuna.pruners import BasePruner, MedianPruner
 from optuna.storages.journal import JournalFileBackend, JournalStorage
 from optuna.study import StudyDirection
 from optuna.trial import TrialState
@@ -27,6 +27,7 @@ from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
 from ._base import BasePipelineTuner, TuneResults
 from ._measure import measure_pipeline
+from ._stopping import PlateauStopRule
 from .spec import SearchSpace, TuningSpec
 
 _log = get_logger(__name__)
@@ -90,7 +91,6 @@ class PipelineTuner(BasePipelineTuner):
         comp_name = self.spec.component_name
         assert comp_name is not None
 
-        # TODO: add support for early stopping beyond the median pruning
         with Task(
             label=f"setup trial {trial.number} to tune {self.pipeline.meta.name}",
             tags=["tune", "setup"],
@@ -240,3 +240,38 @@ class OptunaTuneResults(TuneResults):
 
     def best_result(self):
         raise NotImplementedError()
+
+
+class CompositePruner(BasePruner):
+    """
+    Custom pruner that prunes when either the median rule or the plateau stopper
+    stops.
+    """
+
+    median: BasePruner
+
+    def __init__(self):
+        self.median = MedianPruner(n_min_trials=3, n_warmup_steps=3)
+
+    def prune(self, study, trial):
+        step = trial.last_step
+        log = _log.bind(trial_num=trial.number, epoch=step)
+        log.debug("checking whether to prune trial")
+        if self.median.prune(study, trial):
+            log.debug("pruning by median rule")
+            return True
+
+        if step is None:
+            return False
+
+        plateau = PlateauStopRule(
+            mode="min" if study.direction == StudyDirection.MINIMIZE else "max"
+        )
+        metrics = [
+            trial.intermediate_values[i] for i in range(step + 1) if i in trial.intermediate_values
+        ]
+        if plateau.should_stop(metrics):
+            log.debug("pruning by plateau")
+            return True
+
+        return False
