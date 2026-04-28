@@ -112,7 +112,7 @@ class PipelineTuner(BasePipelineTuner):
         with item_progress(
             f"Trial {trial.number} epochs",
             total=self.spec.search.max_epochs,
-            fields={self.metric: ":.3f"},
+            fields={self.metric: ".3f"},
         ) as pb:
             for i in range(self.spec.search.max_epochs):
                 metrics = self._trial_epoch(i, pipeline, trainer)
@@ -164,7 +164,12 @@ class PipelineTuner(BasePipelineTuner):
             metrics["epoch_measure_s"] = m_task.duration
             elog.debug("epoch measurement finished", duration=m_task.friendly_duration)
 
-        elog.info("epoch complete", duration=e_task.friendly_duration)
+        elog.info(
+            "epoch complete, %s=%.3f",
+            self.metric,
+            metrics[self.metric],
+            duration=e_task.friendly_duration,
+        )
         return metrics
 
     def _run_simple_trial(self, study: Study, trial: Trial, config):
