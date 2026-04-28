@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from os import fspath
 
 import optuna
@@ -17,15 +18,15 @@ from pydantic_core import to_json
 from structlog.stdlib import BoundLogger
 
 from lenskit.logging import Task, get_logger, item_progress
-from lenskit.pipeline import Pipeline, PipelineBuilder, PipelineConfig
+from lenskit.pipeline import Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Component, Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
 from lenskit.random import make_seed
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
-from ._base import BasePipelineTuner
+from ._base import BasePipelineTuner, TuneResults
 from ._measure import measure_pipeline
-from .spec import SearchSpace
+from .spec import SearchSpace, TuningSpec
 
 _log = get_logger(__name__)
 
@@ -37,47 +38,61 @@ class PipelineTuner(BasePipelineTuner):
 
     log: BoundLogger
 
-    @property
-    def pipeline(self) -> PipelineConfig:
-        assert isinstance(self.spec.pipeline, PipelineConfig)
-        return self.spec.pipeline
-
-    def run(self):
+    def run(self) -> OptunaTuneResults:
+        self.out_dir.mkdir(exist_ok=True, parents=True)
         study = optuna.create_study(
             storage=JournalStorage(JournalFileBackend(fspath(self.out_dir / "optuna.log"))),
             pruner=MedianPruner(),
         )
-        # run and parallelize
-        pass
+        # TODO: add parallelism support
 
-    def _run_trial(self, study: Study):
+        self.log = _log.bind(pipeline=self.pipeline.meta.name, dataset=self.data.name)
+        self.log.info("beginning hyperparameter search", max_points=self.spec.search.max_points)
+        with Task(f"tune {self.pipeline.meta.name}", tags=["tune"], reset_hwm=True) as task:
+            task.save_to_file(self.out_dir / "task.json")
+            assert self.spec.search.max_points is not None
+            for trial_no in range(self.spec.search.max_points):
+                trial = study.ask()
+                self._run_trial(study, trial)
+
+        self.log.info("finished tuning in %s", task.friendly_duration)
+        df = study.trials_dataframe()
+        df.to_csv(self.out_dir / "trials.csv")
+
+        return OptunaTuneResults(self.spec, df, task=task)
+
+    def _run_trial(self, study: Study, trial: Trial):
         """
         Run a single trial of the hyperparameter tuning.
         """
-        trial = study.ask()
-        config = self._ask_config(trial)
-        name = self.pipeline.meta.name
-        self.log = _log.bind(pipeline=name, dataset=self.data.name)
 
-        try:
-            if self.iterative:
-                self._run_iter_trial(study, trial, config)
-            else:
-                self._run_simple_trial(study, trial, config)
-        except Exception as e:
-            self.log.info("simple trial failed", trial_num=trial.number, exc_info=e)
-            study.tell(trial, state=TrialState.FAIL)
+        config = self._ask_config(trial)
+        self.log = self.log.bind(trial_num=trial.number)
+
+        with Task(
+            label=f"trial {trial.number} to tune {self.pipeline.meta.name}",
+            tags=["tune", "trial"],
+            reset_hwm=True,
+        ):
+            try:
+                if self.iterative:
+                    self._run_iter_trial(study, trial, config)
+                else:
+                    self._run_simple_trial(study, trial, config)
+            except Exception as e:
+                self.log.info("simple trial failed", exc_info=e)
+                study.tell(trial, state=TrialState.FAIL)
 
     def _run_iter_trial(self, study: Study, trial: Trial, config):
         self.log.info("starting iterative trial", config=config)
         comp_name = self.spec.component_name
         assert comp_name is not None
 
+        # TODO: add support for early stopping beyond the median pruning
         with Task(
-            label=f"tune {self.pipeline.meta.name}",
-            tags=["tune"],
-            reset_hwm=True,
-            subprocess=True,
+            label=f"setup trial {trial.number} to tune {self.pipeline.meta.name}",
+            tags=["tune", "setup"],
+            # reset_hwm=True,
         ):
             pipeline = self._pretrain_iter_pipeline(comp_name, config)
             comp_node = pipeline.node(comp_name)
@@ -94,22 +109,22 @@ class PipelineTuner(BasePipelineTuner):
             )
             trainer = scorer.create_trainer(self.data.train, options)
 
-            with item_progress(
-                f"Trial {trial.number} epochs",
-                total=self.spec.search.max_epochs,
-                fields={self.metric: ":.3f"},
-            ) as pb:
-                for i in range(self.spec.search.max_epochs):
-                    metrics = self._trial_epoch(i, pipeline, trainer)
-                    mv = metrics[self.metric]
-                    pb.update(**{self.metric: mv})
-                    trial.report(mv, i)
-                    if trial.should_prune():
-                        self.log.info(f"pruning after trial {trial.number}")
-                        study.tell(trial, state=TrialState.PRUNED)
-                        return
+        with item_progress(
+            f"Trial {trial.number} epochs",
+            total=self.spec.search.max_epochs,
+            fields={self.metric: ":.3f"},
+        ) as pb:
+            for i in range(self.spec.search.max_epochs):
+                metrics = self._trial_epoch(i, pipeline, trainer)
+                mv = metrics[self.metric]
+                pb.update(**{self.metric: mv})
+                trial.report(mv, i)
+                if trial.should_prune():
+                    self.log.info(f"pruning after trial {trial.number}")
+                    study.tell(trial, state=TrialState.PRUNED)
+                    return
 
-                study.tell(trial, mv)
+            study.tell(trial, mv)
 
     def _pretrain_iter_pipeline(self, comp_name: str, config):
         self.log.debug("setting up base pipeline")
@@ -134,7 +149,7 @@ class PipelineTuner(BasePipelineTuner):
 
     def _trial_epoch(self, epoch: int, pipeline: Pipeline, trainer: ModelTrainer):
         elog = self.log.bind(epoch=epoch)
-        with Task(f"epoch {epoch}", tags=["tuning", "epoch"]) as e_task:
+        with Task(f"epoch {epoch}", tags=["tune", "epoch"]) as e_task:
             elog.debug("beginning training epoch")
             with Task(f"training epoch {epoch}", tags=["tuning", "epoch", "train"]) as t_task:
                 vals = trainer.train_epoch()
@@ -165,16 +180,14 @@ class PipelineTuner(BasePipelineTuner):
         with Task(
             label=f"train {pipe.name}",
             tags=["tune", "train"],
-            reset_hwm=True,
-            subprocess=True,
+            # reset_hwm=True,
         ) as train_task:
             pipe.train(self.data.train, TrainingOptions(rng=rng))
 
         with Task(
             label=f"measure {pipe.name}",
             tags=["tune", "recommend"],
-            reset_hwm=True,
-            subprocess=True,
+            # reset_hwm=True,
         ) as test_task:
             results = measure_pipeline(self.spec, pipe, self.data.test, train_task, test_task)
 
@@ -205,3 +218,18 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
             out[name] = trial.suggest_float(prefix + name, spec.min, spec.max, log=True)
 
     return out
+
+
+@dataclass
+class OptunaTuneResults(TuneResults):
+    spec: TuningSpec
+    study: Study
+
+    def num_trials(self):
+        return len(self.study.trials)
+
+    def best_config(self):
+        raise NotImplementedError()
+
+    def best_result(self):
+        raise NotImplementedError()

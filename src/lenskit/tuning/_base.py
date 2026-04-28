@@ -7,15 +7,18 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
+from pydantic import JsonValue
 
 from lenskit.config import TuneSettings, lenskit_config
 from lenskit.data import Dataset, ItemListCollection
-from lenskit.logging import get_logger
+from lenskit.logging import Task, get_logger
 from lenskit.pipeline import PipelineBuilder
+from lenskit.pipeline.config import PipelineConfig
 from lenskit.pipeline.nodes import ComponentConstructorNode
 from lenskit.random import RNGInput, spawn_seed
 from lenskit.splitting import TTSplit
@@ -107,6 +110,11 @@ class BasePipelineTuner(ABC):
         else:
             return "max"
 
+    @property
+    def pipeline(self) -> PipelineConfig:
+        assert isinstance(self.spec.pipeline, PipelineConfig)
+        return self.spec.pipeline
+
     @abstractmethod
     def run(self) -> TuneResults:
         """
@@ -114,5 +122,42 @@ class BasePipelineTuner(ABC):
         """
 
 
-class TuneResults:
-    pass
+@dataclass
+class TuneResults(ABC):
+    spec: TuningSpec
+    task: Task = field(kw_only=True)
+
+    @abstractmethod
+    def num_trials(self) -> int:
+        """
+        Get the number of completed trials in this search.
+        """
+
+    @abstractmethod
+    def best_config(self) -> dict[str, JsonValue]:
+        """
+        Get the best component configuration from the trials.
+        """
+        ...
+
+    @abstractmethod
+    def best_result(self) -> dict[str, JsonValue]:
+        """
+        Get the best metric result from the trials.
+
+        Depending on the tuning backend, this may include additional values,
+        such as the configuration.
+        """
+        ...
+
+    def best_pipeline(self) -> PipelineConfig:
+        """
+        Get the best pipeline configuration from the results.
+        """
+
+        best = self.best_config()
+        cfg = self.spec.pipeline
+        assert isinstance(cfg, PipelineConfig)
+        name = self.spec.component_name
+        assert name is not None
+        return cfg.merge_component_configs({name: best})

@@ -17,13 +17,13 @@ from pydantic import JsonValue
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
 
+from lenskit.logging import Task
 from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
-from lenskit.pipeline.config import PipelineConfig
 from lenskit.random import int_seed
 
 from .._base import BasePipelineTuner, TuneResults
-from ..spec import SearchSpace, TuningSpec
+from ..spec import SearchSpace
 from .iterative import IterativeEval
 from .job import TuningJobData
 from .reporting import ProgressReport, StatusCallback
@@ -53,11 +53,13 @@ class RayPipelineTuner(BasePipelineTuner):
         if not hasattr(self, "tuner"):
             self.setup()
 
-        self.log.info("starting hyperparameter search")
-        results = self.tuner.fit()
-        self.log.info("finished hyperparameter search")
+        with Task(f"tune {self.pipeline.meta.name}", tags=["tune"], reset_hwm=True) as task:
+            task.save_to_file(self.out_dir / "task.json")
+            self.log.info("starting hyperparameter search")
+            results = self.tuner.fit()
+            self.log.info("finished hyperparameter search")
 
-        return RayTuneResults(self.spec, self.iterative, results)
+        return RayTuneResults(self.spec, self.iterative, results, task=task)
 
     def search_space(self):
         """
@@ -202,9 +204,33 @@ class RayPipelineTuner(BasePipelineTuner):
 
 @dataclass
 class RayTuneResults(TuneResults):
-    spec: TuningSpec
     iterative: bool
     results: ray.tune.ResultGrid
+
+    def num_trials(self):
+        return len(self.results)
+
+    def best_config(self, *, scope: str = "all") -> dict[str, JsonValue]:
+        """
+        Get the best configuration.
+
+        Args:
+            scope:
+                The metric search scope for iterative training.  Set to
+                ``"last"`` to use the last iteration instead of the best
+                iteration.  See :meth:`ray.tune.ResultGrid.get_best_result` for
+                details.
+        """
+        best = self.results.get_best_result(scope=scope)
+        res = best.metrics
+        if res is None:
+            raise ValueError("best result has no metrics")
+
+        cfg = res["config"].copy()
+        if self.iterative:
+            cfg["epochs"] = res["training_iteration"]
+
+        return res
 
     def best_result(self, *, scope: str = "all") -> dict[str, JsonValue]:
         """
@@ -222,21 +248,11 @@ class RayTuneResults(TuneResults):
         if res is None:
             raise ValueError("best result has no metrics")
 
+        res = res.copy()
         if self.iterative:
             res["config"] = res["config"] | {"epochs": res["training_iteration"]}
 
         return res
-
-    def best_pipeline(self) -> PipelineConfig:
-        """
-        Get the (full) configuration for the best pipeline.
-        """
-        best = self.best_result()
-        cfg = self.spec.pipeline
-        assert isinstance(cfg, PipelineConfig)
-        name = self.spec.component_name
-        assert name is not None
-        return cfg.merge_component_configs({name: best["config"]})  # type: ignore
 
 
 def _make_space(space: SearchSpace):
