@@ -68,7 +68,8 @@ class PlateauStopRule:
             best = np.minimum.accumulate(metrics)
             mult = -1
 
-        _log.debug("checking for early stop", n_trials=len(metrics), best=best[-1])
+        log = _log.bind(n_trials=len(metrics), best=best[-1])
+        log.debug("checking for early stop")
 
         # compute relative improvement over previous best entry
         imp = metrics[1:] / best[:-1] - 1.0
@@ -77,6 +78,8 @@ class PlateauStopRule:
 
         # check if we have improved enough lately
         if np.all(imp[-self.check_iters :] < self.min_improvement).item():
+            log.debug("stopping early, last improvement {:%.2%}".format(imp[-1]))
             return True
         else:
+            log.debug("continuing, last improvement {:%.2%}".format(imp[-1]))
             return False
