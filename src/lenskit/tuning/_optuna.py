@@ -54,9 +54,11 @@ class PipelineTuner(BasePipelineTuner):
         with Task(f"tune {self.pipeline.meta.name}", tags=["tune"], reset_hwm=True) as task:
             task.save_to_file(self.out_dir / "task.json")
             assert self.spec.search.max_points is not None
-            for trial_no in range(self.spec.search.max_points):
-                trial = study.ask()
-                self._run_trial(study, trial)
+            with item_progress("Search trials", total=self.spec.search.max_points) as pb:
+                for trial_no in range(self.spec.search.max_points):
+                    trial = study.ask()
+                    self._run_trial(study, trial)
+                    pb.update()
 
         self.log.info("finished tuning in %s", task.friendly_duration)
         df = study.trials_dataframe()
