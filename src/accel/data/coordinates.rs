@@ -30,7 +30,7 @@ pub struct ChunkIndex {
 }
 
 /// A table of sparse matrix or tensor coordinates.
-#[pyclass(module = "lenskit._accel.data")]
+#[pyclass(from_py_object, module = "lenskit._accel.data")]
 #[derive(Clone)]
 pub struct CoordinateTable {
     chunks: Vec<Vec<Int32Array>>,
