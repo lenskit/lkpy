@@ -44,7 +44,7 @@ class PipelineTuner(BasePipelineTuner):
         self.out_dir.mkdir(exist_ok=True, parents=True)
         study = optuna.create_study(
             storage=JournalStorage(JournalFileBackend(fspath(self.out_dir / "optuna.log"))),
-            pruner=MedianPruner(),
+            pruner=CompositePruner(),
             direction=StudyDirection.MINIMIZE if self.mode == "min" else StudyDirection.MAXIMIZE,
         )
         # TODO: add parallelism support
