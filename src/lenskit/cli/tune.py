@@ -15,13 +15,11 @@ from pathlib import Path
 from typing import Literal
 
 import click
-import ray.tune.utils.log
 from humanize import metric as human_metric
 from humanize import precisedelta
 from pydantic_core import to_json
 
 from lenskit.logging import get_logger, stdout_console
-from lenskit.parallel.ray import init_cluster
 from lenskit.tuning import PipelineTuner, TuningSpec
 
 _log = get_logger(__name__)
@@ -88,7 +86,6 @@ def tune(
     """
     console = stdout_console()
     os.environ["RAY_AIR_NEW_OUTPUT"] = "0"
-    ray.tune.utils.log.set_verbosity(0)
 
     spec = TuningSpec.load(search_spec)
     # override settings from command line
@@ -102,7 +99,12 @@ def tune(
 
     # set up the tuning controller
     if use_ray:
+        import ray
+
+        from lenskit.parallel.ray import init_cluster
         from lenskit.tuning import RayPipelineTuner
+
+        ray.tune.utils.log.set_verbosity(0)
 
         try:
             ray.init(address="auto")
