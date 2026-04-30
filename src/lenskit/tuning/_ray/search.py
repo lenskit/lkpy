@@ -4,131 +4,35 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-"""
-Hyperparameter searching wrapper.
+from __future__ import annotations
 
-.. stability:: experimental
+from dataclasses import dataclass
 
-"""
-
-from pathlib import Path
-from typing import Any
-
-import numpy as np
+import ray
 import ray.tune
 import ray.tune.schedulers
 import ray.tune.search
+from numpy.random import default_rng
 from pydantic import JsonValue
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
 
-from lenskit.config import TuneSettings, lenskit_config
-from lenskit.data import Dataset, ItemListCollection
-from lenskit.logging import get_logger
+from lenskit.logging import Task
 from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
-from lenskit.pipeline import PipelineBuilder, PipelineConfig
-from lenskit.pipeline.nodes import ComponentConstructorNode
-from lenskit.random import RNGInput, default_rng, int_seed, spawn_seed
-from lenskit.splitting import TTSplit
-from lenskit.training import UsesTrainer
+from lenskit.random import int_seed
 
-from ._iterative import IterativeEval
-from ._job import TuningJobData
-from ._reporting import ProgressReport, StatusCallback
-from ._simple import SimplePointEval
-from ._stopper import RelativePlateauStopper
-from .spec import PipelineFile, SearchSpace, TuningSpec
-
-_log = get_logger(__name__)
+from .._base import BasePipelineTuner, TuneResults
+from ..spec import SearchSpace
+from .iterative import IterativeEval
+from .job import TuningJobData
+from .reporting import ProgressReport, StatusCallback
+from .simple import SimplePointEval
+from .stopper import RelativePlateauStopper
 
 
-class PipelineTuner:
-    """
-    Set up and run a hyperparameter tuning job for a pipeline.
-
-    Stability:
-        Experimental
-    """
-
-    settings: TuneSettings
-    spec: TuningSpec
-    out_dir: Path
-    pipe_name: str | None
-    random_seed: np.random.SeedSequence
-    iterative: bool
-
-    data: TTSplit
-    harness: Any
+class RayPipelineTuner(BasePipelineTuner):
     tuner: ray.tune.Tuner
-    """
-    The Ray tuner that is used for tuning.  Not available until :meth:`setup`
-    has been called.
-    """
-    results: ray.tune.ResultGrid
-    """
-    Ray tuning results. Only available after :meth:`run` has been called.
-    """
-
-    def __init__(
-        self,
-        spec: TuningSpec,
-        out_dir: Path | None = None,
-        rng: RNGInput = None,
-    ):
-        cfg = lenskit_config()
-        self.settings = cfg.tuning
-        if out_dir is None:
-            out_dir = Path("lenskit-tune")
-        self.out_dir = out_dir
-
-        if isinstance(spec.pipeline, PipelineFile):
-            pipe_file = spec.pipeline.file
-            pipe_file = spec.resolve_path(pipe_file)
-            pb = PipelineBuilder.load_config(pipe_file)
-        else:
-            pb = PipelineBuilder.from_config(spec.pipeline, file_path=spec.file_path)
-
-        self.spec = spec.model_copy(deep=True)
-        self.spec.pipeline = pb.build_config()
-        self.random_seed = spawn_seed(rng)
-
-        self.log = _log.bind(model=pb.name)
-
-        comp_name = self.spec.component_name
-        if comp_name is None:
-            self.log.error("multi-component search is not yet supported")
-            raise NotImplementedError()
-
-        comp = pb.node(comp_name)
-        match comp:
-            case ComponentConstructorNode(constructor=c):
-                self.iterative = isinstance(c, type) and issubclass(c, UsesTrainer)
-            case _:
-                self.log.error("non-class component cannot be searched", component=comp_name)
-                self.log.info("invalid component node: %s", comp)
-                raise RuntimeError("attempted to search non-class component")
-        self.pipe_name = pb.name
-
-    @property
-    def mode(self):
-        if self.spec.search.metric == "RMSE":
-            return "min"
-        else:
-            return "max"
-
-    def set_data(
-        self, train: Dataset | Path, test: ItemListCollection | Path, *, name: str | None = None
-    ):
-        """
-        Set the data to be used for tuning.
-        """
-        if isinstance(train, Path):
-            train = Dataset.load(train)
-        if isinstance(test, Path):
-            test = ItemListCollection.load_parquet(test)
-
-        self.data = TTSplit(train, test, name=name or train.name)
 
     def setup(self):
         """
@@ -140,7 +44,7 @@ class PipelineTuner:
         self.tuner = self.create_tuner()
         self.out_dir.mkdir(exist_ok=True, parents=True)
 
-    def run(self) -> ray.tune.ResultGrid:
+    def run(self) -> RayTuneResults:
         """
         Run the tuning job.
 
@@ -149,43 +53,13 @@ class PipelineTuner:
         if not hasattr(self, "tuner"):
             self.setup()
 
-        self.log.info("starting hyperparameter search")
-        self.results = self.tuner.fit()
-        self.log.info("finished hyperparameter search")
+        with Task(f"tune {self.pipeline.meta.name}", tags=["tune"], reset_hwm=True) as task:
+            task.save_to_file(self.out_dir / "task.json")
+            self.log.info("starting hyperparameter search")
+            results = self.tuner.fit()
+            self.log.info("finished hyperparameter search")
 
-        return self.results
-
-    def best_result(self, *, scope: str = "all") -> dict[str, JsonValue]:
-        """
-        Get the best configuration and its validation metrics.
-
-        Args:
-            scope:
-                The metric search scope for iterative training.  Set to
-                ``"last"`` to use the last iteration instead of the best
-                iteration.  See :meth:`ray.tune.ResultGrid.get_best_result` for
-                details.
-        """
-        best = self.results.get_best_result(scope=scope)
-        res = best.metrics
-        if res is None:
-            raise ValueError("best result has no metrics")
-
-        if self.iterative:
-            res["config"] = res["config"] | {"epochs": res["training_iteration"]}
-
-        return res
-
-    def best_pipeline(self) -> PipelineConfig:
-        """
-        Get the (full) configuration for the best pipeline.
-        """
-        best = self.best_result()
-        cfg = self.spec.pipeline
-        assert isinstance(cfg, PipelineConfig)
-        name = self.spec.component_name
-        assert name is not None
-        return cfg.merge_component_configs({name: best["config"]})  # type: ignore
+        return RayTuneResults(self.spec, self.iterative, results, task=task)
 
     def search_space(self):
         """
@@ -247,7 +121,7 @@ class PipelineTuner:
         Create a Ray tuner for the search.
         """
         match self.spec.search.method:
-            case "optuna":
+            case "tpe":
                 return self._create_optuna_tuner()
             case "hyperopt":
                 return self._create_hyperopt_tuner()
@@ -326,6 +200,59 @@ class PipelineTuner:
             ),
         )
         return self.tuner
+
+
+@dataclass
+class RayTuneResults(TuneResults):
+    iterative: bool
+    results: ray.tune.ResultGrid
+
+    def num_trials(self):
+        return len(self.results)
+
+    def best_config(self, *, scope: str = "all") -> dict[str, JsonValue]:
+        """
+        Get the best configuration.
+
+        Args:
+            scope:
+                The metric search scope for iterative training.  Set to
+                ``"last"`` to use the last iteration instead of the best
+                iteration.  See :meth:`ray.tune.ResultGrid.get_best_result` for
+                details.
+        """
+        best = self.results.get_best_result(scope=scope)
+        res = best.metrics
+        if res is None:
+            raise ValueError("best result has no metrics")
+
+        cfg = res["config"].copy()
+        if self.iterative:
+            cfg["epochs"] = res["training_iteration"]
+
+        return res
+
+    def best_result(self, *, scope: str = "all") -> dict[str, JsonValue]:
+        """
+        Get the best configuration and its validation metrics.
+
+        Args:
+            scope:
+                The metric search scope for iterative training.  Set to
+                ``"last"`` to use the last iteration instead of the best
+                iteration.  See :meth:`ray.tune.ResultGrid.get_best_result` for
+                details.
+        """
+        best = self.results.get_best_result(scope=scope)
+        res = best.metrics
+        if res is None:
+            raise ValueError("best result has no metrics")
+
+        res = res.copy()
+        if self.iterative:
+            res["config"] = res["config"] | {"epochs": res["training_iteration"]}
+
+        return res
 
 
 def _make_space(space: SearchSpace):

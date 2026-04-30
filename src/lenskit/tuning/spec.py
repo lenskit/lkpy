@@ -9,12 +9,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated, Literal, TypeAliasType
+from typing_extensions import Annotated, Literal
 
 from lenskit.config import lenskit_config, load_config_data
 from lenskit.pipeline.config import PipelineConfig
 
-SearchSpace = TypeAliasType("SearchSpace", "dict[str, SearchParam | SearchSpace]")
+type SearchSpace = dict[str, SearchParam | SearchSpace]
+"""
+Specification of the (possibly nested) hyperparameter search space for a
+component.
+"""
 
 
 class SearchConfig(BaseModel):
@@ -22,7 +26,7 @@ class SearchConfig(BaseModel):
     Configuration options for the hyperparameter search.
     """
 
-    method: Literal["optuna", "hyperopt", "random"] | None = None
+    method: Literal["tpe", "random", "hyperopt"] | None = None
     """
     The search method to use.
     """

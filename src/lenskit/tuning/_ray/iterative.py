@@ -30,8 +30,8 @@ from lenskit.splitting import TTSplit
 from lenskit.state import ParameterContainer
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
-from ._job import TuningJobData
-from ._measure import measure_pipeline
+from .._measure import measure_pipeline
+from .job import TuningJobData
 
 _log = get_logger(__name__)
 

@@ -8,10 +8,19 @@
 Tune parameters using Ray Tune.
 """
 
-from ._search import PipelineTuner
+from ._base import BasePipelineTuner
+from ._optuna import PipelineTuner
 from .spec import TuningSpec
 
+try:
+    from ._ray import RayPipelineTuner, RayTuneResults
+except ImportError:
+    pass
+
 __all__ = [
-    "PipelineTuner",
     "TuningSpec",
+    "PipelineTuner",
+    "BasePipelineTuner",
+    "RayPipelineTuner",
+    "RayTuneResults",
 ]

@@ -6,7 +6,8 @@
 
 from pathlib import Path
 
-from lenskit.tuning import PipelineTuner
+from pytest import skip
+
 from lenskit.tuning.spec import TuningSpec
 
 
@@ -16,9 +17,14 @@ def test_tuner_spec():
     assert spec.component_name == "scorer"
 
 
-def test_tuner_space():
+def test_ray_tuner_space():
+    try:
+        from lenskit.tuning import RayPipelineTuner
+    except ImportError:
+        skip("ray not available")
+
     spec = TuningSpec.load(Path("pipelines/iknn-explicit-search.toml"))
-    tuner = PipelineTuner(spec)
+    tuner = RayPipelineTuner(spec)
 
     space = tuner.search_space()
     assert space is not None

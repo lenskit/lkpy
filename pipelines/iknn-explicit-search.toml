@@ -1,5 +1,4 @@
 [search]
-method = "optuna"
 max_points = 30
 list_length = 1000
 metric = "RMSE"

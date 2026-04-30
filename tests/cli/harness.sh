@@ -25,10 +25,10 @@ run-python() {
     $PYRUN "$@"
     status="$?"
     if (($status)); then
-        not_ok "$@"
+        not_ok "failed: python $@"
         echo "# command failed: $PYRUN $0" >&5
     else
-        ok "$@"
+        ok "python $@"
     fi
     return $status
 }
@@ -47,7 +47,7 @@ tap_status() {
     shift
     N=$(($N + 1))
     if [[ $1 ]]; then
-        tap_out "$status $N - $*"
+        tap_out "$status $N $*"
     else
         tap_out "$status $N"
     fi
@@ -69,8 +69,7 @@ require() {
     if test "$@"; then
         ok
     else
-        not_ok
-        tap_comment "require $*"
+        not_ok "require $*"
     fi
 }
 
