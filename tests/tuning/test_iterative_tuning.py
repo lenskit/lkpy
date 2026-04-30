@@ -13,8 +13,7 @@ from lenskit.splitting import sample_records
 from lenskit.tuning import TuningSpec
 
 
-@mark.parametrize("backend", ["optuna", "ray"])
-@fixture
+@fixture(params=["optuna", "ray"])
 def tuner_class(backend):
     match backend:
         case "optuna":
