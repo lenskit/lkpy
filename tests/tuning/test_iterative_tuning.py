@@ -17,6 +17,11 @@ from lenskit.tuning import TuningSpec
 def tuner_class(backend):
     match backend:
         case "optuna":
+            try:
+                import optuna
+            except ImportError:
+                skip("optuna not available")
+
             from lenskit.tuning import PipelineTuner
 
             return PipelineTuner

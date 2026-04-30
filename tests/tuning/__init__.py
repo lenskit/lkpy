@@ -5,5 +5,3 @@
 # SPDX-License-Identifier: MIT
 
 from pytest import importorskip
-
-importorskip("ray")
