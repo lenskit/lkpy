@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from os import fspath
 
@@ -53,12 +54,7 @@ class PipelineTuner(BasePipelineTuner):
         self.log.info("beginning hyperparameter search", max_points=self.spec.search.max_points)
         with Task(f"tune {self.pipeline.meta.name}", tags=["tune"], reset_hwm=True) as task:
             task.save_to_file(self.out_dir / "task.json")
-            assert self.spec.search.max_points is not None
-            with item_progress("Search trials", total=self.spec.search.max_points) as pb:
-                for trial_no in range(self.spec.search.max_points):
-                    trial = study.ask()
-                    self._run_trial(study, trial)
-                    pb.update()
+            self._run_study(study)
 
         self.log.info("finished tuning in %s", task.friendly_duration)
         df = study.trials_dataframe()
@@ -66,11 +62,31 @@ class PipelineTuner(BasePipelineTuner):
 
         return OptunaTuneResults(self.spec, df, task=task)
 
-    def _run_trial(self, study: Study, trial: Trial):
+    def _run_study(self, study: Study):
+        assert self.spec.search.max_points is not None
+        npts = self.spec.search.max_points
+        with item_progress("Search trials", total=self.spec.search.max_points) as pb:
+            if self.settings.jobs and self.settings.jobs > 1:
+                with ThreadPoolExecutor(self.settings.jobs, "lk-tune") as pool:
+                    tasks = [pool.submit(lambda: self._run_trial(study)) for _i in range(npts)]
+                    while tasks:
+                        done, tasks = wait(tasks, return_when=FIRST_COMPLETED)
+                        for t in done:
+                            if exc := t.exception():
+                                _log.error("tuning trial failed", exc_info=exc)
+                                raise exc
+
+                            pb.update()
+            else:
+                for trial_no in range(npts):
+                    self._run_trial(study)
+                    pb.update()
+
+    def _run_trial(self, study: Study):
         """
         Run a single trial of the hyperparameter tuning.
         """
-
+        trial = study.ask()
         config = self._ask_config(trial)
         self.log = self.log.bind(trial_num=trial.number)
 
