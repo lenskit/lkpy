@@ -9,8 +9,16 @@ Tune parameters using Ray Tune.
 """
 
 from ._base import BasePipelineTuner
-from ._optuna import PipelineTuner
 from .spec import TuningSpec
+
+try:
+    from ._optuna import PipelineTuner
+except ImportError:
+
+    class PipelineTuner(BasePipelineTuner):
+        def run(self):
+            raise RuntimeError("Optuna is not available")
+
 
 try:
     from ._ray import RayPipelineTuner, RayTuneResults
