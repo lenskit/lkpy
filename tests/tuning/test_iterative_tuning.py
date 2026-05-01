@@ -42,10 +42,17 @@ def test_tune_als(ml_100k, tmpdir, tuner_class):
     spec.search.max_points = 10
     spec.search.max_epochs = 5
 
-    tuner = tuner_class(spec, Path(tmpdir))
+    tpath = Path(tmpdir)
+
+    tuner = tuner_class(spec, tpath)
     split = sample_records(from_interactions_df(ml_100k), 20000)
 
     tuner.set_data(split.train, split.test)
 
     result = tuner.run()
     print(result.best_result())
+    assert result.best_config()["epochs"] <= 5
+
+    if tuner_class.__name__ == "PipelineTuner":
+        assert (tpath / "trials.csv").exists()
+        assert (tpath / "trial-epochs.csv").exists()

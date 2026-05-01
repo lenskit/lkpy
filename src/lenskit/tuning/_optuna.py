@@ -10,7 +10,9 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from os import fspath
 
+import numpy as np
 import optuna
+import pandas as pd
 from optuna import Study, Trial
 from optuna.pruners import BasePruner, MedianPruner
 from optuna.storages.journal import JournalFileBackend, JournalStorage
@@ -19,6 +21,7 @@ from optuna.trial import TrialState
 from pydantic_core import to_json
 from structlog.stdlib import BoundLogger
 
+from lenskit.data import unflatten_dict
 from lenskit.logging import Task, get_logger, item_progress
 from lenskit.pipeline import Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Component, Placeholder
@@ -58,9 +61,17 @@ class PipelineTuner(BasePipelineTuner):
 
         self.log.info("finished tuning in %s", task.friendly_duration)
         df = study.trials_dataframe()
-        df.to_csv(self.out_dir / "trials.csv")
+        df.to_csv(self.out_dir / "trials.csv", index=False)
 
-        return OptunaTuneResults(self.spec, df, task=task)
+        if self.iterative:
+            idf = pd.DataFrame.from_records(
+                {"trial": t.number, "epoch": e, self.metric: val}
+                for t in study.trials
+                for (e, val) in t.intermediate_values.items()
+            )
+            idf.to_csv(self.out_dir / "trial-epochs.csv", index=False)
+
+        return OptunaTuneResults(self.spec, study, self.iterative, task=task)
 
     def _run_study(self, study: Study):
         assert self.spec.search.max_points is not None
@@ -249,15 +260,24 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
 class OptunaTuneResults(TuneResults):
     spec: TuningSpec
     study: Study
+    iterative: bool
 
     def num_trials(self):
         return len(self.study.trials)
 
     def best_config(self):
-        raise NotImplementedError()
+        best = self.study.best_trial
+        cfg = unflatten_dict(best.params)
+        if self.iterative:
+            vals = [best.intermediate_values.get(i) for i in range(best.last_step + 1)]
+            cfg["epochs"] = np.argmax(vals)
+        return cfg
 
     def best_result(self):
-        raise NotImplementedError()
+        result = {self.spec.search.metric: self.study.best_value}
+        if self.iterative:
+            result["epochs"] = len(self.study.best_trial.intermediate_values)
+        return result
 
 
 class CompositePruner(BasePruner):
