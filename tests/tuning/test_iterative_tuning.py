@@ -14,8 +14,8 @@ from lenskit.tuning import TuningSpec
 
 
 @fixture(params=["optuna", "ray"])
-def tuner_class(backend):
-    match backend:
+def tuner_class(request):
+    match request.param:
         case "optuna":
             try:
                 import optuna
@@ -24,14 +24,14 @@ def tuner_class(backend):
 
             from lenskit.tuning import PipelineTuner
 
-            return PipelineTuner
+            yield PipelineTuner
         case "ray":
             try:
                 from lenskit.tuning import RayPipelineTuner
             except ImportError:
                 skip("ray not available")
 
-            return RayPipelineTuner
+            yield RayPipelineTuner
 
 
 @mark.slow
