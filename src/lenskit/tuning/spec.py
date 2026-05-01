@@ -14,12 +14,6 @@ from typing_extensions import Annotated, Literal
 from lenskit.config import lenskit_config, load_config_data
 from lenskit.pipeline.config import PipelineConfig
 
-type SearchSpace = dict[str, SearchParam | SearchSpace]
-"""
-Specification of the (possibly nested) hyperparameter search space for a
-component.
-"""
-
 
 class SearchConfig(BaseModel):
     """
@@ -176,3 +170,10 @@ class SearchParam(BaseModel):
     """
     Base for logarithmic search scales.
     """
+
+
+type SearchSpace = dict[str, SearchParam | SearchSpace]
+"""
+Specification of the (possibly nested) hyperparameter search space for a
+component.
+"""
