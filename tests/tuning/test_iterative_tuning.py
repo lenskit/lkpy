@@ -45,12 +45,15 @@ def test_tune_als(ml_100k, tmpdir, tuner_class):
     tpath = Path(tmpdir)
 
     tuner = tuner_class(spec, tpath)
+    assert tuner.iterative
     split = sample_records(from_interactions_df(ml_100k), 20000)
 
     tuner.set_data(split.train, split.test)
 
     result = tuner.run()
     print(result.best_result())
+    print(result.best_config())
+    assert result.iterative
     assert result.best_config()["epochs"] <= 5
 
     if tuner_class.__name__ == "PipelineTuner":

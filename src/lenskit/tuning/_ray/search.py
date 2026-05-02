@@ -230,7 +230,7 @@ class RayTuneResults(TuneResults):
         if self.iterative:
             cfg["epochs"] = res["training_iteration"]
 
-        return res
+        return cfg
 
     def best_result(self, *, scope: str = "all") -> dict[str, JsonValue]:
         """
