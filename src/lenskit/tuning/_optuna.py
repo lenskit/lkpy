@@ -112,8 +112,9 @@ class PipelineTuner(BasePipelineTuner):
                 else:
                     self._run_simple_trial(study, trial, config)
             except Exception as e:
-                self.log.info("simple trial failed", exc_info=e)
+                self.log.info("trial failed", exc_info=e)
                 study.tell(trial, state=TrialState.FAIL)
+                raise e
 
     def _run_iter_trial(self, study: Study, trial: Trial, config):
         self.log.info("starting iterative trial", config=config)
@@ -151,7 +152,7 @@ class PipelineTuner(BasePipelineTuner):
                 pb.update(**{self.metric: mv})
                 trial.report(mv, i)
                 if trial.should_prune():
-                    self.log.info(f"pruning after trial {trial.number}")
+                    self.log.info(f"pruning after epoch {i}")
                     study.tell(trial, state=TrialState.PRUNED)
                     return
 
