@@ -109,8 +109,6 @@ class IterativeEval(ray.tune.Trainable):
     def step(self):
         epoch = self.iteration
         epoch_limit = self.job.spec.search.max_epochs
-        if epoch >= epoch_limit:
-            return {ray.tune.result.DONE: True}
 
         elog = self.log.bind(epoch=epoch)
         with Task(f"epoch {self.iteration}", tags=["tuning", "epoch"]) as e_task:
@@ -133,6 +131,9 @@ class IterativeEval(ray.tune.Trainable):
             metrics["epoch_train_s"] = t_task.duration
             metrics["epoch_measure_s"] = m_task.duration
             elog.debug("epoch measurement finished", duration=m_task.friendly_duration)
+
+        if epoch >= epoch_limit:
+            metrics[ray.tune.result.DONE] = True
 
         send_task(self.task)
         elog.info("epoch complete", duration=e_task.friendly_duration)
