@@ -109,7 +109,7 @@ class IterativeEval(ray.tune.Trainable):
     def step(self):
         epoch = self.iteration
         epoch_limit = self.job.spec.search.max_epochs
-        if epoch > epoch_limit:
+        if epoch >= epoch_limit:
             return {ray.tune.result.DONE: True}
 
         elog = self.log.bind(epoch=epoch)
