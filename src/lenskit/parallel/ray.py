@@ -49,7 +49,7 @@ def ensure_cluster():
     if not ray.is_initialized():
         _log.debug("Ray is not initialized, initializing")
         try:
-            init_cluster()
+            init_cluster(global_logging=True)
         except ValueError as e:
             _log.debug("Ray initialization failed", exception=e)
             if "existing cluster" in str(e):
