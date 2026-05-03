@@ -40,7 +40,7 @@ def test_tune_als(ml_100k, tmpdir, tuner_class):
     spec = TuningSpec.load(Path("pipelines/als-implicit-search.toml"))
     spec.search.method = "random"
     spec.search.max_points = 10
-    spec.search.max_epochs = 5
+    # spec.search.max_epochs = 5
 
     tpath = Path(tmpdir)
 
