@@ -153,7 +153,7 @@ class PipelineTuner(BasePipelineTuner):
                 trial.report(mv, i)
                 if trial.should_prune():
                     self.log.info(f"pruning after epoch {i}")
-                    study.tell(trial, state=TrialState.PRUNED)
+                    study.tell(trial, state=TrialState.COMPLETE)
                     return
 
             study.tell(trial, mv)
