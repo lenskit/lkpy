@@ -126,6 +126,7 @@ def tune(
 
     _log.info("starting hyperparameter search")
     results = controller.run()
+    _log.info("finished hyperparameter search")
 
     best = results.best_result()
     result_file = out / "best-result.json"
@@ -141,7 +142,6 @@ def tune(
         pipe_json = results.best_pipeline().model_dump_json(indent=2)
         save_pipeline.write_text(pipe_json + "\n")
 
-    _log.info("finished hyperparameter search")
     console.print("[bold yellow]Hyperparameter search completed![/bold yellow]")
     console.print("Best {} is [bold red]{:.3f}[/bold red]".format(metric, best[metric]))
     assert results.task.duration is not None
