@@ -23,6 +23,7 @@ from structlog.stdlib import BoundLogger
 
 from lenskit.data import unflatten_dict
 from lenskit.logging import Task, get_logger, item_progress
+from lenskit.logging.tasks import add_context_task
 from lenskit.pipeline import Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Component, Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
@@ -76,9 +77,12 @@ class PipelineTuner(BasePipelineTuner):
     def _run_study(self, study: Study):
         assert self.spec.search.max_points is not None
         npts = self.spec.search.max_points
+        task = Task.current()
         with item_progress("Search trials", total=self.spec.search.max_points) as pb:
             if self.settings.jobs and self.settings.jobs > 1:
-                with ThreadPoolExecutor(self.settings.jobs, "lk-tune") as pool:
+                with ThreadPoolExecutor(
+                    self.settings.jobs, "lk-tune", initializer=add_context_task, initargs=(task,)
+                ) as pool:
                     tasks = [pool.submit(lambda: self._run_trial(study)) for _i in range(npts)]
                     while tasks:
                         done, tasks = wait(tasks, return_when=FIRST_COMPLETED)

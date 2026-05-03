@@ -12,10 +12,11 @@ Abstraction for recording tasks.
 from __future__ import annotations
 
 import socket
+import threading
+from contextlib import contextmanager
 from enum import Enum
 from os import PathLike
 from pathlib import Path
-from threading import Lock
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
@@ -28,7 +29,7 @@ from ._proxy import get_logger
 from ._resource import ResourceMeasurement, reset_linux_hwm
 
 _log = get_logger(__name__)
-_active_tasks: list[Task] = []
+_task_context = threading.local()
 
 
 def _dict_extract_values(data: object) -> Any:
@@ -42,6 +43,35 @@ def _lk_machine():
     from lenskit.config import lenskit_config
 
     return lenskit_config().machine
+
+
+def _task_stack() -> list[Task]:
+    return _task_context.__dict__.setdefault("stack", {})
+
+
+def _current_task() -> Task | None:
+    stack = _task_stack()
+    if stack:
+        return stack[-1]
+
+
+def add_context_task(task: Task):
+    """
+    Append a task to the current thread's task context.  Mostly used to
+    initialize task stacks in worker threads.
+    """
+    stack = _task_stack()
+    stack.append(task)
+
+
+@contextmanager
+def adopt_parent_task(task: Task):
+    stack = _task_stack()
+    stack.append(task)
+    try:
+        yield task
+    finally:
+        stack.remove(task)
 
 
 class TaskStatus(str, Enum):
@@ -173,7 +203,7 @@ class Task(BaseModel, extra="allow"):
 
     _reset_hwm: bool = False
     _save_file: Path | None = None
-    _lock: Lock = None  # type: ignore
+    _lock: threading.Lock = None  # type: ignore
     _initial_meter: ResourceMeasurement | None = None
     _final_meter: ResourceMeasurement | None = None
     _refresh_id: UUID | None = None
@@ -184,16 +214,16 @@ class Task(BaseModel, extra="allow"):
         """
         Get the currently-active task.
         """
-        if _active_tasks:
-            return _active_tasks[-1]
+        return _current_task()
 
     @staticmethod
     def root() -> Task | None:
         """
         Get the root task.
         """
-        if _active_tasks:
-            return _active_tasks[0]
+        tasks = _task_stack()
+        if tasks:
+            return tasks[0]
 
     def __init__(
         self,
@@ -204,17 +234,18 @@ class Task(BaseModel, extra="allow"):
         reset_hwm: bool | None = None,
         **data: Any,
     ):
+        current = _current_task()
         if isinstance(parent, Task):
             data["parent_id"] = parent.task_id
-        elif parent is None and _active_tasks:
-            data["parent_id"] = _active_tasks[-1].task_id
+        elif parent is None and current:
+            data["parent_id"] = current.task_id
         super().__init__(label=label, **data)
         if reset_hwm is not None:
             self._reset_hwm = reset_hwm
         else:
             self._reset_hwm = parent is not None
 
-        self._lock = Lock()
+        self._lock = threading.Lock()
 
         if file:
             self._save_file = Path(file)
@@ -283,7 +314,7 @@ class Task(BaseModel, extra="allow"):
             else:
                 log.debug("have a task but no parent")
 
-        _active_tasks.append(self)
+        _task_stack().append(self)
         if self._save_file:
             from lenskit.logging._monitor import get_monitor
 
@@ -295,11 +326,12 @@ class Task(BaseModel, extra="allow"):
         Finish the task.
         """
         log = _log.bind(task_id=str(self.task_id), label=self.label)
-        if _active_tasks[-1] is not self:
+        tasks = _task_stack()
+        if tasks[-1] is not self:
             log.warn("attempted to finish non-active task")
-            _active_tasks.remove(self)
+            tasks.remove(self)
         else:
-            _active_tasks.pop()
+            tasks.pop()
 
         with self._lock:
             if self._refresh_id is not None:
