@@ -301,6 +301,8 @@ jobs:
         run: |
           mise run test-cli -- --coverage --cov-append tests/cli/test-tune.sh
         shell: bash -e {0}
+        env:
+          LK_TUNE_JOBS: 2
 
       - name: 🕺🏻 Test LensKit tune CLI (with Ray)
         run: |
