@@ -23,7 +23,7 @@ run-lenskit tune "${tune_args[@]}" -T "$train" -V "$test" --save-pipeline "$TEST
     --max-points=10 pipelines/bias-search.toml "$out"
 
 require -d "$out"
-require -f "$out/result.json"
+require -f "$out/best-result.json"
 require -f "$TEST_WORK/pipeline.json"
 
 out="$TEST_WORK/als-tune"
@@ -32,5 +32,5 @@ run-lenskit tune -T "$train" -V "$test" --save-pipeline "$TEST_WORK/pipeline.jso
     --max-points=10 pipelines/als-implicit-search.toml "$out"
 
 require -d "$out"
-require -f "$out/result.json"
+require -f "$out/best-result.json"
 require -f "$TEST_WORK/pipeline.json"
