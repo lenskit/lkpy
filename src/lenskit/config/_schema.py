@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from typing import Annotated, TypedDict
 
 from annotated_types import Gt, Le
@@ -148,6 +149,12 @@ class ParallelSettings(BaseSettings):
     threading limits unmodified.
     """
 
+    tune_jobs: int | None = None
+    """
+    Maximum number of hyperparamter tuning jobs.  Alias for
+    :attr:`TuneSettings.jobs`.
+    """
+
     @property
     def total_threads(self):
         nt = self.num_threads
@@ -269,4 +276,11 @@ class LenskitSettings(BaseSettings, extra="allow"):
         """
         Finalize settings, resolving default values etc. as needed.
         """
+        if self.parallel.tune_jobs is not None:
+            if self.tuning.jobs is not None:
+                warnings.warn(
+                    "parallel.tune_jobs and tuning.jobs both set, using parallel.tune_jobs"
+                )
+            self.tuning.jobs = self.parallel.tune_jobs
+
         self.parallel.resolve_defaults()

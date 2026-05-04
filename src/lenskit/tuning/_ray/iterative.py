@@ -30,8 +30,8 @@ from lenskit.splitting import TTSplit
 from lenskit.state import ParameterContainer
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
-from ._job import TuningJobData
-from ._measure import measure_pipeline
+from .._measure import measure_pipeline
+from .job import TuningJobData
 
 _log = get_logger(__name__)
 
@@ -109,8 +109,6 @@ class IterativeEval(ray.tune.Trainable):
     def step(self):
         epoch = self.iteration
         epoch_limit = self.job.spec.search.max_epochs
-        if epoch > epoch_limit:
-            return {ray.tune.result.DONE: True}
 
         elog = self.log.bind(epoch=epoch)
         with Task(f"epoch {self.iteration}", tags=["tuning", "epoch"]) as e_task:
@@ -134,6 +132,10 @@ class IterativeEval(ray.tune.Trainable):
             metrics["epoch_measure_s"] = m_task.duration
             elog.debug("epoch measurement finished", duration=m_task.friendly_duration)
 
+        if epoch >= epoch_limit - 1:
+            elog.debug("epoch limit hit, terminating")
+            metrics[ray.tune.result.DONE] = True
+
         send_task(self.task)
         elog.info("epoch complete", duration=e_task.friendly_duration)
         return metrics
@@ -143,7 +145,7 @@ class IterativeEval(ray.tune.Trainable):
 
     def save_checkpoint(self, checkpoint_dir: str):
         cpdir = Path(checkpoint_dir)
-        log = self.log.bind(epochs=self.iteration)
+        log = self.log.bind(epoch=self.iteration)
         if isinstance(self.trainer, ParameterContainer):
             log.info("saving checkpoint")
             torch.save(
@@ -159,7 +161,7 @@ class IterativeEval(ray.tune.Trainable):
     def load_checkpoint(self, checkpoint_dir: str):
         cpdir = Path(checkpoint_dir)
 
-        self.log.info("resuming from checkpoint", epochs=self.iteration)
+        self.log.info("resuming from checkpoint", epoch=self.iteration)
 
         ptf = cpdir / "model.pt"
         if ptf.exists():

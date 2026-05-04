@@ -4,4 +4,9 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from pytest import importorskip
+from .search import RayPipelineTuner, RayTuneResults
+
+__all__ = [
+    "RayPipelineTuner",
+    "RayTuneResults",
+]

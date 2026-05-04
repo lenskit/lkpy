@@ -12,7 +12,7 @@ import ray
 from lenskit.pipeline import PipelineConfig
 from lenskit.splitting import TTSplit
 
-from .spec import TuningSpec
+from ..spec import TuningSpec
 
 
 @dataclass

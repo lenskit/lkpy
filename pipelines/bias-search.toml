@@ -1,5 +1,4 @@
 [search]
-method = "random"
 max_points = 20
 list_length = 100
 metric = "RMSE"

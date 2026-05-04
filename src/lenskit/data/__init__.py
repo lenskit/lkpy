@@ -29,6 +29,7 @@ from ._collection import (
 from ._container import DataContainer
 from ._dataset import Dataset
 from ._entities import EntitySet
+from ._flatten import flatten_dict, unflatten_dict
 from ._items import ItemList
 from ._query import QueryInput, QueryItemSource, RecQuery
 from ._relationships import MatrixRelationshipSet, RelationshipSet
@@ -64,6 +65,8 @@ __all__ = [
     "load_movielens_df",
     "load_amazon_ratings",
     "load_ms_web",
+    "flatten_dict",
+    "unflatten_dict",
     "Vocabulary",
     "RecQuery",
     "QueryInput",

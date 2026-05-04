@@ -8,10 +8,27 @@
 Tune parameters using Ray Tune.
 """
 
-from ._search import PipelineTuner
+from ._base import BasePipelineTuner
 from .spec import TuningSpec
 
+try:
+    from ._optuna import PipelineTuner
+except ImportError:
+
+    class PipelineTuner(BasePipelineTuner):
+        def run(self):
+            raise RuntimeError("Optuna is not available")
+
+
+try:
+    from ._ray import RayPipelineTuner, RayTuneResults
+except ImportError:
+    pass
+
 __all__ = [
-    "PipelineTuner",
     "TuningSpec",
+    "PipelineTuner",
+    "BasePipelineTuner",
+    "RayPipelineTuner",
+    "RayTuneResults",
 ]

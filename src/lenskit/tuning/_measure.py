@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import pandas as pd
-from pydantic import JsonValue
 
 from lenskit import Pipeline, predict, recommend
 from lenskit.data import GenericKey, ItemList, ItemListCollection, key_dict
@@ -18,8 +17,9 @@ from lenskit.metrics import (
     RBP,
     RMSE,
     Hit,
+    MetricResult,
     RecipRank,
-    call_metric,
+    measure_list,
 )
 
 from .spec import TuningSpec
@@ -63,10 +63,10 @@ def measure_request(spec: TuningSpec, pipe: Pipeline, key: GenericKey, test: Ite
         preds = predict(pipe, query=key.user_id, items=test)  # type: ignore
     else:
         preds = None
-    return measure_list(spec, key, recs, preds, test)
+    return measure_recs(spec, key, recs, preds, test)
 
 
-def measure_list(
+def measure_recs(
     spec: TuningSpec,
     key: GenericKey,
     recs: ItemList,
@@ -76,15 +76,15 @@ def measure_list(
     log = _log.bind(key=key)
     log.debug("measuring recommendation list")
 
-    metrics: dict[str, JsonValue] = key_dict(key)
-    metrics["RBP"] = float(call_metric(RBP, recs, test))
-    metrics["DCG"] = float(call_metric(DCG, recs, test))
-    metrics["NDCG"] = float(call_metric(NDCG, recs, test))
-    metrics["RecipRank"] = float(call_metric(RecipRank, recs, test))
-    metrics["Hit10"] = float(call_metric(Hit, recs, test, n=10))
+    metrics: dict[str, MetricResult] = key_dict(key)
+    metrics["RBP"] = measure_list(RBP, recs, test)
+    metrics["DCG"] = measure_list(DCG, recs, test)
+    metrics["NDCG"] = measure_list(NDCG, recs, test)
+    metrics["RecipRank"] = measure_list(RecipRank, recs, test)
+    metrics["Hit10"] = measure_list(Hit, recs, test, n=10)
 
     if preds is not None:
         log.debug("measuring rating predictions")
-        metrics["RMSE"] = call_metric(RMSE, preds, test)
+        metrics["RMSE"] = measure_list(RMSE, preds, test)
 
     return metrics
