@@ -10,17 +10,25 @@ pub mod lists;
 pub mod types;
 
 use arrow::array::downcast_array;
+use arrow::array::make_array;
+use arrow::array::Array;
+use arrow::array::ArrayData;
 use arrow::array::ArrowPrimitiveType;
 use arrow::array::PrimitiveArray;
+use arrow::pyarrow::PyArrowType;
 use pyo3::exceptions::PyTypeError;
+use pyo3::prelude::*;
 pub use types::SparseIndexListType;
 pub use types::SparseIndexType;
 pub use types::SparseRowType;
 
-use arrow::array::Array;
-use pyo3::prelude::*;
-
 use crate::ok_or_pyerr;
+
+#[pyfunction]
+pub fn arrow_type(arr: PyArrowType<ArrayData>) -> String {
+    let arr = make_array(arr.0);
+    format!("{:?}", arr.data_type())
+}
 
 pub fn checked_array_ref<'array, T: Array + 'static>(
     name: &str,
