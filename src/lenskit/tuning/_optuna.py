@@ -277,7 +277,7 @@ class OptunaTuneResults(TuneResults):
         cfg = unflatten_dict(best.params)
         if self.iterative:
             vals = [best.intermediate_values.get(i) for i in range(best.last_step + 1)]
-            cfg["epochs"] = np.argmax(vals)
+            cfg["epochs"] = np.argmax(vals).item()
         return cfg
 
     def best_result(self):
