@@ -24,12 +24,15 @@ import requests
 from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, SerializeAsAny
 from typing_extensions import Literal
 
+from lenskit.util import Latch
+
 from ._formats import friendly_duration
 from ._proxy import get_logger
 from ._resource import ResourceMeasurement, reset_linux_hwm
 
 _log = get_logger(__name__)
 _task_context = threading.local()
+_prom_warning_latch = Latch()
 
 
 def _dict_extract_values(data: object) -> Any:
@@ -451,14 +454,21 @@ def _get_prometheus_metric(url: str, query: str, time_ms: int) -> float | None:
     try:
         res = requests.get(url, {"query": query}).json()
     except Exception as e:
-        log.warning("Prometheus query error", exc_info=e)
+        if _prom_warning_latch.latch():
+            log.warning("Prometheus query error", exc_info=e)
+        else:
+            log.debug("Prometheus query error (repeat)", exc_info=e)
         return None
 
     log.debug("received response", response=res)
     if res["status"] == "error":
-        log.error("Prometheus query error: %s", res["error"], type=res["errorType"])
+        if _prom_warning_latch.latch():
+            log.error("Prometheus query error: %s", res["error"], type=res["errorType"])
+        else:
+            log.debug("Prometheus query error (repeat): %s", res["error"], type=res["errorType"])
         return None
 
+    _prom_warning_latch.reset()
     results = res["data"]["result"]
     if len(results) == 0:
         log.debug("Prometheus query returned no results")

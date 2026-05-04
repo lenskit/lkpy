@@ -39,7 +39,7 @@ from ._protocol import (
 from ._records import RecordSink
 
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
-REFRESH_INTERVAL = 5
+REFRESH_INTERVAL = 10
 
 _log = get_logger(__name__)
 _monitor_lock = threading.Lock()
