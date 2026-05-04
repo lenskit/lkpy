@@ -10,14 +10,15 @@ Hyperparameter search.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Literal
 
 import click
+import numpy as np
 from humanize import metric as human_metric
 from humanize import precisedelta
-from pydantic_core import to_json
 
 from lenskit.logging import get_logger, stdout_console
 from lenskit.tuning import PipelineTuner, TuningSpec
@@ -130,13 +131,13 @@ def tune(
 
     best = results.best_result()
     result_file = out / "best-result.json"
-    result_json = to_json(best, indent=2)
-    result_file.write_bytes(result_json + b"\n")
+    result_json = json.dumps(best, indent=2, default=_json_default)
+    result_file.write_text(result_json + "\n")
 
     best_cfg = results.best_config()
     cfg_file = out / "best-result.json"
-    cfg_json = to_json(best_cfg, indent=2)
-    cfg_file.write_bytes(cfg_json + b"\n")
+    cfg_json = json.dumps(best_cfg, indent=2, default=_json_default)
+    cfg_file.write_text(cfg_json + "\n")
 
     if save_pipeline is not None:
         pipe_json = results.best_pipeline().model_dump_json(indent=2)
@@ -155,3 +156,10 @@ def tune(
         )
     console.print(line)
     console.print("Trial result:", best)
+
+
+def _json_default(x):
+    if isinstance(x, np.generic):
+        return x.item()
+    else:
+        raise TypeError(f"non-serializable type {type(x)}")
