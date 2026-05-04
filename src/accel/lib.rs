@@ -19,6 +19,7 @@ mod parallel;
 mod progress;
 mod slim;
 mod sparse;
+mod util;
 
 /// Entry point for LensKit accelerator module.
 #[pymodule(gil_used = false)]
@@ -33,6 +34,7 @@ fn _accel<'py>(py: Python<'py>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_class::<logging::AccelLogListener>()?;
     m.add_class::<funksvd::FunkSVDTrainer>()?;
+    m.add_class::<util::atomic::AtomicInt>()?;
     m.add_function(wrap_pyfunction!(parallel::init_accel_pool, m)?)?;
     m.add_function(wrap_pyfunction!(parallel::thread_count, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_row_debug_type, m)?)?;
