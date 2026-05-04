@@ -46,7 +46,7 @@ def _lk_machine():
 
 
 def _task_stack() -> list[Task]:
-    return _task_context.__dict__.setdefault("stack", {})
+    return _task_context.__dict__.setdefault("stack", [])
 
 
 def _current_task() -> Task | None:
