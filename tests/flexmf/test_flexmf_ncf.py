@@ -15,7 +15,9 @@ from lenskit.testing import BasicComponentTests, ScorerTests
 class TestFlexMFNCF(BasicComponentTests, ScorerTests):
     expected_ndcg = (0.01, 0.25)
     component = FlexMFNCFScorer
-    config = FlexMFNCFConfig(epochs=3, gmf_embedding_size=16, mlp_embedding_size=16, mlp_layers=[32, 16, 8])
+    config = FlexMFNCFConfig(
+        epochs=3, gmf_embedding_size=16, mlp_embedding_size=16, mlp_layers=[32, 16, 8]
+    )
 
     def test_skip_retrain(self, ml_ds):
         skip("not needed")
