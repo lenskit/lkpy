@@ -4,8 +4,13 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lenskit.basic import BiasScorer, PopScorer
-from lenskit.pipeline import topn_pipeline
+from pathlib import Path
+
+from lenskit.basic import BiasScorer, PopScorer, TrainingItemsCandidateSelector
+from lenskit.knn import SLIMScorer
+from lenskit.pipeline import Pipeline, topn_pipeline
+
+test_dir = Path(__file__).parent
 
 
 def test_merge_simple_setting():
@@ -27,3 +32,12 @@ def test_merge_deep_setting():
     assert c2 is not cfg
     assert c2.components["scorer"].config["damping"]["user"] == 150
     assert c2.components["scorer"].config["damping"]["item"] == 4
+
+
+def test_load_override():
+    pipe = Pipeline.load_config(test_dir / "candidate-override.json")
+    assert isinstance(pipe.component("scorer"), SLIMScorer)
+
+    cs = pipe.component("candidate-selector")
+    assert isinstance(cs, TrainingItemsCandidateSelector)
+    assert cs.config.exclude is None
