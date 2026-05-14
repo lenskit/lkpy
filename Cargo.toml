@@ -26,14 +26,14 @@ ordered-float = "^5"
 rand = "^0.10"
 rand_pcg = "^0.10"
 rustc-hash = "^2.1.1"
-sha1 = "^0.10"
+sha1 = "^0.11"
 
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "^1.0"
 
 arrow = { version = "^58", features = ["pyarrow"], default-features = false }
 arrow-schema = { version = "^58", features = ["serde"] }
-ndarray = { version = "^0.16", features = ["rayon"] }
+ndarray = { version = "^0.17", features = ["rayon"] }
 numpy = "^0.28"
 
 [dev-dependencies]
