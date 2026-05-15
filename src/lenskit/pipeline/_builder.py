@@ -724,6 +724,8 @@ class PipelineBuilder:
             extend:
                 Whether the configuration should extend the current pipeline, or
                 fail when there are conflicting definitions.
+        Stability:
+            Internal
         """
         self.name = config.meta.name
         self.version = config.meta.version
