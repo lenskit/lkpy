@@ -22,6 +22,7 @@ from typing import Annotated, Literal, Mapping, get_args
 
 from annotated_types import Predicate
 from deepmerge import always_merger
+from deepmerge.merger import Merger
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
@@ -33,6 +34,7 @@ from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
 
 VALID_NAME = re.compile(r"^[\w.@%!*?-]+$", re.UNICODE)
+UNSET_CODE = "!UNSET"
 
 
 def check_name(name: str, *, what: str = "node", allow_reserved: bool = False):
@@ -75,6 +77,9 @@ class PipelineHooks(BaseModel):
 
     run: dict[str, list[PipelineHook]] = {}
 
+    def _apply_patch(self, patch: PipelineHooks):
+        self.run.update(patch.run)
+
 
 class PipelineOptions(BaseModel, extra="allow"):
     """
@@ -98,6 +103,17 @@ class PipelineOptions(BaseModel, extra="allow"):
     """
 
 
+class PipelineConfigFragment(BaseModel, extra="allow"):
+    """
+    Configuration fragments that override base configurations.
+    """
+
+    options: PipelineOptions | None = None
+    "Options for assembling the final pipeline."
+    meta: PipelineMeta = Field(default_factory=lambda: PipelineMeta())
+    "Pipeline metadata."
+
+
 class PipelineConfig(BaseModel):
     """
     Root type for serialized pipeline configuration.  A pipeline config contains
@@ -110,7 +126,7 @@ class PipelineConfig(BaseModel):
 
     options: PipelineOptions | None = None
     "Options for assembling the final pipeline."
-    meta: PipelineMeta
+    meta: PipelineMeta = Field(default_factory=lambda: PipelineMeta())
     "Pipeline metadata."
     inputs: list[PipelineInput] = []
     "Pipeline inputs."
@@ -124,6 +140,18 @@ class PipelineConfig(BaseModel):
     "Literals"
     hooks: PipelineHooks = PipelineHooks()
     "The hooks configured for the pipeline."
+
+    def merge_config(self, update: PipelineConfig | PipelineConfigFragment) -> PipelineConfig:
+        base = self.model_dump()
+        patch = update.model_dump(exclude_unset=True, exclude_computed_fields=True)
+
+        merge = Merger(
+            [(dict, _merge_base), (dict, _merge_component), (dict, "merge")],
+            ["override"],
+            ["override"],
+        )
+        merge.merge(base, patch)
+        return PipelineConfig.model_validate(base)
 
     def merge_component_configs(
         self, configs: Mapping[str, Mapping[str, JsonValue]]
@@ -198,7 +226,7 @@ class PipelineComponent(BaseModel):
     Specification of a pipeline component.
     """
 
-    code: str = Field(validation_alias=AliasChoices("code", "class"))
+    code: str = Field(validation_alias=AliasChoices("code", "class"), default=UNSET_CODE)
     """
     The path to the component's implementation, either a class or a function.
     This is a Python qualified path of the form ``module:name``.
@@ -281,3 +309,65 @@ def hash_config(config: BaseModel) -> str:
     h = sha256()
     h.update(json.encode())
     return h.hexdigest()
+
+
+def merge_config_dicts(base: dict[str, JsonValue], patch: dict[str, JsonValue]) -> JsonValue:
+    """
+    Helper function to merge overrides into JSON-compatible configuration data.
+
+    .. note::
+
+        This function does not provide a way to *remove* values from ``base``.
+        However, they can be set to ``None``.
+
+    Args:
+        base:
+            The base configuration data to update.
+        patch:
+            The updated configuration data.
+
+    Returns:
+        The patched configuration data.  May share dictionary or list objects
+        with either base or patch.
+
+    Stability:
+        Internal
+    """
+
+    result = base.copy()
+    for k, v in patch.items():
+        if isinstance(v, dict):
+            left = result.get(k, None)
+            if isinstance(left, dict):
+                v = merge_config_dicts(left, v)
+        result[k] = v
+
+    return result
+
+
+def _merge_component(config: Merger, path: list[str], base: Any, patch: Any):
+    """
+    Merge component configurations.
+    """
+    match path:
+        case ["components", name] if isinstance(patch, dict):
+            # we are matching a component
+            assert isinstance(base, dict)
+            base_class = base.get("code", None) or base.get("class", None)
+            patch_class = patch.get("code", None) or patch.get("class", None)
+            if patch_class is None or base_class == patch_class:
+                for k, v in patch.items():
+                    base[k] = config.value_strategy(path + ["k"], base[k], v)
+                return STRATEGY_END
+            else:
+                return patch
+        case _:
+            return None
+
+
+def _merge_base(config: Merger, path: list[str], base: Any, patch: Any):
+    match path:
+        case ["options", "base"]:
+            return base
+        case _:
+            return None
