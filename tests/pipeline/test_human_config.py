@@ -6,10 +6,13 @@
 
 from pathlib import Path
 
+from pytest import raises
+
 from lenskit.als import BiasedMFScorer, ImplicitMFScorer
 from lenskit.basic import BiasScorer, FallbackScorer, TopNRanker
 from lenskit.basic.candidates import TrainingItemsCandidateSelector
 from lenskit.config import load_config_data
+from lenskit.diagnostics import PipelineError
 from lenskit.knn.slim import SLIMScorer
 from lenskit.pipeline import Pipeline, PipelineConfig
 from lenskit.pipeline.nodes import ComponentInstanceNode
@@ -102,6 +105,11 @@ def test_apply_config():
     assert isinstance(node, ComponentInstanceNode)
     assert isinstance(node.component, TopNRanker)
     assert node.component.config.n == 100
+
+
+def test_configure_bad_scorer():
+    with raises(PipelineError, match="component “missing”"):
+        Pipeline.from_config({"components": {"missing": {"config": {"wombat": 42}}}})
 
 
 def test_load_override():

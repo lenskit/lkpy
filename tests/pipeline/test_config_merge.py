@@ -5,7 +5,26 @@
 # SPDX-License-Identifier: MIT
 
 from lenskit.basic import BiasScorer, PopScorer
-from lenskit.pipeline import topn_pipeline
+from lenskit.basic.candidates import TrainingItemsCandidateSelector
+from lenskit.pipeline import Pipeline, topn_pipeline
+from lenskit.pipeline.config import PipelineConfigFragment, merge_config_dicts
+
+
+def test_merge_dicts():
+    out = merge_config_dicts({"a": 1, "b": 3}, {"c": 7, "b": -2})
+    assert out == {"a": 1, "b": -2, "c": 7}
+
+
+def test_merge_override():
+    out = merge_config_dicts({"a": 1, "b": {}}, {"c": 7, "b": None})
+    assert out == {"a": 1, "b": None, "c": 7}
+
+
+def test_merge_deep():
+    out = merge_config_dicts(
+        {"a": 1, "b": {"name": "FOOBIE BLETCH"}}, {"b": {"name": "HACKEM MUCHE"}}
+    )
+    assert out == {"a": 1, "b": {"name": "HACKEM MUCHE"}}
 
 
 def test_merge_simple_setting():
@@ -28,6 +47,37 @@ def test_merge_deep_setting():
 
     c2 = pipe.config.merge_component_configs({"scorer": {"damping": {"user": 150, "item": 4}}})
     assert c2 is not cfg
-    assert isinstance(c2.components["scorer"].config, dict)
+    assert c2.components["scorer"].config is not None
+    assert isinstance(c2.components["scorer"].config["damping"], dict)
     assert c2.components["scorer"].config["damping"]["user"] == 150
     assert c2.components["scorer"].config["damping"]["item"] == 4
+
+
+def test_merge_override():
+    pipe = topn_pipeline(BiasScorer, n=100)
+    cfg = pipe.config
+
+    update = PipelineConfigFragment.model_validate({"options": {"base": "std:topn"}})
+    c2 = cfg.merge_config(update)
+
+    assert c2.options is None or c2.options.base is None
+
+
+def test_configure_component():
+    pipe = topn_pipeline(BiasScorer, n=100)
+    cfg = pipe.config
+
+    update = PipelineConfigFragment.model_validate(
+        {"components": {"candidate-selector": {"config": {"exclude": None}}}}
+    )
+    c2 = cfg.merge_config(update)
+
+    comp = c2.components["candidate-selector"]
+    assert comp.code == "lenskit.basic.candidates:TrainingItemsCandidateSelector"
+    assert comp.config is not None
+    assert comp.config["exclude"] is None
+
+    pipe = Pipeline.from_config(c2)
+    comp = pipe.component("candidate-selector")
+    assert isinstance(comp, TrainingItemsCandidateSelector)
+    assert comp.config.exclude is None
