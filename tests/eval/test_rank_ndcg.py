@@ -124,3 +124,31 @@ def test_ndcg_negative_gains(ratings, expected_ndcg):
     truth = ItemList([1, 2, 3, 4, 5], rating=ratings)
     val = call_metric(NDCG, recs, truth, gain="rating")
     assert val == approx(expected_ndcg, rel=1e-3)
+
+
+def test_ndcg_missing_gain_returns_nan():
+    recs = ItemList([1, 2, 3], ordered=True)
+    truth = ItemList([1, 2, 3])
+
+    with warns(UserWarning):
+        val = call_metric(NDCG, recs, truth, gain="rating")
+
+    assert np.isnan(val)
+
+
+def test_ndcg_null_gains_ignored():
+    recs = ItemList([1, 2, 3], ordered=True)
+    truth = ItemList([1, 2, 3], rating=[0.5, None, 3])
+
+    val = call_metric(NDCG, recs, truth, gain="rating")
+    expected = array_dcg(np.array([0.5, 0, 3])) / array_dcg(np.array([3, 0.5]))
+    assert val == approx(expected)
+
+
+def test_ndcg_all_null_gains_returns_nan():
+    recs = ItemList([1, 2, 3], ordered=True)
+    truth = ItemList([1, 2, 3], rating=[None, None, None])
+
+    val = call_metric(NDCG, recs, truth, gain="rating")
+
+    assert np.isnan(val)
