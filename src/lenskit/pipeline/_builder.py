@@ -759,7 +759,7 @@ class PipelineBuilder:
                             raise PipelineError(
                                 f"component “{name}” does not exist in base configuration"
                             )
-                        case ComponentConstructorNode(_, ctor, ccfg):
+                        case ComponentConstructorNode(_, ctor, _ccfg):
                             pass
                 else:
                     raise PipelineError(
