@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Literal
 
 import click
-import termaid
 from rich.syntax import Syntax
 
 from lenskit.logging import get_logger, stdout_console
@@ -42,7 +41,7 @@ _log = get_logger(__name__)
     flag_value="graphviz",
     help="Save in Graphviz (DOT) syntax.",
 )
-@click.option("--render", "render_tty", is_flag=True, help="Render to terminal.")
+@click.option("--render", "render_tty", is_flag=True, help="Render to terminal (requires termaid).")
 @click.option("--label-edges/--no-label-edges", help="Label edges between nodes.")
 @click.option("--plain-nodes", is_flag=True, help="Use plain node text (easier for terminals).")
 @click.option(
@@ -102,6 +101,8 @@ def diagram(
     if out_file is None:
         mmd = diag.text()
         if render_tty:
+            import termaid
+
             console.print(termaid.render_rich(mmd))
         elif console.is_terminal:
             console.print(Syntax(mmd, "mermaid"))

@@ -1725,7 +1725,6 @@ dependencies = [
     { name = "scipy" },
     { name = "setuptools" },
     { name = "structlog" },
-    { name = "termaid" },
     { name = "threadpoolctl" },
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu/" }, marker = "(sys_platform == 'darwin' and extra == 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
     { name = "torch", version = "2.10.0", source = { registry = "https://pypi.lenskit.org/torch/cpu/" }, marker = "(sys_platform == 'darwin' and extra != 'group-7-lenskit-cpu' and extra != 'group-7-lenskit-gpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
@@ -1737,6 +1736,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+cli-extra = [
+    { name = "termaid" },
+]
 gnn = [
     { name = "torch-geometric" },
 ]
@@ -1886,14 +1888,14 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.13" },
     { name = "setuptools", specifier = ">=80" },
     { name = "structlog", specifier = ">=23.2" },
-    { name = "termaid", specifier = ">=0.6.1" },
+    { name = "termaid", marker = "extra == 'cli-extra'", specifier = "~=0.6.1" },
     { name = "threadpoolctl", specifier = ">=3.0" },
     { name = "torch", specifier = "~=2.4" },
     { name = "torch-geometric", marker = "extra == 'gnn'", specifier = "~=2.6" },
     { name = "typing-extensions", specifier = "~=4.15" },
     { name = "xopen", specifier = "~=2.0" },
 ]
-provides-extras = ["funksvd", "gnn", "hpf", "implicit", "notebook", "ray", "sklearn", "tune"]
+provides-extras = ["cli-extra", "funksvd", "gnn", "hpf", "implicit", "notebook", "ray", "sklearn", "tune"]
 
 [package.metadata.requires-dev]
 cpu = [{ name = "torch", specifier = "~=2.4", index = "https://download.pytorch.org/whl/cpu/", conflict = { package = "lenskit", group = "cpu" } }]

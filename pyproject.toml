@@ -43,7 +43,6 @@ dependencies = [
   "lazy-loader >=0.4",
   # torch inductor needs setuptools
   "setuptools >=80",
-  "termaid>=0.6.1",
 ]
 
 [dependency-groups]
@@ -123,6 +122,7 @@ implicit = ["implicit >=0.7.2"]
 gnn = ["torch_geometric ~=2.6"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
+cli-extra = ["termaid ~= 0.6.1"]
 tune = [
   "optuna ~=4.8",
 ]
