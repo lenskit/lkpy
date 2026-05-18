@@ -7,7 +7,7 @@
 from lenskit.basic import BiasScorer, PopScorer
 from lenskit.basic.candidates import TrainingItemsCandidateSelector
 from lenskit.pipeline import Pipeline, topn_pipeline
-from lenskit.pipeline.config import PipelineConfigFragment, patch_config
+from lenskit.pipeline.config import PipelineConfigFragment
 
 
 def test_merge_simple_setting():

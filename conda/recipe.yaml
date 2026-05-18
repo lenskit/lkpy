@@ -56,7 +56,6 @@ outputs:
         - xopen ~=2.0
         - lazy-loader >=0.4
         - setuptools >=80
-        - deepmerge >=2.0
 
     tests:
       - python:
