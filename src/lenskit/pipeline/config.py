@@ -75,9 +75,6 @@ class PipelineHooks(BaseModel):
 
     run: dict[str, list[PipelineHook]] = {}
 
-    def _apply_patch(self, patch: PipelineHooks):
-        self.run.update(patch.run)
-
 
 class PipelineOptions(BaseModel, extra="allow"):
     """
@@ -261,7 +258,7 @@ class PipelineComponent(BaseModel):
                     config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
                 else:
                     config = None
-            case _:
+            case _:  # pragma: nocover
                 raise TypeError("unexpected node type")
 
         code = make_importable_path(ctype)  # type: ignore
