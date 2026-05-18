@@ -93,18 +93,19 @@ def diagram(
     diag.label_edges = label_edges and not render_tty
     diag.plain_nodes = plain_nodes or render_tty
 
-    if out_file is not None:
-        diag.set_output(out_file.open("wt"))
-
     diag.render_pipeline(pipe)
+    mmd = diag.text()
 
-    if out_file is None:
-        mmd = diag.text()
-        if render_tty:
-            import termaid
+    if out_file is not None:
+        out_file.write_text(mmd)
 
-            console.print(termaid.render_rich(mmd))
-        elif console.is_terminal:
+    if render_tty:
+        import termaid
+
+        console.print(termaid.render_rich(mmd))
+
+    elif out_file is None:
+        if console.is_terminal:
             console.print(Syntax(mmd, "mermaid"))
-        else:
+        elif out_file is None:
             print(mmd)
