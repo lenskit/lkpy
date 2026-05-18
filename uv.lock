@@ -1875,7 +1875,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=6" },
     { name = "py-cpuinfo", specifier = ">=9.0" },
     { name = "pyarrow", specifier = ">=20,!=21.*" },
-    { name = "pydantic", specifier = "~=2.10" },
+    { name = "pydantic", specifier = "~=2.12" },
     { name = "pydantic-settings", specifier = "~=2.8" },
     { name = "pyzmq", specifier = ">=26" },
     { name = "ray", marker = "extra == 'ray'", specifier = "~=2.42" },
