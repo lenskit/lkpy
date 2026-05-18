@@ -7,4 +7,4 @@ run-lenskit pipeline expand -o "$out" -c pipelines/als-implicit.toml
 
 scorer="$(jq -r .components.scorer.code <"$out")"
 
-require "$scorer" = lenskit.als.ImplicitMFScorer
+require "$scorer" = lenskit.als:ImplicitMFScorer

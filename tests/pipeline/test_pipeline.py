@@ -10,11 +10,12 @@ from uuid import UUID
 import numpy as np
 from typing_extensions import assert_type
 
-from pytest import mark, raises, warns
+from pytest import mark, raises
 
 from lenskit.pipeline import PipelineBuilder, PipelineError
-from lenskit.pipeline._types import TypecheckWarning
 from lenskit.pipeline.nodes import InputNode, Node
+
+pytestmark = mark.filterwarnings("ignore:component.*is local:lenskit.diagnostics.PipelineWarning")
 
 type TK = int | str
 

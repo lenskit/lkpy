@@ -5,9 +5,11 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
-from pytest import fail, raises
+from pytest import fail, mark, raises
 
 from lenskit.pipeline import Lazy, PipelineBuilder
+
+pytestmark = mark.filterwarnings("ignore:component.*is local:lenskit.diagnostics.PipelineWarning")
 
 
 def fallback(first: int | None, second: Lazy[int]) -> int:
