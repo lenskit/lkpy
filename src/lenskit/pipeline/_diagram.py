@@ -9,6 +9,7 @@ Render pipelines to diagrams.
 """
 
 import io
+import re
 from typing import Literal, TextIO, overload
 
 from lenskit.util import IndentWriter
@@ -47,7 +48,17 @@ def render_pipeline_mmd(
 
         w.print()
         for name, comp in cfg.components.items():
-            w.print(f'{name}["{name}\\n{comp.code}"]')
+            names = name
+            for aname, tgt in cfg.aliases.items():
+                if tgt == name:
+                    names = f"{names}<br><i>{aname}</i>"
+
+            if comp.code == "lenskit.pipeline.components:fallback_on_none":
+                w.print(f'{name}{{"{names}"}}')
+            else:
+                impl = comp.code
+                impl = re.sub(r"^lenskit\.(?:basic\.\w+:)", "", impl)
+                w.print(f'{name}["{names}<br><tt>{impl}</tt>"]')
 
         w.print()
         for name, comp in cfg.components.items():
