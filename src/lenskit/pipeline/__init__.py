@@ -16,7 +16,7 @@ from lenskit.lazy import Lazy
 from ._builder import PipelineBuilder
 from ._cache import PipelineCache
 from ._common import RecPipelineBuilder, predict_pipeline, topn_pipeline
-from ._diagram import render_pipeline_mmd
+from ._diagram import MermaidDiagrammer
 from ._hooks import ComponentInputHook
 from ._impl import CloneMethod, Pipeline
 from ._profiling import PipelineProfiler, ProfileSink
@@ -49,5 +49,5 @@ __all__ = [
     "topn_pipeline",
     "predict_pipeline",
     "ComponentInputHook",
-    "render_pipeline_mmd",
+    "MermaidDiagrammer",
 ]

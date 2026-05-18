@@ -43,6 +43,7 @@ dependencies = [
   "lazy-loader >=0.4",
   # torch inductor needs setuptools
   "setuptools >=80",
+  "termaid>=0.6.1",
 ]
 
 [dependency-groups]

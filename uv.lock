@@ -1725,6 +1725,7 @@ dependencies = [
     { name = "scipy" },
     { name = "setuptools" },
     { name = "structlog" },
+    { name = "termaid" },
     { name = "threadpoolctl" },
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu/" }, marker = "(sys_platform == 'darwin' and extra == 'group-7-lenskit-cpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
     { name = "torch", version = "2.10.0", source = { registry = "https://pypi.lenskit.org/torch/cpu/" }, marker = "(sys_platform == 'darwin' and extra != 'group-7-lenskit-cpu' and extra != 'group-7-lenskit-gpu') or (extra == 'group-7-lenskit-cpu' and extra == 'group-7-lenskit-gpu')" },
@@ -1885,6 +1886,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.13" },
     { name = "setuptools", specifier = ">=80" },
     { name = "structlog", specifier = ">=23.2" },
+    { name = "termaid", specifier = ">=0.6.1" },
     { name = "threadpoolctl", specifier = ">=3.0" },
     { name = "torch", specifier = "~=2.4" },
     { name = "torch-geometric", marker = "extra == 'gnn'", specifier = "~=2.6" },
@@ -4425,6 +4427,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/46/58/8c37dea7bbf769b20d58e7ace7e5edfe65b849442b00ffcdd56be88697c6/tabulate-0.10.0.tar.gz", hash = "sha256:e2cfde8f79420f6deeffdeda9aaec3b6bc5abce947655d17ac662b126e48a60d", size = 91754, upload-time = "2026-03-04T18:55:34.402Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl", hash = "sha256:f0b0622e567335c8fabaaa659f1b33bcb6ddfe2e496071b743aa113f8774f2d3", size = 39814, upload-time = "2026-03-04T18:55:31.284Z" },
+]
+
+[[package]]
+name = "termaid"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/16/4facdf2b4910c6b8bdcb177cc31625b83fc44adbd4589649f5fdb6090c4a/termaid-0.6.1.tar.gz", hash = "sha256:f7284009b7e85fceae62ffed5dfc6d37b2e74cc6821698897654429ad943ed64", size = 382404, upload-time = "2026-03-30T09:58:03.655Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/c3/f8a70c3c1a66c543c1f9c80e5fd0001ffa7162db53457b6a78fe4d873590/termaid-0.6.1-py3-none-any.whl", hash = "sha256:44b15a47e2650dcdc08b2d94f3caf9588c369f6e1e945e2e5d99d35df8548bc1", size = 155353, upload-time = "2026-03-30T09:58:01.97Z" },
 ]
 
 [[package]]

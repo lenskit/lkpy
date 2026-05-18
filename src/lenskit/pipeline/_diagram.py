@@ -10,61 +10,91 @@ Render pipelines to diagrams.
 
 import io
 import re
-from typing import Literal, TextIO, overload
+from abc import ABC, abstractmethod
+from typing import Literal, TextIO
 
 from lenskit.util import IndentWriter
 
 from ._impl import Pipeline
 
 
-@overload
-def render_pipeline_mmd(
-    pipe: Pipeline, *, direction: Literal["LR", "TB"] = "LR", out: None = None
-) -> str: ...
-@overload
-def render_pipeline_mmd(
-    pipe: Pipeline, *, direction: Literal["LR", "TB"] = "LR", out: TextIO
-) -> None: ...
-def render_pipeline_mmd(
-    pipe: Pipeline, *, direction: Literal["LR", "TB"] = "LR", out: TextIO | None = None
-) -> str | None:
-    rv = False
-    if out is None:
-        out = io.StringIO()
-        rv = True
+class GraphDiagrammer(ABC):
+    """
+    Render pipeline diagrams.
 
-    cfg = pipe.config
+    Stability:
+        Internal
+    """
 
-    w = IndentWriter(out)
+    output: TextIO
 
-    w.print(f"flowchart {direction}")
-    with w.indent():
-        w.print("classDef optional stroke-dasharray: 5 5;")
-        w.print('subgraph input["Inputs"]')
+    def __init__(self):
+        self.output = io.StringIO()
+
+    def set_output(self, out: TextIO):
+        self.output = out
+
+    def text(self):
+        if isinstance(self.output, io.StringIO):
+            return self.output.getvalue()
+        else:
+            raise RuntimeError("cannot get text for non-string output")
+
+    @abstractmethod
+    def render_pipeline(self, pipe: Pipeline): ...
+
+
+class MermaidDiagrammer(GraphDiagrammer):
+    direction: Literal["LR", "TB"]
+    label_edges: bool = True
+    plain_nodes: bool = False
+
+    def __init__(self, direction: Literal["LR", "TB"] = "TB"):
+        super().__init__()
+        self.direction = direction
+
+    def render_pipeline(self, pipe: Pipeline):
+        cfg = pipe.config
+
+        w = IndentWriter(self.output)
+        br = "\\n" if self.plain_nodes else "<br>"
+
+        w.print(f"flowchart {self.direction}")
         with w.indent():
-            for pi in cfg.inputs:
-                w.print(f'{pi.name}[/"{pi.name}"/]')
-        w.print("end")
+            # w.print("classDef optional stroke-dasharray: 5 5;")
+            w.print("subgraph Inputs")
+            with w.indent():
+                for pi in cfg.inputs:
+                    w.print(f'{pi.name}[/"{pi.name}"/]')
+            w.print("end")
 
-        w.print()
-        for name, comp in cfg.components.items():
-            names = name
-            for aname, tgt in cfg.aliases.items():
-                if tgt == name:
-                    names = f"{names}<br><i>{aname}</i>"
+            w.print()
+            for name, comp in cfg.components.items():
+                names = name
+                is_out = name in ("recommender", "rating-predictor")
+                for aname, tgt in cfg.aliases.items():
+                    if tgt == name:
+                        atxt = aname if self.plain_nodes else f"<i>{aname}</i>"
+                        names = f"{names}{br}{atxt}"
+                        if aname in ("recommender", "rating-predictor"):
+                            is_out = True
 
-            if comp.code == "lenskit.pipeline.components:fallback_on_none":
-                w.print(f'{name}{{"{names}"}}')
-            else:
-                impl = comp.code
-                impl = re.sub(r"^lenskit\.(?:basic\.\w+:)", "", impl)
-                w.print(f'{name}["{names}<br><tt>{impl}</tt>"]')
+                if comp.code == "lenskit.pipeline.components:fallback_on_none":
+                    w.print(f'{name}{{"{names}"}}')
+                else:
+                    impl = comp.code
+                    impl = re.sub(r"^lenskit\.(?:basic\.\w+:)", "", impl)
+                    impl = impl if self.plain_nodes else f"<tt>{impl}</tt>"
+                    label = f"{names}{br}{impl}"
+                    if is_out:
+                        w.print(f'{name}(["{label}"])')
+                    else:
+                        w.print(f'{name}["{label}"]')
 
-        w.print()
-        for name, comp in cfg.components.items():
-            for iname, isrc in comp.inputs.items():
-                w.print(f"{isrc} -- {iname} --> {name}")
-
-    if rv:
-        assert isinstance(out, io.StringIO)
-        return out.getvalue()
+            w.print()
+            for name, comp in cfg.components.items():
+                for iname, isrc in comp.inputs.items():
+                    if self.label_edges:
+                        w.print(f"{isrc} -- {iname} --> {name}")
+                    else:
+                        w.print(f"{isrc} --> {name}")

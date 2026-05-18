@@ -8,10 +8,11 @@ from pathlib import Path
 from typing import Literal
 
 import click
+import termaid
 from rich.syntax import Syntax
 
 from lenskit.logging import get_logger, stdout_console
-from lenskit.pipeline import Component, Pipeline, render_pipeline_mmd, topn_pipeline
+from lenskit.pipeline import Component, MermaidDiagrammer, Pipeline, topn_pipeline
 from lenskit.pipeline._types import import_path_string
 
 from ._group import pipeline
@@ -41,6 +42,9 @@ _log = get_logger(__name__)
     flag_value="graphviz",
     help="Save in Graphviz (DOT) syntax.",
 )
+@click.option("--render", "render_tty", is_flag=True, help="Render to terminal.")
+@click.option("--label-edges/--no-label-edges", help="Label edges between nodes.")
+@click.option("--plain-nodes", is_flag=True, help="Use plain node text (easier for terminals).")
 @click.option(
     "-o",
     "--output",
@@ -54,6 +58,9 @@ def diagram(
     config: Path | None,
     out_file: Path | None,
     list_length: int | None,
+    label_edges: bool,
+    plain_nodes: bool,
+    render_tty: bool,
     format: Literal["graphviz", "mermaid"],
     rating_predictor: bool,
 ):
@@ -83,12 +90,20 @@ def diagram(
         _log.error("graph format %s not yet supported", format)
         raise SystemExit(2)
 
+    diag = MermaidDiagrammer()
+    diag.label_edges = label_edges and not render_tty
+    diag.plain_nodes = plain_nodes or render_tty
+
     if out_file is not None:
-        with out_file.open("wt") as pf:
-            render_pipeline_mmd(pipe, out=pf)
-    else:
-        mmd = render_pipeline_mmd(pipe)
-        if console.is_terminal:
+        diag.set_output(out_file.open("wt"))
+
+    diag.render_pipeline(pipe)
+
+    if out_file is None:
+        mmd = diag.text()
+        if render_tty:
+            console.print(termaid.render_rich(mmd))
+        elif console.is_terminal:
             console.print(Syntax(mmd, "mermaid"))
         else:
             print(mmd)

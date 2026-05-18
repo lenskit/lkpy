@@ -13,7 +13,7 @@ class IndentWriter:
     Write output with configurable indents.
     """
 
-    level: int = 4
+    level: int = 0
     width: int
     _target: TextIO
 
@@ -26,16 +26,16 @@ class IndentWriter:
         Print another message to the output.
         """
         if data:
-            self._target.write(" " * self.level)
+            self._target.write(" " * (self.level * self.width))
             self._target.write(data)
         if eol:
             self._target.write("\n")
 
     def add_indent(self):
-        self.level += self.width
+        self.level += 1
 
     def drop_indent(self):
-        self.level -= self.width
+        self.level -= 1
         assert self.level >= 0
 
     @contextmanager
