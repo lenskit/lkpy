@@ -6,6 +6,8 @@ uv = "latest"
 cargo-binstall = "latest"
 "cargo:cargo-binutils" = "0.3"
 usage = "latest"
+node = "latest"
+"npm:@mermaid-js/mermaid-cli" = "latest"
 
 [settings]
 idiomatic_version_file_enable_tools = ["rust"]

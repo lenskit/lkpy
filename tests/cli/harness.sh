@@ -19,18 +19,24 @@ begin-suite() {
     perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
 }
 
-run-python() {
+run-command() {
     local status
-    echo "+ python $*"
-    $PYRUN "$@"
+    local ctext="$(echo "$*" | sed -e "s@$TEST_WORK@\$TEST_WORK@g" -e "s@$TEST_DIR@\$TEST_DIR@g")"
+    echo "+ $ctext"
+    "$@"
     status="$?"
     if (($status)); then
-        not_ok "failed: python $@"
-        echo "# command failed: $PYRUN $0" >&5
+        not_ok "exit($status): $ctext"
+        echo "# command failed: $ctext" >&5
     else
-        ok "python $@"
+        ok "$ctext"
     fi
     return $status
+}
+
+run-python() {
+    run-command $PYRUN "$@"
+    return "$?"
 }
 
 run-lenskit() {

@@ -8,7 +8,7 @@ my $verbose = $ENV{VERBOSE};
 print STDERR "counting tests\n" if $verbose;
 
 while (<>) {
-    if (m/^(run-(lenskit|python)|require)\b/) {
+    if (m/^(run-(lenskit|python|command)|require)\b/) {
         print STDERR "test: $_" if $verbose;
         $test_count += 1;
     }
