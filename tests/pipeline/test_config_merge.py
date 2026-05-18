@@ -7,24 +7,7 @@
 from lenskit.basic import BiasScorer, PopScorer
 from lenskit.basic.candidates import TrainingItemsCandidateSelector
 from lenskit.pipeline import Pipeline, topn_pipeline
-from lenskit.pipeline.config import PipelineConfigFragment, merge_config_dicts
-
-
-def test_merge_dicts():
-    out = merge_config_dicts({"a": 1, "b": 3}, {"c": 7, "b": -2})
-    assert out == {"a": 1, "b": -2, "c": 7}
-
-
-def test_merge_override():
-    out = merge_config_dicts({"a": 1, "b": {}}, {"c": 7, "b": None})
-    assert out == {"a": 1, "b": None, "c": 7}
-
-
-def test_merge_deep():
-    out = merge_config_dicts(
-        {"a": 1, "b": {"name": "FOOBIE BLETCH"}}, {"b": {"name": "HACKEM MUCHE"}}
-    )
-    assert out == {"a": 1, "b": {"name": "HACKEM MUCHE"}}
+from lenskit.pipeline.config import PipelineConfigFragment, patch_config
 
 
 def test_merge_simple_setting():

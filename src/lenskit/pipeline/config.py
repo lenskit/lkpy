@@ -21,8 +21,6 @@ from types import FunctionType
 from typing import Annotated, Literal, Mapping, get_args
 
 from annotated_types import Predicate
-from deepmerge import always_merger
-from deepmerge.merger import Merger
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
@@ -142,16 +140,12 @@ class PipelineConfig(BaseModel):
     "The hooks configured for the pipeline."
 
     def merge_config(self, update: PipelineConfig | PipelineConfigFragment) -> PipelineConfig:
-        base = self.model_dump()
+        cfg = self.model_dump()
         patch = update.model_dump(exclude_unset=True, exclude_computed_fields=True)
 
-        merge = Merger(
-            [(dict, _merge_base), (dict, _merge_component), (dict, "merge")],
-            ["override"],
-            ["override"],
-        )
-        merge.merge(base, patch)
-        return PipelineConfig.model_validate(base)
+        merge_configs(cfg, patch)
+
+        return PipelineConfig.model_validate(cfg)
 
     def merge_component_configs(
         self, configs: Mapping[str, Mapping[str, JsonValue]]
@@ -169,7 +163,14 @@ class PipelineConfig(BaseModel):
             except KeyError:
                 raise PipelineError(f"unknown component {name}")  # noqa: B904
 
-            comp.config = always_merger.merge(comp.config or {}, cfg)
+            # make sure we have a mutable dictionary
+            if comp.config is None:
+                base = {}
+            else:
+                base = dict(comp.config)
+
+            merge_configs(base, cfg)
+            comp.config = base
 
         return pipe
 
@@ -311,63 +312,41 @@ def hash_config(config: BaseModel) -> str:
     return h.hexdigest()
 
 
-def merge_config_dicts(base: dict[str, JsonValue], patch: dict[str, JsonValue]) -> JsonValue:
-    """
-    Helper function to merge overrides into JSON-compatible configuration data.
-
-    .. note::
-
-        This function does not provide a way to *remove* values from ``base``.
-        However, they can be set to ``None``.
-
-    Args:
-        base:
-            The base configuration data to update.
-        patch:
-            The updated configuration data.
-
-    Returns:
-        The patched configuration data.  May share dictionary or list objects
-        with either base or patch.
-
-    Stability:
-        Internal
-    """
-
-    result = base.copy()
-    for k, v in patch.items():
-        if isinstance(v, dict):
-            left = result.get(k, None)
-            if isinstance(left, dict):
-                v = merge_config_dicts(left, v)
-        result[k] = v
-
-    return result
-
-
-def _merge_component(config: Merger, path: list[str], base: Any, patch: Any):
-    """
-    Merge component configurations.
-    """
-    match path:
-        case ["components", name] if isinstance(patch, dict):
-            # we are matching a component
+def merge_configs(
+    base: dict[str, Any],
+    update: Mapping[str, Any],
+    *,
+    path: tuple[str, ...] = (),
+    _skip_comp: bool = False,
+):
+    match path, base, update:
+        case ("components", _name), _, {**_u} if not _skip_comp:
+            # merge component configurations
             assert isinstance(base, dict)
-            base_class = base.get("code", None) or base.get("class", None)
-            patch_class = patch.get("code", None) or patch.get("class", None)
-            if patch_class is None or base_class == patch_class:
-                for k, v in patch.items():
-                    base[k] = config.value_strategy(path + ["k"], base[k], v)
-                return STRATEGY_END
+            base_class = base.get("code", None)
+            patch_class = update.get("code", UNSET_CODE)
+            if patch_class == UNSET_CODE or base_class == patch_class:
+                merge_configs(base, update, path=path, _skip_comp=True)
             else:
-                return patch
-        case _:
-            return None
+                merge_configs(
+                    base,
+                    {k: v for (k, v) in update.items() if k != "config"},
+                    path=path,
+                    _skip_comp=True,
+                )
+                base["config"] = update.get("config", {})
 
+        case ("options",), {}, {"base": str(_), **_kws}:
+            base.update({k: v for (k, v) in _kws.items()})
 
-def _merge_base(config: Merger, path: list[str], base: Any, patch: Any):
-    match path:
-        case ["options", "base"]:
-            return base
         case _:
-            return None
+            for k, v in update.items():
+                bv = base.setdefault(k, {})
+                match bv, v:
+                    case {**_bve}, {**_ve}:
+                        merge_configs(bv, v, path=path + (k,))
+                    case None, {**_ve}:
+                        bv = base[k] = {}
+                        merge_configs(bv, v, path=path + (k,))
+                    case _:
+                        base[k] = v

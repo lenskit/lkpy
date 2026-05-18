@@ -109,7 +109,9 @@ def test_apply_config():
 
 def test_configure_bad_scorer():
     with raises(PipelineError, match="component “missing”"):
-        Pipeline.from_config({"components": {"missing": {"config": {"wombat": 42}}}})
+        Pipeline.from_config(
+            {"options": {"base": "std:topn"}, "components": {"missing": {"config": {"wombat": 42}}}}
+        )
 
 
 def test_load_override():
