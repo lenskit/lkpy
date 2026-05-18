@@ -264,7 +264,7 @@ class PipelineComponent(BaseModel):
             case _:
                 raise TypeError("unexpected node type")
 
-        code = f"{ctype.__module__}:{ctype.__qualname__}"
+        code = make_importable_path(ctype)  # type: ignore
 
         return cls(code=code, config=config)
 

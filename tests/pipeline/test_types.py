@@ -181,6 +181,16 @@ def test_importable_string_private_function():
     assert func is stdout_console
 
 
+def test_importable_component_private_function():
+    from lenskit.als import BiasedMFScorer
+
+    path = make_importable_path(BiasedMFScorer)
+    assert path == "lenskit.als.BiasedMFScorer"
+
+    func = import_path_string(path)
+    assert func is BiasedMFScorer
+
+
 def test_parse_string_None():
     assert import_path_string("None") == NoneType
 
