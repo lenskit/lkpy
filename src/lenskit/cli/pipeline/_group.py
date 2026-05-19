@@ -4,8 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import pytest
+import click
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore:component.*is local:lenskit.diagnostics.PipelineWarning"
-)
+
+@click.group
+def pipeline():
+    """
+    Pipeline inspection and manipulation commands.
+    """

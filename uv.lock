@@ -801,15 +801,6 @@ wheels = [
 ]
 
 [[package]]
-name = "deepmerge"
-version = "2.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a8/3a/b0ba594708f1ad0bc735884b3ad854d3ca3bdc1d741e56e40bbda6263499/deepmerge-2.0.tar.gz", hash = "sha256:5c3d86081fbebd04dd5de03626a0607b809a98fb6ccba5770b62466fe940ff20", size = 19890, upload-time = "2024-08-30T05:31:50.308Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/82/e5d2c1c67d19841e9edc74954c827444ae826978499bde3dfc1d007c8c11/deepmerge-2.0-py3-none-any.whl", hash = "sha256:6de9ce507115cff0bed95ff0ce9ecc31088ef50cbdf09bc90a09349a318b3d00", size = 13475, upload-time = "2024-08-30T05:31:48.659Z" },
-]
-
-[[package]]
 name = "defusedxml"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1717,7 +1708,6 @@ name = "lenskit"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
-    { name = "deepmerge" },
     { name = "humanize" },
     { name = "lazy-loader" },
     { name = "numpy" },
@@ -1872,7 +1862,6 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = "~=8.1" },
-    { name = "deepmerge", specifier = ">=2.0" },
     { name = "hpfrec", marker = "extra == 'hpf'", specifier = "~=0.2.12" },
     { name = "humanize", specifier = "~=4.2" },
     { name = "implicit", marker = "extra == 'implicit'", specifier = ">=0.7.2" },
@@ -1886,7 +1875,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=6" },
     { name = "py-cpuinfo", specifier = ">=9.0" },
     { name = "pyarrow", specifier = ">=20,!=21.*" },
-    { name = "pydantic", specifier = "~=2.10" },
+    { name = "pydantic", specifier = "~=2.12" },
     { name = "pydantic-settings", specifier = "~=2.8" },
     { name = "pyzmq", specifier = ">=26" },
     { name = "ray", marker = "extra == 'ray'", specifier = "~=2.42" },

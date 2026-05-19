@@ -35,7 +35,7 @@ dependencies = [
   "packaging >=23.0",
   "psutil >=6",
   "py-cpuinfo >=9.0",
-  "pydantic ~=2.10",
+  "pydantic ~=2.12",
   "pydantic-settings~=2.8",
   "humanize ~=4.2",
   "prettytable ~=3.14",
@@ -43,7 +43,6 @@ dependencies = [
   "lazy-loader >=0.4",
   # torch inductor needs setuptools
   "setuptools >=80",
-  "deepmerge>=2.0",
 ]
 
 [dependency-groups]
@@ -139,6 +138,7 @@ lenskit = "lenskit.cli:main"
 lenskit-config = "lenskit.cli.config:config"
 lenskit-data = "lenskit.cli.data:data"
 lenskit-doctor = "lenskit.cli.doctor:doctor"
+lenskit-pipeline = "lenskit.cli.pipeline:pipeline"
 lenskit-task = "lenskit.cli.task:task"
 lenskit-train = "lenskit.cli.train:train"
 lenskit-tune = "lenskit.cli.tune:tune"

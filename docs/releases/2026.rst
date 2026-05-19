@@ -27,6 +27,11 @@ Second release in the 2026 series, bringing a few smaller feature updates:
 - Added a new scorer, :class:`lenskit.knn.AssociationScorer`, implementing
   conditional probability and lift-based association rule recommendations for
   both personalized and related-item recommendations (:issue:`930`, :pr:`1086`).
+- Fixed a bug in pipeline merging that required derived pipelines to specify
+  component classes in order to configure component options (:issue:`1097`,
+  :pr:`1099`).
+- Added a ``lenskit pipeline expand`` command to render a pipeline configuration
+  to complete JSON for debugging / inspection (:issue:`1098`, :pr:`1099`).
 
 .. _2026.1.0:
 

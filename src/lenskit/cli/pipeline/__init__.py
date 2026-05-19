@@ -4,8 +4,9 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import pytest
+from . import expand  # noqa: E402, F401
+from ._group import pipeline
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore:component.*is local:lenskit.diagnostics.PipelineWarning"
-)
+__all__ = [
+    "pipeline",
+]

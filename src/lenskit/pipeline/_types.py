@@ -205,12 +205,22 @@ def make_importable_path(obj: type | FunctionType | None) -> str:
         return obj.__name__
 
     if obj.__qualname__ != obj.__name__:
-        raise TypeError("nested objects not yet supported")
+        if obj.__qualname__.endswith(f"<locals>.{obj.__name__}"):
+            warnings.warn(
+                f"component {obj.__qualname__} is local, configuration will not be usable",
+                PipelineWarning,
+                stacklevel=2,
+            )
+        else:
+            err = TypeError("nested objects not yet supported")
+            err.add_note(f"name: {obj.__name__}")
+            err.add_note(f"qualified name: {obj.__qualname__}")
+            raise err
 
     mod_path = obj.__module__
-    out_path = f"{mod_path}.{obj.__qualname__}"
+    out_path = f"{mod_path}:{obj.__qualname__}"
     short_mod_path = re.sub(r"\._.*", "", mod_path)
-    short_path = f"{short_mod_path}.{obj.__name__}"
+    short_path = f"{short_mod_path}:{obj.__name__}"
 
     if short_mod_path != mod_path:
         short_mod = import_module(short_mod_path)

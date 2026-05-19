@@ -21,7 +21,6 @@ from types import FunctionType
 from typing import Annotated, Literal, Mapping, get_args
 
 from annotated_types import Predicate
-from deepmerge import always_merger
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
@@ -33,6 +32,7 @@ from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
 
 VALID_NAME = re.compile(r"^[\w.@%!*?-]+$", re.UNICODE)
+UNSET_CODE = "!UNSET"
 
 
 def check_name(name: str, *, what: str = "node", allow_reserved: bool = False):
@@ -98,6 +98,17 @@ class PipelineOptions(BaseModel, extra="allow"):
     """
 
 
+class PipelineConfigFragment(BaseModel, extra="allow"):
+    """
+    Configuration fragments that override base configurations.
+    """
+
+    options: PipelineOptions | None = None
+    "Options for assembling the final pipeline."
+    meta: PipelineMeta = Field(default_factory=lambda: PipelineMeta())
+    "Pipeline metadata."
+
+
 class PipelineConfig(BaseModel):
     """
     Root type for serialized pipeline configuration.  A pipeline config contains
@@ -110,7 +121,7 @@ class PipelineConfig(BaseModel):
 
     options: PipelineOptions | None = None
     "Options for assembling the final pipeline."
-    meta: PipelineMeta
+    meta: PipelineMeta = Field(default_factory=lambda: PipelineMeta())
     "Pipeline metadata."
     inputs: list[PipelineInput] = []
     "Pipeline inputs."
@@ -124,6 +135,14 @@ class PipelineConfig(BaseModel):
     "Literals"
     hooks: PipelineHooks = PipelineHooks()
     "The hooks configured for the pipeline."
+
+    def merge_config(self, update: PipelineConfig | PipelineConfigFragment) -> PipelineConfig:
+        cfg = self.model_dump()
+        patch = update.model_dump(exclude_unset=True, exclude_computed_fields=True)
+
+        merge_configs(cfg, patch)
+
+        return PipelineConfig.model_validate(cfg)
 
     def merge_component_configs(
         self, configs: Mapping[str, Mapping[str, JsonValue]]
@@ -141,7 +160,14 @@ class PipelineConfig(BaseModel):
             except KeyError:
                 raise PipelineError(f"unknown component {name}")  # noqa: B904
 
-            comp.config = always_merger.merge(comp.config or {}, cfg)
+            # make sure we have a mutable dictionary
+            if comp.config is None:
+                base = {}
+            else:
+                base = dict(comp.config)
+
+            merge_configs(base, cfg)
+            comp.config = base
 
         return pipe
 
@@ -198,7 +224,7 @@ class PipelineComponent(BaseModel):
     Specification of a pipeline component.
     """
 
-    code: str = Field(validation_alias=AliasChoices("code", "class"))
+    code: str = Field(validation_alias=AliasChoices("code", "class"), default=UNSET_CODE)
     """
     The path to the component's implementation, either a class or a function.
     This is a Python qualified path of the form ``module:name``.
@@ -232,10 +258,10 @@ class PipelineComponent(BaseModel):
                     config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
                 else:
                     config = None
-            case _:
+            case _:  # pragma: nocover
                 raise TypeError("unexpected node type")
 
-        code = f"{ctype.__module__}:{ctype.__qualname__}"
+        code = make_importable_path(ctype)  # type: ignore
 
         return cls(code=code, config=config)
 
@@ -281,3 +307,43 @@ def hash_config(config: BaseModel) -> str:
     h = sha256()
     h.update(json.encode())
     return h.hexdigest()
+
+
+def merge_configs(
+    base: dict[str, Any],
+    update: Mapping[str, Any],
+    *,
+    path: tuple[str, ...] = (),
+    _skip_comp: bool = False,
+):
+    match path, base, update:
+        case ("components", _name), _, {**_u} if not _skip_comp:
+            # merge component configurations
+            assert isinstance(base, dict)
+            base_class = base.get("code", None)
+            patch_class = update.get("code", UNSET_CODE)
+            if patch_class == UNSET_CODE or base_class == patch_class:
+                merge_configs(base, update, path=path, _skip_comp=True)
+            else:
+                merge_configs(
+                    base,
+                    {k: v for (k, v) in update.items() if k != "config"},
+                    path=path,
+                    _skip_comp=True,
+                )
+                base["config"] = update.get("config", {})
+
+        case ("options",), {}, {"base": str(_), **_kws}:
+            base.update({k: v for (k, v) in _kws.items()})
+
+        case _:
+            for k, v in update.items():
+                bv = base.setdefault(k, {})
+                match bv, v:
+                    case {**_bve}, {**_ve}:
+                        merge_configs(bv, v, path=path + (k,))
+                    case None, {**_ve}:
+                        bv = base[k] = {}
+                        merge_configs(bv, v, path=path + (k,))
+                    case _:
+                        base[k] = v

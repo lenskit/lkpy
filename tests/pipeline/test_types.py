@@ -148,14 +148,14 @@ def test_importable_string_generic():
 
 
 def test_importable_string_class():
-    assert make_importable_path(UUID) == "uuid.UUID"
+    assert make_importable_path(UUID) == "uuid:UUID"
 
 
 def test_importable_string_function():
     from lenskit.config import configure
 
     path = make_importable_path(configure)
-    assert path == "lenskit.config.configure"
+    assert path == "lenskit.config:configure"
 
     func = import_path_string(path)
     assert func is configure
@@ -165,7 +165,7 @@ def test_importable_string_private_module():
     from lenskit.pipeline import Pipeline
 
     path = make_importable_path(Pipeline)
-    assert path == "lenskit.pipeline.Pipeline"
+    assert path == "lenskit.pipeline:Pipeline"
 
     cls = import_path_string(path)
     assert cls is Pipeline
@@ -175,10 +175,20 @@ def test_importable_string_private_function():
     from lenskit.logging import stdout_console
 
     path = make_importable_path(stdout_console)
-    assert path == "lenskit.logging.stdout_console"
+    assert path == "lenskit.logging:stdout_console"
 
     func = import_path_string(path)
     assert func is stdout_console
+
+
+def test_importable_component_private_function():
+    from lenskit.als import BiasedMFScorer
+
+    path = make_importable_path(BiasedMFScorer)
+    assert path == "lenskit.als:BiasedMFScorer"
+
+    func = import_path_string(path)
+    assert func is BiasedMFScorer
 
 
 def test_parse_string_None():

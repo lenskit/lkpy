@@ -39,7 +39,7 @@ from .components import (
     fallback_on_none,
     is_component_class,
 )
-from .config import PipelineConfig, PipelineHook, check_name
+from .config import UNSET_CODE, PipelineConfig, PipelineHook, check_name
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
@@ -724,6 +724,8 @@ class PipelineBuilder:
             extend:
                 Whether the configuration should extend the current pipeline, or
                 fail when there are conflicting definitions.
+        Stability:
+            Internal
         """
         self.name = config.meta.name
         self.version = config.meta.version
@@ -749,7 +751,23 @@ class PipelineBuilder:
                 # ignore special nodes in first pass
                 continue
 
-            ctor: Any = import_path_string(comp.code)
+            ctor: Any
+            if comp.code == UNSET_CODE:
+                if extend:
+                    match self.node(name, missing="none"):
+                        case None:
+                            raise PipelineError(
+                                f"component “{name}” does not exist in base configuration"
+                            )
+                        case ComponentConstructorNode(_, ctor, _ccfg):
+                            pass
+                else:
+                    raise PipelineError(
+                        "unset component implementations only supported in derived configurations"
+                    )
+            else:
+                ctor = import_path_string(comp.code)
+
             if is_component_class(ctor):
                 cfg = ctor.validate_config(comp.config)
             else:
