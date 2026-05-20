@@ -16,6 +16,7 @@ if [[ -z $ML_TEST_DIR ]]; then
 fi
 
 begin-suite() {
+    tap_out "TAP version 14"
     if ! grep -q '^test-plan ' "$TEST"; then
         perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
     fi
@@ -60,7 +61,7 @@ tap_status() {
     shift
     N=$(($N + 1))
     if [[ $1 ]]; then
-        tap_out "$status $N $*"
+        tap_out "$status $N - $*"
     else
         tap_out "$status $N"
     fi
@@ -76,6 +77,18 @@ ok() {
 
 not_ok() {
     tap_status "not ok" "$@"
+}
+
+skip() {
+    local n=1
+    if [[ $1 =~ ^[[:digit:]]+$ ]]; then
+        n="$1"
+        shift
+    fi
+    while (($n > 0)); do
+        tap_status ok "$* # SKIP"
+        n=$(($n - 1))
+    done
 }
 
 require() {
