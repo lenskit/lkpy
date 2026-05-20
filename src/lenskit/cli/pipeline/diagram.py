@@ -43,7 +43,6 @@ _log = get_logger(__name__)
 )
 @click.option("--render", "render_tty", is_flag=True, help="Render to terminal (requires termaid).")
 @click.option("--label-edges/--no-label-edges", help="Label edges between nodes.")
-@click.option("--plain-nodes", is_flag=True, help="Use plain node text (easier for terminals).")
 @click.option(
     "-o",
     "--output",
@@ -58,7 +57,6 @@ def diagram(
     out_file: Path | None,
     list_length: int | None,
     label_edges: bool,
-    plain_nodes: bool,
     render_tty: bool,
     format: Literal["graphviz", "mermaid"],
     rating_predictor: bool,
@@ -90,8 +88,7 @@ def diagram(
         raise SystemExit(2)
 
     diag = MermaidDiagrammer()
-    diag.label_edges = label_edges and not render_tty
-    diag.plain_nodes = plain_nodes or render_tty
+    diag.label_edges = label_edges
 
     diag.render_pipeline(pipe)
     mmd = diag.text()
@@ -102,7 +99,10 @@ def diagram(
     if render_tty:
         import termaid
 
-        console.print(termaid.render_rich(mmd))
+        d2 = MermaidDiagrammer("TB", for_tty=True)
+        d2.render_pipeline(pipe)
+
+        console.print(termaid.render_rich(d2.text()))
 
     elif out_file is None:
         if console.is_terminal:

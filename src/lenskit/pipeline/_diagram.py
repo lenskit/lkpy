@@ -47,17 +47,20 @@ class GraphDiagrammer(ABC):
 class MermaidDiagrammer(GraphDiagrammer):
     direction: Literal["LR", "TB"]
     label_edges: bool = True
-    plain_nodes: bool = False
+    for_tty: bool = False
 
-    def __init__(self, direction: Literal["LR", "TB"] = "TB"):
+    def __init__(self, direction: Literal["LR", "TB"] = "TB", *, for_tty: bool = False):
         super().__init__()
         self.direction = direction
+        if for_tty:
+            self.for_tty = True
+            self.label_edges = False
 
     def render_pipeline(self, pipe: Pipeline):
         cfg = pipe.config
 
         w = IndentWriter(self.output)
-        br = "\\n" if self.plain_nodes else "<br>"
+        br = "\\n" if self.for_tty else "<br>"
 
         w.print(f"flowchart {self.direction}")
         with w.indent():
@@ -74,7 +77,7 @@ class MermaidDiagrammer(GraphDiagrammer):
                 is_out = name in ("recommender", "rating-predictor")
                 for aname, tgt in cfg.aliases.items():
                     if tgt == name:
-                        atxt = aname if self.plain_nodes else f"<i>{aname}</i>"
+                        atxt = aname if self.for_tty else f"*{aname}*"
                         names = f"{names}{br}{atxt}"
                         if aname in ("recommender", "rating-predictor"):
                             is_out = True
@@ -83,8 +86,9 @@ class MermaidDiagrammer(GraphDiagrammer):
                     w.print(f'{name}{{"{names}"}}')
                 else:
                     impl = comp.code
-                    impl = re.sub(r"^lenskit\.(?:basic\.\w+:)", "", impl)
-                    impl = impl if self.plain_nodes else f"<tt>{impl}</tt>"
+                    impl = re.sub(r"^lenskit\.(?:basic\.\w+:)?", "", impl)
+                    if not self.for_tty:
+                        impl = f"<tt>{impl}</tt>"
                     label = f"{names}{br}{impl}"
                     if is_out:
                         w.print(f'{name}(["{label}"])')
