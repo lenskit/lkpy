@@ -11,27 +11,15 @@ import click
 from rich.syntax import Syntax
 
 from lenskit.logging import get_logger, stdout_console
-from lenskit.pipeline import Component, MermaidDiagrammer, Pipeline, topn_pipeline
-from lenskit.pipeline._types import import_path_string
+from lenskit.pipeline import MermaidDiagrammer
 
 from ._group import pipeline
+from ._load import PipelineLoadSpec, wants_pipeline_config
 
 _log = get_logger(__name__)
 
 
 @pipeline.command
-@click.option(
-    "-C", "--scorer-class", metavar="CLS", help="Create a default pipeline with scorer CLS"
-)
-@click.option(
-    "-c", "--config", type=Path, metavar="FILE", help="Load pipeline configuration from FILE."
-)
-@click.option(
-    "--rating-predictor",
-    is_flag=True,
-    help="Include rating prediction in the pipeline capabilities.",
-)
-@click.option("-n", "--list-length", type=int, help="Default list length for pipeline ranker.")
 @click.option(
     "--mermaid", "format", flag_value="mermaid", default="mermaid", help="Save in Mermaid syntax."
 )
@@ -51,41 +39,24 @@ _log = get_logger(__name__)
     metavar="FILE",
     help="Save pipeline diagram to FILE.",
 )
+@wants_pipeline_config
 def diagram(
-    scorer_class: str | None,
-    config: Path | None,
+    pipe_cfg: PipelineLoadSpec,
     out_file: Path | None,
-    list_length: int | None,
     label_edges: bool,
     render_tty: bool,
     format: Literal["graphviz", "mermaid"],
-    rating_predictor: bool,
 ):
     """
     Render a diagram of the pipeline.
     """
     console = stdout_console()
-    if config is not None:
-        if scorer_class is not None:
-            _log.error("cannot specify both scorer class and configuration file")
-            raise SystemExit(3)
-
-        _log.info("loading pipeline from %s", config)
-        pipe = Pipeline.load_config(config)
-
-    elif scorer_class is not None:
-        _log.info("creating pipeline for %s", config)
-        scorer = import_path_string(scorer_class)
-        assert issubclass(scorer, Component)
-        pipe = topn_pipeline(scorer, predicts_ratings=rating_predictor, n=list_length)
-
-    else:
-        _log.error("no scorer specified")
-        raise SystemExit(5)
 
     if format != "mermaid":
         _log.error("graph format %s not yet supported", format)
         raise SystemExit(2)
+
+    pipe = pipe_cfg.load_pipeline()
 
     diag = MermaidDiagrammer()
     diag.label_edges = label_edges
