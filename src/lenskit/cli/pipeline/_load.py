@@ -23,6 +23,7 @@ class PipelineLoadSpec:
     config: Path | None = None
     rating_predictor: bool = False
     list_length: int | None = None
+    name: str | None = None
 
     def load_pipeline(self):
         if self.config is not None:
@@ -37,7 +38,10 @@ class PipelineLoadSpec:
             _log.info("creating pipeline for class %s", self.scorer_class)
             scorer = import_path_string(self.scorer_class)
             assert issubclass(scorer, Component)
-            return topn_pipeline(scorer, predicts_ratings=self.rating_predictor, n=self.list_length)
+            name = self.name or scorer.__name__
+            return topn_pipeline(
+                scorer, predicts_ratings=self.rating_predictor, n=self.list_length, name=name
+            )
 
         else:
             _log.error("no scorer specified")
@@ -57,13 +61,17 @@ def wants_pipeline_config(func):
         is_flag=True,
         help="Include rating prediction in the pipeline capabilities.",
     )
+    @click.option("--pipeline-name", type=str, help="Name of pipeline (when constructing).")
     @click.option("-n", "--list-length", type=int, help="Default list length for pipeline ranker.")
-    def wrap_for_config(scorer_class, config, rating_predictor, list_length, **kwargs):
+    def wrap_for_config(
+        scorer_class, config, rating_predictor, list_length, pipeline_name, **kwargs
+    ):
         cfg = PipelineLoadSpec(
             scorer_class=scorer_class,
             config=config,
             rating_predictor=rating_predictor,
             list_length=list_length,
+            name=pipeline_name,
         )
         func(cfg, **kwargs)
 
