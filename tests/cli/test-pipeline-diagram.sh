@@ -2,6 +2,7 @@ out="$TEST_WORK/als-implicit.mmd"
 
 MERMAID_IMG=ghcr.io/mermaid-js/mermaid-cli/mermaid-cli
 if [[ -z "$MERMAID" ]]; then
+    dbg "looking for mermaid"
     if [[ -n $MERMAID_DOCKER ]]; then
         dbg "searching for docker"
         if which -s docker; then
@@ -22,7 +23,7 @@ require -f "$out"
 # make sure it can run / render
 cd "$TEST_WORK" || exit 2
 declare -a mermaid_cmd
-if [[ $MERMAID = mmdc ]]; then
+if [[ $MERMAID = cli ]]; then
     mermaid_cmd=(mmdc)
 elif [[ $MERMAID = docker ]]; then
     mermaid_cmd=(docker run --rm -v "$TEST_WORK:/data" "$MERMAID_IMG")
