@@ -82,6 +82,8 @@ jobs:
         run: |
           mise run test-cli -- --coverage --cov-append
         shell: bash -e {0}
+        env:
+          MERMAID_DOCKER: 1
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
