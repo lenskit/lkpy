@@ -42,9 +42,11 @@ def main():
         sys.exit(ec)
 
 
-@click.group("lenskit")
-@click.option("-v", "--verbose", "verbosity", count=True, help="Enable verbose logging output")
+@click.group("lenskit", invoke_without_command=True)
+@click.help_option("-h", "--help")
+@click.option("-v", "--verbose", "verbosity", count=True, help="Enable verbose logging output.")
 @click.option("--skip-log-setup", is_flag=True, hidden=True, envvar="LK_SKIP_LOG_SETUP")
+@click.option("--list-commands", is_flag=True, hidden=True)
 @click.option(
     "-R",
     "--project-root",
@@ -52,9 +54,16 @@ def main():
     metavar="DIR",
     help="Look for project root in DIR for configuration files.",
 )
-def lenskit(verbosity: int, project_root: Path | None, skip_log_setup: bool = False):
+@click.pass_context
+def lenskit(
+    ctx: click.Context,
+    verbosity: int,
+    project_root: Path | None,
+    skip_log_setup: bool = False,
+    list_commands: bool = False,
+):
     """
-    Data and pipeline operations with LensKit.
+    Manipulate and inspect LensKit pipelines, data, and environments.
     """
 
     # this code is run before any other command logic, so we can do global setup
@@ -72,6 +81,15 @@ def lenskit(verbosity: int, project_root: Path | None, skip_log_setup: bool = Fa
 
     configure(cfg_dir=project_root)
 
+    if list_commands:
+        _list_commands(ctx, lenskit)
+        return
+
+    if ctx.invoked_subcommand is None:
+        _log.error("no command specified")
+        print(lenskit.get_help(ctx))
+        sys.exit(2)
+
 
 @lenskit.command("version")
 def version():
@@ -79,6 +97,14 @@ def version():
     Print LensKit version info.
     """
     console.print(f"LensKit version [bold cyan]{__version__}[/bold cyan].")
+
+
+def _list_commands(ctx: click.Context, cmd: click.Group | click.Command, prefix=""):
+    name = prefix + cmd.name
+    print(name)
+    if isinstance(cmd, click.Group):
+        for kid in cmd.list_commands(ctx):
+            _list_commands(ctx, cmd.commands[kid], f"{name} ")
 
 
 cli_plugins = entry_points(group="lenskit.cli.plugins")

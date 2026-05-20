@@ -16,7 +16,14 @@ if [[ -z $ML_TEST_DIR ]]; then
 fi
 
 begin-suite() {
-    perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
+    if ! grep -q '^test-plan ' "$TEST"; then
+        perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
+    fi
+}
+
+test-plan() {
+    tap_out 1..$1
+    dbg "1..$1"
 }
 
 run-command() {
