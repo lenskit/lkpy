@@ -4,6 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import os
 import warnings
 
 import numpy as np
@@ -11,11 +12,13 @@ from numpy.typing import NDArray
 from typing_extensions import Callable, TypeAlias, override
 
 from lenskit.data import ItemList
+from lenskit.diagnostics import DataWarning
 
 from ._base import ListMetric, RankingMetricBase
 from ._weighting import LogRankWeight, RankWeight
 
 Discount: TypeAlias = Callable[[NDArray[np.number]], NDArray[np.float64]]
+_warn_skips = (os.path.dirname(os.path.dirname(__file__)),)
 
 
 class DiscountWeight(RankWeight):
@@ -104,6 +107,7 @@ class NDCG(ListMetric, RankingMetricBase):
         recs = self.truncate(recs)
 
         if len(test) == 0:
+            warnings.warn("test item list is empty", DataWarning, skip_file_prefixes=_warn_skips)
             return np.nan
 
         if self.gain:
@@ -111,8 +115,7 @@ class NDCG(ListMetric, RankingMetricBase):
 
             gains = test.field(self.gain, "pandas", index="ids")
             if gains is None:
-                warnings.warn(f"test items have no field {self.gain}")
-                return np.nan
+                raise KeyError(f"test items have no field {self.gain}")
 
             gains = gains.dropna()
 
@@ -217,8 +220,7 @@ def _graded_dcg(
 ) -> float:
     gains = test.field(field, "pandas", index="ids")
     if gains is None:
-        warnings.warn(f"test items have no field {field}")
-        return np.nan
+        raise KeyError(f"test items have no field {field}")
 
     gains = gains.dropna()
 
