@@ -6,7 +6,7 @@ uv = "latest"
 cargo-binstall = "latest"
 "cargo:cargo-binutils" = "0.3"
 usage = "latest"
-perl = "latest"
+perl = { version = "latest", os = ["linux", "macos"] }
 
 [settings]
 idiomatic_version_file_enable_tools = ["rust"]
