@@ -22,6 +22,9 @@ _log = get_logger(__name__)
 
 @click.command("train")
 @click.option("--profile-torch", is_flag=True, help="Profile PyTorch training")
+@click.option(
+    "-o", "--output", "out_file", type=Path, metavar="FILE", help="Save trained model to FILE."
+)
 @click.argument("dataset", metavar="DATA", type=Path)
 @wants_pipeline_config
 def train(
