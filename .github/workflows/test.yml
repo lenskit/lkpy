@@ -227,6 +227,7 @@ jobs:
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
+          python -m pytest -vs tests/test_env.py
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
 
       - name: 🕺🏻 Test LensKit CLI
