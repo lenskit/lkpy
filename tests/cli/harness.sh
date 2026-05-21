@@ -16,21 +16,35 @@ if [[ -z $ML_TEST_DIR ]]; then
 fi
 
 begin-suite() {
-    perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
+    tap_out "TAP version 14"
+    if ! grep -q '^test-plan ' "$TEST"; then
+        perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
+    fi
+}
+
+test-plan() {
+    tap_out 1..$1
+    dbg "1..$1"
+}
+
+run-command() {
+    local status
+    local ctext="$(echo "$*" | sed -e "s@$TEST_WORK@\$TEST_WORK@g" -e "s@$TEST_DIR@\$TEST_DIR@g")"
+    echo "+ $ctext"
+    "$@"
+    status="$?"
+    if (($status)); then
+        not_ok "exit($status): $ctext"
+        echo "# command failed: $ctext" >&5
+    else
+        ok "$ctext"
+    fi
+    return $status
 }
 
 run-python() {
-    local status
-    echo "+ python $*"
-    $PYRUN "$@"
-    status="$?"
-    if (($status)); then
-        not_ok "failed: python $@"
-        echo "# command failed: $PYRUN $0" >&5
-    else
-        ok "python $@"
-    fi
-    return $status
+    run-command $PYRUN "$@"
+    return "$?"
 }
 
 run-lenskit() {
@@ -47,7 +61,7 @@ tap_status() {
     shift
     N=$(($N + 1))
     if [[ $1 ]]; then
-        tap_out "$status $N $*"
+        tap_out "$status $N - $*"
     else
         tap_out "$status $N"
     fi
@@ -63,6 +77,18 @@ ok() {
 
 not_ok() {
     tap_status "not ok" "$@"
+}
+
+skip() {
+    local n=1
+    if [[ $1 =~ ^[[:digit:]]+$ ]]; then
+        n="$1"
+        shift
+    fi
+    while (($n > 0)); do
+        tap_status ok "$* # SKIP"
+        n=$(($n - 1))
+    done
 }
 
 require() {

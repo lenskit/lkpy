@@ -67,11 +67,8 @@ class ComponentInputHook(Protocol):
         Args:
             node:
                 The component node being invoked.
-            input_name:
-                The name of the component's input that will receive the data.
-            input_type:
-                The type of data the component expects for this input, if one
-                was specified in the component definition.
+            input:
+                The component input that will receive the data.
             value:
                 The data value to be supplied.  This is declared
                 :class:`object`, because its type is not known or guaranteed in

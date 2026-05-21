@@ -82,6 +82,8 @@ jobs:
         run: |
           mise run test-cli -- --coverage --cov-append
         shell: bash -e {0}
+        env:
+          MERMAID_DOCKER: 1
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
@@ -225,6 +227,7 @@ jobs:
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
+          python -m pytest -vs tests/test_env.py
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
 
       - name: 🕺🏻 Test LensKit CLI
