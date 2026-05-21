@@ -16,6 +16,7 @@ from lenskit.data import Dataset, ItemList
 from lenskit.data.types import NPMatrix, NPVector
 from lenskit.logging import item_progress
 from lenskit.math.solve import solve_cholesky
+from lenskit.parallel import run_accel_task
 
 from ._common import ALSBase, ALSConfig, ALSTrainerBase, TrainContext
 
@@ -110,8 +111,9 @@ class BiasedMFTrainer(ALSTrainerBase[BiasedMFScorer, BiasedMFConfig]):
     @override
     def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
         with item_progress(f"Epoch {epoch} {context.label}", context.nrows) as pb:
-            return als.train_explicit_matrix(
-                context.matrix, context.left, context.right, context.reg, pb
+            return run_accel_task(
+                als.train_explicit_matrix(context.matrix, context.left, context.right, context.reg),
+                progress=pb,
             )
 
 
