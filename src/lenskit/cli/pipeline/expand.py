@@ -9,27 +9,14 @@ from pathlib import Path
 import click
 
 from lenskit.logging import get_logger, stdout_console
-from lenskit.pipeline import Component, Pipeline, topn_pipeline
-from lenskit.pipeline._types import import_path_string
 
 from ._group import pipeline
+from ._load import PipelineLoadSpec, wants_pipeline_config
 
 _log = get_logger(__name__)
 
 
 @pipeline.command
-@click.option(
-    "-C", "--scorer-class", metavar="CLS", help="Create a default pipeline with scorer CLS"
-)
-@click.option(
-    "-c", "--config", type=Path, metavar="FILE", help="Load pipeline configuration from FILE."
-)
-@click.option(
-    "--rating-predictor",
-    is_flag=True,
-    help="Include rating prediction in the pipeline capabilities.",
-)
-@click.option("-n", "--list-length", type=int, help="Default list length for pipeline ranker.")
 @click.option(
     "-o",
     "--output",
@@ -38,35 +25,18 @@ _log = get_logger(__name__)
     metavar="FILE",
     help="Save expanded pipeline configuration to FILE.",
 )
+@wants_pipeline_config
 def expand(
-    scorer_class: str | None,
-    config: Path | None,
-    out_file: Path,
-    list_length: int | None,
-    rating_predictor: bool,
+    pipe_cfg: PipelineLoadSpec,
+    out_file: Path | None,
 ):
     """
     Expand a pipeline configuration into fully-formed pipeline and save or print
     the resulting configuration.
     """
     console = stdout_console()
-    if config is not None:
-        if scorer_class is not None:
-            _log.error("cannot specify both scorer class and configuration file")
-            raise SystemExit(3)
 
-        _log.info("loading pipeline from %s", config)
-        pipe = Pipeline.load_config(config)
-
-    elif scorer_class is not None:
-        _log.info("creating pipeline for %s", config)
-        scorer = import_path_string(scorer_class)
-        assert issubclass(scorer, Component)
-        pipe = topn_pipeline(scorer, predicts_ratings=rating_predictor, n=list_length)
-
-    else:
-        _log.error("no scorer specified")
-        raise SystemExit(5)
+    pipe = pipe_cfg.load_pipeline()
 
     if out_file is not None:
         with out_file.open("wt") as jf:

@@ -20,6 +20,10 @@ err() {
     echo "ERROR: $*" >&2
 }
 
+warn() {
+    echo "WARNING: $*" >&2
+}
+
 die() {
     local ec=2
     if [[ "$1" =~ '^-[0-9]$' ]]; then

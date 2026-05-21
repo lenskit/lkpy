@@ -9,6 +9,7 @@ Small utility functions or classes that don't fit elsewhere, mostly used inside
 LensKit implementations.
 """
 
+from ._indent import IndentWriter
 from ._latch import Latch
 
-__all__ = ["Latch"]
+__all__ = ["Latch", "IndentWriter"]
