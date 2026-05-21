@@ -17,8 +17,8 @@ from copy import deepcopy
 from graphlib import CycleError, TopologicalSorter
 from os import PathLike
 from pathlib import Path
-from types import UnionType
-from typing import TypeAliasType, Union
+from types import GenericAlias, UnionType
+from typing import TypeAliasType, Union, get_origin
 from uuid import NAMESPACE_URL, uuid5
 
 from typing_extensions import Any, Literal, TypeForm, cast, overload
@@ -227,6 +227,8 @@ class PipelineBuilder:
                 tys |= set(typing.get_args(t))
             elif isinstance(t, type):
                 tys.add(t)
+            elif isinstance(t, GenericAlias):
+                tys.add(get_origin(t))
             else:
                 raise TypeError(f"unsupported type form: {t}")
 
