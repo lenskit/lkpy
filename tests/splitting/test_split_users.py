@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -14,8 +14,7 @@ import pandas as pd
 import pytest
 
 from lenskit.data import Dataset, from_interactions_df
-from lenskit.splitting.holdout import SampleFrac, SampleN
-from lenskit.splitting.users import crossfold_users, sample_users
+from lenskit.splitting import SampleFrac, SampleN, crossfold_users, sample_users
 
 
 def test_crossfold_users(ml_ds: Dataset):

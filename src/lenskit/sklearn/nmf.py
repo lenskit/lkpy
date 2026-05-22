@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -14,13 +14,13 @@ This module contains a non-negative factorization implicit-feedback scorer built
 from __future__ import annotations
 
 import numpy as np
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, PositiveInt
 from sklearn.decomposition import MiniBatchNMF, non_negative_factorization
 from typing_extensions import Literal, override
 
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
+from lenskit.config.common import EmbeddingSizeMixin
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import NPMatrix
-from lenskit.data.vocab import Vocabulary
 from lenskit.logging import Stopwatch, get_logger
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
@@ -28,7 +28,7 @@ from lenskit.training import Trainable, TrainingOptions
 _log = get_logger(__name__)
 
 
-class NMFConfig(BaseModel, extra="forbid"):
+class NMFConfig(EmbeddingSizeMixin, BaseModel, extra="forbid"):
     """
     Configuration for :class:`NMFScorer`.
     See the documentation for :func:`sklearn.decomposition.non_negative_factorization`
@@ -37,9 +37,9 @@ class NMFConfig(BaseModel, extra="forbid"):
     """
 
     beta_loss: Literal["frobenius", "kullback-leibler", "itakura-saito"] = "frobenius"
-    max_iter: int = Field(default=200, validation_alias=AliasChoices("max_iter", "epochs"))
-    n_components: int | None = Field(
-        default=None, validation_alias=AliasChoices("n_components", "embedding_size")
+    max_iter: PositiveInt = Field(default=200, validation_alias=AliasChoices("max_iter", "epochs"))
+    embedding_size: PositiveInt | None = Field(
+        default=64, validation_alias=AliasChoices("embedding_size", "n_components")
     )
     alpha_W: float = 0.0
     alpha_H: float | Literal["same"] = "same"
@@ -65,10 +65,11 @@ class NMFScorer(Component[ItemList], Trainable):
     item_components: NPMatrix
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "item_components") and not options.retrain:
-            return
+    def is_trained(self):
+        return hasattr(self, "item_components")
 
+    @override
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         timer = Stopwatch()
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
@@ -81,7 +82,7 @@ class NMFScorer(Component[ItemList], Trainable):
                 r_mat,
                 beta_loss=self.config.beta_loss,
                 max_iter=self.config.max_iter,
-                n_components=self.config.n_components,
+                n_components=self.config.embedding_size,
                 alpha_W=self.config.alpha_W,
                 alpha_H=self.config.alpha_H,
                 l1_ratio=self.config.l1_ratio,
@@ -90,7 +91,7 @@ class NMFScorer(Component[ItemList], Trainable):
             model = MiniBatchNMF(
                 beta_loss=self.config.beta_loss,
                 max_iter=self.config.max_iter,
-                n_components=self.config.n_components,
+                n_components=self.config.embedding_size,
                 alpha_W=self.config.alpha_W,
                 alpha_H=self.config.alpha_H,
                 l1_ratio=self.config.l1_ratio,

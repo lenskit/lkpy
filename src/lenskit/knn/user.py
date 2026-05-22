@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -22,15 +22,15 @@ from scipy.sparse import csr_array
 from typing_extensions import NamedTuple, Optional, override
 
 from lenskit._accel import knn
-from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
+from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
-from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
+__all__ = ["UserKNNConfig", "UserKNNScorer"]
 _log = get_logger(__name__)
 
 
@@ -100,6 +100,10 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     @override
+    def is_trained(self):
+        return hasattr(self, "user_ratings")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
@@ -108,9 +112,6 @@ class UserKNNScorer(Component[ItemList], Trainable):
         Args:
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
-        if hasattr(self, "user_ratings_") and not options.retrain:
-            return
-
         ensure_parallel_init()
         rmat = (
             data.interactions().matrix().scipy(attribute="rating" if self.config.explicit else None)
@@ -255,7 +256,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
 
         index = self.users.number(query.user_id, missing=None)
 
-        if query.user_items is None:
+        if query.query_items is None:
             if index is None:
                 _log.warning("user %s has no ratings and none provided", query.user_id)
                 return None
@@ -268,16 +269,16 @@ class UserKNNScorer(Component[ItemList], Trainable):
             else:
                 umean = 0
             return UserRatings(index, row, umean)
-        elif len(query.user_items) == 0:
+        elif len(query.query_items) == 0:
             return None
         else:
             _log.debug("using provided item history")
             ratings = np.zeros(len(self.items), dtype=np.float32)
-            ui_nos = query.user_items.numbers(missing="negative", vocabulary=self.items)
+            ui_nos = query.query_items.numbers(missing="negative", vocabulary=self.items)
             ui_mask = ui_nos >= 0
 
             if self.config.explicit:
-                urv = query.user_items.field("rating")
+                urv = query.query_items.field("rating")
                 if urv is None:
                     _log.warning("user %s has items but no ratings", query.user_id)
                     return None
@@ -295,6 +296,8 @@ class UserKNNScorer(Component[ItemList], Trainable):
 class UserRatings(NamedTuple):
     """
     Dense user ratings.
+
+    :meta private:
     """
 
     index: int | None

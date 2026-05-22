@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -27,6 +27,26 @@ def test_temporal_split(ml_ds: Dataset):
         ts = il.field("timestamp", format="pandas")
         assert ts is not None
         assert np.all(ts >= point)
+
+
+def test_temporal_split_limit(ml_ds: Dataset):
+    split = split_global_time(ml_ds, "2015-01-01", filter_test_users=True)
+
+    tr_count = split.train.user_stats()
+
+    for k in split.test.keys():
+        (u,) = k
+        assert tr_count.loc[u, "rating_count"] >= 1
+
+
+def test_temporal_split_limit2(ml_ds: Dataset):
+    split = split_global_time(ml_ds, "2015-01-01", filter_test_users=2)
+
+    tr_count = split.train.user_stats()
+
+    for k in split.test.keys():
+        (u,) = k
+        assert tr_count.loc[u, "rating_count"] >= 2
 
 
 def test_temporal_split_fraction(ml_ds: Dataset):

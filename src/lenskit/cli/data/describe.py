@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,10 +12,10 @@ import click
 from rich.console import Console
 from rich.markdown import Markdown
 
+from lenskit.data import Dataset
+from lenskit.data._summary import save_stats
 from lenskit.data.amazon import load_amazon_ratings
-from lenskit.data.dataset import Dataset
 from lenskit.data.movielens import load_movielens
-from lenskit.data.summary import save_stats
 from lenskit.logging import get_logger
 
 _log = get_logger(__name__)

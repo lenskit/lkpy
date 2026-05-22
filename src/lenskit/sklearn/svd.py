@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -13,17 +13,15 @@ This module contains a truncated SVD explicit-feedback scorer built on
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, BaseModel, Field
 from sklearn.decomposition import TruncatedSVD
 from typing_extensions import Literal, override
 
 from lenskit.basic import BiasModel, Damping
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
-from lenskit.data.vocab import Vocabulary
+from lenskit.config.common import EmbeddingSizeMixin
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.logging import Stopwatch, get_logger
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
@@ -31,10 +29,9 @@ from lenskit.training import Trainable, TrainingOptions
 _log = get_logger(__name__)
 
 
-@dataclass
-class BiasedSVDConfig:
+class BiasedSVDConfig(EmbeddingSizeMixin, BaseModel):
     embedding_size: int = Field(
-        default=50, validation_alias=AliasChoices("embedding_size", "features")
+        default=64, validation_alias=AliasChoices("embedding_size", "features")
     )
     """
     The dimension of user and item embeddings (number of latent features to
@@ -63,24 +60,25 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
 
     config: BiasedSVDConfig
 
-    bias_: BiasModel
-    factorization_: TruncatedSVD
-    users_: Vocabulary
-    items_: Vocabulary
-    user_components_: NDArray[np.float64]
+    bias: BiasModel
+    factorization: TruncatedSVD
+    users: Vocabulary
+    items: Vocabulary
+    user_components: NDArray[np.float64]
+
+    @override
+    def is_trained(self):
+        return hasattr(self, "factorization")
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "factorization_") and not options.retrain:
-            return
-
         timer = Stopwatch()
         _log.info("[%s] computing bias", timer)
-        self.bias_ = BiasModel.learn(data, self.config.damping)
+        self.bias = BiasModel.learn(data, self.config.damping)
 
-        g_bias = self.bias_.global_bias
-        u_bias = self.bias_.user_biases
-        i_bias = self.bias_.item_biases
+        g_bias = self.bias.global_bias
+        u_bias = self.bias.user_biases
+        i_bias = self.bias.item_biases
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
         r_mat = data.interaction_matrix(format="scipy", field="rating", layout="coo", legacy=True)
@@ -93,14 +91,14 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
 
         r_mat = r_mat.tocsr()
 
-        self.factorization_ = TruncatedSVD(
+        self.factorization = TruncatedSVD(
             self.config.embedding_size, algorithm=self.config.algorithm, n_iter=self.config.n_iter
         )
-        _log.info("[%s] training SVD (k=%d)", timer, self.factorization_.n_components)  # type: ignore
-        Xt = self.factorization_.fit_transform(r_mat)  # type: ignore
-        self.user_components_ = Xt
-        self.users_ = data.users
-        self.items_ = data.items
+        _log.info("[%s] training SVD (k=%d)", timer, self.factorization.n_components)  # type: ignore
+        Xt = self.factorization.fit_transform(r_mat)  # type: ignore
+        self.user_components = Xt
+        self.users = data.users
+        self.items = data.items
         _log.info("finished model training in %s", timer)
 
     @override
@@ -109,25 +107,25 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
 
         uidx = None
         if query.user_id is not None:
-            uidx = self.users_.number(query.user_id, missing="none")
+            uidx = self.users.number(query.user_id, missing="none")
 
         if uidx is None:
             return ItemList(items, scores=np.nan)
 
         # Get index for user & usable items
-        iidx = items.numbers(vocabulary=self.items_, missing="negative")
+        iidx = items.numbers(vocabulary=self.items, missing="negative")
         good_iidx = iidx[iidx >= 0]
 
         _log.debug("reverse-transforming user %s (idx=%d)", query.user_id, uidx)
-        Xt = self.user_components_[[uidx], :]
-        X = self.factorization_.inverse_transform(Xt)
+        Xt = self.user_components[[uidx], :]
+        X = self.factorization.inverse_transform(Xt)
         # restrict to usable desired items
         Xsel = X[0, good_iidx]
 
         scores = np.full(len(items), np.nan)
         scores[iidx >= 0] = Xsel
 
-        biases, _ub = self.bias_.compute_for_items(items, query.user_id, query.user_items)
+        biases, _ub = self.bias.compute_for_items(items, query.user_id, query.query_items)
         scores += biases
 
         return ItemList(items, scores=scores)

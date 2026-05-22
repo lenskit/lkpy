@@ -1,3 +1,7 @@
+"""
+Top-level package for the LensKit recommender systems toolkit.
+"""
+
 from . import (
     als,
     basic,

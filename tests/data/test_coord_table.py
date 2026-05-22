@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -9,7 +9,7 @@ import pandas as pd
 import pyarrow as pa
 
 from lenskit._accel import data
-from lenskit.data.vocab import Vocabulary
+from lenskit.data import Vocabulary
 
 
 def test_empty():

@@ -1,6 +1,6 @@
 // This file is part of LensKit.
 // Copyright (C) 2018-2023 Boise State University.
-// Copyright (C) 2023-2025 Drexel University.
+// Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
@@ -11,10 +11,7 @@ use arrow::{
     buffer::OffsetBuffer,
 };
 use arrow_schema::{DataType, Field, Fields};
-use pyo3::prelude::*;
-use rayon::iter::plumbing::{Consumer, Folder, Reducer};
-
-use crate::progress::ProgressHandle;
+use rayon::iter::plumbing::{Consumer, Folder, Reducer, UnindexedConsumer};
 
 use super::SparseIndexType;
 
@@ -33,15 +30,11 @@ pub struct ArrowCSRConsumer {
 
 struct CSRState {
     dimension: usize,
-    progress: ProgressHandle,
 }
 
 impl CSRState {
-    fn new(dim: usize, progress: Option<Py<PyAny>>) -> Self {
-        CSRState {
-            dimension: dim,
-            progress: ProgressHandle::new(progress),
-        }
+    fn new(dim: usize) -> Self {
+        CSRState { dimension: dim }
     }
 }
 
@@ -58,12 +51,10 @@ impl ArrowCSRConsumer {
             val_bld: Float32Builder::new(),
         }
     }
-    pub(crate) fn new(dim: usize) -> Self {
-        Self::from_state(CSRState::new(dim, None))
-    }
 
-    pub(crate) fn with_progress(dim: usize, progress: Py<PyAny>) -> Self {
-        Self::from_state(CSRState::new(dim, Some(progress)))
+    #[allow(dead_code)]
+    pub(crate) fn new(dim: usize) -> Self {
+        Self::from_state(CSRState::new(dim))
     }
 }
 
@@ -89,6 +80,16 @@ impl Consumer<CSRItem> for ArrowCSRConsumer {
     }
 }
 
+impl UnindexedConsumer<CSRItem> for ArrowCSRConsumer {
+    fn split_off_left(&self) -> Self {
+        ArrowCSRConsumer::from_state_ref(self.state.clone())
+    }
+
+    fn to_reducer(&self) -> Self::Reducer {
+        ArrowCSRConsumer::from_state_ref(self.state.clone())
+    }
+}
+
 impl Folder<CSRItem> for ArrowCSRConsumer {
     type Result = CSRResult;
 
@@ -99,7 +100,6 @@ impl Folder<CSRItem> for ArrowCSRConsumer {
             self.val_bld.append_value(s);
         }
         self.lengths.push(len);
-        self.state.progress.tick();
         self
     }
 

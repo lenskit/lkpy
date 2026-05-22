@@ -1,17 +1,21 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
+from typing import Literal
+
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 
-from pytest import raises
+from pytest import mark, raises, warns
 
 from lenskit.data import DatasetBuilder
-from lenskit.diagnostics import DataError
+from lenskit.diagnostics import DataError, DataWarning
+from lenskit.testing import ml_test_dir
 
 
 def test_empty_builder():
@@ -58,6 +62,17 @@ def test_add_new_entity_ids():
     assert ds.user_count == 5
     assert np.all(ds.users.ids() == ["a", "b", "x", "y", "z"])
     assert np.all(ds.entities("user").ids() == ["a", "b", "x", "y", "z"])
+
+
+def test_add_invalid_entity_class_name():
+    dsb = DatasetBuilder()
+    with raises(ValueError, match="invalid"):
+        dsb.add_entities("_item", ["a", "b", "c"])
+
+    dsb.add_entities("item", ["a", "b", "c"])
+    ds = dsb.build()
+    assert ds.item_count == 3
+    assert np.all(ds.items.ids() == ["a", "b", "c"])
 
 
 def test_add_duplicate_entities_forbidden():
@@ -132,3 +147,82 @@ def test_add_entities_twice():
     assert ds.item_count == 0
     assert ds.user_count == 8
     assert np.all(ds.users.ids() == ["a", "b", "x", "y", "z", "q", "r", "s"])
+
+
+@mark.parametrize("index", [False, True, "unnamed"])
+def test_add_entities_with_dataframe(index: bool | Literal["unnamed"]):
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
+
+    genres = items["genres"].str.split("|")
+    items["genres"] = genres
+
+    if index:
+        input = items
+        if index == "unnamed":
+            input.index.name = None
+    else:
+        input = items.reset_index()
+
+    if index == "unnamed":
+        with warns(DataWarning):
+            dsb.add_entities("item", input)
+    else:
+        dsb.add_entities("item", input)
+
+    ds = dsb.build()
+    assert ds.item_count == len(items)
+
+    assert ds.entities("item").attribute("title").is_scalar
+    assert ds.entities("item").attribute("genres").is_list
+
+    titles = ds.entities("item").attribute("title").pandas()
+    assert len(titles) == len(items)
+    titles, ot = titles.align(items["title"])
+    assert np.all(titles == ot)
+
+
+def test_add_entities_with_arrow_table():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
+
+    genres = items["genres"].str.split("|")
+    items["genres"] = genres
+    table = pa.Table.from_pandas(items)
+
+    dsb.add_entities("item", table)
+
+    ds = dsb.build()
+    assert ds.item_count == len(items)
+
+    assert ds.entities("item").attribute("title").is_scalar
+    assert ds.entities("item").attribute("genres").is_list
+
+    titles = ds.entities("item").attribute("title").pandas()
+    assert len(titles) == len(items)
+    titles, ot = titles.align(items["title"])
+    assert np.all(titles == ot)
+
+
+def test_add_entities_catch_ids():
+    "test that creating entities with too many IDs is error"
+    dsb = DatasetBuilder()
+
+    df = pd.DataFrame({"item_id": np.arange(10), "user_id": np.arange(10) * 100})
+
+    with raises(DataError):
+        dsb.add_entities("item", df)
+
+
+def test_add_entities_no_id():
+    "test that creating entities with too many IDs is error"
+    dsb = DatasetBuilder()
+
+    df = pd.DataFrame({"item": np.arange(10), "score": np.arange(10) * 100})
+
+    with warns(DataWarning):
+        dsb.add_entities("item", df)

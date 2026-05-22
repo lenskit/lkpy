@@ -1,13 +1,13 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 import numpy as np
 from typing_extensions import override
 
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 
 from ._base import ListMetric, RankingMetricBase
 
@@ -20,8 +20,8 @@ class AveragePrecision(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"AveragePrecision@{self.k}"
+        if self.n is not None:
+            return f"AveragePrecision@{self.n}"
         else:
             return "AveragePrecision"
 

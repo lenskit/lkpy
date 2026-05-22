@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -45,8 +45,13 @@ class NDCG(ListMetric, RankingMetricBase):
         \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
         \\end{align*}
 
+    .. note::
+        Negative gains are clipped to zero before computing NDCG.
+        This keeps the metric bounded between 0 and 1 and prevents cases where
+        negative gains can lead to misleading positive scores due to
+        cancellation effects.
     Args:
-        k:
+        n:
             The maximum recommendation list length to consider (longer lists are
             truncated).
         weight:
@@ -71,13 +76,14 @@ class NDCG(ListMetric, RankingMetricBase):
 
     def __init__(
         self,
-        k: int | None = None,
+        n: int | None = None,
         *,
+        k: int | None = None,
         weight: RankWeight = LogRankWeight(),
         discount: Discount | None = None,
         gain: str | None = None,
     ):
-        super().__init__(k=k)
+        super().__init__(n, k=k)
         self.weight = weight
         self.discount = discount
         if discount is not None:
@@ -86,8 +92,8 @@ class NDCG(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"NDCG@{self.k}"
+        if self.n is not None:
+            return f"NDCG@{self.n}"
         else:
             return "NDCG"
 
@@ -95,24 +101,31 @@ class NDCG(ListMetric, RankingMetricBase):
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
+        if len(test) == 0:
+            return float("nan")
+
         if self.gain:
             realized = _graded_dcg(recs, test, self.gain, self.weight)
 
             gains = test.field(self.gain, "pandas", index="ids")
             if gains is None:
                 raise KeyError(f"test items have no field {self.gain}")
-            if self.k:
-                gains = gains.nlargest(n=self.k)
+            gains = gains.clip(lower=0)
+            if self.n:
+                gains = gains.nlargest(n=self.n)
             else:
                 gains = gains.sort_values(ascending=False)
             iweight = self.weight.weight(np.arange(1, len(gains) + 1))
             ideal = np.dot(gains.values, iweight).item()  # type: ignore
 
+            if ideal == 0:
+                return 0.0
+
         else:
             realized = _binary_dcg(recs, test, self.weight)
             n = len(test)
-            if self.k and self.k < n:
-                n = self.k
+            if self.n and self.n < n:
+                n = self.n
             ideal = fixed_dcg(n, self.weight)
 
         return realized / ideal
@@ -137,7 +150,7 @@ class DCG(ListMetric, RankingMetricBase):
     using the unnormalized version.
 
     Args:
-        k:
+        n:
             The maximum recommendation list length to consider (longer lists are
             truncated).
         discount:
@@ -159,13 +172,14 @@ class DCG(ListMetric, RankingMetricBase):
 
     def __init__(
         self,
-        k: int | None = None,
+        n: int | None = None,
         *,
+        k: int | None = None,
         weight: RankWeight = LogRankWeight(),
         discount: Discount | None = None,
         gain: str | None = None,
     ):
-        super().__init__(k=k)
+        super().__init__(n, k=k)
         self.weight = weight
         self.discount = discount
         if discount is not None:
@@ -174,8 +188,8 @@ class DCG(ListMetric, RankingMetricBase):
 
     @property
     def label(self):
-        if self.k is not None:
-            return f"DCG@{self.k}"
+        if self.n is not None:
+            return f"DCG@{self.n}"
         else:
             return "DCG"
 
@@ -195,6 +209,8 @@ def _graded_dcg(
     gains = test.field(field, "pandas", index="ids")
     if gains is None:
         raise KeyError(f"test items have no field {field}")
+
+    gains = gains.clip(lower=0)
 
     ranks = recs.ranks(format="pandas")
     if ranks is None:

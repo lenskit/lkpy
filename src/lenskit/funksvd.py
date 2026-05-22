@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -18,6 +18,7 @@ from typing_extensions import override
 
 from lenskit._accel import FunkSVDTrainer
 from lenskit.basic import BiasModel, Damping
+from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import NPMatrix
 from lenskit.logging import Stopwatch, get_logger
@@ -30,11 +31,11 @@ _logger = get_logger(__name__)
 INITIAL_VALUE = 0.1
 
 
-class FunkSVDConfig(BaseModel):
+class FunkSVDConfig(EmbeddingSizeMixin, BaseModel):
     "Configuration for :class:`FunkSVDScorer`."
 
     embedding_size: PositiveInt = Field(
-        default=50, validation_alias=AliasChoices("embedding_size", "features")
+        default=64, validation_alias=AliasChoices("embedding_size", "features")
     )
     """
     Number of latent features.
@@ -103,6 +104,10 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
     item_embeddings: NPMatrix
 
     @override
+    def is_trained(self):
+        return hasattr(self, "item_embeddings")
+
+    @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Train a FunkSVD model.
@@ -110,9 +115,6 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         Args:
             ratings: the ratings data frame.
         """
-        if hasattr(self, "item_embeddings") and not options.retrain:
-            return
-
         log = _logger.bind(dataset=data.name)
 
         timer = Stopwatch()
@@ -214,7 +216,7 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
 
         scores = np.full((len(items),), np.nan, dtype=np.float64)
         scores[item_mask] = i_feats @ u_feat
-        biases, _ub = self.bias.compute_for_items(items, user_id, query.user_items)
+        biases, _ub = self.bias.compute_for_items(items, user_id, query.history_items)
         scores += biases
 
         return ItemList(items, scores=scores)

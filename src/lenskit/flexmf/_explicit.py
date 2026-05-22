@@ -1,12 +1,10 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
-
-from dataclasses import dataclass
 
 import torch
 from torch.nn import functional as F
@@ -23,7 +21,6 @@ from ._training import (
 )
 
 
-@dataclass
 class FlexMFExplicitConfig(FlexMFConfigBase):
     """
     Configuration for :class:`FlexMFExplicitScorer`.  This class overrides
@@ -101,6 +98,8 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
             self.data.n_users,
             self.data.n_items,
             self.torch_rng,
+            user_bias=True,
+            item_bias=True,
             sparse=self.config.reg_method != "AdamW",
             init_scale=0.1,
         )

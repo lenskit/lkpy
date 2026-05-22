@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -17,7 +17,7 @@ from hypothesis import given, settings
 
 from lenskit.basic import PopScorer
 from lenskit.basic.topn import TopNRanker
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 
 _log = logging.getLogger(__name__)
 

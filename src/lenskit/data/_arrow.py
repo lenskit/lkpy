@@ -1,0 +1,155 @@
+# This file is part of LensKit.
+# Copyright (C) 2018-2023 Boise State University.
+# Copyright (C) 2023-2026 Drexel University.
+# Licensed under the MIT license, see LICENSE.md for details.
+# SPDX-License-Identifier: MIT
+
+"""
+Arrow utility functions.
+"""
+
+from functools import partial
+from typing import Any
+
+import numpy as np
+import pyarrow as pa
+import pyarrow.compute as pc
+import torch
+from typing_extensions import Callable, Literal, overload
+
+from ._mtarray import MTArray
+
+type Selector[A] = Callable[[MTArray | A | None], A | None]
+
+
+def get_indexer(sel) -> Selector[Any]:
+    """
+    Get a selector that will apply the specified indexer.  This allows
+    one indexer to be applied to multiple arrays.
+    """
+    if np.isscalar(sel):
+        sel = pa.array([sel], pa.int32())  # type: ignore
+        return partial(arrow_take, sel)
+    elif isinstance(sel, slice):
+        return partial(arrow_slice, sel)
+    elif not isinstance(sel, pa.Array):
+        sel = pa.array(sel)
+
+    if pa.types.is_integer(sel.type):
+        return partial(arrow_take, sel)
+    elif pa.types.is_boolean(sel.type):
+        return partial(arrow_filter, sel)
+    else:  # pragma: nocover
+        raise TypeError(f"invalid selector: {sel}")
+
+
+def arrow_to_format(array: pa.Array, format: Literal["arrow", "numpy", "torch"]):
+    """
+    Convert an Arrow array into another format.
+
+    Stability:
+        Internal
+    """
+    match format:
+        case "arrow":
+            return array
+        case "numpy":
+            return array.to_numpy(zero_copy_only=False)
+        case "torch":
+            return torch.as_tensor(array.to_numpy(zero_copy_only=False, writable=True))
+        case _:  # pragma: nocover
+            raise ValueError(f"unknown format {format}")
+
+
+@overload
+def arrow_slice[A](sel: slice, array: MTArray | A) -> A: ...
+@overload
+def arrow_slice[A](sel: slice, array: MTArray | A | None) -> A | None: ...
+def arrow_slice[A](sel: slice, array: MTArray | A | None) -> A | None:
+    """
+    Slice an Arrow array.
+    """
+    if array is None:
+        return None
+    elif isinstance(array, MTArray):
+        array = array.arrow()
+
+    if sel.step and sel.step != 1:
+        raise ValueError("slices with steps unsupported")
+    start = sel.start or 0
+    if start < 0:
+        start = len(array) + start
+    if sel.stop is None:
+        slen = len(array) - start
+    elif sel.stop < 0:
+        slen = len(array) - start + sel.stop
+    else:
+        slen = sel.stop - start
+
+    return array.slice(start, slen)
+
+
+@overload
+def arrow_take[A](sel: pa.Int32Array, array: MTArray | A) -> A: ...
+@overload
+def arrow_take[A](sel: pa.Int32Array, array: MTArray | A | None) -> A | None: ...
+def arrow_take[A](sel: pa.Int32Array, array: MTArray | A | None) -> A | None:
+    """
+    Select from an Arrow array by integer indices.
+    """
+
+    if array is None:
+        return None
+    elif isinstance(array, MTArray):
+        array = array.arrow()
+
+    return array.take(sel)
+
+
+@overload
+def arrow_filter[A](sel: pa.BooleanArray, array: MTArray | A) -> A: ...
+@overload
+def arrow_filter[A](sel: pa.BooleanArray, array: MTArray | A | None) -> A | None: ...
+def arrow_filter[A](sel: pa.BooleanArray, array: MTArray | A | None) -> A | None:
+    """
+    Select from an Arrow array by integer indices.
+    """
+
+    if array is None:
+        return None
+    elif isinstance(array, MTArray):
+        array = array.arrow()
+
+    return array.filter(sel)
+
+
+def arrow_type(dtype: np.dtype) -> pa.DataType:
+    """
+    Resolve a NumPy data type to an Arrow data type, assuming objects store
+    strings.
+    """
+    if dtype == np.object_:
+        return pa.utf8()
+    else:
+        return pa.from_numpy_dtype(dtype)
+
+
+def explode_column(tbl: pa.Table, column: str, *, out_col: str | None = None) -> pa.Table:
+    """
+    “Explode” a list column to yield one row per list element.
+    """
+    col = tbl.column(column)
+    if not (
+        pa.types.is_list(col.type)
+        or pa.types.is_list_view(col.type)
+        or pa.types.is_large_list(col.type)
+        or pa.types.is_large_list_view(col.type)
+    ):
+        raise TypeError(f"column type {col.type} is not a list type")
+
+    paired = tbl.drop_columns(column)
+    indices = pc.list_parent_indices(col)
+    exp_tbl = paired.take(indices)
+    exp_col = pc.list_flatten(col)
+    assert len(exp_tbl) == len(exp_col)
+    return exp_tbl.append_column(out_col or column, exp_col)

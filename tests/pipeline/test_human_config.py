@@ -1,18 +1,24 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 from pathlib import Path
 
+from pytest import raises
+
 from lenskit.als import BiasedMFScorer, ImplicitMFScorer
 from lenskit.basic import BiasScorer, FallbackScorer, TopNRanker
+from lenskit.basic.candidates import TrainingItemsCandidateSelector
 from lenskit.config import load_config_data
+from lenskit.diagnostics import PipelineError
+from lenskit.knn.slim import SLIMScorer
 from lenskit.pipeline import Pipeline, PipelineConfig
 from lenskit.pipeline.nodes import ComponentInstanceNode
 
 config_dir = Path("pipelines")
+test_dir = Path(__file__).parent
 
 
 def test_load_config():
@@ -99,3 +105,19 @@ def test_apply_config():
     assert isinstance(node, ComponentInstanceNode)
     assert isinstance(node.component, TopNRanker)
     assert node.component.config.n == 100
+
+
+def test_configure_bad_scorer():
+    with raises(PipelineError, match="component “missing”"):
+        Pipeline.from_config(
+            {"options": {"base": "std:topn"}, "components": {"missing": {"config": {"wombat": 42}}}}
+        )
+
+
+def test_load_override():
+    pipe = Pipeline.load_config(test_dir / "candidate-override.json")
+    assert isinstance(pipe.component("scorer"), SLIMScorer)
+
+    cs = pipe.component("candidate-selector")
+    assert isinstance(cs, TrainingItemsCandidateSelector)
+    assert cs.config.exclude is None

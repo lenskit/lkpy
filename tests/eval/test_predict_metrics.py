@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -122,7 +122,9 @@ def test_batch_rmse(ml_100k):
 
     # we should have all users
     assert len(umdf) == len(split.test)
-    missing = set(umdf.index.tolist()) - set(split.test.keys())
+
+    # we should only have users who are in the test data
+    missing = set(umdf.index.tolist()) - set(k.user_id for k in split.test.keys())
     assert len(missing) == 0
 
     # we should not have any missing values
@@ -141,5 +143,5 @@ def test_batch_rmse(ml_100k):
     assert mdf.loc["MAE", "mean"] == approx(0.76, abs=0.05)
 
     # we should have global metrics
-    assert gs["RMSE"] == approx(0.93, abs=0.05)
-    assert gs["MAE"] == approx(0.76, abs=0.05)
+    assert gs["RMSE.global"] == approx(0.93, abs=0.05)
+    assert gs["MAE.global"] == approx(0.76, abs=0.05)

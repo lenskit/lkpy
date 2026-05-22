@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -61,11 +61,10 @@ def check_name(name: str) -> None:
 
 class AllowableTroolean(Enum):
     """
-    Three-way enumeration for storing both whether a feature is allowed and is
-    used.  For convenience, in serialized data or configuration files these
-    values may be specified either as strings or as booleans, in which case
-    ``False`` is :attr:`FORBIDDEN` and ``True`` is :attr:`ALLOWED`.  They are
-    always serialized as strings.
+    Stores both whether a feature is allowed and is used in the case of having repeats.
+    For convenience, in serialized data or configuration files these values may be specified
+    either as strings or as booleans, in which case ``False`` is :attr:`FORBIDDEN` and
+    ``True`` is :attr:`ALLOWED`. They are always serialized as strings.
     """
 
     FORBIDDEN = "forbidden"
@@ -104,7 +103,7 @@ class AllowableTroolean(Enum):
 
     @model_validator(mode="before")
     @classmethod
-    def _validate_troolean(cls, value: Any):
+    def _validate_policy(cls, value: Any):
         if value is True:
             return AllowableTroolean.ALLOWED
         elif value is False:
@@ -114,6 +113,10 @@ class AllowableTroolean(Enum):
 
 
 class AttrLayout(Enum):
+    """
+    Possible layouts for entity attributes.
+    """
+
     SCALAR = "scalar"
     """
     Scalar (non-list, non-vector) attribute value.

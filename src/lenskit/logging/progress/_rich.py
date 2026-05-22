@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -83,8 +83,10 @@ class RichProgress(Progress):
 
         fields = {}
         if update.fields:
-            cls._field_format = _make_format({n: f.format for (n, f) in update.fields.items()})
-            fields = {n: f.value for (n, f) in update.fields.items()}
+            cls._field_format = _make_format(
+                {n: f.format for (n, f) in update.fields.items() if f.value is not None}
+            )
+            fields = {n: f.value for (n, f) in update.fields.items() if f.value is not None}
         else:
             cls._field_format = ""
 

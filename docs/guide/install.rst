@@ -8,6 +8,15 @@ We distribute LensKit through both PyPI and Conda (in the ``conda-forge`` channe
 Once you have installed LensKit, see `Getting Started`_.
 
 .. _`Getting Started`: GettingStarted.html
+.. _SPEC0: https://scientific-python.org/specs/spec-0000/
+
+.. tip:: Python Version
+
+    LensKit follows SPEC0_ for its supported Python versions (see
+    :ref:`dep-policy` for details). However, for best results, we recommend
+    Python 3.14 with free-threading *enabled* (`uv venv -p 3.14t`), unless
+    you need to use Ray.
+
 
 Pip and uv
 ----------

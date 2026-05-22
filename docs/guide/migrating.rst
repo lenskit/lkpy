@@ -64,6 +64,11 @@ fall into the following categories:
   also directly supports “global” metrics that are computed over an entire run
   instead of one list at a time.
 
+  .. versionchanged:: 2026.1
+
+    ``RunAnalysis`` has been superseded by
+    :class:`~lenskit.metrics.MeasurementCollector`.
+
 .. important::
 
     The default options of some metrics, particularly

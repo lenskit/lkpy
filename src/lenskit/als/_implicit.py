@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -130,6 +130,12 @@ class ImplicitMFScorer(ALSBase):
 
 class ImplicitMFTrainer(ALSTrainerBase[ImplicitMFScorer, ImplicitMFConfig]):
     @override
+    def train_epoch(self):
+        res = super().train_epoch()
+        self._save_user_otor()
+        return res
+
+    @override
     def prepare_matrix(self, data: Dataset) -> coo_array:
         ints = data.interactions().matrix()
         if self.config.use_ratings:
@@ -154,10 +160,13 @@ class ImplicitMFTrainer(ALSTrainerBase[ImplicitMFScorer, ImplicitMFConfig]):
 
     @override
     def finalize(self):
+        self._save_user_otor()
+        super().finalize()
+
+    def _save_user_otor(self):
         # compute OtOr and save it on the model
         reg = self.config.user_reg
         self.scorer._OtOr = _implicit_otor(self.scorer.item_embeddings, reg)
-        super().finalize()
 
 
 def _implicit_otor(other: NPMatrix, reg: float) -> NPMatrix:

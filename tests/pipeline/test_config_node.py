@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -18,7 +18,7 @@ def test_untyped_input():
 
 
 def test_input_with_type():
-    node = InputNode("scroll", types={str})
+    node = InputNode("scroll", type=str)
 
     cfg = PipelineInput.from_node(node)
     print(cfg)
@@ -27,7 +27,7 @@ def test_input_with_type():
 
 
 def test_input_with_none():
-    node = InputNode("scroll", types={str, type(None)})
+    node = InputNode("scroll", type=str | None)
 
     cfg = PipelineInput.from_node(node)
     print(cfg)
@@ -36,7 +36,7 @@ def test_input_with_none():
 
 
 def test_input_with_generic():
-    node = InputNode("scroll", types={list[str]})
+    node = InputNode("scroll", type=list[str])
 
     cfg = PipelineInput.from_node(node)
     print(cfg)

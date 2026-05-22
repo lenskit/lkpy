@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -14,24 +14,25 @@ from collections.abc import Callable
 
 from typing_extensions import (
     Any,
-    Generic,
     NamedTuple,
     Protocol,
-    TypeAlias,
     TypedDict,
-    TypeVar,
 )
 
-from ..components import Component, PipelineFunction
+from ..components import Component, ComponentInput, PipelineFunction
 from ..nodes import ComponentInstanceNode
-from ..types import TypeExpr
 
-ComponentObject: TypeAlias = Component | PipelineFunction
+type GenericHook = Callable[..., Any]
+"""
+Generic callable type for arbitrary hook functions.
+"""
+type ComponentObject = Component[Any] | PipelineFunction
+"""
+General type for instantiated component objects that may be passed to hooks.
+"""
 
-Hook = TypeVar("Hook", bound=Callable[..., Any], covariant=True)
 
-
-class HookEntry(NamedTuple, Generic[Hook]):
+class HookEntry[Hook: GenericHook](NamedTuple):
     """
     An entry in a pipeline hook list.
     """
@@ -48,13 +49,15 @@ class ComponentInputHook(Protocol):
     at the appropriate stage of the input.
 
     Component input hooks are installed under the name ``component-input``.
+
+    Stability:
+        Experimental
     """
 
     def __call__(
         self,
         node: ComponentInstanceNode[Any],
-        input_name: str,
-        input_type: TypeExpr | None,
+        input: ComponentInput,
         value: object,
         **context: Any,
     ) -> Any:
@@ -64,11 +67,8 @@ class ComponentInputHook(Protocol):
         Args:
             node:
                 The component node being invoked.
-            input_name:
-                The name of the component's input that will receive the data.
-            input_type:
-                The type of data the component expects for this input, if one
-                was specified in the component definition.
+            input:
+                The component input that will receive the data.
             value:
                 The data value to be supplied.  This is declared
                 :class:`object`, because its type is not known or guaranteed in

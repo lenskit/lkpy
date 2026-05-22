@@ -18,7 +18,7 @@ scorers, but using a model optimized with a rank-based loss function.
 Baseline Scorers
 ~~~~~~~~~~~~~~~~
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
     lenskit.basic.BiasScorer
@@ -27,13 +27,17 @@ Baseline Scorers
 Classical Collaborative Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
     lenskit.knn.ItemKNNScorer
     lenskit.knn.UserKNNScorer
+    lenskit.knn.SLIMScorer
+    lenskit.knn.EASEScorer
     lenskit.als.BiasedMFScorer
     lenskit.als.ImplicitMFScorer
+    lenskit.flexmf.FlexMFExplicitScorer
+    lenskit.flexmf.FlexMFImplicitScorer
     lenskit.sklearn.svd.BiasedSVDScorer
     lenskit.funksvd.FunkSVDScorer
     lenskit.hpf.HPFScorer
@@ -43,9 +47,9 @@ Utility Scorers
 ~~~~~~~~~~~~~~~
 
 These scorers are used to compose more sophisticated pipelines, usually
-involving multiple pipelines.
+involving multiple scorers.
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
     lenskit.basic.FallbackScorer

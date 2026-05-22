@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -10,14 +10,15 @@ from typing import Generator, NamedTuple
 import numpy as np
 import pandas as pd
 
-from pytest import approx, fixture, mark, warns
+from pytest import approx, fixture, mark, raises, skip, warns
 
 from lenskit.basic import BiasScorer, PopScorer
 from lenskit.batch import BatchPipelineRunner, predict, recommend, score
 from lenskit.data import Dataset, ItemList, UserIDKey, from_interactions_df
-from lenskit.data.adapt import normalize_interactions_df
+from lenskit.data._adapt import normalize_interactions_df
 from lenskit.diagnostics import DataWarning
 from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
+from lenskit.parallel.ray import ray_available
 from lenskit.pipeline import Pipeline, topn_pipeline
 from lenskit.splitting import SampleN, TTSplit, sample_users
 from lenskit.testing import ml_100k, ml_ds, ml_ratings  # noqa: F401
@@ -51,7 +52,7 @@ def ml_split(ml_100k: pd.DataFrame) -> Generator[TTSplit, None, None]:
 
 
 def test_predict_single(mlb: MLB):
-    res = predict(mlb.pipeline, {1: ItemList([31])}, n_jobs=1)
+    res = predict(mlb.pipeline, [{"user_id": 1, "items": ItemList([31])}])
 
     assert len(res) == 1
     uid, result = next(iter(res))
@@ -66,7 +67,7 @@ def test_predict_single(mlb: MLB):
 
 
 def test_score_single(mlb: MLB):
-    res = score(mlb.pipeline, {1: ItemList([31])}, n_jobs=1)
+    res = score(mlb.pipeline, [{"user_id": 1, "items": ItemList([31])}])
 
     assert len(res) == 1
     uid, result = next(iter(res))
@@ -83,7 +84,7 @@ def test_score_single(mlb: MLB):
 def test_recommend_user(mlb: MLB):
     user = 5
 
-    results = recommend(mlb.pipeline, [user], n=10, n_jobs=1)
+    results = recommend(mlb.pipeline, [user], n=10)
 
     assert len(results) == 1
 
@@ -111,7 +112,7 @@ def test_bias_batch(ml_split: TTSplit, ncpus: int | None):
     runner.recommend()
     runner.predict()
 
-    results = runner.run(pipeline, ml_split.test)
+    results = runner.run(pipeline, ml_split.test_requests)
 
     preds = results.output("predictions")
 
@@ -134,17 +135,25 @@ def test_bias_batch(ml_split: TTSplit, ncpus: int | None):
     assert ras.loc["NDCG", "mean"] > 0
 
 
-@mark.parametrize("ncpus", [None, 1, 2])
+@mark.parametrize("ncpus", [None, 1, 2, "ray"])
 @mark.eval
 def test_pop_batch_recommend(ml_split: TTSplit, ncpus: int | None):
+    if ncpus == "ray":
+        if not ray_available():
+            skip("ray is not available")
+        ncpus = None
+        use_ray = True
+    else:
+        use_ray = False
+
     algo = PopScorer()
     pipeline = topn_pipeline(algo, n=20)
     pipeline.train(ml_split.train)
 
-    runner = BatchPipelineRunner(n_jobs=ncpus)
+    runner = BatchPipelineRunner(n_jobs=ncpus, use_ray=use_ray)
     runner.recommend()
 
-    results = runner.run(pipeline, ml_split.test)
+    results = runner.run(pipeline, ml_split.test_requests)
 
     recs = results.output("recommendations")
     ra = RunAnalysis()
@@ -167,16 +176,5 @@ def test_bias_df(ml_split: TTSplit):
     runner = BatchPipelineRunner()
     runner.recommend()
 
-    with warns(DataWarning):
-        results = runner.run(pipeline, ml_split.test.to_df())
-
-    recs = results.output("recommendations")
-    ra = RunAnalysis()
-    ra.add_metric(NDCG())
-    ra.add_metric(RBP())
-    rec_acc = ra.measure(recs, ml_split.test)
-    ras = rec_acc.list_summary()
-    print(ras)
-
-    assert ras.loc["RBP", "mean"] > 0
-    assert ras.loc["NDCG", "mean"] > 0
+    with raises(TypeError):
+        _results = runner.run(pipeline, ml_split.test.to_df())

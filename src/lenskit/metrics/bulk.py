@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -8,69 +8,29 @@ from __future__ import annotations
 
 import logging
 import warnings
-from dataclasses import dataclass
-from typing import Callable, TypeVar
+from typing import TypeVar
 
-import numpy as np
 import pandas as pd
 
-from lenskit.data import ItemList, ItemListCollection
+from lenskit.data import ItemListCollection
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import item_progress
+from lenskit.metrics import MeasurementCollector
 
-from ._base import DecomposedMetric, GlobalMetric, ListMetric, Metric, MetricFunction
+from ._base import Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
 K1 = TypeVar("K1", bound=tuple)
 K2 = TypeVar("K2", bound=tuple)
 
 
-@dataclass(frozen=True)
-class MetricWrapper:
-    """
-    Internal class for storing metrics.
-
-    Stability:
-        Internal
-    """
-
-    metric: Metric | MetricFunction
-    label: str
-    default: float | None = None
-
-    @property
-    def is_listwise(self) -> bool:
-        "Check if this metric is listwise."
-        return isinstance(self.metric, (ListMetric, Callable))
-
-    @property
-    def is_global(self) -> bool:
-        "Check if this metric is global."
-        return isinstance(self.metric, GlobalMetric)
-
-    @property
-    def is_decomposed(self) -> bool:
-        "Check if this metric is decomposed."
-        return isinstance(self.metric, DecomposedMetric)
-
-    def measure_list(self, list: ItemList, test: ItemList) -> float:
-        if isinstance(self.metric, ListMetric):
-            return self.metric.measure_list(list, test)
-        elif isinstance(self.metric, Callable):
-            return self.metric(list, test)
-        else:
-            raise TypeError(f"metric {self.metric} does not support list measurement")
-
-    def measure_run(self, run: ItemListCollection, test: ItemListCollection) -> float:
-        if isinstance(self.metric, GlobalMetric):
-            return self.metric.measure_run(run, test)
-        else:
-            raise TypeError(f"metric {self.metric} does not support global measurement")
-
-
 class RunAnalysisResult:
     """
     Results of a bulk metric computation.
+
+    .. deprecated:: 2026.1
+
+        This class is deprecated in favor of directly using
+        :class:`~lenskit.metrics.MeasurementCollector`.
 
     Stability:
         Caller
@@ -96,7 +56,7 @@ class RunAnalysisResult:
     def list_metrics(self, fill_missing=True) -> pd.DataFrame:
         """
         Get the per-list scores of the results.  This is a data frame with one
-        row per list (with the list key on the inded), and one metric per
+        row per list (with the list key on the index), and one metric per
         column.
 
         Args:
@@ -106,11 +66,13 @@ class RunAnalysisResult:
                 want to do analyses that need to treat missing values
                 differently.
         """
-        return self._list_metrics.fillna(self._defaults)
+        if fill_missing:
+            return self._list_metrics.fillna(self._defaults)
+        return self._list_metrics
 
     def list_summary(self, *keys: str) -> pd.DataFrame:
         """
-        Sumamry statistics for the per-list metrics.  Each metric is on its own
+        Summary statistics for the per-list metrics.  Each metric is on its own
         row, with columns reporting the following:
 
         ``mean``:
@@ -153,37 +115,22 @@ class RunAnalysisResult:
         self._global_metrics = pd.concat([self._global_metrics, other._global_metrics])
 
 
-def _wrap_metric(
-    m: Metric | MetricFunction | type[Metric],
-    label: str | None = None,
-    default: float | None = None,
-) -> MetricWrapper:
-    if isinstance(m, type):
-        m = m()
-
-    if label is None:
-        if isinstance(m, Metric):
-            wl = m.label
-        else:
-            wl = m.__name__  # type: ignore
-    else:
-        wl = label
-
-    if default is None:
-        if isinstance(m, ListMetric):
-            default = m.default
-        else:
-            default = 0.0
-
-        if default is not None and not isinstance(default, (float, int, np.floating, np.integer)):
-            raise TypeError(f"metric {m} has unsupported default {default}")
-
-    return MetricWrapper(m, wl, default)  # type: ignore
-
-
 class RunAnalysis:
     """
     Compute metrics over a collection of item lists composing a run.
+
+    This class now uses :class:`MetricAccumulator` internally to separate
+    accumulation from looping, while maintaining the same external interface.
+
+    .. versionchanged:: 2026.1
+
+        Global metric outputs from this class have changed column names in some
+        cases, to simplify logic.
+
+    .. deprecated:: 2026.1
+
+        This class is deprecated in favor of directly using
+        :class:`~lenskit.metrics.MeasurementCollector`.
 
     Args:
         metrics:
@@ -194,11 +141,20 @@ class RunAnalysis:
         Caller
     """
 
-    metrics: list[MetricWrapper]
-    "The list of metrics to compute."
+    collector: MeasurementCollector
+    """
+    The measurement collector for this analysis.
+    """
+    _defaults: dict[str, float]
 
     def __init__(self, *metrics: Metric):
-        self.metrics = [_wrap_metric(m) for m in metrics]
+        warnings.warn(
+            "RunAnalysis is deprectated, use MeasurementCollector instead", DeprecationWarning
+        )
+        self.collector = MeasurementCollector()
+        self._defaults = {}
+        for metric in metrics:
+            self.collector.add_metric(metric)
 
     def add_metric(
         self,
@@ -218,9 +174,11 @@ class RunAnalysis:
             default:
                 The default value to use in aggregates when a user does not have
                 recommendations. If unset, obtains from the metric's ``default``
-                attribute (if specified), or 0.0.
+                attribute (if specified).
         """
-        self.metrics.append(_wrap_metric(metric, label, default))
+        self.collector.add_metric(metric, label)
+        if default is not None:
+            self._defaults[self.collector._metrics[-1].label] = default
 
     def compute(
         self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
@@ -239,67 +197,14 @@ class RunAnalysis:
         """
         Measure a set of outputs against a set of test data.
         """
-        self._validate_setup()
-        index = pd.MultiIndex.from_tuples(outputs.keys())
-        index.names = list(outputs.key_fields)
 
-        lms = [m for m in self.metrics if m.is_listwise or m.is_decomposed]
-        gms = [m for m in self.metrics if m.is_global]
-        list_results = pd.DataFrame({m.label: np.nan for m in lms}, index=index)
-        list_intermediates = {m.label: [] for m in self.metrics if m.is_decomposed}
+        copy = self.collector.empty_copy()
+        copy._validate_setup()
 
-        n = len(outputs)
-        _log.debug("computing %d listwise metrics for %d output lists", len(lms), n)
-        no_test_count = 0
-        with item_progress("Measuring", n) as pb:
-            for i, (key, out) in enumerate(outputs):
-                list_test = test.lookup_projected(key)
-                if out is None:
-                    pass
-                elif list_test is None:
-                    no_test_count += 1
-                else:
-                    l_row: list[float | None] = []
-                    for m in lms:
-                        mv = None
-                        if m.is_decomposed:
-                            assert isinstance(m.metric, DecomposedMetric)
-                            val = m.metric.compute_list_data(out, list_test)
-                            list_intermediates[m.label].append(val)
-                            mv = m.metric.extract_list_metric(val)
-                        if mv is None and m.is_listwise:
-                            mv = m.measure_list(out, list_test)
-                        l_row.append(mv)
-                    list_results.iloc[i] = l_row  # type: ignore
-                pb.update()
+        copy.add_collection_measurements(outputs, test)
 
-        if no_test_count:
-            _log.warning("could not find test data for %d lists", no_test_count)
-
-        _log.debug("computing %d global metrics for %d output lists", len(gms), n)
-        global_results = pd.Series(
-            {
-                m.label: (
-                    m.metric.global_aggregate(list_intermediates[m.label])
-                    if m.is_decomposed
-                    else m.measure_run(outputs, test)
-                )
-                for m in self.metrics
-                if m.is_global or m.is_decomposed
-            },
-            dtype=np.float64,
+        res = RunAnalysisResult(
+            copy.list_metrics(), pd.Series(copy.summary_metrics()), self._defaults
         )
 
-        return RunAnalysisResult(
-            list_results,
-            global_results,
-            {m.label: m.default for m in self.metrics if m.default is not None},
-        )
-
-    def _validate_setup(self):
-        seen = set()
-        for m in self.metrics:
-            lbl = m.label
-            if lbl in seen:
-                raise RuntimeError(f"duplicate metric: {lbl}")
-            seen.add(lbl)
+        return res

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -10,10 +10,18 @@ from os import fspath
 from pathlib import Path
 
 from packaging.version import Version
+from sphinx.application import Sphinx
+from sphinx.util.logging import getLogger
 
-from lenskit._version import lenskit_version
+CONF_DIR = Path(__file__).parent
+SRC_DIR = CONF_DIR.parent / "src"
 
-sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
+sys.path.append(fspath((Path(__file__).parent / "_ext").resolve()))
+sys.path.insert(0, fspath(SRC_DIR.resolve()))
+
+from lenskit._version import lenskit_version  # noqa: PLC2701, E402
+
+_log = getLogger("sphinx.lenskit")
 
 project = "LensKit"
 copyright = "2018–2025 Drexel University, Boise State University, and collaborators"
@@ -33,12 +41,14 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.extlinks",
     "sphinx.ext.todo",
+    "sphinx.ext.graphviz",
     "sphinx_togglebutton",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.mermaid",
     "sphinx_copybutton",
     "sphinx_new_tab_link",
+    "autoapi.extension",
     "lk_stability",
 ]
 
@@ -58,18 +68,19 @@ pygments_style = "sphinx"
 highlight_language = "python3"
 
 html_theme = "pydata_sphinx_theme"
-html_logo = "LKLogo2.png"
+html_logo = "lenskit-wordmark.png"
+html_favicon = "lenskit-icon.png"
 if _parsed_ver.is_devrelease:
-    html_baseurl = "https://lkpy.lenskit.org/latest/"
+    html_baseurl = "https://lenskit.org/latest/"
 else:
-    html_baseurl = "https://lkpy.lenskit.org/stable/"
+    html_baseurl = "https://lenskit.org/stable/"
 html_css_files = [
     "css/custom.css",
 ]
 
 html_theme_options = {
     "switcher": {
-        "json_url": "https://lkpy.lenskit.org/versions.json",
+        "json_url": "https://lenskit.org/versions.json",
         "version_match": "2024.0dev",
     },
     "show_version_warning_banner": True,
@@ -96,10 +107,11 @@ html_theme_options = {
     "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
     "footer_start": ["copyright", "version", "disclaimer", "counter"],
     "footer_end": [],
+    "show_toc_level": 2,
     # "github_user": "lenskit",
     # 'github_repo': 'lkpy',
     # 'travis_button': False,
-    # 'canonical_url': 'https://lkpy.lenskit.org/',
+    # 'canonical_url': 'https://lenskit.org/',
     # 'font_family': 'Charter, serif'
     # 'font_family': '"Source Sans Pro", "Georgia Pro", Georgia, serif',
     # 'font_size': '15px',
@@ -121,9 +133,27 @@ autodoc_type_aliases = {
     "RNGInput": "lenskit.random.RNGInput",
     "IDSequence": "lenskit.data.types.IDSequence",
 }
-# autosummary_generate_overwrite = False
-autosummary_imported_members = False
-autosummary_ignore_module_all = True
+
+# autoapisummary_generate_overwrite = False
+autoapisummary_generate = False
+autoapisummary_imported_members = False
+autoapisummary_ignore_module_all = True
+
+autoapi_own_page_level = "class"
+autoapi_file_patterns = ["*.pyi", "*.py"]
+autoapi_dirs = ["../src/lenskit"]
+autoapi_root = "api"
+autoapi_template_dir = "_templates"
+autoapi_options = [
+    "members",
+    "show-inheritance",
+    "special-members",
+    "show-module-summary",
+    "imported-members",
+    "undoc-members",
+]
+autoapi_add_toctree_entry = False
+autoapi_keep_files = True
 
 # customize doc parsing
 napoleon_custom_sections = [("Stability", "returns_style")]
@@ -140,10 +170,11 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
     "structlog": ("https://www.structlog.org/en/stable/", None),
-    "torch": ("https://pytorch.org/docs/stable/", None),
+    "torch": ("https://docs.pytorch.org/docs/stable/", None),
     "implicit": ("https://benfred.github.io/implicit/", None),
     "pydantic": ("https://docs.pydantic.dev/latest/", None),
     "ray": ("https://docs.ray.io/en/latest/", None),
+    "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest/", None),
 }
 
 bibtex_bibfiles = ["lenskit.bib"]
@@ -153,6 +184,7 @@ doctest_default_flags = (
     doctest.ELLIPSIS | doctest.IGNORE_EXCEPTION_DETAIL | doctest.NORMALIZE_WHITESPACE
 )
 
+graphviz_output_format = "svg"
 mermaid_d3_zoom = True
 
 # -- external links
@@ -163,4 +195,21 @@ extlinks = {
     "user": ("https://github.com/%s", "@%s"),
 }
 
-bibtex_bibfiles = ["lenskit.bib"]
+
+def skip_alias_imports(app, what, name, obj, skip, options):
+    _log.verbose("inspecting doc member: %s %s", what, name)
+
+    if name in ("lenskit.__main__", "lenskit.cli"):
+        return True
+
+    if obj.imported:
+        path = obj.obj.get("original_path")
+        if "._" not in path:
+            return True
+
+    return skip
+
+
+def setup(app: Sphinx):
+    app.connect("autoapi-skip-member", skip_alias_imports)
+    pass

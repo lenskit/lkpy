@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,8 +12,7 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from pytest import mark
 
-from lenskit.pipeline import Component, PipelineBuilder
-from lenskit.pipeline.cache import PipelineCache
+from lenskit.pipeline import Component, PipelineBuilder, PipelineCache
 from lenskit.pipeline.nodes import ComponentInstanceNode
 
 

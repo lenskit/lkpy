@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -31,21 +31,27 @@ class TestBiasedSVD(BasicComponentTests, ScorerTests):
     config = svd.BiasedSVDConfig(embedding_size=25, damping=10)
     expected_rmse = (0.915, 0.925)
 
+    def verify_models_equivalent(self, orig, copy):
+        assert copy.bias.global_bias == orig.bias.global_bias
+        assert np.all(copy.bias.user_biases == orig.bias.user_biases)
+        assert np.all(copy.bias.item_biases == orig.bias.item_biases)
+        assert np.all(copy.user_components == orig.user_components)
+
 
 def test_svd_basic_build():
     algo = svd.BiasedSVDScorer(features=2)
     algo.train(simple_ds)
 
-    assert algo.user_components_.shape == (3, 2)
+    assert algo.user_components.shape == (3, 2)
 
 
 def test_svd_predict_basic():
     _log.info("SVD input data:\n%s", simple_df)
     algo = svd.BiasedSVDScorer(features=2, damping=0)
     algo.train(simple_ds)
-    _log.info("user means:\n%s", str(algo.bias_.user_biases))
-    _log.info("item means:\n%s", str(algo.bias_.item_biases))
-    _log.info("user matrix:\n%s", str(algo.user_components_))
+    _log.info("user means:\n%s", str(algo.bias.user_biases))
+    _log.info("item means:\n%s", str(algo.bias.item_biases))
+    _log.info("user matrix:\n%s", str(algo.user_components))
 
     preds = algo(10, ItemList([3]))
     assert len(preds) == 1
@@ -78,18 +84,3 @@ def test_svd_predict_bad_user():
     assert preds is not None
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
-
-
-@mark.slow
-def test_svd_save_load(ml_ds: Dataset):
-    original = svd.BiasedSVDScorer(features=20)
-    original.train(ml_ds)
-
-    mod = pickle.dumps(original)
-    _log.info("serialized to %d bytes", len(mod))
-    algo = pickle.loads(mod)
-
-    assert algo.bias_.global_bias == original.bias_.global_bias
-    assert np.all(algo.bias_.user_biases == original.bias_.user_biases)
-    assert np.all(algo.bias_.item_biases == original.bias_.item_biases)
-    assert np.all(algo.user_components_ == original.user_components_)

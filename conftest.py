@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -8,18 +8,21 @@ import logging
 import os
 import warnings
 
+import numpy as np
 import structlog
 import torch
 from numpy.random import Generator, default_rng
 
 from hypothesis import settings
-from pytest import fixture, skip
+from pytest import fixture, register_assert_rewrite, skip
 
 from lenskit.parallel import ensure_parallel_init
 from lenskit.random import init_global_rng
 
+register_assert_rewrite("lenskit.testing")
+
 # bring common fixtures into scope
-from lenskit.testing import ml_100k, ml_ds, ml_ds_unchecked, ml_ratings  # noqa: F401
+from lenskit.testing import ml_100k, ml_ds, ml_ds_unchecked, ml_ratings  # noqa: E402, F401
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
@@ -40,6 +43,14 @@ structlog.configure(
     logger_factory=structlog.stdlib.LoggerFactory(),
     cache_logger_on_first_use=True,
 )
+os.environ["LK_SKIP_LOG_SETUP"] = "1"
+
+
+@fixture
+def fresh_rng() -> Generator:
+    "Fixture to provide a fresh (non-fixed) RNG for tests that need it."
+    seed = np.random.SeedSequence()
+    return np.random.default_rng(seed)
 
 
 @fixture

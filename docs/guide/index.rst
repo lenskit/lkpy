@@ -31,12 +31,12 @@ guide to how to use LensKit for research, education, and other purposes.
     data/datasets
 
 .. toctree::
-    :caption: Components
+    :caption: Components and Models
     :maxdepth: 1
 
     conventions
-    flexmf
     scorers
+    flexmf
     rankers
     other-components
     implementing
@@ -48,12 +48,14 @@ guide to how to use LensKit for research, education, and other purposes.
     splitting
     batch
     evaluation/index
+    evaluation/collection
     documenting
 
 .. toctree::
-    :caption: Support Code
+    :caption: Utilities and Diagnostics
     :maxdepth: 1
 
     logging
+    diagnostics/index
     parallelism
     ../cli/index

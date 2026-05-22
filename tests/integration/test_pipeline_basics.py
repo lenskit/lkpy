@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -16,7 +16,7 @@ from lenskit import batch, recommend
 from lenskit.als import ImplicitMFScorer
 from lenskit.basic import (
     RandomSelector,
-    UnratedTrainingItemsCandidateSelector,
+    TrainingItemsCandidateSelector,
     UserTrainingHistoryLookup,
 )
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
@@ -29,7 +29,7 @@ def random_pipe(ml_ds: Dataset):
     query = pb.create_input("query", QueryInput)
     history = pb.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
     candidates = pb.add_component(
-        "candidate-selector", UnratedTrainingItemsCandidateSelector, query=history
+        "candidate-selector", TrainingItemsCandidateSelector, query=history
     )
     pb.add_component("recommender", RandomSelector, {"n": 100}, items=candidates)
 
@@ -48,7 +48,7 @@ def test_history_correct(rng: np.random.Generator, ml_ds: Dataset, random_pipe: 
         query = random_pipe.run("history-lookup", query=uid)
         assert isinstance(query, RecQuery)
         assert query.user_id == uid
-        user_items = query.user_items
+        user_items = query.history_items
         assert isinstance(user_items, ItemList)
         assert len(user_items) == len(train_items)
         assert set(user_items.ids()) == set(train_items.ids())

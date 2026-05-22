@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -16,8 +16,7 @@ from pytest import approx
 from lenskit.basic import BiasScorer
 from lenskit.basic.composite import FallbackScorer
 from lenskit.basic.history import KnownRatingScorer
-from lenskit.data import Dataset
-from lenskit.data.items import ItemList
+from lenskit.data import Dataset, ItemList
 from lenskit.data.types import ID
 from lenskit.operations import predict, score
 from lenskit.pipeline import Pipeline, PipelineBuilder, RecPipelineBuilder

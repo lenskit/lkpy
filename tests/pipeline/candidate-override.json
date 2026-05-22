@@ -1,0 +1,15 @@
+{
+  "options": {
+    "base": "std:topn"
+  },
+  "components": {
+    "scorer": {
+      "code": "lenskit.knn.SLIMScorer"
+    },
+    "candidate-selector": {
+      "config": {
+        "exclude": null
+      }
+    }
+  }
+}

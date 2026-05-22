@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -33,9 +33,9 @@ def test_lookup_user_id(ml_ds):
 
     assert isinstance(query, RecQuery)
     assert query.user_id == user
-    assert query.user_items is not None
-    assert len(query.user_items) == len(ds_row)
-    assert np.all(query.user_items.ids() == ds_row.ids())
+    assert query.history_items is not None
+    assert len(query.history_items) == len(ds_row)
+    assert np.all(query.history_items.ids() == ds_row.ids())
 
 
 def test_lookup_no_override(ml_ds):
@@ -45,14 +45,14 @@ def test_lookup_no_override(ml_ds):
 
     user = ml_ds.users.id(100)
     ds_row = ml_ds.user_row(user)
-    query = RecQuery(user, ds_row[:-2])
+    query = RecQuery(user_id=user, history_items=ds_row[:-2])
     query = lookup(query)
 
     assert isinstance(query, RecQuery)
     assert query.user_id == user
-    assert query.user_items is not None
-    assert len(query.user_items) == len(ds_row) - 2
-    assert np.all(query.user_items.ids() == ds_row[:-2].ids())
+    assert query.history_items is not None
+    assert len(query.history_items) == len(ds_row) - 2
+    assert np.all(query.history_items.ids() == ds_row[:-2].ids())
 
 
 def test_lookup_items_only(ml_ds: Dataset):
@@ -66,9 +66,9 @@ def test_lookup_items_only(ml_ds: Dataset):
 
     assert isinstance(query, RecQuery)
     assert query.user_id is None
-    assert query.user_items is not None
-    assert len(query.user_items) == len(ds_row) - 5
-    assert np.all(query.user_items.ids() == ds_row[:-5].ids())
+    assert query.history_items is not None
+    assert len(query.history_items) == len(ds_row) - 5
+    assert np.all(query.history_items.ids() == ds_row[:-5].ids())
 
 
 def test_lookup_pickle(ml_ds: Dataset):
@@ -87,9 +87,9 @@ def test_lookup_pickle(ml_ds: Dataset):
     l2_row = l2(100)
 
     assert l_row.user_id == 100
-    assert np.all(l_row.user_items.ids() == ds_row.ids())
+    assert np.all(l_row.history_items.ids() == ds_row.ids())
     assert l2_row.user_id == 100
-    assert np.all(l2_row.user_items.ids() == ds_row.ids())
+    assert np.all(l2_row.history_items.ids() == ds_row.ids())
 
 
 def test_known_rating_defaults(ml_ds: Dataset):

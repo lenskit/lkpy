@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -13,8 +13,7 @@ import pyarrow as pa
 
 from pytest import approx, raises, warns
 
-from lenskit.data import DatasetBuilder
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset, DatasetBuilder
 from lenskit.data.schema import AllowableTroolean, DataSchema
 from lenskit.diagnostics import DataError, DataWarning
 

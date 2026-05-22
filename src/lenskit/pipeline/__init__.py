@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -11,12 +11,16 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 from lenskit.diagnostics import PipelineError, PipelineWarning
+from lenskit.lazy import Lazy
 
+from ._builder import PipelineBuilder
+from ._cache import PipelineCache
+from ._common import RecPipelineBuilder, predict_pipeline, topn_pipeline
+from ._diagram import MermaidDiagrammer
 from ._hooks import ComponentInputHook
 from ._impl import CloneMethod, Pipeline
-from .builder import PipelineBuilder
-from .cache import PipelineCache
-from .common import RecPipelineBuilder, predict_pipeline, topn_pipeline
+from ._profiling import PipelineProfiler, ProfileSink
+from ._state import PipelineState
 from .components import (
     Component,
     ComponentConstructor,
@@ -24,12 +28,12 @@ from .components import (
 )
 from .config import PipelineConfig
 from .nodes import Node
-from .state import PipelineState
-from .types import Lazy
 
 __all__ = [
     "Pipeline",
     "PipelineBuilder",
+    "PipelineProfiler",
+    "ProfileSink",
     "CloneMethod",
     "PipelineError",
     "PipelineWarning",
@@ -45,4 +49,5 @@ __all__ = [
     "topn_pipeline",
     "predict_pipeline",
     "ComponentInputHook",
+    "MermaidDiagrammer",
 ]

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,49 +12,49 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
-from inspect import isabstract, signature
+from dataclasses import dataclass
+from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
+from typing import TypeVar, get_args
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
     Any,
     Callable,
-    Generic,
     Mapping,
-    ParamSpec,
     Protocol,
-    TypeAlias,
-    TypeVar,
+    get_annotations,
     get_origin,
     get_type_hints,
     runtime_checkable,
 )
 
-from .types import Lazy, TypecheckWarning, resolve_type_string
+from lenskit.diagnostics import PipelineWarning
+from lenskit.lazy import Lazy
 
-P = ParamSpec("P")
-T = TypeVar("T")
-CFG = TypeVar("CFG")
-CArgs = ParamSpec("CArgs", default=...)
-"""
-Argument type for a component.  It is difficult to actually specify this, but
-using this default parameter spec allows :class:`Component` subclasses to
-typecheck by declaring the base class :meth:`~Component.__call__` to have
-unknown parameters.
-"""
-# COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
-COut = TypeVar("COut", covariant=True, default=Any)
-"""
-Return type for a component.
-"""
-PipelineFunction: TypeAlias = Callable[..., COut]
+from ._types import TypecheckWarning, is_compatible_data
+
+type PipelineFunction[COut] = Callable[..., COut]
 """
 Pure-function interface for pipeline functions.
 """
 
 
+@dataclass
+class ComponentInput:
+    """
+    Representation of a component input slot.
+    """
+
+    name: str
+    type: type | None = None
+    is_lazy: bool = False
+    accepts_none: bool = False
+    has_default: bool = False
+
+
 @runtime_checkable
-class ComponentConstructor(Protocol, Generic[CFG, COut]):
+class ComponentConstructor[CFG, COut](Protocol):
     """
     Protocol for component constructors.
     """
@@ -66,7 +66,7 @@ class ComponentConstructor(Protocol, Generic[CFG, COut]):
     def validate_config(self, data: Any = None) -> CFG | None: ...
 
 
-class Component(ABC, Generic[COut, CArgs]):
+class Component[COut](ABC):
     """
     Base class for pipeline component objects.  Any component that is not just a
     function should extend this class.
@@ -125,6 +125,7 @@ class Component(ABC, Generic[COut, CArgs]):
                         "component class {} does not define a config attribute type".format(
                             cls.__qualname__
                         ),
+                        PipelineWarning,
                         stacklevel=2,
                     )
 
@@ -140,6 +141,7 @@ class Component(ABC, Generic[COut, CArgs]):
                 "component class {} does not define a config attribute type".format(
                     self.__class__.__qualname__
                 ),
+                PipelineWarning,
                 stacklevel=2,
             )
         elif cfg_cls and not isinstance(config, cfg_cls):
@@ -192,7 +194,7 @@ class Component(ABC, Generic[COut, CArgs]):
             return None
 
     @abstractmethod
-    def __call__(self, *args: CArgs.args, **kwargs: CArgs.kwargs) -> COut:  # pragma: nocover
+    def __call__(self, *args: ..., **kwargs: ...) -> COut:  # pragma: nocover
         """
         Run the pipeline's operation and produce a result.  This is the key
         method for components to implement.
@@ -217,40 +219,18 @@ class Placeholder(Component[Any]):
     Simple no-op component to use as a placeholder in partial pipelines.
     """
 
+    config: PlaceholderConfig
+
     def __call__(self, **kwargs: Any) -> Any:
         raise NotImplementedError("attempted to invoke placeholder component")
 
 
-def instantiate_component(
-    comp: str | type | FunctionType, config: Mapping[str, Any] | None
-) -> Callable[..., object]:
-    """
-    Utility function to instantiate a component given its class, function, or
-    string representation.
-
-    Stability:
-        Internal
-    """
-    if isinstance(comp, str):
-        comp = resolve_type_string(comp)
-
-    # make the type checker happy
-    assert not isinstance(comp, str)
-
-    if isinstance(comp, FunctionType):
-        return comp
-    elif issubclass(comp, Component):
-        cfg = comp.validate_config(config)
-        return comp(cfg)  # type: ignore
-    else:  # pragma: nocover
-        return comp()  # type: ignore
-
-
-def component_inputs(
+def component_inputs[COut](
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
     *,
     warn_on_missing: bool = True,
-) -> dict[str, type | None]:
+    _warn_level: int = 1,
+) -> dict[str, ComponentInput]:
     if isinstance(component, FunctionType):
         function = component
     elif hasattr(component, "__call__"):
@@ -258,31 +238,42 @@ def component_inputs(
     else:
         raise TypeError("invalid component " + repr(component))
 
-    types = get_type_hints(function)
+    types = _get_types(function)
     sig = signature(function)
 
-    inputs: dict[str, type | None] = {}
+    inputs: dict[str, ComponentInput] = {}
     for param in sig.parameters.values():
+        ci = ComponentInput(param.name)
         if param.name == "self":
             continue
 
+        inputs[param.name] = ci
+
         if pt := types.get(param.name, None):
-            inputs[param.name] = pt
-        else:
-            if warn_on_missing:
-                warnings.warn(
-                    f"parameter {param.name} of component {component} has no type annotation",
-                    TypecheckWarning,
-                    2,
-                )
-            inputs[param.name] = None
+            if get_origin(pt) == Lazy:
+                ci.is_lazy = True
+                (ci.type,) = get_args(pt)
+            else:
+                ci.type = pt
+        elif warn_on_missing:
+            warnings.warn(
+                f"parameter {param.name} of component {component} has no type annotation",
+                TypecheckWarning,
+                stacklevel=_warn_level + 1,
+            )
+
+        if ci.type is None or is_compatible_data(None, ci.type):
+            ci.accepts_none = True
+
+        if param.default is not Parameter.empty:
+            ci.has_default = True
 
     return inputs
 
 
-def component_return_type(
+def component_return_type[COut](
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
-) -> type | None:
+) -> type[COut] | None:
     if isinstance(component, FunctionType):
         function = component
     elif hasattr(component, "__call__"):
@@ -290,11 +281,17 @@ def component_return_type(
     else:
         raise TypeError("invalid component " + repr(component))
 
-    types = get_type_hints(function)
-    return types.get("return", None)
+    types = _get_types(function)
+
+    typ = types.get("return", None)
+    if isinstance(typ, TypeVar):
+        warnings.warn(f"component {component} has unresolved return type", PipelineWarning)
+        return None
+
+    return typ
 
 
-def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:
+def fallback_on_none[T](primary: T, fallback: Lazy[T]) -> T:
     """
     Fallback to a second component if the primary input is `None`.
 
@@ -305,3 +302,25 @@ def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:
         return primary
     else:
         return fallback.get()
+
+
+def is_component_class(obj: Any) -> bool:
+    """
+    Check if the provided object is a component class.
+    """
+
+    if isinstance(obj, type) and issubclass(obj, Component):
+        return True
+    else:  # pragma: nocover
+        return isinstance(obj, ComponentConstructor)
+
+
+def _get_types(func: Any) -> dict[str, Any]:
+    "Compatibility helper to get type hints"
+    try:
+        return get_type_hints(func)
+    except NameError:
+        warnings.warn(
+            "get_type_hints failed, using fallback (fixed in Python 3.12.5)", RuntimeWarning
+        )
+        return get_annotations(func, eval_str=True)

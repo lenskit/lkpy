@@ -1,13 +1,13 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
 import numpy as np
 import pandas as pd
 
-from lenskit.data.adapt import from_interactions_df
+from lenskit.data import from_interactions_df
 
 
 def test_item_subset(rng: np.random.Generator, ml_ratings: pd.DataFrame):

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -13,8 +13,7 @@ import pyarrow.compute as pc
 
 from pytest import mark
 
-from lenskit.data import load_amazon_ratings
-from lenskit.data.vocab import Vocabulary
+from lenskit.data import Vocabulary, load_amazon_ratings
 
 AZ_NAME = os.environ.get("LK_TEST_AZ_SET", "Video_Games")
 

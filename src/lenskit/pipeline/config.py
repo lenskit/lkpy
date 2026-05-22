@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -13,20 +13,43 @@ from __future__ import annotations
 
 import base64
 import pickle
+import re
 import warnings
 from collections import OrderedDict
 from hashlib import sha256
 from types import FunctionType
-from typing import Annotated, Literal, Mapping
+from typing import Annotated, Literal, Mapping, get_args
 
 from annotated_types import Predicate
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
+from lenskit.diagnostics import PipelineError, PipelineWarning
+
 from ._hooks import HookEntry
+from ._types import is_union_type, make_importable_path
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
-from .types import type_string
+
+VALID_NAME = re.compile(r"^[\w.@%!*?-]+$", re.UNICODE)
+UNSET_CODE = "!UNSET"
+
+
+def check_name(name: str, *, what: str = "node", allow_reserved: bool = False):
+    """
+    Check that a name is valid.
+
+    Raises:
+        ValueError:
+            If the specified name is not valid.
+    """
+
+    if not VALID_NAME.match(name):
+        raise ValueError(f"invalid {what} name “{name}”")
+    if name.startswith("_") and not allow_reserved:
+        raise ValueError(
+            f"invalid {what} name “{name}”, names beginning with “_” are reserved by LensKit"
+        )
 
 
 class PipelineHook(BaseModel):
@@ -39,8 +62,8 @@ class PipelineHook(BaseModel):
 
     @classmethod
     def from_entry(cls, hook: HookEntry[Any]):
-        if not isinstance(hook, FunctionType):  # type: ignore
-            warnings.warn(f"hook {hook.function} is not a function")
+        if not isinstance(hook.function, FunctionType):  # type: ignore
+            warnings.warn(f"hook {hook.function} is not a function", PipelineWarning)
         function = f"{hook.function.__module__}:{hook.function.__qualname__}"
         return cls(function=function, priority=hook.priority)
 
@@ -75,6 +98,17 @@ class PipelineOptions(BaseModel, extra="allow"):
     """
 
 
+class PipelineConfigFragment(BaseModel, extra="allow"):
+    """
+    Configuration fragments that override base configurations.
+    """
+
+    options: PipelineOptions | None = None
+    "Options for assembling the final pipeline."
+    meta: PipelineMeta = Field(default_factory=lambda: PipelineMeta())
+    "Pipeline metadata."
+
+
 class PipelineConfig(BaseModel):
     """
     Root type for serialized pipeline configuration.  A pipeline config contains
@@ -87,7 +121,7 @@ class PipelineConfig(BaseModel):
 
     options: PipelineOptions | None = None
     "Options for assembling the final pipeline."
-    meta: PipelineMeta
+    meta: PipelineMeta = Field(default_factory=lambda: PipelineMeta())
     "Pipeline metadata."
     inputs: list[PipelineInput] = []
     "Pipeline inputs."
@@ -101,6 +135,41 @@ class PipelineConfig(BaseModel):
     "Literals"
     hooks: PipelineHooks = PipelineHooks()
     "The hooks configured for the pipeline."
+
+    def merge_config(self, update: PipelineConfig | PipelineConfigFragment) -> PipelineConfig:
+        cfg = self.model_dump()
+        patch = update.model_dump(exclude_unset=True, exclude_computed_fields=True)
+
+        merge_configs(cfg, patch)
+
+        return PipelineConfig.model_validate(cfg)
+
+    def merge_component_configs(
+        self, configs: Mapping[str, Mapping[str, JsonValue]]
+    ) -> PipelineConfig:
+        """
+        Merge component configuration options into the pipeline configuration.
+
+        This returns a modified copy of the pipeline with the applied
+        configurations, and does not modify the configuration in-place.
+        """
+        pipe = self.model_copy(deep=True)
+        for name, cfg in configs.items():
+            try:
+                comp = pipe.components[name]
+            except KeyError:
+                raise PipelineError(f"unknown component {name}")  # noqa: B904
+
+            # make sure we have a mutable dictionary
+            if comp.config is None:
+                base = {}
+            else:
+                base = dict(comp.config)
+
+            merge_configs(base, cfg)
+            comp.config = base
+
+        return pipe
 
 
 class PipelineMeta(BaseModel):
@@ -137,10 +206,15 @@ class PipelineInput(BaseModel):
 
     @classmethod
     def from_node(cls, node: InputNode[Any]) -> Self:
-        if node.types is not None:
-            types = {type_string(t) for t in node.types}
-        else:
+        if node.type == Any:
             types = None
+        elif is_union_type(node.type):
+            types = set(get_args(node.type))
+        else:
+            types = {node.type}
+
+        if types is not None:
+            types = {make_importable_path(t) for t in types}
 
         return cls(name=node.name, types=types)
 
@@ -150,7 +224,7 @@ class PipelineComponent(BaseModel):
     Specification of a pipeline component.
     """
 
-    code: str = Field(validation_alias=AliasChoices("code", "class"))
+    code: str = Field(validation_alias=AliasChoices("code", "class"), default=UNSET_CODE)
     """
     The path to the component's implementation, either a class or a function.
     This is a Python qualified path of the form ``module:name``.
@@ -180,11 +254,14 @@ class PipelineComponent(BaseModel):
                     if isinstance(comp, Component):
                         config = comp.dump_config()
             case ComponentConstructorNode(_name, ctype, config):
-                config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
-            case _:
+                if isinstance(ctype, type) and issubclass(ctype, Component):
+                    config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
+                else:
+                    config = None
+            case _:  # pragma: nocover
                 raise TypeError("unexpected node type")
 
-        code = f"{ctype.__module__}:{ctype.__qualname__}"
+        code = make_importable_path(ctype)  # type: ignore
 
         return cls(code=code, config=config)
 
@@ -230,3 +307,43 @@ def hash_config(config: BaseModel) -> str:
     h = sha256()
     h.update(json.encode())
     return h.hexdigest()
+
+
+def merge_configs(
+    base: dict[str, Any],
+    update: Mapping[str, Any],
+    *,
+    path: tuple[str, ...] = (),
+    _skip_comp: bool = False,
+):
+    match path, base, update:
+        case ("components", _name), _, {**_u} if not _skip_comp:
+            # merge component configurations
+            assert isinstance(base, dict)
+            base_class = base.get("code", None)
+            patch_class = update.get("code", UNSET_CODE)
+            if patch_class == UNSET_CODE or base_class == patch_class:
+                merge_configs(base, update, path=path, _skip_comp=True)
+            else:
+                merge_configs(
+                    base,
+                    {k: v for (k, v) in update.items() if k != "config"},
+                    path=path,
+                    _skip_comp=True,
+                )
+                base["config"] = update.get("config", {})
+
+        case ("options",), {}, {"base": str(_), **_kws}:
+            base.update({k: v for (k, v) in _kws.items()})
+
+        case _:
+            for k, v in update.items():
+                bv = base.setdefault(k, {})
+                match bv, v:
+                    case {**_bve}, {**_ve}:
+                        merge_configs(bv, v, path=path + (k,))
+                    case None, {**_ve}:
+                        bv = base[k] = {}
+                        merge_configs(bv, v, path=path + (k,))
+                    case _:
+                        base[k] = v

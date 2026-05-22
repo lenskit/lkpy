@@ -5,5 +5,6 @@
 *.gz
 *.zst
 ml-*/
+ms-web/
 !ml-latest-small/
 *.parquet

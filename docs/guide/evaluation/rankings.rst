@@ -9,17 +9,29 @@ The :py:mod:`lenskit.metrics.ranking` module contains the core top-*N* ranking
 accuracy metrics (including rank-oblivious list metrics like precision, recall,
 and hit rate).
 
-Ranking metrics extend the :py:class:`RankingMetricBase` base class in addition
-to :py:class:`ListMetric` and/or :py:class:`GlobalMetric`, return a score given
-a recommendation list and a test rating list, both as :py:class:`item lists
+Ranking metrics extend the :py:class:`RankingMetricBase` base class, often in
+addition to :py:class:`ListMetric`, and return a score given a recommendation
+list and a test rating list, both as :py:class:`item lists
 <lenskit.data.ItemList>`; most metrics require the recommendation item list to
 be :py:attr:`~lenskit.data.ItemList.ordered`.
 
-All LensKit ranking metrics take `k` as a constructor argument to control the
+All LensKit ranking metrics take ``n`` as a constructor argument to control the
 list of the length that is considered; this allows multiple measurements (e.g.
 HR@5 and HR@10) to be computed from a single set of rankings.
 
+Metrics can be used on their own, but it is usually easiest to use them with
+:class:`~lenskit.metrics.MeasurementCollector` to handle some of edge cases
+around data availability, etc., as well as to support metric-specific
+aggregation (see :ref:`eval-collection` for more details).
+
+.. versionchanged:: 2026.1
+
+    The argument for the list length has changed from ``k`` to ``n``, for
+    consistency across LensKit.  ``k`` is kept as a deprecated alias until
+    2027.1.
+
 .. versionchanged:: 2025.1
+
     The top-N accuracy metric interface has changed to use item lists, and to
     be simpler to implement.
 
@@ -32,12 +44,12 @@ List and Set Metrics
 These metrics just look at the recommendation list and do not consider the rank
 positions of items within it.
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
-    ~lenskit.metrics.Hit
-    ~lenskit.metrics.Precision
-    ~lenskit.metrics.Recall
+    lenskit.metrics.Hit
+    lenskit.metrics.Precision
+    lenskit.metrics.Recall
 
 Ranked List Metrics
 -------------------
@@ -46,13 +58,13 @@ These metrics treat the recommendation list as a ranked list of items that may
 or may not be relevant; some also support different item utilities (e.g. ratings
 or graded relevance scores).
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
-    ~lenskit.metrics.RecipRank
-    ~lenskit.metrics.RBP
-    ~lenskit.metrics.NDCG
-    ~lenskit.metrics.DCG
+    lenskit.metrics.RecipRank
+    lenskit.metrics.RBP
+    lenskit.metrics.NDCG
+    lenskit.metrics.DCG
 
 Beyond Accuracy
 ---------------
@@ -61,7 +73,7 @@ These metrics measure **non-accuracy** properties of recommendation lists, such
 as popularity/obscurity or diversity.
 
 
-.. autosummary::
+.. autoapisummary::
     :nosignatures:
 
-    ~lenskit.metrics.MeanPopRank
+    lenskit.metrics.MeanPopRank

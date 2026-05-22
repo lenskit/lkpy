@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,37 +12,42 @@ from __future__ import annotations
 
 from lenskit.diagnostics import FieldError
 
-from .adapt import from_interactions_df
-from .amazon import load_amazon_ratings
-from .attributes import AttributeSet
-from .builder import DatasetBuilder
-from .collection import (
+from ._adapt import from_interactions_df
+from ._attributes import EntityAttribute
+from ._batches import BatchedRange
+from ._builder import DatasetBuilder
+from ._collection import (
     GenericKey,
     ItemListCollection,
     ItemListCollector,
     ListILC,
     MutableItemListCollection,
+    QueryIDKey,
     UserIDKey,
+    key_dict,
 )
-from .dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
-from .items import ItemList
-from .matrix import COOStructure, CSRStructure
+from ._container import DataContainer
+from ._dataset import Dataset
+from ._entities import EntitySet
+from ._flatten import flatten_dict, unflatten_dict
+from ._items import ItemList
+from ._query import QueryInput, QueryItemSource, RecQuery
+from ._relationships import MatrixRelationshipSet, RelationshipSet
+from ._vocab import Vocabulary
+from .amazon import load_amazon_ratings
 from .movielens import load_movielens, load_movielens_df
-from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
-from .query import QueryInput, RecQuery
+from .msweb import load_ms_web
 from .types import ID, NPID, FeedbackType
-from .vocab import Vocabulary
 
 __all__ = [
     "Dataset",
+    "DatasetBuilder",
+    "DataContainer",
     "EntitySet",
     "RelationshipSet",
     "MatrixRelationshipSet",
-    "AttributeSet",
-    "DatasetBuilder",
+    "EntityAttribute",
     "FieldError",
-    "CSRStructure",
-    "COOStructure",
     "from_interactions_df",
     "ID",
     "NPID",
@@ -53,15 +58,18 @@ __all__ = [
     "MutableItemListCollection",
     "ListILC",
     "UserIDKey",
+    "QueryIDKey",
     "GenericKey",
+    "key_dict",
     "load_movielens",
     "load_movielens_df",
     "load_amazon_ratings",
-    "MTArray",
-    "MTFloatArray",
-    "MTGenericArray",
-    "MTIntArray",
+    "load_ms_web",
+    "flatten_dict",
+    "unflatten_dict",
     "Vocabulary",
     "RecQuery",
     "QueryInput",
+    "QueryItemSource",
+    "BatchedRange",
 ]

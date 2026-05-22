@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,7 +12,7 @@ import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given
 
-from lenskit.data.arrow import arrow_to_format
+from lenskit.data._arrow import arrow_to_format
 
 
 @given(nph.arrays(dtype=nph.floating_dtypes(endianness="="), shape=nph.array_shapes(max_dims=1)))

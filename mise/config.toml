@@ -1,11 +1,17 @@
 [tools]
 rust = "stable"
-shfmt = "latest"
+"github:mvdan/sh" = "latest"
 uv = "latest"
+"pipx:pre-commit" = "4"
+cargo-binstall = "latest"
+"cargo:cargo-binutils" = "0.3"
+usage = "latest"
+perl = { version = "latest", os = ["linux", "macos"] }
 
 [settings]
-experimental = true
 idiomatic_version_file_enable_tools = ["rust"]
+github.github_attestations = false
+aqua.github_attestations = false
 
 [settings.python]
 uv_venv_auto = true

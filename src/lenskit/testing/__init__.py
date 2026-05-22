@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -20,7 +20,6 @@ import hypothesis.strategies as st
 
 from ._arrays import coo_arrays, scored_lists, sparse_arrays, sparse_tensors
 from ._components import BasicComponentTests, ScorerTests
-from ._markers import jit_enabled, wantjit
 from ._movielens import (
     DemoRecs,
     demo_recs,
@@ -33,6 +32,7 @@ from ._movielens import (
     ml_test_dir,
     pop_recs,
 )
+from ._msweb import msweb
 
 __all__ = [
     "coo_arrays",
@@ -46,10 +46,9 @@ __all__ = [
     "ml_ds_unchecked",
     "ml_ratings",
     "ml_test_dir",
+    "msweb",
     "demo_recs",
     "pop_recs",
-    "wantjit",
-    "jit_enabled",
     "set_env_var",
     "DemoRecs",
     "BasicComponentTests",

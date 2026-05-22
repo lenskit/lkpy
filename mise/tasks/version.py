@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -35,7 +35,7 @@ from docopt import docopt
 if prj_root := os.environ.get("MISE_PROJECT_ROOT", None):
     sys.path.insert(0, f"{prj_root}/src")
 
-from lenskit._version import lenskit_version
+from lenskit._version import lenskit_version  # noqa: PLC2701
 
 _log = logging.getLogger("lenskit.version-tool")
 

@@ -108,8 +108,8 @@ These are arranged in a directed acyclic graph, consisting of:
   components and how to provide each component with the inputs it requires; see
   :ref:`pipeline-connections` for details.
 
-Each node has a name that can be used to look up the node with
-:meth:`Pipeline.node` (or :meth:`PipelineBuilder.node`) and appears in
+Each node has a :ref:`name <pipeline-names>` that can be used to look up the
+node with :meth:`Pipeline.node` (or :meth:`PipelineBuilder.node`) and appears in
 serialization and logging situations. Names must be unique within a pipeline.
 
 .. _pipeline-connections:
@@ -244,6 +244,12 @@ These component names replace the task-specific interfaces in pre-2025 LensKit;
 a ``Recommender`` is now just a pipeline with ``recommender`` and/or ``ranker``
 components.
 
+.. note:: Limits on Names
+
+    Component names must consist of alphanumeric characters and the symbols
+    ``_-.@%!*?``, and may not begin with ``_``. Names beginning with ``_`` are
+    reserved for LensKit internal use.
+
 .. _pipeline-serialization:
 
 Pipeline Serialization
@@ -335,7 +341,7 @@ The convenience methods are equivalent to the following pipeline code:
     # find candidates from the training data
     default_candidates = pipe.add_component(
         'candidate-selector',
-        UnratedTrainingItemsCandidateSelector,
+        TrainingItemsCandidateSelector,
         query=history,
     )
     # if the client provided items as a pipeline input, use those; otherwise

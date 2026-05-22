@@ -1,43 +1,48 @@
 [package]
 name = "lenskit"
-version = "2025.3.0-alpha.4"
+version = "2026.1.1-alpha1"
 edition = "2021"
 license = "MIT"
 rust-version = "1.87"
 
 [lib]
-name = "_accel"
+name = "lenskit_accel"
 path = "src/accel/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-log = { version = "^0.4", features = ["release_max_level_debug"] }
-pyo3 = { version = "^0.25", features = ["extension-module", "abi3-py311"] }
-pyo3-log = "^0.12"
+log = { version = "^0.4", features = ["release_max_level_debug", "serde"] }
+pyo3 = { version = "^0.28", features = ["extension-module", "abi3-py312"] }
 thiserror = "^2"
 
+arc-swap = "^1.9"
+crossbeam-channel = "^0.5"
 rayon = "^1.10"
+rayon-cancel = "^1.0"
 
-hashbrown = "^0.15"
+hashbrown = "^0.17"
 hex = "^0.4"
 ordered-float = "^5"
-rand = "^0.9"
-rand_pcg = "^0.9"
+rand = "^0.10"
+rand_pcg = "^0.10"
 rustc-hash = "^2.1.1"
-sha1 = "^0.10"
+sha1 = "^0.11"
 
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "^1.0"
 
-arrow = { version = "^56", features = ["pyarrow"], default-features = false }
-arrow-schema = { version = "^56", features = ["serde"] }
-nalgebra = { version = "^0.34" }
-ndarray = { version = "^0.16", features = ["rayon"] }
-nshare = { version = "^0.10", default-features = false, features = ["ndarray", "nalgebra"] }
-numpy = "^0.25"
+arrow = { version = "^58", features = ["pyarrow"], default-features = false }
+arrow-schema = { version = "^58", features = ["serde"] }
+ndarray = { version = "^0.17", features = ["rayon"] }
+numpy = "^0.28"
+
+[dev-dependencies]
+ntest = "^0.9"
 
 [profile.dev]
+lto = "thin"
 opt-level = 2
+debug-assertions = true
 
 [profile.release]
 lto = true

@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -8,12 +8,12 @@
 Basic set statistics.
 """
 
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 
-from ._base import Metric
+from ._base import ListMetric, Metric
 
 
-class ListLength(Metric):
+class ListLength(ListMetric):
     """
     Report the length of the output (recommendation list or predictions).
 
@@ -23,7 +23,7 @@ class ListLength(Metric):
 
     label = "N"  # type: ignore
 
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         return len(recs)
 
 
@@ -37,5 +37,5 @@ class TestItemCount(Metric):
 
     label = "TestItemCount"  # type: ignore
 
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         return len(test)

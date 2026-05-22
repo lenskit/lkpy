@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,11 +12,28 @@ Basic data types used in data representations.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Generic, NamedTuple
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from typing_extensions import Any, Generic, Literal, Sequence, TypeAlias, TypeVar
+from typing_extensions import Any, Literal, Sequence, TypeAlias, TypeVar
+
+__all__ = [
+    "FeedbackType",
+    "ID",
+    "NPID",
+    "IDArray",
+    "IDSequence",
+    "NPMatrix",
+    "NPVector",
+    "DF_FORMAT",
+    "MAT_FORMAT",
+    "LAYOUT",
+    "AliasedColumn",
+    "UIPair",
+    "Extent",
+]
 
 FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
@@ -29,26 +46,24 @@ ID: TypeAlias = CoreID | NPID
 "Allowable identifier types."
 IDArray: TypeAlias = np.ndarray[tuple[int], np.dtype[NPID]]
 "NumPy arrays of identifiers."
-IDSequence: TypeAlias = (
+IDSequence: TypeAlias = """
     Sequence[ID]
     | IDArray
     | pa.StringArray
-    | "pa.IntegerArray[Any]"
-    | "pa.ChunkedArray[Any]"
-    | "pd.Series[CoreID]"
-)
+    | pa.IntegerArray[Any]
+    | pa.ChunkedArray[Any]
+    | pd.Series[CoreID]
+    """
 "Sequences of identifiers."
 
+_UIPT = TypeVar("_UIPT")
 V = TypeVar("V", bound=np.number[Any], default=np.float32)
 NPMatrix: TypeAlias = np.ndarray[tuple[int, int], np.dtype[V]]
 NPVector: TypeAlias = np.ndarray[tuple[int], np.dtype[V]]
 
-T = TypeVar("T")
-
-DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
-MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
-MAT_AGG: TypeAlias = Literal["count", "sum", "mean", "first", "last"]
-LAYOUT: TypeAlias = Literal["csr", "coo"]
+type DF_FORMAT = Literal["numpy", "pandas", "torch"]
+type MAT_FORMAT = Literal["scipy", "torch", "pandas", "structure"]
+type LAYOUT = Literal["csr", "coo"]
 
 
 @dataclass
@@ -72,10 +87,28 @@ Column: TypeAlias = str | AliasedColumn
 
 
 @dataclass(frozen=True)
-class UIPair(Generic[T]):
+class UIPair(Generic[_UIPT]):
     """
     A user-item pair of values.
     """
 
-    user: T
-    item: T
+    user: _UIPT
+    item: _UIPT
+
+
+class Extent(NamedTuple):
+    """
+    Representation of a range with a start and end.
+    """
+
+    start: int
+    "The range start (inclusive)."
+    end: int
+    "The range end (exclusive)."
+
+    @property
+    def size(self) -> int:
+        """
+        The size of the extent.
+        """
+        return self.end - self.start
