@@ -21,7 +21,7 @@ license-files = ["LICENSE.md"]
 dynamic = ["version"]
 dependencies = [
   "typing-extensions ~=4.15",
-  "pandas >=2.3,<4",
+  "pandas >=2.2,<4",
   "pyarrow >=20,!=21.*",
   "numpy >=2.0",
   "scipy >=1.13",
@@ -98,7 +98,7 @@ dev = [
   "ipython >=7",
   "sphinx-autobuild >=2021",
   # stub files
-  "pandas-stubs >=1.5,<3",
+  "pandas-stubs >=2.2,<4",
   "pyarrow-stubs >=11",
   "scipy-stubs >=1.14.1.6",
   { include-group = "test" },
