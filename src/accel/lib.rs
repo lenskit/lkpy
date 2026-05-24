@@ -16,7 +16,6 @@ mod indirect;
 mod knn;
 mod logging;
 mod parallel;
-mod progress;
 mod slim;
 mod sparse;
 mod tasks;
