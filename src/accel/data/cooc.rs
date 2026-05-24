@@ -6,42 +6,56 @@
 
 //! Support for counting co-occurrences.
 
-use std::sync::atomic::Ordering;
-
 use arrow::{
-    array::{make_array, Array, ArrayData, Int32Array, RecordBatch},
+    array::{make_array, Array, ArrayData, Int32Array},
+    datatypes::Int32Type,
     pyarrow::PyArrowType,
 };
 use log::*;
-use numpy::{PyArray2, ToPyArray};
+use numpy::ToPyArray;
 use pyo3::{
     exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
+    IntoPyObjectExt,
 };
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    arrow::checked_array_ref,
+    arrow::checked_array,
     data::pairs::{
         AsymmetricPairCounter, ConcurrentPairCounter, DensePairCounter, PairCounter,
         SymmetricPairCounter,
     },
-    progress::ProgressHandle,
+    tasks::{AccelTask, AccelTaskImpl, AtomicCancel},
 };
+
+pub(super) struct COOCInput {
+    n_groups: usize,
+    n_items: usize,
+    ordered: bool,
+    diagonal: bool,
+    groups: Int32Array,
+    items: Int32Array,
+}
+
+struct SparseCOOCTask {
+    input: COOCInput,
+}
+
+struct DenseCOOCTask {
+    input: COOCInput,
+}
 
 /// Count co-occurrances.
 #[pyfunction]
-#[pyo3(signature=(n_groups, n_items, groups, items, *, ordered=false, diagonal=true, progress=None))]
-pub fn count_cooc<'py>(
-    py: Python<'py>,
+#[pyo3(signature=(n_groups, n_items, groups, items, *, ordered=false, diagonal=true))]
+pub fn count_cooc(
     n_groups: usize,
     n_items: usize,
     groups: PyArrowType<ArrayData>,
     items: PyArrowType<ArrayData>,
     ordered: bool,
     diagonal: bool,
-    progress: Option<Py<PyAny>>,
-) -> PyResult<Vec<PyArrowType<RecordBatch>>> {
+) -> PyResult<AccelTask> {
     let groups = make_array(groups.0);
     let items = make_array(items.0);
     let nrows = groups.len();
@@ -49,49 +63,64 @@ pub fn count_cooc<'py>(
         return Err(PyValueError::new_err("array length mismatch"));
     }
 
-    let pb = ProgressHandle::new(progress);
+    let groups = checked_array::<Int32Type>("groups", &groups)?;
+    let items = checked_array::<Int32Type>("items", &items)?;
 
-    let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
-    let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
-    let out = if ordered {
-        py.detach(|| {
-            count_cooc_sequential::<AsymmetricPairCounter>(&pb, groups, items, n_groups, n_items)
-        })
-    } else {
-        let ctr = SymmetricPairCounter::with_diagonal(n_items, diagonal);
-        count_cooc_parallel(py, ctr, groups, items, n_groups, &pb)
-    };
-    let out = out?;
-    debug!(
-        "finished counting {} co-occurrances",
-        out.iter().map(|m| m.nnz()).sum::<usize>()
-    );
+    Ok(AccelTask::wrap(SparseCOOCTask {
+        input: COOCInput {
+            n_groups,
+            n_items,
+            ordered,
+            diagonal,
+            groups,
+            items,
+        },
+    }))
+}
 
-    let mut batches = Vec::with_capacity(out.len());
-    for coo in out {
-        batches.push(
-            coo.record_batch("count")
-                .map_err(|e| {
-                    PyRuntimeError::new_err(format!("error assembling result array: {}", e))
-                })?
-                .into(),
+impl AccelTaskImpl for SparseCOOCTask {
+    fn invoke<'py>(&self, py: Python<'py>, task: &AccelTask) -> PyResult<Bound<'py, PyAny>> {
+        let cancel = AtomicCancel::new();
+        task.set_cancel(cancel.clone());
+
+        let out = py.detach(|| {
+            if self.input.ordered {
+                count_cooc_sequential::<AsymmetricPairCounter>(&self.input, &cancel)
+            } else {
+                let ctr =
+                    SymmetricPairCounter::with_diagonal(self.input.n_items, self.input.diagonal);
+                count_cooc_parallel(ctr, &self.input, &cancel)
+            }
+        })?;
+        debug!(
+            "finished counting {} co-occurrances",
+            out.iter().map(|m| m.nnz()).sum::<usize>()
         );
-    }
 
-    Ok(batches)
+        let mut batches: Vec<PyArrowType<_>> = Vec::with_capacity(out.len());
+        for coo in out {
+            batches.push(
+                coo.record_batch("count")
+                    .map_err(|e| {
+                        PyRuntimeError::new_err(format!("error assembling result array: {}", e))
+                    })?
+                    .into(),
+            );
+        }
+
+        batches.into_bound_py_any(py)
+    }
 }
 
 #[pyfunction]
-#[pyo3(signature=(n_groups, n_items, groups, items, *, diagonal=true, progress=None))]
-pub fn dense_cooc<'py>(
-    py: Python<'py>,
+#[pyo3(signature=(n_groups, n_items, groups, items, *, diagonal=true))]
+pub fn dense_cooc(
     n_groups: usize,
     n_items: usize,
     groups: PyArrowType<ArrayData>,
     items: PyArrowType<ArrayData>,
     diagonal: bool,
-    progress: Option<Py<PyAny>>,
-) -> PyResult<Bound<'py, PyArray2<f32>>> {
+) -> PyResult<AccelTask> {
     let groups = make_array(groups.0);
     let items = make_array(items.0);
     let nrows = groups.len();
@@ -99,85 +128,87 @@ pub fn dense_cooc<'py>(
         return Err(PyValueError::new_err("array length mismatch"));
     }
 
-    let pb = ProgressHandle::new(progress);
+    let groups = checked_array::<Int32Type>("groups", &groups)?;
+    let items = checked_array::<Int32Type>("items", &items)?;
 
-    let groups = checked_array_ref::<Int32Array>("groups", "Int32", &groups)?;
-    let items = checked_array_ref::<Int32Array>("items", "Int32", &items)?;
+    Ok(AccelTask::wrap(DenseCOOCTask {
+        input: COOCInput {
+            n_groups,
+            n_items,
+            ordered: false,
+            diagonal,
+            groups,
+            items,
+        },
+    }))
+}
 
-    let ctr = DensePairCounter::with_diagonal(n_items, diagonal);
-    let out = count_cooc_parallel(py, ctr, groups, items, n_groups, &pb)?;
-    debug!("finished counting co-occurrances");
+impl AccelTaskImpl for DenseCOOCTask {
+    fn invoke<'py>(&self, py: Python<'py>, task: &AccelTask) -> PyResult<Bound<'py, PyAny>> {
+        let cancel = AtomicCancel::new();
+        task.set_cancel(cancel.clone());
 
-    Ok(out.to_pyarray(py))
+        let out = py.detach(|| {
+            let ctr = DensePairCounter::with_diagonal(self.input.n_items, self.input.diagonal);
+            count_cooc_parallel(ctr, &self.input, &cancel)
+        })?;
+        debug!("finished counting co-occurrances");
+
+        out.to_pyarray(py).into_bound_py_any(py)
+    }
 }
 
 fn count_cooc_sequential<PC: PairCounter>(
-    pb: &ProgressHandle,
-    groups: &Int32Array,
-    items: &Int32Array,
-    n_groups: usize,
-    n_items: usize,
+    input: &COOCInput,
+    cancel: &AtomicCancel,
 ) -> PyResult<PC::Output> {
-    let gvals = groups.values();
-    let ivals = items.values();
+    let gvals = input.groups.values();
+    let ivals = input.items.values();
 
-    let g_ptrs = compute_group_pointers(n_groups, gvals)?;
+    let g_ptrs = compute_group_pointers(input.n_groups, gvals)?;
 
     // TODO: parallelize this logic
     debug!("pass 2: counting groups");
-    let mut counts = PC::create(n_items);
-    for i in 0..n_groups {
+    let mut counts = PC::create(input.n_items);
+    for i in 0..input.n_groups {
         let start = g_ptrs[i];
         let end = g_ptrs[i + 1];
         let items = &ivals[start..end];
         count_items(&mut counts, items);
-        if i % 100 == 0 {
-            Python::attach(|py| {
-                let _ = pb.advance(py, items.len());
-            })
-        }
+        cancel.advance(items.len());
     }
-    Python::attach(|py| {
-        let _ = pb.advance(py, items.len());
-    });
 
     // assemble the result
     Ok(counts.finish())
 }
 
-fn count_cooc_parallel<'py, PC: ConcurrentPairCounter>(
-    py: Python<'py>,
+fn count_cooc_parallel<PC: ConcurrentPairCounter>(
     counts: PC,
-    groups: &Int32Array,
-    items: &Int32Array,
-    n_groups: usize,
-    pb: &ProgressHandle,
+    input: &COOCInput,
+    cancel: &AtomicCancel,
 ) -> PyResult<PC::Output> {
-    let gvals = groups.values();
-    let ivals = items.values();
+    let gvals = input.groups.values();
+    let ivals = input.items.values();
 
-    let g_ptrs = py.detach(|| compute_group_pointers(n_groups, gvals))?;
+    let g_ptrs = compute_group_pointers(input.n_groups, gvals)?;
 
     debug!("pass 2: counting groups");
     // TODO: fix progress update
-    pb.process_iter_with_counter(py, (0..n_groups).into_par_iter(), |iter, counter| {
-        iter.for_each(|i| {
-            let start = g_ptrs[i];
-            let end = g_ptrs[i + 1];
-            let items = &ivals[start..end];
-            let n = items.len();
+    (0..input.n_groups).for_each(|i| {
+        let start = g_ptrs[i];
+        let end = g_ptrs[i + 1];
+        let items = &ivals[start..end];
+        let n = items.len();
 
-            for i in 0..n {
-                let ri = items[i as usize];
-                for j in i..n {
-                    let ci = items[j as usize];
-                    counts.crecord(ri, ci);
-                }
+        for i in 0..n {
+            let ri = items[i as usize];
+            for j in i..n {
+                let ci = items[j as usize];
+                counts.crecord(ri, ci);
             }
-            counter.fetch_add(items.len(), Ordering::Relaxed);
-        });
-        Ok(())
-    })?;
+        }
+        cancel.advance(items.len());
+    });
 
     // assemble the result
     Ok(counts.finish())

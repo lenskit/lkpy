@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 
 from lenskit.data.matrix import SparseRowArray
-from lenskit.logging import Progress
+from lenskit.parallel import AccelTask
 
 def train_slim(
     ui_matrix: SparseRowArray,
@@ -10,5 +10,4 @@ def train_slim(
     l2_reg: float,
     max_iters: int,
     max_nbrs: int | None,
-    progress: Progress | None,
-) -> Sequence[SparseRowArray]: ...
+) -> AccelTask[Sequence[SparseRowArray]]: ...
