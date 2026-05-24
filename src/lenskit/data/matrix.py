@@ -25,6 +25,7 @@ from scipy.sparse import csr_array
 
 from lenskit._accel import data as _data_accel
 from lenskit.logging import Progress
+from lenskit.parallel import run_accel_task
 
 from .types import NPVector
 
@@ -615,12 +616,14 @@ def fast_col_cooc(
     if dense:
         if ordered:
             raise NotImplementedError("dense ordered co-occurrences not supported")
-        return _data_accel.dense_cooc(
-            m, n, rows, cols, progress=progress, diagonal=include_diagonal
+        return run_accel_task(
+            _data_accel.dense_cooc(m, n, rows, cols, diagonal=include_diagonal),
+            progress=progress,
         )
     else:
-        batches = _data_accel.count_cooc(
-            m, n, rows, cols, progress=progress, diagonal=include_diagonal, ordered=ordered
+        batches = run_accel_task(
+            _data_accel.count_cooc(m, n, rows, cols, diagonal=include_diagonal, ordered=ordered),
+            progress=progress,
         )
         tbl = pa.Table.from_batches(batches)
         indices = np.stack(

@@ -6,7 +6,7 @@ from typing_extensions import TypeVar
 
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import ID
-from lenskit.logging import Progress
+from lenskit.parallel import AccelTask
 
 A = TypeVar("A", bound=pa.Array, default=pa.Array)
 
@@ -30,8 +30,7 @@ def count_cooc(
     *,
     ordered: bool = False,
     diagonal: bool = True,
-    progress: Progress | None,
-) -> list[pa.RecordBatch]: ...
+) -> AccelTask[list[pa.RecordBatch]]: ...
 def dense_cooc(
     n_groups: int,
     n_items: int,
@@ -39,8 +38,7 @@ def dense_cooc(
     cols: pa.Int32Array,
     *,
     diagonal: bool = True,
-    progress: Progress | None,
-) -> np.ndarray[tuple[int, int], np.dtype[np.float32]]: ...
+) -> AccelTask[np.ndarray[tuple[int, int], np.dtype[np.float32]]]: ...
 def scatter_array(dst: A, idx: pa.Array, src: A) -> A: ...
 def scatter_array_empty(dst_size: int, idx: pa.Array, src: A) -> A: ...
 def sample_negatives(

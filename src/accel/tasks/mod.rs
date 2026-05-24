@@ -9,8 +9,10 @@
 use std::sync::Mutex;
 
 use pyo3::{prelude::*, types::PyNone, IntoPyObjectExt};
+mod atomic;
 mod progress;
 
+pub use atomic::AtomicCancel;
 pub use progress::IterCancel;
 
 /// Trait for the Rust side of the accelerator task interface.
