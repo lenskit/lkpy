@@ -32,6 +32,11 @@ Second release in the 2026 series, bringing a few smaller feature updates:
   :pr:`1099`).
 - Added a ``lenskit pipeline expand`` command to render a pipeline configuration
   to complete JSON for debugging / inspection (:issue:`1098`, :pr:`1099`).
+- Added a new ``lenskit pipeline diagram`` command to render a pipeline configuration
+  to a Mermaid diagram for visualization (:pr:`1100`).
+- Re-add support for Pandas 2.2 to improve Google Colab support (:issue:`1103`,
+  :pr:`1104`).
+- Handle parameterized types for component inputs (:issue:`1101`, :pr:`1102`).
 
 .. _2026.1.0:
 
