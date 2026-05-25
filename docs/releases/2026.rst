@@ -38,6 +38,10 @@ Second release in the 2026 series, bringing a few smaller feature updates:
   :pr:`1104`).
 - Handle parameterized types for component inputs (:issue:`1101`, :pr:`1102`).
 
+PRs and issues are listed in `milestone 2026.2`_.
+
+.. _milestone 2026.2: https://github.com/lenskit/lkpy/issues?q=is%3Aclosed%20milestone%3A%222026.2%22
+
 .. _2026.1.0:
 
 2026.1.0
