@@ -32,6 +32,7 @@ pub enum IxVar<T32, T64> {
 }
 
 /// A compressed sparse row matrix with only structure, not values.
+#[derive(Clone)]
 pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
     pub n_rows: usize,
     pub n_cols: usize,

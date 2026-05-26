@@ -10,59 +10,80 @@ use arrow::{
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
-use pyo3::prelude::*;
+use pyo3::{prelude::*, IntoPyObjectExt};
 use rayon::prelude::*;
 
 use log::*;
+use rayon_cancel::CancelAdapter;
 
 use crate::{
     als::solve::POSV,
     parallel::maybe_fuse,
-    progress::ProgressHandle,
     sparse::{CSRMatrix, CSR},
+    tasks::{AccelTask, AccelTaskImpl, IterCancel},
 };
+
+struct ImplicitTrainTask {
+    solver: POSV,
+    matrix: CSRMatrix<i32>,
+    this: Py<PyArray2<f32>>,
+    other: Py<PyArray2<f32>>,
+    otor: Py<PyArray2<f32>>,
+}
 
 #[pyfunction]
 pub(super) fn train_implicit_matrix<'py>(
     py: Python<'py>,
     matrix: PyArrowType<ArrayData>,
-    this: Bound<'py, PyArray2<f32>>,
-    other: Bound<'py, PyArray2<f32>>,
-    otor: Bound<'py, PyArray2<f32>>,
-    progress: Bound<'py, PyAny>,
-) -> PyResult<f32> {
+    this: Py<PyArray2<f32>>,
+    other: Py<PyArray2<f32>>,
+    otor: Py<PyArray2<f32>>,
+) -> PyResult<AccelTask> {
     let solver = POSV::load(py)?;
     let matrix_ref = make_array(matrix.0);
     let matrix: CSRMatrix<i32> = CSRMatrix::from_arrow(matrix_ref)?;
 
-    let mut this_py = this.readwrite();
-    let mut this = this_py.as_array_mut();
+    Ok(AccelTask::wrap(ImplicitTrainTask {
+        solver,
+        matrix,
+        this,
+        other,
+        otor,
+    }))
+}
 
-    let other_py = other.readonly();
-    let other = other_py.as_array();
+impl AccelTaskImpl for ImplicitTrainTask {
+    fn invoke<'py>(&self, py: Python<'py>, task: &AccelTask) -> PyResult<Bound<'py, PyAny>> {
+        let mut this_py = self.this.bind(py).readwrite();
+        let mut this = this_py.as_array_mut();
 
-    let otor_py = otor.readonly();
-    let otor = otor_py.as_array();
+        let other_py = self.other.bind(py).readonly();
+        let other = other_py.as_array();
 
-    let progress = ProgressHandle::from_input(progress);
-    debug!(
-        "beginning implicit ALS training half with {} rows",
-        other.nrows()
-    );
-    let frob: f32 = progress.process_iter(
-        py,
-        maybe_fuse(this.outer_iter_mut().into_par_iter()).enumerate(),
-        |iter| {
-            Ok(iter
+        let otor_py = self.otor.bind(py).readonly();
+        let otor = otor_py.as_array();
+
+        debug!(
+            "beginning implicit ALS training half with {} rows",
+            other.nrows()
+        );
+
+        let iter = maybe_fuse(this.outer_iter_mut().into_par_iter()).enumerate();
+        let adapter = CancelAdapter::new(iter);
+        task.set_cancel(IterCancel::from_adapter(&adapter));
+
+        let frob = py.detach(move || {
+            adapter
                 .map(|(i, row)| {
-                    let f = train_row_solve(&solver, &matrix, i, row, &other, &otor);
+                    let f = train_row_solve(&self.solver, &self.matrix, i, row, &other, &otor);
                     f
                 })
-                .sum())
-        },
-    )?;
+                .sum::<f32>()
+                .sqrt()
+        });
 
-    Ok(frob.sqrt())
+        frob.into_bound_py_any(py)
+    }
 }
 
 fn train_row_solve(

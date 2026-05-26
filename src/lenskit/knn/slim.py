@@ -20,7 +20,7 @@ from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger, item_progress
-from lenskit.parallel.config import ensure_parallel_init
+from lenskit.parallel import ensure_parallel_init, run_accel_task
 from lenskit.pipeline.components import Component
 from lenskit.training import Trainable, TrainingOptions
 
@@ -99,14 +99,16 @@ class SLIMScorer(Component, Trainable):
         iu_matrix = ui_matrix.transpose()
 
         with item_progress("SLIM vectors", ui_matrix.dimension) as pb:
-            weights = _slim_accel.train_slim(
-                ui_matrix,
-                iu_matrix,
-                self.config.l1_reg,
-                self.config.l2_reg,
-                self.config.max_iters,
-                self.config.max_nbrs,
-                pb,
+            weights = run_accel_task(
+                _slim_accel.train_slim(
+                    ui_matrix,
+                    iu_matrix,
+                    self.config.l1_reg,
+                    self.config.l2_reg,
+                    self.config.max_iters,
+                    self.config.max_nbrs,
+                ),
+                progress=pb,
             )
         weights = pa.chunked_array(weights).combine_chunks()
         weights = SparseRowArray.from_array(weights)

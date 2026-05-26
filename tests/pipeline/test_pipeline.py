@@ -54,6 +54,26 @@ def test_create_input_type_alias():
     assert len(pipe.nodes()) == 1
     assert pipe.node("user") == src
 
+    cfg = pipe.config
+    assert cfg.inputs[0].types == {"int", "str"}
+
+
+def test_create_input_list():
+    "create an input node"
+    pipe = PipelineBuilder()
+    src = pipe.create_input("features", list[str])
+    assert_type(src, Node[list[str]])
+    assert isinstance(src, InputNode)
+    assert src.name == "features"
+    assert src.type == list  # noqa: E721
+    # assert src.type == list[str]
+
+    assert len(pipe.nodes()) == 1
+    assert pipe.node("features") is src
+
+    cfg = pipe.build_config()
+    assert cfg.inputs[0].types == {"list"}
+
 
 def test_lookup_optional():
     "lookup a node without failing"

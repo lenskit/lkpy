@@ -13,13 +13,14 @@ use arrow::{
 };
 use log::*;
 use ordered_float::NotNan;
-use pyo3::{exceptions::PyValueError, prelude::*};
+use pyo3::{exceptions::PyValueError, prelude::*, IntoPyObjectExt};
 use rayon::prelude::*;
+use rayon_cancel::CancelAdapter;
 
 use crate::{
     parallel::maybe_fuse,
-    progress::ProgressHandle,
     sparse::{ArrowCSRConsumer, CSRStructure, CSR},
+    tasks::{AccelTask, AccelTaskImpl, IterCancel},
 };
 
 type FP = f32;
@@ -34,12 +35,10 @@ struct SLIMOptions {
     max_nbrs: Option<usize>,
 }
 
-struct SLIMWorkspace<'a> {
+struct SLIMTask {
     options: SLIMOptions,
-    ui_matrix: &'a CSRStructure<i64>,
-    iu_matrix: &'a CSRStructure<i64>,
-    n_users: usize,
-    n_items: usize,
+    ui_matrix: CSRStructure<i64>,
+    iu_matrix: CSRStructure<i64>,
 }
 
 /// Register the lenskit._accel.slim module
@@ -57,15 +56,13 @@ pub fn register_slim(parent: &Bound<'_, PyModule>) -> PyResult<()> {
 /// implementation.
 #[pyfunction]
 fn train_slim<'py>(
-    py: Python<'py>,
     ui_matrix: PyArrowType<ArrayData>,
     iu_matrix: PyArrowType<ArrayData>,
     l1_reg: FP,
     l2_reg: FP,
     max_iters: u32,
     max_nbrs: Option<usize>,
-    progress: Bound<'py, PyAny>,
-) -> PyResult<Vec<PyArrowType<ArrayData>>> {
+) -> PyResult<AccelTask> {
     let ui_matrix = make_array(ui_matrix.0);
     let ui_matrix = CSRStructure::<i64>::from_arrow(ui_matrix)?;
     let iu_matrix = make_array(iu_matrix.0);
@@ -81,8 +78,6 @@ fn train_slim<'py>(
         return Err(PyValueError::new_err("rating count mismatch"));
     }
 
-    let progress = ProgressHandle::from_input(progress);
-
     let options = SLIMOptions {
         l1_reg,
         l2_reg,
@@ -90,39 +85,50 @@ fn train_slim<'py>(
         max_nbrs,
     };
 
-    debug!("computing similarity rows");
-    let collector = ArrowCSRConsumer::new(ui_matrix.n_cols);
-
-    let range = 0..ui_matrix.n_cols;
-    let chunks = progress.process_iter(py, range.into_par_iter(), move |iter| {
-        let chunks = maybe_fuse(iter)
-            .map_init(
-                || SLIMWorkspace::create(&ui_matrix, &iu_matrix, &options),
-                SLIMWorkspace::compute_column,
-            )
-            .drive_unindexed(collector);
-        Ok(chunks)
-    })?;
-    let result = py.detach(move || chunks.into_iter().map(|a| a.into_data().into()).collect());
-
-    Ok(result)
+    Ok(AccelTask::wrap(SLIMTask {
+        options,
+        ui_matrix,
+        iu_matrix,
+    }))
 }
 
-impl<'a> SLIMWorkspace<'a> {
-    fn create(
-        ui_matrix: &'a CSRStructure<i64>,
-        iu_matrix: &'a CSRStructure<i64>,
-        options: &SLIMOptions,
-    ) -> Self {
-        let n_items = ui_matrix.n_cols;
-        let n_users = ui_matrix.n_rows;
-        SLIMWorkspace {
-            options: *options,
-            ui_matrix,
-            iu_matrix,
-            n_users,
-            n_items,
-        }
+impl AccelTaskImpl for SLIMTask {
+    fn invoke<'py>(
+        &self,
+        py: Python<'py>,
+        task: &crate::tasks::AccelTask,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        debug!("computing similarity rows");
+        let n_items = self.ui_matrix.n_cols;
+        let collector = ArrowCSRConsumer::new(n_items);
+
+        let range = 0..n_items;
+        let adapter = CancelAdapter::new(range.into_par_iter());
+        task.set_cancel(IterCancel::from_adapter(&adapter));
+
+        let chunks = py.detach(move || {
+            let chunks = maybe_fuse(adapter)
+                .map(|i| self.compute_column(i))
+                .drive_unindexed(collector);
+            chunks
+        });
+        let result: Vec<_> = py.detach(move || {
+            chunks
+                .into_iter()
+                .map(|a| PyArrowType::from(a.into_data()))
+                .collect()
+        });
+        result.into_bound_py_any(py)
+    }
+}
+
+impl SLIMTask {
+    fn n_items(&self) -> usize {
+        self.ui_matrix.n_cols
+    }
+
+    fn n_users(&self) -> usize {
+        self.ui_matrix.n_rows
     }
 
     /// Train a single column of the SLIM weight matrix.
@@ -139,14 +145,14 @@ impl<'a> SLIMWorkspace<'a> {
     /// as I can tell.  We follow the implementation's direction here (which is
     /// also simpler).
     #[inline(never)] // a lot of work is in here, let's make profiling easeir
-    fn compute_column(&mut self, item: usize) -> Vec<(i32, FP)> {
+    fn compute_column(&self, item: usize) -> Vec<(i32, FP)> {
         let start = Instant::now();
         // get the active users for this item — indices where target vector is 1
         let i_users = self.iu_matrix.row_cols(item);
 
         // initialize our vectors
-        let mut weights = vec![0.0; self.n_items];
-        let mut resids = vec![0.0; self.n_users];
+        let mut weights = vec![0.0; self.n_items()];
+        let mut resids = vec![0.0; self.n_users()];
 
         let active = self.prep_resid_and_active(item, &i_users, &mut resids);
 
@@ -189,8 +195,8 @@ impl<'a> SLIMWorkspace<'a> {
     /// limited to the top *k* most-similar items (by cosine similarity).
     #[inline(never)]
     fn prep_resid_and_active(&self, item: usize, i_users: &[i32], resids: &mut [FP]) -> Vec<usize> {
-        let mut path_counts = vec![0; self.n_items];
-        let mut active = Vec::with_capacity(self.n_items / 4);
+        let mut path_counts = vec![0; self.n_items()];
+        let mut active = Vec::with_capacity(self.n_items() / 4);
 
         // Residuals are defined by rᵤᵢ - ∑ rᵤⱼwᵢⱼ, but all wᵢⱼ are initially 0,
         // so the residual is just 1 where the user rated the target item and 0
@@ -228,13 +234,7 @@ impl<'a> SLIMWorkspace<'a> {
     }
 
     #[inline(never)]
-    fn run_cd(
-        &mut self,
-        item: usize,
-        weights: &mut [FP],
-        resids: &mut [FP],
-        active: &[usize],
-    ) -> u32 {
+    fn run_cd(&self, item: usize, weights: &mut [FP], resids: &mut [FP], active: &[usize]) -> u32 {
         let mut n_iters = self.options.max_iters;
         for it in 0..n_iters {
             let max_upd = self.cd_round(weights, resids, active);
@@ -250,7 +250,7 @@ impl<'a> SLIMWorkspace<'a> {
     }
 
     /// Do one round of coordinate descent, returning the maximum coordinate change.
-    fn cd_round(&mut self, weights: &mut [FP], resids: &mut [FP], active: &[usize]) -> FP {
+    fn cd_round(&self, weights: &mut [FP], resids: &mut [FP], active: &[usize]) -> FP {
         let mut dmax = 0.0;
         for j in active {
             let j_users = self.iu_matrix.row_cols(*j);
@@ -264,13 +264,7 @@ impl<'a> SLIMWorkspace<'a> {
 
     /// Do one parameter update of coordinate descent, returning the (absolute)
     /// coordinate change.
-    fn cd_single(
-        &mut self,
-        j: usize,
-        nz_rows: &[i32],
-        weights: &mut [FP],
-        resids: &mut [FP],
-    ) -> FP {
+    fn cd_single(&self, j: usize, nz_rows: &[i32], weights: &mut [FP], resids: &mut [FP]) -> FP {
         let cur_w = weights[j];
         // Reg Paths divides by N to get a mean, but Karypis does *not*.
 

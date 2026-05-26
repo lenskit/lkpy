@@ -15,6 +15,7 @@ from lenskit.data import Dataset, ItemList
 from lenskit.data.types import NPMatrix, NPVector
 from lenskit.logging import item_progress
 from lenskit.math.solve import solve_cholesky
+from lenskit.parallel import run_accel_task
 
 from ._common import ALSBase, ALSConfig, ALSTrainerBase, TrainContext
 
@@ -155,8 +156,11 @@ class ImplicitMFTrainer(ALSTrainerBase[ImplicitMFScorer, ImplicitMFConfig]):
     @override
     def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
         OtOr = _implicit_otor(context.right, context.reg)
-        with item_progress(f"Epoch {epoch} {context.label}", context.nrows) as pb:
-            return als.train_implicit_matrix(context.matrix, context.left, context.right, OtOr, pb)
+        with item_progress(f"Epoch {epoch} {context.label} rows", context.nrows) as pb:
+            return run_accel_task(
+                als.train_implicit_matrix(context.matrix, context.left, context.right, OtOr),
+                progress=pb,
+            )
 
     @override
     def finalize(self):
