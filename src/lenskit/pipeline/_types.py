@@ -13,6 +13,7 @@ from importlib import import_module
 from types import FunctionType, GenericAlias, NoneType, UnionType
 from typing import (
     Any,
+    Literal,
     TypeAliasType,
     TypeVar,
     Union,
@@ -189,7 +190,9 @@ def is_instance_or_subclass(obj: Any, typ: type):
         return isinstance(obj, typ)
 
 
-def make_importable_path(obj: type | FunctionType | None) -> str:
+def make_importable_path(
+    obj: type | FunctionType | None, *, final_sep: Literal[":", "."] = ":"
+) -> str:
     """
     Compute a string representation of a class or function that is both
     resolvable and human-readable.  Type parameterizations are lost.  The
@@ -218,9 +221,9 @@ def make_importable_path(obj: type | FunctionType | None) -> str:
             raise err
 
     mod_path = obj.__module__
-    out_path = f"{mod_path}:{obj.__qualname__}"
+    out_path = f"{mod_path}{final_sep}{obj.__qualname__}"
     short_mod_path = re.sub(r"\._.*", "", mod_path)
-    short_path = f"{short_mod_path}:{obj.__name__}"
+    short_path = f"{short_mod_path}{final_sep}{obj.__name__}"
 
     if short_mod_path != mod_path:
         short_mod = import_module(short_mod_path)
