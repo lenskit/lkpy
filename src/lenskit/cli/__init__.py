@@ -118,7 +118,9 @@ def version():
     console.print(f"LensKit version [bold cyan]{__version__}[/bold cyan].")
 
 
-def _list_commands(ctx: click.Context, cmd: click.Group | click.Command, prefix=""):
+def _list_commands(
+    ctx: click.Context, cmd: click.Group | click.Command, prefix=""
+):  # pragma: nocover
     assert cmd.name is not None
     name = prefix + cmd.name
     print(name)
