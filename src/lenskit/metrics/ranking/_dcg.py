@@ -209,6 +209,10 @@ class DCG(ListMetric, RankingMetricBase):
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
+        if len(test) == 0:
+            warnings.warn("test item list is empty", DataWarning, skip_file_prefixes=_warn_skips)
+            return np.nan
+
         if self.gain:
             return _graded_dcg(recs, test, self.gain, self.weight)
         else:
@@ -268,15 +272,19 @@ def array_dcg(
     Returns:
         double: the DCG of the scored items.
     """
+    if len(scores) == 0:
+        return np.nan
+
     ids = np.arange(1, len(scores) + 1)
+
     recs = ItemList(item_ids=ids, ordered=True)
 
-    mask = scores > 0
-    test = ItemList(item_ids=ids[mask], rating=scores[mask])
-
     if graded:
+        test = ItemList(item_ids=ids, rating=scores)
         return _graded_dcg(recs, test, "rating")
     else:
+        mask = scores > 0
+        test = ItemList(item_ids=ids[mask])
         return _binary_dcg(recs, test)
 
 

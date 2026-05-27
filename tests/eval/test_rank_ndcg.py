@@ -142,7 +142,7 @@ def test_ndcg_null_gains_ignored():
     truth = ItemList([1, 2, 3], rating=[0.5, None, 3])
 
     val = call_metric(NDCG, recs, truth, gain="rating")
-    expected = array_dcg(np.array([0.5, 0, 3])) / array_dcg(np.array([3, 0.5]))
+    expected = array_dcg(np.array([0.5, 0, 3])) / array_dcg(np.array([3, 0.5, 0]))
     assert val == approx(expected)
 
 
