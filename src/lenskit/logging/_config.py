@@ -16,7 +16,7 @@ import re
 import sys
 import warnings
 from pathlib import Path
-from typing import Literal, TypeAlias
+from typing import Literal
 
 import structlog
 from structlog.dev import RichTracebackFormatter
@@ -33,7 +33,7 @@ CORE_PROCESSORS = [
     structlog.stdlib.PositionalArgumentsFormatter(),
     structlog.processors.MaybeTimeStamper(),
 ]
-LogFormat: TypeAlias = Literal["json", "logfmt", "text"]
+type LogFormat = Literal["json", "logfmt", "text"]
 
 _active_config: LoggingConfig | None = None
 
@@ -135,21 +135,34 @@ class LoggingConfig:  # pragma: nocover
                 The level of verbosity.  Values of ``True`` or ``1`` turn on
                 ``DEBUG``-level logs, and ``2`` or greater turns on tracing.
         """
-        if isinstance(verbose, int) and verbose > 1:
-            self.level = LVL_TRACE
-        elif verbose:
-            self.level = logging.DEBUG
-        else:
-            self.level = logging.INFO
+        self.level = _verbose_level(verbose)
 
     def set_log_file(
-        self, path: os.PathLike[str], level: int | None = None, format: LogFormat = "json"
+        self,
+        path: os.PathLike[str],
+        level: int | None = None,
+        format: LogFormat = "json",
+        *,
+        verbosity: int | None = None,
     ):
         """
         Configure a log file.
+
+        Args:
+            path:
+                Path to the log file.
+            level:
+                Logging level (as a :mod:`logging` constant).
+            format:
+                Format for log output files.
+            verbosity:
+                Logging level (as a verbosity level, 0=INFO).
         """
         self.file = Path(path)
-        self.file_level = level
+        if level is not None:
+            self.file_level = level
+        elif verbosity is not None:
+            self.file_level = _verbose_level(verbosity)
         self.file_format = format
 
     def apply(self):
@@ -247,6 +260,15 @@ class LoggingConfig:  # pragma: nocover
         update_log_level()
 
         _active_config = self
+
+
+def _verbose_level(verbose: bool | int):
+    if isinstance(verbose, int) and verbose > 1:
+        return LVL_TRACE
+    elif verbose:
+        return logging.DEBUG
+    else:
+        return logging.INFO
 
 
 def _env_level(name: str) -> int | None:

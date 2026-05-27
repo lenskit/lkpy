@@ -15,7 +15,7 @@ import numpy as np
 
 from lenskit import __version__, configure
 from lenskit.config import locate_configuration_root
-from lenskit.logging import LoggingConfig, console, get_logger
+from lenskit.logging import LogFormat, LoggingConfig, console, get_logger
 
 __all__ = ["lenskit", "main", "version"]
 _log = get_logger(__name__)
@@ -45,6 +45,20 @@ def main():
 @click.group("lenskit", invoke_without_command=True)
 @click.help_option("-h", "--help")
 @click.option("-v", "--verbose", "verbosity", count=True, help="Enable verbose logging output.")
+@click.option("--log-file", type=Path, help="Save log messages to FILE")
+@click.option(
+    "--log-file-verbose",
+    type=int,
+    is_flag=False,
+    flag_value=1,
+    help="Increase verbosity of log file independent of --verbose",
+)
+@click.option(
+    "--log-file-format",
+    type=click.Choice(["json", "logfmt", "text"], False),
+    default="json",
+    help="Write log file in specified format.",
+)
 @click.option("--skip-log-setup", is_flag=True, hidden=True, envvar="LK_SKIP_LOG_SETUP")
 @click.option("--list-commands", is_flag=True, hidden=True)
 @click.option(
@@ -58,6 +72,9 @@ def main():
 def lenskit(
     ctx: click.Context,
     verbosity: int,
+    log_file: Path | None,
+    log_file_verbose: int | None,
+    log_file_format: LogFormat,
     project_root: Path | None,
     skip_log_setup: bool = False,
     list_commands: bool = False,
@@ -71,6 +88,8 @@ def lenskit(
         lc = LoggingConfig()
         if verbosity:
             lc.set_verbose(verbosity)
+        if log_file is not None:
+            lc.set_log_file(log_file, verbosity=log_file_verbose)
         lc.apply()
 
     if project_root is None:
@@ -100,6 +119,7 @@ def version():
 
 
 def _list_commands(ctx: click.Context, cmd: click.Group | click.Command, prefix=""):
+    assert cmd.name is not None
     name = prefix + cmd.name
     print(name)
     if isinstance(cmd, click.Group):

@@ -8,7 +8,7 @@
 Logging, progress, and resource records.
 """
 
-from ._config import LoggingConfig, basic_logging, notebook_logging
+from ._config import LogFormat, LoggingConfig, basic_logging, notebook_logging
 from ._console import console, stdout_console
 from ._formats import friendly_duration
 from ._proxy import get_logger
@@ -20,6 +20,7 @@ from .tasks import Task
 
 __all__ = [
     "LoggingConfig",
+    "LogFormat",
     "basic_logging",
     "notebook_logging",
     "Progress",
