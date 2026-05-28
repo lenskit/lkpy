@@ -10,6 +10,16 @@ There are no new major paradigm shifts, though — pipelines, datasets, and
 components work as they do in the 2025 series, but with more features, some
 rough corners polished off the interfaces, and hopefully fewer bugs.
 
+.. _2026.3.0:
+
+2026.3.0
+~~~~~~~~
+
+Third release in 2026, with more feature updates and bug fixes.
+
+- Fixed graded NDCG when input item lists are empty and do not have the grade
+  field (:issue:`1095`, :pr:`1096`).
+
 .. _2026.2.0:
 
 2026.2.0
