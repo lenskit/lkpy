@@ -12,9 +12,8 @@ import click
 from rich.console import Console
 from rich.markdown import Markdown
 
-from lenskit.data import Dataset, load_amazon_ratings, load_movielens
+from lenskit.data import Dataset
 from lenskit.data._summary import save_stats
-from lenskit.data.sources.steam import load_steam
 from lenskit.logging import get_logger
 
 _log = get_logger(__name__)
@@ -41,12 +40,18 @@ def describe(format: str | None, markdown: bool, path: list[Path]):
             log.info("loading LensKit native data")
             data = Dataset.load(path[0])
         case "movielens":
+            from lenskit.data.sources.movielens import load_movielens
+
             log.info("loading MovieLens data")
             data = load_movielens(path[0])
         case "amazon":
+            from lenskit.data.sources.amazon import load_amazon_ratings
+
             log.info("loading Amazon data")
             data = load_amazon_ratings(path[0])
         case "steam":
+            from lenskit.data.sources.steam import load_steam
+
             log.info("loading Steam data")
             data = load_steam(*path)
         case _:
