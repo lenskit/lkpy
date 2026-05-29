@@ -16,6 +16,7 @@ from itertools import batched
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 from xopen import xopen
@@ -108,6 +109,12 @@ def _load_au_steam(interactions: Path, reviews: Path | None) -> Dataset:
     dsb = DatasetBuilder()
 
     ui_data = _read_table(interactions, AU_USERS_ITEMS_SCHEMA)
+
+    _log.debug("de-duplicating Steam data", rows=ui_data.num_rows)
+    _uq_ids, uq_rows = np.unique(ui_data.column("steam_id"), return_index=True, sorted=False)
+    uq_rows = pa.array(uq_rows)
+    ui_data = ui_data.take(uq_rows)
+
     _log.info("loaded Steam data", users=ui_data.num_rows)
 
     items = ui_data.column("items")
@@ -122,17 +129,17 @@ def _load_au_steam(interactions: Path, reviews: Path | None) -> Dataset:
     )
     item_info: pa.Table = ii_tbl.group_by("item_id").aggregate([("item_name", "distinct")])
     item_info = item_info.append_column(
-        "name", pc.list_element(item_info.column("item_name_distinct"), 0)
+        "title", pc.list_element(item_info.column("item_name_distinct"), 0)
     ).drop_columns("item_name_distinct")
     item_info = item_info.filter(item_info.column("item_id").is_valid())
     _log.debug("item schema: %s", item_info.schema)
     _log.info("adding items", count=item_info.num_rows)
     dsb.add_entities("item", item_info.column("item_id"))
-    dsb.add_scalar_attribute("item", "name", item_info)
+    dsb.add_scalar_attribute("item", "title", item_info)
 
     _log.info("adding users", count=ui_data.num_rows)
-    dsb.add_entities("user", pc.unique(ui_data.column("user_id")))
-    dsb.add_scalar_attribute("user", "steam_id", ui_data.select(["user_id", "steam_id"]))
+    users = ui_data.select(["steam_id", "user_id"]).rename_columns(["user_id", "username"])
+    dsb.add_entities("user", users)
 
     _log.info("adding user-item interactions")
     # TODO: make DSB work better with CSR-shaped data
