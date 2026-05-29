@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -12,12 +12,12 @@ Support for importing `Steam data`_.
 
 import sys
 from collections.abc import Generator
+from itertools import batched
 from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
 import pyarrow.compute as pc
-from more_itertools import chunked
 from xopen import xopen
 
 from lenskit._accel import data as _accel_data
@@ -152,7 +152,7 @@ def _read_table(path: Path, schema: pa.Schema | None = None) -> pa.Table:
 
 
 def _decode_chunks(path: Path, schema: pa.Schema | None = None) -> Generator[pa.RecordBatch]:
-    for chunk in chunked(_decode_steam(path), BATCH_SIZE):
+    for chunk in batched(_decode_steam(path), BATCH_SIZE):
         batch = pa.RecordBatch.from_pylist(chunk, schema)
         if schema is None:
             schema = batch.schema
