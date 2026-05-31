@@ -20,6 +20,7 @@ mod cooc;
 mod coordinates;
 mod index;
 mod pairs;
+mod pyon;
 mod sampling;
 mod scatter;
 mod selection;
@@ -48,6 +49,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     data.add_function(wrap_pyfunction!(cooc::count_cooc, &data)?)?;
     data.add_function(wrap_pyfunction!(cooc::dense_cooc, &data)?)?;
     data.add_function(wrap_pyfunction!(hash_array, &data)?)?;
+    data.add_function(wrap_pyfunction!(pyon::pyon_loads, &data)?)?;
 
     Ok(())
 }

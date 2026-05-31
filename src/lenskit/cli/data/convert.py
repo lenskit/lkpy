@@ -8,8 +8,6 @@ from pathlib import Path
 
 import click
 
-from lenskit.data import load_amazon_ratings, load_movielens
-from lenskit.data.msweb import load_ms_web
 from lenskit.logging import get_logger
 
 _log = get_logger(__name__)
@@ -19,6 +17,7 @@ _log = get_logger(__name__)
 @click.option("--movielens", "format", flag_value="movielens", help="Convert MovieLens data.")
 @click.option("--amazon", "format", flag_value="amazon", help="Convert Amazon rating data.")
 @click.option("--ms-web", "format", flag_value="ms-web", help="Convert MSWeb visit logs.")
+@click.option("--steam", "format", flag_value="steam", help="Convert Steam interaction data")
 @click.option(
     "--item-lists", is_flag=True, help="Convert to an ItemListCollection instead of Dataset."
 )
@@ -40,13 +39,20 @@ def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = F
             _log.error("no data format specified")
             raise click.UsageError("no data format specified")
         case "movielens":
+            from lenskit.data.sources.movielens import load_movielens
+
             log.info("loading MovieLens data")
             if len(src) != 1:
                 log.error("received %d source paths, MovieLens only takes one", len(src))
+
             data = load_movielens(src[0])
         case "amazon":
+            from lenskit.data.sources.amazon import load_amazon_ratings
+
             data = load_amazon_ratings(*src)
         case "ms-web":
+            from lenskit.data.sources.msweb import load_ms_web
+
             data = load_ms_web(src[0])
         case _:
             raise ValueError(f"unknown data format {format}")
