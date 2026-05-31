@@ -6,7 +6,6 @@
 
 import os
 import sys
-import warnings
 from importlib.metadata import entry_points
 from pathlib import Path
 
@@ -134,6 +133,6 @@ for plugin in cli_plugins:
     try:
         cmd = plugin.load()
     except ImportError as e:
-        warnings.warn(f"cannot load CLI {plugin.name}: {e}", ImportWarning)
-
-    lenskit.add_command(cmd)
+        print(f"WARNING: cannot load LensKit CLI {plugin.name}: {e}", file=sys.stderr)
+    else:
+        lenskit.add_command(cmd)
