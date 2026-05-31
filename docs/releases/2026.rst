@@ -17,6 +17,14 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 
 Third release in 2026, with more feature updates and bug fixes.
 
+.. _2026.2.1:
+
+2026.2.1
+~~~~~~~~
+
+Bug-fix release (with one very small feature).
+
+- Fixed correct running of CLI when CLI plugins cannot be imported.
 - Fixed graded NDCG when input item lists are empty and do not have the grade
   field (:issue:`1095`, :pr:`1096`).
 - Added support for PyArrow tables to
