@@ -306,7 +306,7 @@ jobs:
 
       - name: 🕺🏻 Test LensKit CLI
         run: |
-          mise run test-cli -- --coverage --cov-append tests/cli/test-tune.sh
+          mise run test-cli -- --coverage --cov-append
         shell: bash -e {0}
         env:
           LK_TUNE_JOBS: 2
