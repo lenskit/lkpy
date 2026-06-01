@@ -54,6 +54,10 @@ def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = F
             from lenskit.data.sources.msweb import load_ms_web
 
             data = load_ms_web(src[0])
+        case "steam":
+            from lenskit.data.sources.steam import load_steam
+
+            data = load_steam(src[0])
         case _:
             raise ValueError(f"unknown data format {format}")
 
