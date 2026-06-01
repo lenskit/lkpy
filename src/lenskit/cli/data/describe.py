@@ -12,7 +12,7 @@ import click
 from rich.console import Console
 from rich.markdown import Markdown
 
-from lenskit.data import Dataset, load_amazon_ratings, load_movielens
+from lenskit.data import Dataset
 from lenskit.data._summary import save_stats
 from lenskit.logging import get_logger
 
@@ -20,27 +20,40 @@ _log = get_logger(__name__)
 
 
 @click.command("describe")
-@click.option("--movielens", "format", flag_value="movielens", help="describe MovieLens data")
-@click.option("--amazon", "format", flag_value="amazon", help="describe Amazon rating data")
+@click.option("--movielens", "format", flag_value="movielens", help="Describe MovieLens data.")
+@click.option("--amazon", "format", flag_value="amazon", help="Describe Amazon rating data.")
+@click.option("--steam", "format", flag_value="steam", help="Describe Steam interaction data.")
 @click.option("--markdown", is_flag=True, help="output raw Markdown")
-@click.argument("path", type=Path)
-def describe(format: str | None, markdown: bool, path: Path):
+@click.argument("path", type=Path, nargs=-1, required=True)
+def describe(format: str | None, markdown: bool, path: list[Path]):
     """
     Describe a data set.
     """
 
-    log = _log.bind(path=str(path))
+    if len(path) == 1:
+        log = _log.bind(path=str(path[0]))
+    else:
+        log = _log.bind(path=[str(p) for p in path])
 
     match format:
         case None:
             log.info("loading LensKit native data")
-            data = Dataset.load(path)
+            data = Dataset.load(path[0])
         case "movielens":
+            from lenskit.data.sources.movielens import load_movielens
+
             log.info("loading MovieLens data")
-            data = load_movielens(path)
+            data = load_movielens(path[0])
         case "amazon":
+            from lenskit.data.sources.amazon import load_amazon_ratings
+
             log.info("loading Amazon data")
-            data = load_amazon_ratings(path)
+            data = load_amazon_ratings(path[0])
+        case "steam":
+            from lenskit.data.sources.steam import load_steam
+
+            log.info("loading Steam data")
+            data = load_steam(*path)
         case _:
             raise ValueError(f"unknown data format {format}")
 

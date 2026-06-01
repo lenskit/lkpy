@@ -828,8 +828,7 @@ class DatasetBuilder:
             raise DataError(f"no entities of class {cls}")
 
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):  # pragma: nocover
-            n_bad = nums.is_valid().sum().as_py()
+        if n_bad := nums.null_count:  # pragma: nocover
             raise DataError(f"{n_bad} unknown entity IDs")
 
         val_array: pa.Array = pa.array(values)  # type: ignore
@@ -915,8 +914,7 @@ class DatasetBuilder:
         if e_tbl is None:  # pragma: nocover
             raise DataError(f"no entities of class {cls}")
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):  # pragma: nocover
-            n_bad = nums.is_valid().sum().as_py()
+        if n_bad := nums.null_count:  # pragma: nocover
             raise DataError(f"{n_bad} unknown entity IDs")
 
         val_array: pa.Array = pa.array(values)  # type: ignore
@@ -980,8 +978,7 @@ class DatasetBuilder:
         if e_tbl is None:  # pragma: nocover
             raise DataError(f"no entities of class {cls}")
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):  # pragma: nocover
-            n_bad = nums.is_valid().sum().as_py()
+        if n_bad := nums.null_count:  # pragma: nocover
             raise DataError(f"{n_bad} unknown entity IDs")
 
         tbl_valid = np.zeros(e_tbl.num_rows, dtype=np.bool_)

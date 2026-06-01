@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pytest import fixture, skip
 
-from lenskit.data.msweb import load_ms_web
+from lenskit.data.sources.msweb import load_ms_web
 from lenskit.splitting import TTSplit
 
 MSWEB_TRAIN = Path("data/anonymous-msweb.data.gz")
