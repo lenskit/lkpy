@@ -17,6 +17,9 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 
 Third release in 2026, with more feature updates and bug fixes.
 
+- Added initial support for importing Steam user/item data
+  (:py:mod:`lenskit.data.sources.steam`, :pr:`1111`).
+
 .. _2026.2.1:
 
 2026.2.1
