@@ -36,6 +36,27 @@ def rank_biased_precision(
     return rbp / normalization
 
 
+def graded_rank_biased_precision(
+    relevance: np.ndarray, weights: np.ndarray, normalization: float = 1.0
+) -> float:
+    """
+    Compute graded rank-biased precision.
+
+    Args:
+        relevance:
+            Float array of relevance/grade scores at each position
+        weights:
+            Weight for each item position (same length as relevance)
+        normalization:
+            Optional normalization factor, defaults to 1.0
+
+    Returns:
+        Graded RBP score
+    """
+    score = np.sum(weights * relevance).item()
+    return score / normalization
+
+
 class RBP(ListMetric, RankingMetricBase):
     """
     Evaluate recommendations with rank-biased precision :cite:p:`rbp`.
@@ -62,6 +83,9 @@ class RBP(ListMetric, RankingMetricBase):
     has no pooling, so the variance of this estimator may be high as they note
     in the paper; however, RBP with high patience should be no worse than nDCG
     (and perhaps even better) in this regard.
+
+    This metric class supports relevance grades :math:`r_{ui} \\in \\[0, 1\\]`
+    via an optional ``grade_field``.
 
     In recommender evaluation, we usually have a small test set, so the maximum
     achievable RBP is significantly less than the theoretical maximum, and is a
@@ -99,6 +123,8 @@ class RBP(ListMetric, RankingMetricBase):
     patience: float
     normalize: bool
     weight_field: str | None
+    grade_field: str | None
+    unknown_grade: float
 
     def __init__(
         self,
@@ -109,6 +135,8 @@ class RBP(ListMetric, RankingMetricBase):
         patience: float = 0.85,
         normalize: bool = False,
         weight_field: str | None = None,
+        grade_field: str | None = None,
+        unknown_grade: float = 0.25,
     ):
         super().__init__(n, k=k)
         self.patience = patience
@@ -117,13 +145,16 @@ class RBP(ListMetric, RankingMetricBase):
         self.weight = weight
         self.normalize = normalize
         self.weight_field = weight_field
+        self.grade_field = grade_field
+        self.unknown_grade = unknown_grade
 
     @property
     def label(self):
+        base = "RBP" if self.grade_field is None else "GradedRBP"
         if self.n is not None:
-            return f"RBP@{self.n}"
+            return f"{base}@{self.n}"
         else:
-            return "RBP"
+            return base
 
     @override
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
@@ -133,8 +164,6 @@ class RBP(ListMetric, RankingMetricBase):
         nrel = len(test)
         if nrel == 0:
             return np.nan
-
-        good = recs.isin(test)
 
         if self.weight_field is not None:
             # use custom weights from field
@@ -158,4 +187,17 @@ class RBP(ListMetric, RankingMetricBase):
             else:
                 normalization = np.sum(weights).item()
 
-        return rank_biased_precision(good, weights, normalization)
+        # Binary relevance
+        if self.grade_field is None:
+            good = recs.isin(test)
+            return rank_biased_precision(good, weights, normalization)
+
+        # Graded relevance
+        if self.grade_field not in test._fields:
+            raise ValueError(f"Grade field '{self.grade_field}' not found in test ItemList")
+
+        grades = test.field(self.grade_field)
+        grade_map = dict(zip(test.ids(), grades))
+        relevance = np.array([grade_map.get(item, self.unknown_grade) for item in recs.ids()])
+
+        return graded_rank_biased_precision(relevance, weights, normalization)
