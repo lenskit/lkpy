@@ -294,7 +294,7 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
         assert batch.data.interactions is not None
         assert isinstance(batch.users, np.ndarray)
 
-        # start looking for misranked models
+        # start looking for misranked items
         idx_range = torch.arange(len(users), device=users.device)
         neg_scores = torch.full((len(users),), -math.inf, device=users.device)
         neg_norms = torch.zeros(len(users), device=users.device)
