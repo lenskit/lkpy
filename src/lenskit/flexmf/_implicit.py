@@ -333,6 +333,7 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
         tries = 0
         # Track which training batch rows we still need negatives for.
         needed = torch.full((bsize,), True, dtype=torch.bool)
+        n_dev = needed.to(device, non_blocking=True)
 
         # We will keep looping as long as some rows need negatives, and we
         # haven't exceeded the attempt budget.
@@ -341,7 +342,6 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             bi = tries % WARP_CAND_BATCH_SIZE
             tries += 1
 
-            n_dev = needed.to(device, non_blocking=True)
             if bi == 0:
                 # Set up candidates based on rows that need items at the start of the batch.
                 cand_mask = needed
@@ -378,7 +378,8 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
 
             # Now that we have the best negative so far, find the winners and
             # remove don't update them in the next batch.
-            needed = neg_scores < pos_scores[:, 0]
+            n_dev = neg_scores < pos_scores[:, 0]
+            needed = n_dev.cpu()
 
         # Compute estimated ranks from the negative counts
         ranks = ((self.data.n_items - 1) / (neg_counts + 1)).to(torch.float64).detach()
