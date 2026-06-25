@@ -20,6 +20,7 @@ from pytest import approx, fixture, mark
 from lenskit.basic.history import UserTrainingHistoryLookup
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
 from lenskit.diagnostics import DataWarning
+from lenskit.knn import ItemKNNConfig
 from lenskit.knn.item import ItemKNNScorer
 from lenskit.pipeline import predict_pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
@@ -85,6 +86,13 @@ class TestItemKNN(BasicComponentTests, ScorerTests):
         assert r_mat.data == approx(o_mat.data)
 
         assert all(r_mat.indptr == o_mat.indptr)
+
+
+class TestImplicitItemKNN(BasicComponentTests, ScorerTests):
+    can_score = "some"
+    component = ItemKNNScorer
+    config = ItemKNNConfig(feedback="implicit")
+    expected_ndcg = 0.10
 
 
 def test_ii_config():
