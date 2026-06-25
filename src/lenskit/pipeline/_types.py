@@ -134,32 +134,35 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
         all of the targets, and ``True`` otherwise.
     """
     for target in targets:
-        # resolve type aliases
-        if isinstance(target, TypeAliasType):
-            target = target.__value__
         if target == Any:
             return True
 
-        # try a straight subclass check first, but gracefully handle incompatible types
+        # resolve type aliases
+        if isinstance(target, TypeAliasType) and is_compatible_data(obj, target.__value__):
+            return True
+
+        # try a straight subclass check first, but gracefully handle incompatible target types
         try:
-            if isinstance(obj, target):
+            if isinstance(obj, target):  # ty:ignore[invalid-argument-type]
                 return True
         except TypeError:
             # failing to check instance is fine, continue other checks
             pass
 
+        # we need type origin for several things
         origin = get_origin(target)
-        if origin == UnionType or origin == Union:
-            types = get_args(target)
-            if is_compatible_data(obj, *types):
-                return True
-        elif isinstance(target, TypeVar):
-            # is this quite correct?
-            if target.__bound__ is None or isinstance(obj, target.__bound__):
-                return True
-        elif isinstance(target, (GenericAlias, _GenericAlias)):
-            tcls = get_origin(target)
+
+        if isinstance(target, (GenericAlias, _GenericAlias)):
+            tcls = origin
+            while isinstance(tcls, (TypeAliasType, GenericAlias)):
+                if isinstance(tcls, GenericAlias):
+                    tcls = get_origin(tcls)
+                elif isinstance(tcls, TypeAliasType):
+                    tcls = tcls.__value__
+
             if isinstance(obj, np.ndarray) and tcls == np.ndarray:
+                # FIXME check for NumPy type compatibility
+                return True
                 # check for type compatibility
                 _sz, dtw = get_args(target)
                 (dt,) = get_args(dtw)
@@ -167,6 +170,17 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
                     return True
             elif isinstance(tcls, type) and isinstance(obj, tcls):
                 # this has holes, but is as close an approximation as we can get
+                return True
+        elif isinstance(origin, TypeAliasType):
+            if is_compatible_data(obj, origin.__value__):
+                return True
+        elif origin == UnionType or origin == Union:
+            types = get_args(target)
+            if is_compatible_data(obj, *types):
+                return True
+        elif isinstance(target, TypeVar):
+            # check type variable bounds (we can't fully resolve type variables)
+            if target.__bound__ is None or is_compatible_data(obj, target.__bound__):
                 return True
         elif (
             isinstance(obj, int)
