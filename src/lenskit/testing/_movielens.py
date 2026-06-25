@@ -96,7 +96,10 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
 
     for col in old_ustats.columns:
         log.info("checking user stats column", column=col)
-        assert ustats[col].values == pytest.approx(old_ustats[col].values)
+        if isinstance(ustats[col].values.dtype, np.floating):
+            assert ustats[col].values == pytest.approx(old_ustats[col].values)
+        else:
+            assert np.all(ustats[col].values == old_ustats[col].values)
 
 
 @pytest.fixture
