@@ -224,7 +224,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         cmat = rmat / np.maximum(norms, np.finfo("f4").smallest_normal)
         assert cmat.shape == rmat.shape
         log.debug("[%s] normalized, memory use %s", timer, max_memory())
-        return cmat
+        return cmat.astype(np.float32)
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
