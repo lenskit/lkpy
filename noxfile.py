@@ -9,8 +9,19 @@ import nox
 
 @nox.session(venv_backend="uv")
 @nox.parametrize("torch", ["2.4", "2.5", "2.6", "2.7", "2.8"])
-def test(session, torch):
+def sweep_torch(session, torch):
     session.install(f"torch ~={torch}.0", "-e", ".", "--group", "test")
+    run_pytest(session)
+
+
+@nox.session(venv_backend="uv")
+@nox.parametrize("numpy", ["2.0", "2.1", "2.2", "2.3", "2.4", "2.5"])
+def sweep_numpy(session, numpy):
+    session.install(f"numpy ~={numpy}.0", "-e", ".", "--group", "test")
+    run_pytest(session)
+
+
+def run_pytest(session):
     opts = session.posargs
     if not opts:
         opts = ["-m", "not slow", "tests"]

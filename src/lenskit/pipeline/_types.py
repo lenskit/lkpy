@@ -23,11 +23,12 @@ from typing import (
 )
 
 import numpy as np
+from numpy.typing import NDArray
 from typing_extensions import TypeForm
 
 from lenskit.diagnostics import PipelineWarning, TypecheckWarning
 
-type TypeExpr = type | UnionType | TypeAliasType
+type TypeExpr = type | UnionType | TypeAliasType | GenericAlias
 """
 Type for (resolved) type expressions.
 
@@ -77,36 +78,48 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
         ``False`` if it is clear that the specified type is incompatible with
         all of the targets, and ``True`` otherwise.
     """
-    for target in targets:
-        # resolve type aliases
-        if isinstance(target, TypeAliasType):
-            target = target.__value__
-        if target == Any:
-            return True
+    return any(_compat_type_inner(typ, target) for target in targets)
 
-        # try a straight subclass check first, but gracefully handle incompatible types
-        try:
-            if issubclass(typ, target):
-                return True
-        except TypeError:
-            # failing to check instance is fine, continue other checks
-            pass
 
-        if isinstance(target, (GenericAlias, _GenericAlias)):
-            tcls = get_origin(target)
-            # if we're matching a raw type against a generic, just check the origin
-            if isinstance(typ, GenericAlias):
-                warnings.warn(f"cannot type-check generic type {typ}", TypecheckWarning)
-                cls = get_origin(typ)
-                if issubclass(cls, tcls):  # type: ignore
-                    return True
-            elif isinstance(typ, type):
-                if issubclass(typ, tcls):  # type: ignore
-                    return True
-        elif typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
+def _compat_type_inner(typ: type, target: TypeExpr) -> bool:
+    """
+    Check a type for compatibility with a single type.
+    """
+    # always compatible with Any
+    if target == Any:
+        return True
+
+    # try a straight subclass check first, but gracefully handle incompatible types
+    try:
+        if issubclass(typ, target):
             return True
-        elif typ == float and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
-            return True
+    except TypeError:
+        # failing to check instance is fine, continue other checks
+        pass
+
+    # resolve type aliases
+    if isinstance(target, TypeAliasType):
+        return _compat_type_inner(typ, target.__value__)
+    if isinstance(typ, TypeAliasType):
+        return _compat_type_inner(typ.__value__, target)
+
+    # expand union types
+    if is_union_type(target):
+        types = get_args(target)
+        return is_compatible_type(typ, *types)
+
+    # handle numeric hierarchy
+    if typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
+        return True
+    if typ == float and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
+        return True
+
+    # try to handle generic types
+    if isinstance(typ, (GenericAlias, _GenericAlias)):
+        warnings.warn(f"cannot type-check generic type {typ}", TypecheckWarning)
+        return _compat_type_inner(get_origin(typ), target)
+    if isinstance(target, (GenericAlias, _GenericAlias)):
+        return _compat_type_inner(typ, get_origin(target))
 
     return False
 
@@ -133,48 +146,60 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
         ``False`` if it is clear that the specified type is incompatible with
         all of the targets, and ``True`` otherwise.
     """
-    for target in targets:
-        # resolve type aliases
-        if isinstance(target, TypeAliasType):
-            target = target.__value__
-        if target == Any:
+    return any(_compat_data_inner(obj, target) for target in targets)
+
+
+def _compat_data_inner(obj: object, target: TypeExpr) -> bool:
+    # always compatible with Any
+    if target == Any:
+        return True
+
+    # try a straight subclass check first, but gracefully handle incompatible target types
+    try:
+        if isinstance(obj, target):  # type: ignore
+            return True
+    except TypeError:
+        # failing to check instance is fine, continue other checks
+        pass
+
+    # resolve type aliases
+    if isinstance(target, TypeAliasType):
+        return _compat_data_inner(obj, target.__value__)
+
+    # expand union types
+    if is_union_type(target):
+        types = get_args(target)
+        return is_compatible_data(obj, *types)
+
+    # resolve numeric type hierarchy
+    if isinstance(obj, int) and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
+        return True
+    if isinstance(obj, float) and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
+        return True
+
+    if isinstance(target, TypeVar):
+        # check type variable bounds (we can't fully resolve type variables)
+        if target.__bound__ is None or is_compatible_data(obj, target.__bound__):
             return True
 
-        # try a straight subclass check first, but gracefully handle incompatible types
-        try:
-            if isinstance(obj, target):
-                return True
-        except TypeError:
-            # failing to check instance is fine, continue other checks
-            pass
-
+    # attempt to resolve generic types
+    if isinstance(target, (GenericAlias, _GenericAlias)):
         origin = get_origin(target)
-        if origin == UnionType or origin == Union:
-            types = get_args(target)
-            if is_compatible_data(obj, *types):
-                return True
-        elif isinstance(target, TypeVar):
-            # is this quite correct?
-            if target.__bound__ is None or isinstance(obj, target.__bound__):
-                return True
-        elif isinstance(target, (GenericAlias, _GenericAlias)):
-            tcls = get_origin(target)
-            if isinstance(obj, np.ndarray) and tcls == np.ndarray:
+
+        if isinstance(obj, np.ndarray):
+            if origin == np.ndarray:
                 # check for type compatibility
                 _sz, dtw = get_args(target)
                 (dt,) = get_args(dtw)
-                if issubclass(obj.dtype.type, dt):
-                    return True
-            elif isinstance(tcls, type) and isinstance(obj, tcls):
-                # this has holes, but is as close an approximation as we can get
+            elif origin == NDArray:
+                (dt,) = get_args(target)
+            else:
+                dt = None
+
+            if dt is not None and issubclass(obj.dtype.type, dt):
                 return True
-        elif (
-            isinstance(obj, int)
-            and isinstance(target, type)
-            and issubclass(target, (float, complex))
-        ):  # noqa: E721
-            return True
-        elif isinstance(obj, float) and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
+        elif isinstance(origin, type) and isinstance(obj, origin):
+            # this has holes, but is as close an approximation as we can get
             return True
 
     return False
@@ -214,7 +239,7 @@ def make_importable_path(
                 PipelineWarning,
                 stacklevel=2,
             )
-        else:
+        else:  # pragma: nocover
             err = TypeError("nested objects not yet supported")
             err.add_note(f"name: {obj.__name__}")
             err.add_note(f"qualified name: {obj.__qualname__}")
@@ -229,7 +254,7 @@ def make_importable_path(
         short_mod = import_module(short_mod_path)
         if getattr(short_mod, obj.__name__, None) is obj:
             out_path = short_path
-        else:
+        else:  # pragma: nocover
             warnings.warn(f"{short_path} is not {out_path}, using long path", PipelineWarning)
 
     return out_path
@@ -254,7 +279,7 @@ def import_path_string(tstr: str) -> Any:
         else:
             # separate last element from module
             parts = tstr.split(".")
-            if not parts:
+            if not parts:  # pragma: noccover
                 raise ValueError(f"unparsable type string {tstr}")
             mod_name = ".".join(parts[:-1])
             typ_name = parts[-1]
@@ -265,4 +290,5 @@ def import_path_string(tstr: str) -> Any:
 
 def is_union_type(ty: TypeForm[Any]):
     # TODO: update to 'isinstance' after Python 3.14 unification of types
-    return get_origin(ty) is Union or get_origin(ty) is UnionType
+    origin = get_origin(ty)
+    return origin is Union or origin is UnionType
