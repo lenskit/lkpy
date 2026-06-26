@@ -26,7 +26,6 @@ from lenskit.data import MatrixRelationshipSet, QueryInput, RecQuery, Relationsh
 from lenskit.pipeline._types import (
     TypecheckWarning,
     import_path_string,
-    is_compatible_data,
     is_compatible_type,
     is_instance_or_subclass,
     make_importable_path,
@@ -82,6 +81,82 @@ def test_type_incompat_generics():
 
 def test_compatible_type_any():
     assert is_compatible_type(int, Any)
+
+
+def test_compatible_type_union():
+    assert is_compatible_type(bytes, bytes | str)
+
+
+def test_compatible_int_float():
+    assert is_compatible_type(int, float)
+
+
+def test_compatible_float_complex():
+    assert is_compatible_type(float, complex)
+
+
+@mark.xfail(reason="generic type-checks not yet supported")
+def test_numpy_array_compat():
+    assert is_compatible_type(
+        np.ndarray[Any, np.dtype[np.int32]],
+        np.ndarray[Any, np.dtype[np.int32]],
+    )
+    assert is_compatible_type(
+        np.ndarray[Any, np.dtype[np.int32]],
+        np.ndarray[Any, np.dtype[np.integer]],
+    )
+    assert not is_compatible_type(
+        np.ndarray[Any, np.dtype[np.int32]],
+        np.ndarray[Any, np.dtype[np.float64]],
+    )
+
+
+@mark.xfail(reason="generic type-checks not yet supported")
+def test_numpy_array_type_compat():
+    assert is_compatible_type(
+        np.ndarray[Any, np.dtype[np.int32]],
+        NDArray[np.int32],
+    )
+    assert is_compatible_type(
+        np.ndarray[Any, np.dtype[np.int32]],
+        NDArray[np.int64],
+    )
+    assert not is_compatible_type(
+        np.ndarray[Any, np.dtype[np.int32]],
+        NDArray[np.float32],
+    )
+
+
+@mark.xfail(reason="generic type-checks not yet supported")
+def test_numpy_type_type_compat():
+    assert is_compatible_type(
+        NDArray[np.int32],
+        NDArray[np.int32],
+    )
+    assert is_compatible_type(
+        NDArray[np.int32],
+        NDArray[np.int64],
+    )
+    assert not is_compatible_type(
+        NDArray[np.int32],
+        NDArray[np.float32],
+    )
+
+
+@mark.xfail(reason="generic type-checks not yet supported")
+def test_numpy_type_array_compat():
+    assert is_compatible_type(
+        NDArray[np.int32],
+        np.ndarray[Any, np.dtype[np.int32]],
+    )
+    assert is_compatible_type(
+        NDArray[np.int32],
+        np.ndarray[Any, np.dtype[np.int64]],
+    )
+    assert not is_compatible_type(
+        NDArray[np.int32],
+        np.ndarray[Any, np.dtype[np.float32]],
+    )
 
 
 def test_query_subtype():

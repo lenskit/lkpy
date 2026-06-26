@@ -78,36 +78,48 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
         ``False`` if it is clear that the specified type is incompatible with
         all of the targets, and ``True`` otherwise.
     """
-    for target in targets:
-        # resolve type aliases
-        if isinstance(target, TypeAliasType):
-            target = target.__value__
-        if target == Any:
-            return True
+    return any(_compat_type_inner(typ, target) for target in targets)
 
-        # try a straight subclass check first, but gracefully handle incompatible types
-        try:
-            if issubclass(typ, target):
-                return True
-        except TypeError:
-            # failing to check instance is fine, continue other checks
-            pass
 
-        if isinstance(target, (GenericAlias, _GenericAlias)):
-            tcls = get_origin(target)
-            # if we're matching a raw type against a generic, just check the origin
-            if isinstance(typ, GenericAlias):
-                warnings.warn(f"cannot type-check generic type {typ}", TypecheckWarning)
-                cls = get_origin(typ)
-                if issubclass(cls, tcls):
-                    return True
-            elif isinstance(typ, type):
-                if issubclass(typ, tcls):
-                    return True
-        elif typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
+def _compat_type_inner(typ: type, target: TypeExpr) -> bool:
+    """
+    Check a type for compatibility with a single type.
+    """
+    # always compatible with Any
+    if target == Any:
+        return True
+
+    # try a straight subclass check first, but gracefully handle incompatible types
+    try:
+        if issubclass(typ, target):
             return True
-        elif typ == float and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
-            return True
+    except TypeError:
+        # failing to check instance is fine, continue other checks
+        pass
+
+    # resolve type aliases
+    if isinstance(target, TypeAliasType):
+        return _compat_type_inner(typ, target.__value__)
+    if isinstance(typ, TypeAliasType):
+        return _compat_type_inner(typ.__value__, target)
+
+    # expand union types
+    if is_union_type(target):
+        types = get_args(target)
+        return is_compatible_type(typ, *types)
+
+    # handle numeric hierarchy
+    if typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
+        return True
+    if typ == float and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
+        return True
+
+    # try to handle generic types
+    if isinstance(typ, (GenericAlias, _GenericAlias)):
+        warnings.warn(f"cannot type-check generic type {typ}", TypecheckWarning)
+        return _compat_type_inner(get_origin(typ), target)
+    if isinstance(target, (GenericAlias, _GenericAlias)):
+        return _compat_type_inner(typ, get_origin(target))
 
     return False
 
@@ -134,10 +146,10 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
         ``False`` if it is clear that the specified type is incompatible with
         all of the targets, and ``True`` otherwise.
     """
-    return any(_is_compatible_single_type(obj, target) for target in targets)
+    return any(_compat_data_inner(obj, target) for target in targets)
 
 
-def _is_compatible_single_type(obj: object, target: TypeExpr) -> bool:
+def _compat_data_inner(obj: object, target: TypeExpr) -> bool:
     # always compatible with Any
     if target == Any:
         return True
@@ -152,10 +164,9 @@ def _is_compatible_single_type(obj: object, target: TypeExpr) -> bool:
 
     # resolve type aliases
     if isinstance(target, TypeAliasType):
-        return _is_compatible_single_type(obj, target.__value__)
+        return _compat_data_inner(obj, target.__value__)
 
     # expand union types
-    # FIXME: change to isinstance when we drop Python <3.14
     if is_union_type(target):
         types = get_args(target)
         return is_compatible_data(obj, *types)
