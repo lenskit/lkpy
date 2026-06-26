@@ -99,10 +99,10 @@ def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
             if isinstance(typ, GenericAlias):
                 warnings.warn(f"cannot type-check generic type {typ}", TypecheckWarning)
                 cls = get_origin(typ)
-                if issubclass(cls, tcls):  # type: ignore
+                if issubclass(cls, tcls):
                     return True
             elif isinstance(typ, type):
-                if issubclass(typ, tcls):  # type: ignore
+                if issubclass(typ, tcls):
                     return True
         elif typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
             return True
@@ -154,10 +154,9 @@ def _is_compatible_single_type(obj: object, target: TypeExpr) -> bool:
     if isinstance(target, TypeAliasType):
         return _is_compatible_single_type(obj, target.__value__)
 
-    origin = get_origin(target)
     # expand union types
     # FIXME: change to isinstance when we drop Python <3.14
-    if origin == Union or origin == UnionType:
+    if is_union_type(target):
         types = get_args(target)
         return is_compatible_data(obj, *types)
 
@@ -174,6 +173,8 @@ def _is_compatible_single_type(obj: object, target: TypeExpr) -> bool:
 
     # attempt to resolve generic types
     if isinstance(target, (GenericAlias, _GenericAlias)):
+        origin = get_origin(target)
+
         if isinstance(obj, np.ndarray):
             if origin == np.ndarray:
                 # check for type compatibility
@@ -189,6 +190,8 @@ def _is_compatible_single_type(obj: object, target: TypeExpr) -> bool:
         elif isinstance(origin, type) and isinstance(obj, origin):
             # this has holes, but is as close an approximation as we can get
             return True
+
+    return False
 
 
 def is_instance_or_subclass(obj: Any, typ: type):
@@ -225,7 +228,7 @@ def make_importable_path(
                 PipelineWarning,
                 stacklevel=2,
             )
-        else:
+        else:  # pragma: nocover
             err = TypeError("nested objects not yet supported")
             err.add_note(f"name: {obj.__name__}")
             err.add_note(f"qualified name: {obj.__qualname__}")
@@ -240,7 +243,7 @@ def make_importable_path(
         short_mod = import_module(short_mod_path)
         if getattr(short_mod, obj.__name__, None) is obj:
             out_path = short_path
-        else:
+        else:  # pragma: nocover
             warnings.warn(f"{short_path} is not {out_path}, using long path", PipelineWarning)
 
     return out_path
@@ -265,7 +268,7 @@ def import_path_string(tstr: str) -> Any:
         else:
             # separate last element from module
             parts = tstr.split(".")
-            if not parts:
+            if not parts:  # pragma: noccover
                 raise ValueError(f"unparsable type string {tstr}")
             mod_name = ".".join(parts[:-1])
             typ_name = parts[-1]
@@ -276,4 +279,5 @@ def import_path_string(tstr: str) -> Any:
 
 def is_union_type(ty: TypeForm[Any]):
     # TODO: update to 'isinstance' after Python 3.14 unification of types
-    return get_origin(ty) is Union or get_origin(ty) is UnionType
+    origin = get_origin(ty)
+    return origin is Union or origin is UnionType
