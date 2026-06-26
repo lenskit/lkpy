@@ -152,10 +152,12 @@ def _is_compatible_single_type(obj: object, target: TypeExpr) -> bool:
 
     # resolve type aliases
     if isinstance(target, TypeAliasType):
-        return is_compatible_data(obj, target.__value__)
+        return _is_compatible_single_type(obj, target.__value__)
 
+    origin = get_origin(target)
     # expand union types
-    if isinstance(target, (Union, UnionType)):
+    # FIXME: change to isinstance when we drop Python <3.14
+    if origin == Union or origin == UnionType:
         types = get_args(target)
         return is_compatible_data(obj, *types)
 
@@ -172,21 +174,19 @@ def _is_compatible_single_type(obj: object, target: TypeExpr) -> bool:
 
     # attempt to resolve generic types
     if isinstance(target, (GenericAlias, _GenericAlias)):
-        tcls = get_origin(target)
-
         if isinstance(obj, np.ndarray):
-            if tcls == np.ndarray:
+            if origin == np.ndarray:
                 # check for type compatibility
                 _sz, dtw = get_args(target)
                 (dt,) = get_args(dtw)
-            elif tcls == NDArray:
+            elif origin == NDArray:
                 (dt,) = get_args(target)
             else:
                 dt = None
 
             if dt is not None and issubclass(obj.dtype.type, dt):
                 return True
-        elif isinstance(tcls, type) and isinstance(obj, tcls):
+        elif isinstance(origin, type) and isinstance(obj, origin):
             # this has holes, but is as close an approximation as we can get
             return True
 
