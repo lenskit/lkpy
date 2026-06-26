@@ -23,11 +23,12 @@ from typing import (
 )
 
 import numpy as np
+from numpy.typing import NDArray
 from typing_extensions import TypeForm
 
 from lenskit.diagnostics import PipelineWarning, TypecheckWarning
 
-type TypeExpr = type | UnionType | TypeAliasType
+type TypeExpr = type | UnionType | TypeAliasType | GenericAlias
 """
 Type for (resolved) type expressions.
 
@@ -133,65 +134,61 @@ def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
         ``False`` if it is clear that the specified type is incompatible with
         all of the targets, and ``True`` otherwise.
     """
-    for target in targets:
-        if target == Any:
+    return any(_is_compatible_single_type(obj, target) for target in targets)
+
+
+def _is_compatible_single_type(obj: object, target: TypeExpr) -> bool:
+    # always compatible with Any
+    if target == Any:
+        return True
+
+    # try a straight subclass check first, but gracefully handle incompatible target types
+    try:
+        if isinstance(obj, target):  # type: ignore
+            return True
+    except TypeError:
+        # failing to check instance is fine, continue other checks
+        pass
+
+    # resolve type aliases
+    if isinstance(target, TypeAliasType):
+        return is_compatible_data(obj, target.__value__)
+
+    # expand union types
+    if isinstance(target, (Union, UnionType)):
+        types = get_args(target)
+        return is_compatible_data(obj, *types)
+
+    # resolve numeric type hierarchy
+    if isinstance(obj, int) and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
+        return True
+    if isinstance(obj, float) and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
+        return True
+
+    if isinstance(target, TypeVar):
+        # check type variable bounds (we can't fully resolve type variables)
+        if target.__bound__ is None or is_compatible_data(obj, target.__bound__):
             return True
 
-        # resolve type aliases
-        if isinstance(target, TypeAliasType) and is_compatible_data(obj, target.__value__):
-            return True
+    # attempt to resolve generic types
+    if isinstance(target, (GenericAlias, _GenericAlias)):
+        tcls = get_origin(target)
 
-        # try a straight subclass check first, but gracefully handle incompatible target types
-        try:
-            if isinstance(obj, target):  # ty:ignore[invalid-argument-type]
-                return True
-        except TypeError:
-            # failing to check instance is fine, continue other checks
-            pass
-
-        # we need type origin for several things
-        origin = get_origin(target)
-
-        if isinstance(target, (GenericAlias, _GenericAlias)):
-            tcls = origin
-            while isinstance(tcls, (TypeAliasType, GenericAlias)):
-                if isinstance(tcls, GenericAlias):
-                    tcls = get_origin(tcls)
-                elif isinstance(tcls, TypeAliasType):
-                    tcls = tcls.__value__
-
-            if isinstance(obj, np.ndarray) and tcls == np.ndarray:
-                # FIXME check for NumPy type compatibility
-                return True
+        if isinstance(obj, np.ndarray):
+            if tcls == np.ndarray:
                 # check for type compatibility
                 _sz, dtw = get_args(target)
                 (dt,) = get_args(dtw)
-                if issubclass(obj.dtype.type, dt):
-                    return True
-            elif isinstance(tcls, type) and isinstance(obj, tcls):
-                # this has holes, but is as close an approximation as we can get
-                return True
-        elif isinstance(origin, TypeAliasType):
-            if is_compatible_data(obj, origin.__value__):
-                return True
-        elif origin == UnionType or origin == Union:
-            types = get_args(target)
-            if is_compatible_data(obj, *types):
-                return True
-        elif isinstance(target, TypeVar):
-            # check type variable bounds (we can't fully resolve type variables)
-            if target.__bound__ is None or is_compatible_data(obj, target.__bound__):
-                return True
-        elif (
-            isinstance(obj, int)
-            and isinstance(target, type)
-            and issubclass(target, (float, complex))
-        ):  # noqa: E721
-            return True
-        elif isinstance(obj, float) and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
-            return True
+            elif tcls == NDArray:
+                (dt,) = get_args(target)
+            else:
+                dt = None
 
-    return False
+            if dt is not None and issubclass(obj.dtype.type, dt):
+                return True
+        elif isinstance(tcls, type) and isinstance(obj, tcls):
+            # this has holes, but is as close an approximation as we can get
+            return True
 
 
 def is_instance_or_subclass(obj: Any, typ: type):

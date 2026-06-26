@@ -13,7 +13,7 @@ import warnings
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from types import NoneType
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Union
 from uuid import UUID
 
 import numpy as np
@@ -97,13 +97,24 @@ def test_data_compat_generic():
     assert is_compatible_data([72], list[str])
 
 
-def test_numpy_typecheck():
+def test_numpy_typecheck_NDArray():
     assert is_compatible_data(np.arange(10), NDArray[np.integer])
     assert is_compatible_data(np.arange(10, dtype="i8"), NDArray[np.int64])
     assert is_compatible_data(np.arange(10, dtype="i4"), NDArray[np.int32])
-    # assert is_compatible_data(np.arange(10), ArrayLike)
     # numpy types can be checked
-    # assert not is_compatible_data(np.arange(10), NDArray[np.float64])
+    assert not is_compatible_data(np.arange(10), NDArray[np.float64])
+
+
+def test_numpy_typecheck_ndarray():
+    assert is_compatible_data(np.arange(10), np.ndarray[Any, np.dtype[np.integer]])
+    assert is_compatible_data(np.arange(10, dtype="i8"), np.ndarray[Any, np.dtype[np.int64]])
+    assert is_compatible_data(np.arange(10, dtype="i4"), np.ndarray[Any, np.dtype[np.int32]])
+    # numpy types can be checked
+    assert not is_compatible_data(np.arange(10), np.ndarray[Any, np.dtype[np.float64]])
+
+
+def test_numpy_array_like():
+    assert is_compatible_data(np.arange(10), ArrayLike)
 
 
 def test_numpy_scalar_typecheck():
@@ -112,6 +123,11 @@ def test_numpy_scalar_typecheck():
 
 def test_numpy_scalar_typecheck2():
     assert is_compatible_data(np.int32(4270), np.integer[Any] | int)
+
+
+def test_compatible_data_union():
+    assert is_compatible_data("foo", str | bytes)
+    assert is_compatible_data("foo", Union[str, bytes])
 
 
 def test_compatible_any():
