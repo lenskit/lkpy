@@ -17,6 +17,9 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 
 Third release in 2026, with more feature updates and bug fixes.
 
+- Fixed bug in FlexMF's ``"misranked"`` sampler (for WARP), where it did
+  not correctly continue sampling (:pr:`1121`).
+- Reworked type checking logic in the pipeline to fix type bugs with NumPy 2.5, and hopefully reduce brittleness (:pr:`1120`).
 - Added initial support for importing Steam user/item data
   (:py:mod:`lenskit.data.sources.steam`, :pr:`1111`).
 
