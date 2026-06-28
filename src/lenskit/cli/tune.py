@@ -127,7 +127,6 @@ def tune(
     results = controller.run()
     _log.info("finished hyperparameter search")
 
-    results.save_results(out)
     best = results.best_result()
 
     if save_pipeline is not None:
@@ -148,3 +147,5 @@ def tune(
         )
     console.print(line)
     console.print("Trial result:", best)
+
+    results.save_results(out)

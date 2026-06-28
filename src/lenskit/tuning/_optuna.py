@@ -75,7 +75,7 @@ class PipelineTuner(BasePipelineTuner):
             )
             idf.to_csv(self.out_dir / "trial-epochs.csv", index=False)
 
-        return OptunaTuneResults(self.spec, study, self.iterative, task=task)
+        return OptunaTuneResults(spec=self.spec, study=study, iterative=self.iterative, task=task)
 
     def _run_study(self, study: Study):
         assert self.spec.search.max_points is not None
