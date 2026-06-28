@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -131,6 +132,20 @@ class TuneResults(ABC):
     def num_trials(self) -> int:
         """
         Get the number of completed trials in this search.
+        """
+
+    @abstractmethod
+    def trials(self) -> Iterable[dict[str, JsonValue]]:
+        """
+        Iterate over individual trials in this search.  Each dictionary contains
+        metric(s), the configuration (as ``"config"``), and other tuner-specific fields.
+        """
+
+    @abstractmethod
+    def iterations(self) -> Iterable[dict[str, JsonValue]]:
+        """
+        Iterate over individual iterations within trials.  The dictionary contains
+        columns identifying both the iteration and the trial.
         """
 
     @abstractmethod

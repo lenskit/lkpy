@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from os import fspath
@@ -17,9 +18,11 @@ from optuna import Study, Trial
 from optuna.pruners import BasePruner, MedianPruner
 from optuna.storages.journal import JournalFileBackend, JournalStorage
 from optuna.study import StudyDirection
-from optuna.trial import TrialState
+from optuna.trial import FrozenTrial, TrialState
+from pydantic import JsonValue
 from pydantic_core import to_json
 from structlog.stdlib import BoundLogger
+from typing_extensions import override
 
 from lenskit.data import unflatten_dict
 from lenskit.logging import Task, get_logger, item_progress
@@ -272,6 +275,25 @@ class OptunaTuneResults(TuneResults):
     def num_trials(self):
         return len(self.study.trials)
 
+    @override
+    def trials(self) -> Iterable[dict[str, JsonValue]]:
+        for trial in self.study.trials:
+            yield self._trial_result(trial)
+
+    @override
+    def epochs(self) -> Iterable[dict[str, JsonValue]]:
+        if not self.iterative:
+            return []
+
+        for n, trial in enumerate(self.study.trials):
+            for i in range(trial.last_step + 1):
+                out_row = {
+                    "trial": n,
+                    "epoch": i,
+                    self.spec.search.metric: trial.intermediate_values.get(i),
+                }
+                yield out_row
+
     def best_config(self):
         best = self.study.best_trial
         cfg = unflatten_dict(best.params)
@@ -280,11 +302,40 @@ class OptunaTuneResults(TuneResults):
             cfg["epochs"] = np.argmax(vals).item()
         return cfg
 
-    def best_result(self):
-        result = {self.spec.search.metric: self.study.best_value}
+    def best_result(self) -> dict[str, JsonValue]:
+        return self._trial_result(self.study.best_trial)
+
+    def _trial_result(
+        self, trial: FrozenTrial, *, include_config: bool = True
+    ) -> dict[str, JsonValue]:
+        assert self.spec.search.metric is not None
+        result: dict[str, JsonValue]
+
         if self.iterative:
-            result["epochs"] = len(self.study.best_trial.intermediate_values)
+            assert trial.last_step is not None
+            vals = [trial.intermediate_values.get(i) for i in range(trial.last_step + 1)]
+            epoch = np.argmax(vals).item()
+            result = {
+                self.spec.search.metric: vals[epoch],
+                "epochs": epoch,
+                "attempted_epochs": len(trial.intermediate_values),
+                "final_metric": trial.value,
+            }
+        else:
+            result = {self.spec.search.metric: trial.value}
+
+        if include_config:
+            result["config"] = self._trial_config(trial)
         return result
+
+    def _trial_config(self, trial: FrozenTrial) -> dict[str, JsonValue]:
+        cfg = unflatten_dict(trial.params)
+        if self.iterative:
+            assert trial.last_step is not None
+            vals = [trial.intermediate_values.get(i) for i in range(trial.last_step + 1)]
+            cfg["epochs"] = np.argmax(vals).item()
+
+        return cfg
 
 
 class CompositePruner(BasePruner):

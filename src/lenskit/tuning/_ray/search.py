@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 import ray
@@ -16,6 +17,7 @@ from numpy.random import default_rng
 from pydantic import JsonValue
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
+from typing_extensions import override
 
 from lenskit.logging import Task
 from lenskit.parallel import get_parallel_config
@@ -209,6 +211,19 @@ class RayTuneResults(TuneResults):
 
     def num_trials(self):
         return len(self.results)
+
+    @override
+    def trials(self) -> Iterable[dict[str, JsonValue]]:
+        for n, result in enumerate(self.results):
+            yield {"trial": n} | result.metrics
+
+    @override
+    def epochs(self) -> Iterable[dict[str, JsonValue]]:
+        for n, result in enumerate(self.results):
+            for i, row in result.metrics_dataframe.to_dict("index").items():
+                out_row = {"trial": n, "epoch": i}
+                out_row.update({k: v for (k, v) in row.items() if not k.startswith("config/")})
+                yield out_row
 
     def best_config(self, *, scope: str = "all") -> dict[str, JsonValue]:
         """
