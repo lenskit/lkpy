@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -127,6 +128,35 @@ class BasePipelineTuner(ABC):
 class TuneResults(ABC):
     spec: TuningSpec
     task: Task = field(kw_only=True)
+    iterative: bool
+
+    def save_results(self, dir: Path):
+        """
+        Save the tuning results to a directory.
+        """
+        self.task.save_to_file(dir / "task.json")
+
+        best = self.best_result()
+        result_file = dir / "best-result.json"
+        result_json = json.dumps(best, indent=2, default=_np_json_default)
+        result_file.write_text(result_json + "\n")
+
+        best_cfg = self.best_config()
+        cfg_file = dir / "best-config.json"
+        cfg_json = json.dumps(best_cfg, indent=2, default=_np_json_default)
+        cfg_file.write_text(cfg_json + "\n")
+
+        pipe_json = self.best_pipeline().model_dump_json(indent=2)
+        (dir / "best-pipeline.json").write_text(pipe_json + "\n")
+
+        with open(dir / "trials.ndjson", "wt") as jsf:
+            for result in self.trials():
+                print(json.dumps(result, default=_np_json_default), file=jsf)
+
+        if self.iterative:
+            with open(dir / "epochs.ndjson", "wt") as jsf:
+                for result in self.epochs():
+                    print(json.dumps(result, default=_np_json_default), file=jsf)
 
     @abstractmethod
     def num_trials(self) -> int:
@@ -142,7 +172,7 @@ class TuneResults(ABC):
         """
 
     @abstractmethod
-    def iterations(self) -> Iterable[dict[str, JsonValue]]:
+    def epochs(self) -> Iterable[dict[str, JsonValue]]:
         """
         Iterate over individual iterations within trials.  The dictionary contains
         columns identifying both the iteration and the trial.
@@ -176,3 +206,10 @@ class TuneResults(ABC):
         name = self.spec.component_name
         assert name is not None
         return cfg.merge_component_configs({name: best})
+
+
+def _np_json_default(x):
+    if isinstance(x, np.generic):
+        return x.item()
+    else:
+        raise TypeError(f"non-serializable type {type(x)}")

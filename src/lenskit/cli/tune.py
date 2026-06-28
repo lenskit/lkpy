@@ -10,13 +10,11 @@ Hyperparameter search.
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Literal
 
 import click
-import numpy as np
 from humanize import metric as human_metric
 from humanize import precisedelta
 
@@ -129,29 +127,13 @@ def tune(
     results = controller.run()
     _log.info("finished hyperparameter search")
 
+    results.save_results(out)
     best = results.best_result()
-    result_file = out / "best-result.json"
-    result_json = json.dumps(best, indent=2, default=_json_default)
-    result_file.write_text(result_json + "\n")
 
-    best_cfg = results.best_config()
-    cfg_file = out / "best-config.json"
-    cfg_json = json.dumps(best_cfg, indent=2, default=_json_default)
-    cfg_file.write_text(cfg_json + "\n")
-
-    pipe_json = results.best_pipeline().model_dump_json(indent=2)
-    (out / "best-pipeline.json").write_text(pipe_json + "\n")
     if save_pipeline is not None:
+        _log.info("saving pipeline to %s", save_pipeline)
+        pipe_json = results.best_pipeline().model_dump_json(indent=2)
         save_pipeline.write_text(pipe_json + "\n")
-
-    with open(out / "trials.ndjson", "wt") as jsf:
-        for result in results.trials():
-            print(json.dumps(result), file=jsf)
-
-    if results.iterative:
-        with open(out / "epochs.ndjson", "wt") as jsf:
-            for result in results.epochs():
-                print(json.dumps(result), file=jsf)
 
     console.print("[bold yellow]Hyperparameter search completed![/bold yellow]")
     console.print("Best {} is [bold red]{:.3f}[/bold red]".format(metric, best[metric]))
@@ -166,10 +148,3 @@ def tune(
         )
     console.print(line)
     console.print("Trial result:", best)
-
-
-def _json_default(x):
-    if isinstance(x, np.generic):
-        return x.item()
-    else:
-        raise TypeError(f"non-serializable type {type(x)}")
