@@ -10,13 +10,11 @@ Hyperparameter search.
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Literal
 
 import click
-import numpy as np
 from humanize import metric as human_metric
 from humanize import precisedelta
 
@@ -44,10 +42,10 @@ _log = get_logger(__name__)
     "--hyperopt", "method", flag_value="hyperopt", help="use HyperOpt search (requires Ray)"
 )
 @click.option(
-    "--optuna",
+    "--tpe",
     "method",
-    flag_value="optuna",
-    default="optuna",
+    flag_value="tpe",
+    default="tpe",
     help="use Optuna TPE search (default)",
 )
 @click.option(
@@ -83,10 +81,14 @@ def tune(
     save_pipeline: Path | None,
 ):
     """
-    Tune pipeline hyperparameters with Ray Tune.
+    Tune pipeline hyperparameters.
     """
     console = stdout_console()
     os.environ["RAY_AIR_NEW_OUTPUT"] = "0"
+
+    if method != "tpe" and not use_ray:  # pragma: nocover
+        _log.error("search method %s only supported with Ray", method)
+        raise click.UsageError("unsupported method")
 
     spec = TuningSpec.load(search_spec)
     # override settings from command line
@@ -101,6 +103,7 @@ def tune(
     # set up the tuning controller
     if use_ray:
         import ray
+        import ray.tune.utils.log
 
         from lenskit.parallel.ray import init_cluster
         from lenskit.tuning import RayPipelineTuner
@@ -130,16 +133,9 @@ def tune(
     _log.info("finished hyperparameter search")
 
     best = results.best_result()
-    result_file = out / "best-result.json"
-    result_json = json.dumps(best, indent=2, default=_json_default)
-    result_file.write_text(result_json + "\n")
-
-    best_cfg = results.best_config()
-    cfg_file = out / "best-result.json"
-    cfg_json = json.dumps(best_cfg, indent=2, default=_json_default)
-    cfg_file.write_text(cfg_json + "\n")
 
     if save_pipeline is not None:
+        _log.info("saving pipeline to %s", save_pipeline)
         pipe_json = results.best_pipeline().model_dump_json(indent=2)
         save_pipeline.write_text(pipe_json + "\n")
 
@@ -148,7 +144,7 @@ def tune(
     assert results.task.duration is not None
     line = "[bold magenta]{}[/bold magenta] trials took [bold cyan]{}[/bold cyan]".format(
         results.num_trials(),
-        precisedelta(results.task.duration),  # type: ignore
+        precisedelta(results.task.duration),
     )
     if results.task.system_power:
         line += " and consumed [bold green]{}[/bold green]".format(
@@ -157,9 +153,4 @@ def tune(
     console.print(line)
     console.print("Trial result:", best)
 
-
-def _json_default(x):
-    if isinstance(x, np.generic):
-        return x.item()
-    else:
-        raise TypeError(f"non-serializable type {type(x)}")
+    results.save_results(out)

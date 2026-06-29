@@ -7,7 +7,7 @@ out="$TEST_WORK/bias-tune"
 declare -a tune_args=()
 if [[ $LK_USE_RAY_TUNE ]]; then
     msg "using ray tune"
-    args+=(--use-ray)
+    tune_args+=(--ray)
 fi
 
 if [[ ! -f $ML100K ]]; then
@@ -24,13 +24,20 @@ run-lenskit tune "${tune_args[@]}" -T "$train" -V "$test" --save-pipeline "$TEST
 
 require -d "$out"
 require -f "$out/best-result.json"
+require -f "$out/best-config.json"
+require -f "$out/best-pipeline.json"
+require -f "$out/trials.ndjson"
 require -f "$TEST_WORK/pipeline.json"
 
 out="$TEST_WORK/als-tune"
 tap_comment "testing iterative tuning"
-run-lenskit tune -T "$train" -V "$test" --save-pipeline "$TEST_WORK/pipeline.json" \
-    --max-points=10 pipelines/als-implicit-search.toml "$out"
+run-lenskit tune "${tune_args[@]}" -T "$train" -V "$test" --save-pipeline "$TEST_WORK/pipeline.json" \
+    --max-points=5 pipelines/als-implicit-search.toml "$out"
 
 require -d "$out"
 require -f "$out/best-result.json"
+require -f "$out/best-config.json"
+require -f "$out/best-pipeline.json"
+require -f "$out/trials.ndjson"
+require -f "$out/epochs.ndjson"
 require -f "$TEST_WORK/pipeline.json"

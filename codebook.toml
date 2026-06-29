@@ -1,4 +1,10 @@
 words = [
   "Drexel",
   "Optuna",
+  "NDCG",
+  "Optuna",
+  "RBP",
+  "RMSE",
+  "TPE",
+  "hyperparameters",
 ]
