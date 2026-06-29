@@ -1,11 +1,12 @@
 [tools]
 rust = "stable"
-"github:mvdan/sh" = "latest"
+usage = "latest"
 uv = "latest"
+shfmt = "latest"
+taplo = "latest"
 "pipx:pre-commit" = "4"
 cargo-binstall = "latest"
 "cargo:cargo-binutils" = "0.3"
-usage = "latest"
 perl = { version = "latest", os = ["linux", "macos"] }
 
 [settings]
