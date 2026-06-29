@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -211,5 +212,7 @@ class TuneResults(ABC):
 def _np_json_default(x):
     if isinstance(x, np.generic):
         return x.item()
+    elif isinstance(x, uuid.UUID):
+        return str(x)
     else:
         raise TypeError(f"non-serializable type {type(x)}")
