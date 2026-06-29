@@ -7,7 +7,7 @@ out="$TEST_WORK/bias-tune"
 declare -a tune_args=()
 if [[ $LK_USE_RAY_TUNE ]]; then
     msg "using ray tune"
-    args+=(--use-ray)
+    tune_args+=(--use-ray)
 fi
 
 if [[ ! -f $ML100K ]]; then
