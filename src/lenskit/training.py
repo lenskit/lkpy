@@ -12,6 +12,7 @@ Interfaces and support for model training.
 from __future__ import annotations
 
 import os
+import platform
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -23,6 +24,7 @@ from typing_extensions import TypeVar
 
 from lenskit.data import Dataset, ItemList
 from lenskit.logging import get_logger, item_progress
+from lenskit.parallel import is_free_threaded
 from lenskit.pipeline._types import make_importable_path
 from lenskit.pipeline.components import Component
 from lenskit.random import RNGInput, random_generator
@@ -190,6 +192,40 @@ class TrainingOptions:
             return False
         else:
             raise ValueError(f"unrecognized boolean value {name}={val}")
+
+    def torch_compilation_enabled(self) -> bool:
+        """
+        Query whether models should attempt to use :func:`torch.compile`.
+        """
+        import torch
+
+        ft = is_free_threaded(require_active=True)
+        if ft:
+            # FIXME: re-enable when Triton supports free-threading.
+            _log.info("Disabling Torch compilation by default on free-threaded Python")
+
+        if not self.env_flag("LK_TORCH_COMPILE", default=ft):
+            _log.debug("Torch compilation not enabled")
+            return False
+
+        if platform.system() not in ("Linux", "Darwin"):
+            _log.warn(
+                "compiled models are only usable on Linux and macOS, using uncompiled model",
+                err_code="LKW-TCOMP",
+            )
+            return False
+
+        if torch.__version__ < "2.8":
+            _log.warn(
+                "compiled models require Torch >=2.8, using uncompiled model",
+                err_code="LKW-TCOMP",
+            )
+            return False
+
+        if ft:
+            _log.warn("Torch compilation currently disables free-threading")
+
+        return True
 
 
 @runtime_checkable
