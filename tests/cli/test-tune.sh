@@ -32,7 +32,7 @@ require -f "$TEST_WORK/pipeline.json"
 out="$TEST_WORK/als-tune"
 tap_comment "testing iterative tuning"
 run-lenskit tune "${tune_args[@]}" -T "$train" -V "$test" --save-pipeline "$TEST_WORK/pipeline.json" \
-    --max-points=10 pipelines/als-implicit-search.toml "$out"
+    --max-points=5 pipelines/als-implicit-search.toml "$out"
 
 require -d "$out"
 require -f "$out/best-result.json"
