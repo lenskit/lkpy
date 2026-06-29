@@ -1,1 +1,4 @@
-words = ["Drexel", "Optuna"]
+words = [
+  "Drexel",
+  "Optuna",
+]
