@@ -42,10 +42,10 @@ _log = get_logger(__name__)
     "--hyperopt", "method", flag_value="hyperopt", help="use HyperOpt search (requires Ray)"
 )
 @click.option(
-    "--optuna",
+    "--tpe",
     "method",
-    flag_value="optuna",
-    default="optuna",
+    flag_value="tpe",
+    default="tpe",
     help="use Optuna TPE search (default)",
 )
 @click.option(
@@ -81,10 +81,14 @@ def tune(
     save_pipeline: Path | None,
 ):
     """
-    Tune pipeline hyperparameters with Ray Tune.
+    Tune pipeline hyperparameters.
     """
     console = stdout_console()
     os.environ["RAY_AIR_NEW_OUTPUT"] = "0"
+
+    if method != "tpe" and not use_ray:  # pragma: nocover
+        _log.error("search method %s only supported with Ray", method)
+        raise click.UsageError("unsupported method")
 
     spec = TuningSpec.load(search_spec)
     # override settings from command line
@@ -99,6 +103,7 @@ def tune(
     # set up the tuning controller
     if use_ray:
         import ray
+        import ray.tune.utils.log
 
         from lenskit.parallel.ray import init_cluster
         from lenskit.tuning import RayPipelineTuner
@@ -139,7 +144,7 @@ def tune(
     assert results.task.duration is not None
     line = "[bold magenta]{}[/bold magenta] trials took [bold cyan]{}[/bold cyan]".format(
         results.num_trials(),
-        precisedelta(results.task.duration),  # type: ignore
+        precisedelta(results.task.duration),
     )
     if results.task.system_power:
         line += " and consumed [bold green]{}[/bold green]".format(
