@@ -6,14 +6,24 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from typing import NamedTuple, Sequence
 
-from lenskit.data import GenericKey, ItemListCollection
+from lenskit.data import ID, GenericKey, ItemListCollection, key_dict
 
-type BatchResultRow = tuple[GenericKey, dict[str, object]]
-"""
-Results for a single query in the batch recommendations.
-"""
+
+class BatchResultRow(NamedTuple):
+    """
+    Results for a single query in the batch recommendations.
+    """
+
+    key: GenericKey
+    "The key (e.g. user ID) associated with this result row."
+    outputs: dict[str, object]
+    "The outputs associated with this result row."
+
+    def key_dict(self) -> dict[str, ID]:
+        "Get the row's key as a dictionary."
+        return key_dict(self.key)
 
 
 class BatchResults:

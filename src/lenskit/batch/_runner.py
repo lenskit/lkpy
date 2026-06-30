@@ -15,6 +15,7 @@ from functools import partial
 from typing import Any, Literal, TypeAlias
 
 from lenskit.data import (
+    GenericKey,
     QueryIDKey,
     UserIDKey,
 )
@@ -310,8 +311,9 @@ def run_pipeline(
     profiler: ProfileSink | None,
     req: ResolvedBatchRequest,
 ) -> BatchResultRow:
+    key: GenericKey
     if isinstance(req.query.query_id, tuple):
-        key = req.query.query_id
+        key = req.query.query_id  # type: ignore
     elif req.query.query_id is not None:
         key = QueryIDKey(req.query.query_id)
     elif req.query.user_id is not None:
@@ -337,4 +339,4 @@ def run_pipeline(
         for cname, oname in inv.components.items():
             result[oname] = outs[cname]
 
-    return key, result  # type: ignore
+    return BatchResultRow(key, result)
