@@ -22,6 +22,7 @@ Third release in 2026, with more feature updates and bug fixes.
 - Reworked type checking logic in the pipeline to fix type bugs with NumPy 2.5, and hopefully reduce brittleness (:pr:`1120`).
 - Added initial support for importing Steam user/item data
   (:py:mod:`lenskit.data.sources.steam`, :pr:`1111`).
+- Support simultaneous multithreaded running in accelerator tasks (:issue:`1124`, :pr:`1125`).
 
 .. _2026.2.1:
 
