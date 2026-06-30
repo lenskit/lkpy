@@ -11,5 +11,9 @@ words = [
   "TPE",
   "hyperparameters",
   "lenskit",
+  "mkdir",
+  "profiler",
+  "recommender",
   "seealso",
+  "zstd",
 ]
