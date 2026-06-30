@@ -11,6 +11,7 @@ Item list collections.
 from ._base import ItemListCollection, ItemListCollector, MutableItemListCollection
 from ._keys import GenericKey, QueryIDKey, UserIDKey, key_dict
 from ._list import ListILC
+from ._parquet import ParquetItemListCollector
 
 __all__ = [
     "GenericKey",
@@ -19,6 +20,7 @@ __all__ = [
     "ItemListCollection",
     "ItemListCollector",
     "MutableItemListCollection",
+    "ParquetItemListCollector",
     "ListILC",
     "key_dict",
 ]
