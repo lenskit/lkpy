@@ -26,7 +26,7 @@ def run_accel_task[R](task: AccelTask[R], *, progress: Progress | None = None) -
     """
     Run a accelerated backend task with progress, cancellation, etc.
     """
-    thread = AccelTaskThread(task, copy_context())
+    thread = AccelTaskThread(task)
     thread.start()
 
     try:
@@ -109,22 +109,20 @@ class AccelTaskThread[R](threading.Thread):
     _task: AccelTask[R]
     _condition: threading.Condition
     _result: Some[R] | Exception | None = None
-    _context: Context
+    _accel_context: Context
 
-    def __init__(self, task: AccelTask[R], context: Context):
+    def __init__(self, task: AccelTask[R]):
         n = _task_count.fetch_add()
         super().__init__(name=f"AccelTask-{n}", daemon=False)
         self._task = task
         self._condition = threading.Condition()
-        self._context = context
+        self._accel_context = copy_context()
 
     def run(self):
-        self._context.run(self._run)
-
-    def _run(self):
         try:
             _log.debug("beginning accelerator task", task=self._task)
-            res = Some(self._task.invoke(pool=NestedPool.active_accel_pool()))
+            res = self._accel_context.run(self._task.invoke, pool=NestedPool.active_accel_pool())
+            res = Some(res)
             _log.debug("accelerator task finished", task=self._task)
         except Exception as e:
             _log.error("accelerator task failed", task=self._task, exc_info=e)
