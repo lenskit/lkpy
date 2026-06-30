@@ -380,7 +380,8 @@ def test_save_parquet_with_mkdir(tmpdir: Path):
     assert (tmpdir / "subdir").exists()
 
     f_no_mkdir = tmpdir / "no_mkdir" / "items.parquet"
-    ilc.save_parquet(f_no_mkdir, mkdir=False)
+    with raises(FileNotFoundError):
+        ilc.save_parquet(f_no_mkdir, mkdir=False)
     assert not (tmpdir / "no_mkdir").exists()
 
 
