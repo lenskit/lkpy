@@ -7,11 +7,14 @@
 from __future__ import annotations
 
 import threading
+from contextvars import Context, copy_context
 from dataclasses import dataclass
 from typing import Protocol
 
-from lenskit._accel import AtomicInt
+from lenskit._accel import AtomicInt, NestedAccelPool
 from lenskit.logging import Progress, get_logger
+
+from ._pool import NestedPool
 
 _task_count: AtomicInt = AtomicInt()
 _log = get_logger(__name__)
@@ -63,7 +66,7 @@ class AccelTask[R](Protocol):
     progress reports.
     """
 
-    def invoke(self) -> R:
+    def invoke(self, *, pool: NestedAccelPool | None = None) -> R:
         """
         Run this task and return its result.  Must only be called once for a
         given accelerator task.  Will be run on the offloaded execution thread.
@@ -106,17 +109,20 @@ class AccelTaskThread[R](threading.Thread):
     _task: AccelTask[R]
     _condition: threading.Condition
     _result: Some[R] | Exception | None = None
+    _accel_context: Context
 
     def __init__(self, task: AccelTask[R]):
         n = _task_count.fetch_add()
         super().__init__(name=f"AccelTask-{n}", daemon=False)
         self._task = task
         self._condition = threading.Condition()
+        self._accel_context = copy_context()
 
     def run(self):
         try:
             _log.debug("beginning accelerator task", task=self._task)
-            res = Some(self._task.invoke())
+            res = self._accel_context.run(self._task.invoke, pool=NestedPool.active_accel_pool())
+            res = Some(res)
             _log.debug("accelerator task finished", task=self._task)
         except Exception as e:
             _log.error("accelerator task failed", task=self._task, exc_info=e)

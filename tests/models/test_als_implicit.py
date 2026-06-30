@@ -15,6 +15,7 @@ from pytest import approx, mark
 from lenskit.als import ImplicitMFScorer
 from lenskit.als._implicit import ImplicitMFConfig
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
+from lenskit.parallel._pool import NestedPool
 from lenskit.pipeline import Pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
 
@@ -66,6 +67,15 @@ def test_config_exp_dict_double():
 def test_config_exp_json():
     cfg = ImplicitMFConfig.model_validate_json('{"embedding_size_exp": 2}')
     assert cfg.embedding_size == 4
+
+
+def test_nested_pool(ml_ds: Dataset):
+    "smoke-test training in a nested accelerator pool"
+    als = ImplicitMFScorer(epochs=5)
+    with NestedPool():
+        als.train(ml_ds)
+
+    assert als.trained_epochs == 5
 
 
 def test_reconfigure_pipeline():

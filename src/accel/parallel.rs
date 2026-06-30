@@ -4,17 +4,19 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
+use std::sync::Arc;
+
 use log::*;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
 #[cfg(debug_assertions)]
 use rayon::iter::PanicFuse;
-use rayon::{current_num_threads, iter::ParallelIterator, ThreadPoolBuilder};
+use rayon::{current_num_threads, iter::ParallelIterator, ThreadPool, ThreadPoolBuilder};
 
 #[pyfunction]
 pub fn init_accel_pool(n_threads: usize) -> PyResult<()> {
     debug!(
-        "initializing accelerator thread pool with {} threads",
+        "initializing global accelerator thread pool with {} threads",
         n_threads
     );
     ThreadPoolBuilder::new()
@@ -36,4 +38,36 @@ pub fn maybe_fuse<I: ParallelIterator>(iter: I) -> I {
 #[cfg(debug_assertions)]
 pub fn maybe_fuse<I: ParallelIterator>(iter: I) -> PanicFuse<I> {
     iter.panic_fuse()
+}
+
+#[pyclass]
+pub struct NestedAccelPool {
+    pool: Option<Arc<ThreadPool>>,
+}
+
+#[pymethods]
+impl NestedAccelPool {
+    #[new]
+    fn create(n_threads: usize) -> PyResult<NestedAccelPool> {
+        debug!("creating nested pool with {} threads", n_threads);
+        let pool = ThreadPoolBuilder::new()
+            .num_threads(n_threads)
+            .build()
+            .map_err(|e| PyRuntimeError::new_err(format!("could not make thread pool: {}", e)))?;
+        Ok(NestedAccelPool {
+            pool: Some(Arc::new(pool)),
+        })
+    }
+
+    fn shutdown(&mut self) -> PyResult<()> {
+        debug!("shutting down nested pool");
+        self.pool = None;
+        Ok(())
+    }
+}
+
+impl NestedAccelPool {
+    pub fn get_pool(&self) -> Option<Arc<ThreadPool>> {
+        self.pool.clone()
+    }
 }

@@ -27,6 +27,7 @@ from typing_extensions import override
 from lenskit.data import unflatten_dict
 from lenskit.logging import Task, get_logger, item_progress
 from lenskit.logging.tasks import add_context_task
+from lenskit.parallel import NestedPool
 from lenskit.pipeline import Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Component, Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
@@ -86,7 +87,10 @@ class PipelineTuner(BasePipelineTuner):
                 with ThreadPoolExecutor(
                     self.settings.jobs, "lk-tune", initializer=add_context_task, initargs=(task,)
                 ) as pool:
-                    tasks = [pool.submit(lambda: self._run_trial(study)) for _i in range(npts)]
+                    tasks = [
+                        pool.submit(lambda: self._run_trial(study, nested_pool=True))
+                        for _i in range(npts)
+                    ]
                     while tasks:
                         done, tasks = wait(tasks, return_when=FIRST_COMPLETED)
                         for t in done:
@@ -100,10 +104,14 @@ class PipelineTuner(BasePipelineTuner):
                     self._run_trial(study)
                     pb.update()
 
-    def _run_trial(self, study: Study):
+    def _run_trial(self, study: Study, *, nested_pool: bool = False):
         """
         Run a single trial of the hyperparameter tuning.
         """
+        if nested_pool:
+            with NestedPool():
+                return self._run_trial(study)
+
         trial = study.ask()
         config = self._ask_config(trial)
         self.log = self.log.bind(trial_num=trial.number)
