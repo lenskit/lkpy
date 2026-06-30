@@ -13,7 +13,10 @@ mod atomic;
 mod progress;
 
 pub use atomic::AtomicCancel;
+use log::*;
 pub use progress::IterCancel;
+
+use crate::parallel::NestedAccelPool;
 
 /// Trait for the Rust side of the accelerator task interface.
 pub trait AccelTaskImpl: Sync + Send + 'static {
@@ -58,8 +61,30 @@ impl<T: AccelTaskImpl> From<T> for AccelTask {
 
 #[pymethods]
 impl AccelTask {
-    fn invoke<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        self.task.invoke(py, self)
+    #[pyo3(signature=(*,pool=None))]
+    fn invoke<'py>(
+        &self,
+        py: Python<'py>,
+        pool: Option<PyRef<'py, NestedAccelPool>>,
+    ) -> PyResult<Py<PyAny>> {
+        let pool = pool
+            .map(|p| {
+                let ip = p.get_pool();
+                if ip.is_none() {
+                    warn!("attempted to invoke accelerator task with shut-down thread pool")
+                }
+                ip
+            })
+            .flatten();
+
+        if let Some(pool) = pool {
+            py.detach(|| {
+                pool.install(|| Python::attach(|py| self.task.invoke(py, self).map(Bound::unbind)))
+            })
+        } else {
+            trace!("running task on current thread");
+            Ok(self.task.invoke(py, self)?.unbind())
+        }
     }
 
     fn cancel(&self) {
