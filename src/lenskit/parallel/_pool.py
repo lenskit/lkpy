@@ -17,6 +17,13 @@ _active_pool: ContextVar[NestedAccelPool | None] = ContextVar("lenskit:active_po
 
 
 class NestedPool:
+    """
+    Context manager to run accelerator tasks in separate accelerator pools.
+
+    Stability:
+        Internal
+    """
+
     n_threads: int
     _pool: NestedAccelPool | None = None
     _token: Token | None = None
