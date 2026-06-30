@@ -35,25 +35,25 @@ __all__ = [
     "Extent",
 ]
 
-FeedbackType: TypeAlias = Literal["explicit", "implicit"]
+type FeedbackType = Literal["explicit", "implicit"]
 "Types of feedback supported."
 
-CoreID: TypeAlias = int | str | bytes
+type CoreID = int | str | bytes
 "Core (non-NumPy) identifier types."
-NPID: TypeAlias = np.integer[Any] | np.str_ | np.bytes_ | np.object_
+type NPID = np.integer[Any] | np.str_ | np.bytes_ | np.object_
 "NumPy entity identifier types."
-ID: TypeAlias = CoreID | NPID
+type ID = CoreID | NPID
 "Allowable identifier types."
-IDArray: TypeAlias = np.ndarray[tuple[int], np.dtype[NPID]]
+type IDArray = np.ndarray[tuple[int], np.dtype[NPID]]
 "NumPy arrays of identifiers."
-IDSequence: TypeAlias = """
+type IDSequence = (
     Sequence[ID]
     | IDArray
     | pa.StringArray
     | pa.IntegerArray[Any]
     | pa.ChunkedArray[Any]
     | pd.Series[CoreID]
-    """
+)
 "Sequences of identifiers."
 
 _UIPT = TypeVar("_UIPT")
