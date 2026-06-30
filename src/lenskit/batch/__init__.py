@@ -16,11 +16,12 @@ from lenskit.data import GenericKey, ItemListCollection
 from lenskit.pipeline import Pipeline, PipelineProfiler
 
 from ._queries import BatchInput, BatchRecRequest, TestRequestAdapter
-from ._results import BatchResults
+from ._results import BatchResultRow, BatchResults
 from ._runner import BatchPipelineRunner, InvocationSpec
 
 __all__ = [
     "BatchPipelineRunner",
+    "BatchResultRow",
     "BatchResults",
     "BatchRecRequest",
     "BatchInput",
