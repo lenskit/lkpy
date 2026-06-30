@@ -36,6 +36,17 @@ Allowed input types for batch inference routines.
 """
 
 
+@dataclass
+class NormalizedQueryBatch:
+    """
+    Internal representation for a normalized, runnable batch of queries.
+    """
+
+    key_type: type[GenericKey]
+    queries: Iterable[ResolvedBatchRequest]
+    count: int | None
+
+
 class BatchRecRequest(TypedDict, total=False):
     """
     Full recommendation request for batch inference, including candidate items.
@@ -166,7 +177,7 @@ class TestRequestAdapter(Iterable[BatchRecRequest], Sized):
 
 def normalize_query_input(
     queries: BatchInput,
-) -> tuple[type[GenericKey], Iterable[ResolvedBatchRequest], int | None]:
+) -> NormalizedQueryBatch:
     kt = None
 
     if isinstance(queries, ItemListCollection):
@@ -197,7 +208,7 @@ def normalize_query_input(
     else:
         raise ValueError("query must have one of query_id, user_id")
 
-    return kt, _iter_queries(q_first, q_iter), n
+    return NormalizedQueryBatch(kt, _iter_queries(q_first, q_iter), n)
 
 
 def _iter_queries(

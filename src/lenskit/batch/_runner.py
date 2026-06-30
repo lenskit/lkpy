@@ -22,7 +22,7 @@ from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import get_parallel_config, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler, ProfileSink
 
-from ._queries import BatchInput, ResolvedBatchRequest, normalize_query_input
+from ._queries import BatchInput, NormalizedQueryBatch, ResolvedBatchRequest, normalize_query_input
 from ._results import BatchResultRow, BatchResults
 
 _log = get_logger(__name__)
@@ -159,7 +159,7 @@ class BatchPipelineRunner:
         queries: BatchInput,
     ) -> BatchResults:
         """
-        Run the pipeline and return its results.
+        Run the pipeline and collect its results.
 
         .. note::
 
@@ -177,38 +177,80 @@ class BatchPipelineRunner:
             The batch results, mapping output names to item list collections of
             outputs.
         """
-
         if queries is None:  # pragma: nocover
             raise RuntimeError("no queries specified")
 
+        nqs = normalize_query_input(queries)
+        results = BatchResults(nqs.key_type)
+        with closing(self._run_impl(pipeline, nqs)) as rs:
+            for key, outs in rs:
+                for cn, cr in outs.items():
+                    results.add_result(cn, key, cr)
+
+        return results
+
+    def run_iter(
+        self,
+        pipeline: Pipeline,
+        queries: BatchInput,
+    ) -> Generator[BatchResultRow]:
+        """
+        Run the pipeline and yield its results.
+
+        This generator should be closed when it is done or the run is aborted,
+        to ensure resources are properly cleaned up.  The best way to use this
+        method is as follows::
+
+            with closing(runner.run_iter()) as results:
+                for key, outs in results:
+                    # do something with the data
+                    pass
+
+        .. note::
+
+            The runner does **not** guarantee that results are in the same order
+            as the original inputs — with parallelism, they may be yielded in
+            the order they are ready.
+
+        Args:
+            pipeline:
+                The pipeline to run.
+            queries:
+                The collection of test queries use.  See :ref:`batch-queries`
+                for details on the various input formats.
+        """
+        if queries is None:  # pragma: nocover
+            raise RuntimeError("no queries specified")
+
+        nqs = normalize_query_input(queries)
+        return self._run_impl(pipeline, nqs)
+
+    def _run_impl(
+        self, pipeline: Pipeline, queries: NormalizedQueryBatch
+    ) -> Generator[BatchResultRow]:
         prof = self.profiler
         if prof is not None:
             prof = prof.multiprocess()
 
-        key_type, q_iter, nq = normalize_query_input(queries)
-
-        log = _log.bind(name=pipeline.name, n_queries=nq, n_jobs=self.n_jobs)
+        log = _log.bind(name=pipeline.name, n_queries=queries.count, n_jobs=self.n_jobs)
 
         log.info("beginning batch run")
 
-        with closing(self._run_results(pipeline, prof, q_iter)) as tasks:
-            with item_progress("Inference", nq) as progress:
+        with closing(self._run_results(pipeline, prof, queries.queries)) as tasks:
+            with item_progress("Inference", queries.count) as progress:
                 # release our reference, will sometimes free the pipeline memory in this process
                 del pipeline
-                results = BatchResults(key_type)
                 timer = Stopwatch()
                 n = 0
                 for key, outs in tasks:
                     n += 1
-                    for cn, cr in outs.items():
-                        results.add_result(cn, key, cr)
+                    yield key, outs
+
                     progress.update()
                 timer.stop()
 
                 rate_ms = timer.elapsed() / n * 1000
                 log.info("finished running in %s", timer, time_per_query="{:.1f}ms".format(rate_ms))
-
-        return results
 
     def _run_results(
         self,
