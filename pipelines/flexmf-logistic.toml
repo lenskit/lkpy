@@ -1,5 +1,5 @@
 [meta]
-name = "flexmf-bpr"
+name = "flexmf-logistic"
 
 [options]
 base = "std:topn"
@@ -8,4 +8,4 @@ base = "std:topn"
 class = "lenskit.flexmf.FlexMFImplicitScorer"
 
 [components.scorer.config]
-preset = "bpr"
+preset = "logisgic"
