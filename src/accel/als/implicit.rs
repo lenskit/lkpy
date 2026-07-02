@@ -10,14 +10,14 @@ use arrow::{
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
-use pyo3::{prelude::*, IntoPyObjectExt};
+use pyo3::{exceptions::PyRuntimeError, prelude::*, IntoPyObjectExt};
 use rayon::prelude::*;
 
 use log::*;
 use rayon_cancel::CancelAdapter;
 
 use crate::{
-    als::solve::POSV,
+    als::solve::{SolveError, POSV},
     parallel::maybe_fuse,
     sparse::{CSRMatrix, CSR},
     tasks::{AccelTask, AccelTaskImpl, IterCancel},
@@ -72,17 +72,15 @@ impl AccelTaskImpl for ImplicitTrainTask {
         let adapter = CancelAdapter::new(iter);
         task.set_cancel(IterCancel::from_adapter(&adapter));
 
-        let frob = py.detach(move || {
-            adapter
-                .map(|(i, row)| {
-                    let f = train_row_solve(&self.solver, &self.matrix, i, row, &other, &otor);
-                    f
-                })
-                .sum::<f32>()
-                .sqrt()
+        let frob: PyResult<f32> = py.detach(move || {
+            Ok(adapter
+                .map(|(i, row)| train_row_solve(&self.solver, &self.matrix, i, row, &other, &otor))
+                .try_reduce(|| 0.0f32, |v1, v2| Ok(v1 + v2))
+                .map_err(|e| PyRuntimeError::new_err(format!("ALS solve error: {}", e)))?
+                .sqrt())
         });
 
-        frob.into_bound_py_any(py)
+        frob?.into_bound_py_any(py)
     }
 }
 
@@ -93,13 +91,13 @@ fn train_row_solve(
     mut row_data: ArrayBase<ViewRepr<&mut f32>, Ix1>,
     other: &ArrayView2<f32>,
     otor: &ArrayView2<f32>,
-) -> f32 {
+) -> Result<f32, SolveError> {
     let cols = matrix.row_cols(row_num);
     let vals = matrix.row_vals(row_num);
 
     if cols.len() == 0 {
         row_data.fill(0.0);
-        return 0.0;
+        return Ok(0.0);
     }
 
     let cols: Vec<_> = cols.iter().map(|c| *c as usize).collect();
@@ -118,10 +116,10 @@ fn train_row_solve(
     vals += 1.0;
     let y = mt.dot(&vals);
 
-    let soln = solver.solve(&mut a, &y).expect("LAPACK error");
+    let soln = solver.solve(&mut a, &y)?;
 
     let deltas = &soln - &row_data;
     row_data.assign(&soln);
 
-    deltas.dot(&deltas)
+    Ok(deltas.dot(&deltas))
 }
