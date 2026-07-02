@@ -42,10 +42,12 @@ def run_accel_task[R](task: AccelTask[R], *, progress: Progress | None = None) -
                 result = thread.wait_for_result()
 
             match result:
-                case Exception():
+                case BaseException():
                     raise RuntimeError("accelerator task failed with exception") from result
                 case Some(v):
                     return v
+                case _:  # pragma: nocover
+                    raise TypeError("unexpected accelerator task result")
 
     except KeyboardInterrupt as e:
         _log.debug("received KeyboardInterrupt, cancelling background task")
@@ -108,7 +110,7 @@ class AccelTaskThread[R](threading.Thread):
 
     _task: AccelTask[R]
     _condition: threading.Condition
-    _result: Some[R] | Exception | None = None
+    _result: Some[R] | BaseException | None = None
     _accel_context: Context
 
     def __init__(self, task: AccelTask[R]):
@@ -124,18 +126,18 @@ class AccelTaskThread[R](threading.Thread):
             res = self._accel_context.run(self._task.invoke, pool=NestedPool.active_accel_pool())
             res = Some(res)
             _log.debug("accelerator task finished", task=self._task)
-        except Exception as e:
+        except BaseException as e:
             _log.error("accelerator task failed", task=self._task, exc_info=e)
             res = e
 
         self._set_result(res)
 
-    def _set_result(self, result: Some[R] | Exception):
+    def _set_result(self, result: Some[R] | BaseException):
         with self._condition:
             self._result = result
             self._condition.notify_all()
 
-    def wait_for_result(self, *, timeout: float | None = None) -> Some[R] | Exception | None:
+    def wait_for_result(self, *, timeout: float | None = None) -> Some[R] | BaseException | None:
         with self._condition:
             if self._result is not None:
                 return self._result
