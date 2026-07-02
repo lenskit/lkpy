@@ -108,10 +108,7 @@ class BasePipelineTuner(ABC):
 
     @property
     def mode(self) -> Literal["min", "max"]:
-        if self.spec.search.metric == "RMSE":
-            return "min"
-        else:
-            return "max"
+        return self.spec.search.resolved_direction()
 
     @property
     def pipeline(self) -> PipelineConfig:

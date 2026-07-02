@@ -308,7 +308,14 @@ class OptunaTuneResults(TuneResults):
         cfg = unflatten_dict(best.params)
         if self.iterative:
             vals = [best.intermediate_values.get(i) for i in range(best.last_step + 1)]
-            cfg["epochs"] = np.argmax(vals).item()
+            match self.study.direction:
+                case StudyDirection.MAXIMIZE:
+                    cfg["epochs"] = np.argmax(vals).item() + 1
+                case StudyDirection.MINIMIZE:
+                    cfg["epochs"] = np.argmin(vals).item() + 1
+                case _:
+                    raise RuntimeError("unexpected study direction")
+
         return cfg
 
     def best_result(self) -> dict[str, JsonValue]:

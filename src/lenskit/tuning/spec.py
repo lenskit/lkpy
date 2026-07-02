@@ -61,6 +61,15 @@ class SearchConfig(BaseModel):
     The frequency for saving checkpoints.
     """
 
+    def resolved_direction(self) -> Literal["min", "max"]:
+        """
+        Get the metric optimization direction.
+        """
+        if self.metric in ("RMSE", "MAE"):
+            return "min"
+        else:
+            return "max"
+
     def update_max_points(self, n: int | None):
         """
         Limit the search points to a new maximum, if it exceeds the current maximum.
