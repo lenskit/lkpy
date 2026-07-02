@@ -98,7 +98,9 @@ class PipelineTuner(BasePipelineTuner):
                         for t in done:
                             if exc := t.exception():
                                 _log.error("tuning trial failed", exc_info=exc)
-                                raise exc
+                                if self.spec.search.error_action == "abort":
+                                    pool.shutdown(False, cancel_futures=True)
+                                    raise exc
 
                             pb.update()
             else:

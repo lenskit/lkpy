@@ -20,6 +20,7 @@ from humanize import precisedelta
 
 from lenskit.logging import get_logger, stdout_console
 from lenskit.tuning import PipelineTuner, TuningSpec
+from lenskit.tuning.spec import ErrorAction
 
 _log = get_logger(__name__)
 
@@ -65,6 +66,11 @@ _log = get_logger(__name__)
 @click.option(
     "--save-pipeline", type=Path, metavar="FILE", help="Save best pipeline configuration to FILE"
 )
+@click.option(
+    "--on-error",
+    type=click.Choice(["abort", "continue"], case_sensitive=False),
+    help="What to do when a trial fails.",
+)
 @click.argument("SEARCH_SPEC", type=Path)
 @click.argument("OUT", type=Path)
 def tune(
@@ -72,6 +78,7 @@ def tune(
     search_spec: Path,
     out: Path,
     method: Literal["random", "hyperopt", "tpe"] | None,
+    on_error: ErrorAction | None,
     use_ray: bool,
     max_points: int | None,
     job_limit: int | None,
@@ -97,6 +104,8 @@ def tune(
         spec.search.metric = metric
     if method is not None:
         spec.search.method = method
+    if on_error is not None:
+        spec.search.error_action = on_error
 
     out.mkdir(exist_ok=True, parents=True)
 

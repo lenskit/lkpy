@@ -14,6 +14,11 @@ from typing_extensions import Annotated, Literal
 from lenskit.config import lenskit_config, load_config_data
 from lenskit.pipeline.config import PipelineConfig
 
+type ErrorAction = Literal["abort", "continue"]
+"""
+Action to take when a trial fails.
+"""
+
 
 class SearchConfig(BaseModel):
     """
@@ -59,6 +64,10 @@ class SearchConfig(BaseModel):
     checkpoint_iters: int = 2
     """
     The frequency for saving checkpoints.
+    """
+    error_action: ErrorAction = "continue"
+    """
+    What to do when one of the search trials fails.
     """
 
     def resolved_direction(self) -> Literal["min", "max"]:
