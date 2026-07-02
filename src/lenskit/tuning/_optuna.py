@@ -59,7 +59,9 @@ class PipelineTuner(BasePipelineTuner):
         # TODO: add parallelism support
 
         self.log = _log.bind(pipeline=self.pipeline.meta.name, dataset=self.data.name)
-        self.log.info("beginning hyperparameter search", max_points=self.spec.search.max_points)
+        self.log.info(
+            "beginning hyperparameter search", points=self.spec.search.num_search_points()
+        )
         with Task(f"tune {self.pipeline.meta.name}", tags=["tune"], reset_hwm=True) as task:
             task.save_to_file(self.out_dir / "task.json")
             self._run_study(study)
@@ -79,10 +81,9 @@ class PipelineTuner(BasePipelineTuner):
         return OptunaTuneResults(spec=self.spec, study=study, iterative=self.iterative, task=task)
 
     def _run_study(self, study: Study):
-        assert self.spec.search.max_points is not None
-        npts = self.spec.search.max_points
+        npts = self.spec.search.num_search_points()
         task = Task.current()
-        with item_progress("Search trials", total=self.spec.search.max_points) as pb:
+        with item_progress("Search trials", total=npts) as pb:
             if self.settings.jobs and self.settings.jobs > 1:
                 with ThreadPoolExecutor(
                     self.settings.jobs, "lk-tune", initializer=add_context_task, initargs=(task,)
