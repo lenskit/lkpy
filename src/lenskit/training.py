@@ -204,7 +204,7 @@ class TrainingOptions:
             # FIXME: re-enable when Triton supports free-threading.
             _log.info("Disabling Torch compilation by default on free-threaded Python")
 
-        if not self.env_flag("LK_TORCH_COMPILE", default=ft):
+        if not self.env_flag("LK_TORCH_COMPILE", default=not ft):
             _log.debug("Torch compilation not enabled")
             return False
 
