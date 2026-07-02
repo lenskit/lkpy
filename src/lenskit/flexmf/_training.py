@@ -150,14 +150,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         Invoke the model, using the compiled version if available.
         """
         if self._compiled_model is not None:
-            from torch.dynamo._exc import TorchDynamoException  # noqa: PLC2701
-
-            try:
-                return self._compiled_model(*args, **kwargs)
-            except TorchDynamoException as e:
-                self.log.warning("calling compiled model failed, falling back: %s", e)
-                self._compiled_model = None
-                return self.call_model(*args, **kwargs)
+            return self._compiled_model(*args, **kwargs)
         else:
             return self.model(*args, **kwargs)
 
