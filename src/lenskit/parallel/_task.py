@@ -46,6 +46,8 @@ def run_accel_task[R](task: AccelTask[R], *, progress: Progress | None = None) -
                     raise RuntimeError("accelerator task failed with exception") from result
                 case Some(v):
                     return v
+                case None:
+                    pass  # continue the loop
                 case _:  # pragma: nocover
                     raise TypeError("unexpected accelerator task result")
 
