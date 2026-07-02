@@ -6,9 +6,9 @@
 
 //! Support for monitored accelerator tasks.
 
-use std::sync::Mutex;
+use std::{panic::catch_unwind, sync::Mutex};
 
-use pyo3::{prelude::*, types::PyNone, IntoPyObjectExt};
+use pyo3::{exceptions::PyRuntimeError, prelude::*, types::PyNone, IntoPyObjectExt};
 mod atomic;
 mod progress;
 
