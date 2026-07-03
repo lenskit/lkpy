@@ -8,6 +8,7 @@ tombi = "latest"
 cargo-binstall = "latest"
 "cargo:cargo-binutils" = "0.3"
 perl = { version = "latest", os = ["linux", "macos"] }
+hk = "latest"
 
 [settings]
 idiomatic_version_file_enable_tools = ["rust"]
@@ -16,3 +17,6 @@ aqua.github_attestations = false
 
 [settings.python]
 uv_venv_auto = true
+
+[env]
+HK_MISE = 1
