@@ -4,11 +4,13 @@ usage = "latest"
 uv = "latest"
 shfmt = "latest"
 tombi = "latest"
-"pipx:pre-commit" = "4"
 cargo-binstall = "latest"
 "cargo:cargo-binutils" = "0.3"
 perl = { version = "latest", os = ["linux", "macos"] }
 hk = "latest"
+pkl = "latest"
+taplo = "latest"
+yamllint = "latest"
 
 [settings]
 idiomatic_version_file_enable_tools = ["rust"]

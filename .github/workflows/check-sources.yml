@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   pre-commit:
-    name: Check pre-commit hooks
+    name: Check source code lints
     runs-on: ubuntu-latest
 
     steps:
@@ -27,22 +27,13 @@ jobs:
         with:
           cache: false
 
-      - name: 🪝 Install pre-commit hooks
-        run: pre-commit install-hooks
-
       # switch git branches so we don't trip the branch pre-commit check
       - name: Switch branches
         run: git checkout -b check-source HEAD
 
       - name: ✅ Check that pre-commit is clean
         run: |
-          if pre-commit run --all-files; then
-            echo "::debug title=pre-commit::pre-commit checks passed"
-          else
-            git diff
-            git status -s |sed -Ee 's/^...(.*)/::error file=\1,title=pre-commit::pre-commit would modify this file/'
-            exit 1
-          fi
+          hk check --all
 
   lint:
     name: Annotate with lint failures
