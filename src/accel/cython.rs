@@ -6,7 +6,7 @@
 
 //! Cython FFI interface (primarily for accessing SciPy BLAS & LAPACK).
 use std::{
-    ffi::{c_void, CString},
+    ffi::{CString, c_void},
     ptr::NonNull,
 };
 

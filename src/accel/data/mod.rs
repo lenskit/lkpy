@@ -8,7 +8,7 @@
 use std::cmp::min;
 
 use arrow::{
-    array::{make_array, ArrayData},
+    array::{ArrayData, make_array},
     pyarrow::PyArrowType,
     row::{RowConverter, SortField},
 };

@@ -7,7 +7,7 @@
 //! Indirect hash table implementation
 
 use arrow::array::{Int32Array, Int32Builder};
-use hashbrown::{hash_table::Entry, HashTable};
+use hashbrown::{HashTable, hash_table::Entry};
 use pyo3::{exceptions::PyValueError, prelude::*};
 
 use super::{HashError, IndirectHashContent, IndirectSearcher};

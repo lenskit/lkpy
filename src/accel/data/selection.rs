@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::{
-    array::{make_array, Array, ArrayData, BooleanBuilder, Int32Array},
+    array::{Array, ArrayData, BooleanBuilder, Int32Array, make_array},
     pyarrow::PyArrowType,
 };
 use pyo3::prelude::*;

@@ -7,13 +7,13 @@
 use std::{fmt::Debug, ops::AddAssign};
 
 use arrow::{
-    array::{make_array, Array, ArrayData, ArrowPrimitiveType, OffsetSizeTrait, PrimitiveArray},
+    array::{Array, ArrayData, ArrowPrimitiveType, OffsetSizeTrait, PrimitiveArray, make_array},
     datatypes::{Int32Type, Int64Type},
     pyarrow::PyArrowType,
 };
 use pyo3::prelude::*;
 
-use crate::sparse::{csr_structure, CSRStructure, IxVar, CSR};
+use crate::sparse::{CSR, CSRStructure, IxVar, csr_structure};
 
 /// Transpose the structure of a CSR matrix.
 #[pyfunction]

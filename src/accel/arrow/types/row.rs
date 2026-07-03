@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::datatypes::DataType;
-use arrow_schema::extension::ExtensionType;
 use arrow_schema::ArrowError;
+use arrow_schema::extension::ExtensionType;
 
 use super::SparseIndexType;
 
@@ -106,7 +106,7 @@ impl ExtensionType for SparseRowType {
                 return Err(ArrowError::InvalidArgumentError(format!(
                     "unsupported data type {}",
                     data_type
-                )))
+                )));
             }
         };
         let fields = match elt_t {
@@ -115,7 +115,7 @@ impl ExtensionType for SparseRowType {
                 return Err(ArrowError::InvalidArgumentError(format!(
                     "unsupported element type {}",
                     t
-                )))
+                )));
             }
         };
 

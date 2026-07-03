@@ -7,16 +7,16 @@
 use pyo3::prelude::*;
 
 use arrow::{
-    array::{make_array, Array, ArrayData, Float32Array, Int32Array},
+    array::{Array, ArrayData, Float32Array, Int32Array, make_array},
     pyarrow::PyArrowType,
 };
 
 use crate::{
     arrow::checked_array_ref,
-    sparse::{CSRMatrix, CSRStructure, CSR},
+    sparse::{CSR, CSRMatrix, CSRStructure},
 };
 
-use super::accum::{collect_items_averaged, collect_items_summed, ScoreAccumulator};
+use super::accum::{ScoreAccumulator, collect_items_averaged, collect_items_summed};
 
 #[pyfunction]
 pub fn user_score_items_explicit<'py>(

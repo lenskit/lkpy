@@ -4,11 +4,11 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::cmp::{min, Reverse};
+use std::cmp::{Reverse, min};
 
 use arrow::{
     array::{
-        make_array, Array, ArrayData, ArrowPrimitiveType, Int32Array, PrimitiveArray, RecordBatch,
+        Array, ArrayData, ArrowPrimitiveType, Int32Array, PrimitiveArray, RecordBatch, make_array,
     },
     pyarrow::PyArrowType,
 };

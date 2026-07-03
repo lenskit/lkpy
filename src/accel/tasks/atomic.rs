@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: MIT
 
 use std::sync::{
-    atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
+    atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
 use crate::tasks::CancelImpl;

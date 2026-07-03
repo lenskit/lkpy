@@ -8,7 +8,7 @@
 
 use std::{panic::catch_unwind, sync::Mutex};
 
-use pyo3::{exceptions::PyRuntimeError, prelude::*, types::PyNone, IntoPyObjectExt};
+use pyo3::{IntoPyObjectExt, exceptions::PyRuntimeError, prelude::*, types::PyNone};
 mod atomic;
 mod progress;
 

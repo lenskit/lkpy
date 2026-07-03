@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use arrow::{
     array::{
-        make_array, Array, ArrayData, ArrayRef, ArrowPrimitiveType, OffsetSizeTrait, PrimitiveArray,
+        Array, ArrayData, ArrayRef, ArrowPrimitiveType, OffsetSizeTrait, PrimitiveArray, make_array,
     },
     compute::kernels::cast,
     datatypes::ArrowNativeType,

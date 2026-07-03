@@ -8,7 +8,7 @@ use std::convert::Infallible;
 use std::hash::{Hash, Hasher};
 
 use arrow::array::{
-    make_array, Array, ArrayData, ArrowPrimitiveType, AsArray, PrimitiveArray, PrimitiveBuilder,
+    Array, ArrayData, ArrowPrimitiveType, AsArray, PrimitiveArray, PrimitiveBuilder, make_array,
 };
 use arrow::compute::cast;
 use arrow::pyarrow::PyArrowType;

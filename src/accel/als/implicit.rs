@@ -5,21 +5,21 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::{
-    array::{make_array, ArrayData},
+    array::{ArrayData, make_array},
     pyarrow::PyArrowType,
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
-use pyo3::{exceptions::PyRuntimeError, prelude::*, IntoPyObjectExt};
+use pyo3::{IntoPyObjectExt, exceptions::PyRuntimeError, prelude::*};
 use rayon::prelude::*;
 
 use log::*;
 use rayon_cancel::CancelAdapter;
 
 use crate::{
-    als::solve::{SolveError, POSV},
+    als::solve::{POSV, SolveError},
     parallel::maybe_fuse,
-    sparse::{CSRMatrix, CSR},
+    sparse::{CSR, CSRMatrix},
     tasks::{AccelTask, AccelTaskImpl, IterCancel},
 };
 

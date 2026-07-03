@@ -11,7 +11,7 @@ use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
 #[cfg(debug_assertions)]
 use rayon::iter::PanicFuse;
-use rayon::{current_num_threads, iter::ParallelIterator, ThreadPool, ThreadPoolBuilder};
+use rayon::{ThreadPool, ThreadPoolBuilder, current_num_threads, iter::ParallelIterator};
 
 #[pyfunction]
 pub fn init_accel_pool(n_threads: usize) -> PyResult<()> {

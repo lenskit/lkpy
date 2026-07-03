@@ -7,16 +7,16 @@
 //! Support for counting co-occurrences.
 
 use arrow::{
-    array::{make_array, Array, ArrayData, Int32Array},
+    array::{Array, ArrayData, Int32Array, make_array},
     datatypes::Int32Type,
     pyarrow::PyArrowType,
 };
 use log::*;
 use numpy::ToPyArray;
 use pyo3::{
+    IntoPyObjectExt,
     exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
-    IntoPyObjectExt,
 };
 
 use crate::{

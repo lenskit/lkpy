@@ -11,15 +11,15 @@ use log::*;
 
 use arrow::{
     array::{
-        downcast_array, Array, ArrowPrimitiveType, GenericListArray, Int32Array, OffsetSizeTrait,
-        PrimitiveArray, StructArray,
+        Array, ArrowPrimitiveType, GenericListArray, Int32Array, OffsetSizeTrait, PrimitiveArray,
+        StructArray, downcast_array,
     },
     datatypes::{DataType, Float32Type},
 };
-use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
+use pyo3::exceptions::PyTypeError;
 
-use crate::arrow::{lists::ExtractListArray, SparseIndexListType, SparseRowType};
+use crate::arrow::{SparseIndexListType, SparseRowType, lists::ExtractListArray};
 use crate::ok_or_pyerr;
 
 use super::SparseIndexType;

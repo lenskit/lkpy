@@ -8,18 +8,18 @@
 use std::time::Instant;
 
 use arrow::{
-    array::{make_array, Array, ArrayData},
+    array::{Array, ArrayData, make_array},
     pyarrow::PyArrowType,
 };
 use log::*;
 use ordered_float::NotNan;
-use pyo3::{exceptions::PyValueError, prelude::*, IntoPyObjectExt};
+use pyo3::{IntoPyObjectExt, exceptions::PyValueError, prelude::*};
 use rayon::prelude::*;
 use rayon_cancel::CancelAdapter;
 
 use crate::{
     parallel::maybe_fuse,
-    sparse::{ArrowCSRConsumer, CSRStructure, CSR},
+    sparse::{ArrowCSRConsumer, CSR, CSRStructure},
     tasks::{AccelTask, AccelTaskImpl, IterCancel},
 };
 

@@ -12,7 +12,7 @@ use arrow::{
     array::{AsArray, Int32Array, RecordBatch},
     pyarrow::PyArrowType,
 };
-use hashbrown::{hash_table::Entry, HashTable};
+use hashbrown::{HashTable, hash_table::Entry};
 use log::*;
 use pyo3::{
     exceptions::{PyTypeError, PyValueError},

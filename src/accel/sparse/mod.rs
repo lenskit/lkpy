@@ -10,11 +10,11 @@ use log::*;
 use pyo3::prelude::*;
 
 use arrow::{
-    array::{make_array, Array, ArrayData},
+    array::{Array, ArrayData, make_array},
     pyarrow::PyArrowType,
 };
-use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
+use pyo3::exceptions::PyTypeError;
 
 mod consumer;
 mod coo;
@@ -25,7 +25,7 @@ pub use crate::arrow::SparseIndexType;
 pub use crate::arrow::SparseRowType;
 pub use consumer::ArrowCSRConsumer;
 pub use coo::{COOMatrix, COOMatrixBuilder};
-pub use csr::{csr_structure, CSRMatrix, CSRStructure, IxVar, CSR};
+pub use csr::{CSR, CSRMatrix, CSRStructure, IxVar, csr_structure};
 
 /// Test function to make sure we can convert sparse rows.
 #[pyfunction]

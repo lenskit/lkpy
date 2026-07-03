@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::{
-    array::{make_array, Array, ArrayData, Float32Array, Int32Array},
+    array::{Array, ArrayData, Float32Array, Int32Array, make_array},
     pyarrow::PyArrowType,
 };
 use pyo3::prelude::*;
@@ -13,7 +13,7 @@ use pyo3::prelude::*;
 use crate::{
     arrow::checked_array_ref,
     knn::accum::{collect_items_averaged, collect_items_counts, collect_items_summed},
-    sparse::{CSRMatrix, CSR},
+    sparse::{CSR, CSRMatrix},
 };
 
 use super::accum::ScoreAccumulator;

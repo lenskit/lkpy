@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::{
-    array::{make_array, ArrayData, Float32Array, Int32Array},
+    array::{ArrayData, Float32Array, Int32Array, make_array},
     pyarrow::PyArrowType,
 };
 use numpy::{PyArray1, PyArray2, PyArrayMethods};

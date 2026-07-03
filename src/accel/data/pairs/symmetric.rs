@@ -4,8 +4,8 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::sync::atomic::{AtomicI32, AtomicUsize};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI32, AtomicUsize};
 use std::{mem::transmute, sync::atomic::Ordering};
 
 use arrow::array::Int32Array;
@@ -149,11 +149,7 @@ impl SymmetricPairCounter {
             self.n_items
         );
 
-        if row <= col {
-            (row, col)
-        } else {
-            (col, row)
-        }
+        if row <= col { (row, col) } else { (col, row) }
     }
 }
 

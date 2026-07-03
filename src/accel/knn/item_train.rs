@@ -7,17 +7,17 @@
 use std::cmp::Reverse;
 
 use arrow::{
-    array::{make_array, Array, ArrayData},
+    array::{Array, ArrayData, make_array},
     pyarrow::PyArrowType,
 };
 use log::*;
 use ordered_float::NotNan;
-use pyo3::{prelude::*, IntoPyObjectExt};
+use pyo3::{IntoPyObjectExt, prelude::*};
 use rayon::prelude::*;
 use rayon_cancel::CancelAdapter;
 
 use crate::{
-    sparse::{ArrowCSRConsumer, CSRMatrix, CSR},
+    sparse::{ArrowCSRConsumer, CSR, CSRMatrix},
     tasks::{AccelTask, AccelTaskImpl, IterCancel},
 };
 

@@ -9,12 +9,12 @@ pub mod dispatch;
 pub mod lists;
 pub mod types;
 
-use arrow::array::downcast_array;
-use arrow::array::make_array;
 use arrow::array::Array;
 use arrow::array::ArrayData;
 use arrow::array::ArrowPrimitiveType;
 use arrow::array::PrimitiveArray;
+use arrow::array::downcast_array;
+use arrow::array::make_array;
 use arrow::pyarrow::PyArrowType;
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;

@@ -17,7 +17,7 @@ use pyo3::{
 };
 
 use arrow::{
-    array::{make_array, Array, ArrayData, ArrowPrimitiveType, AsArray, Int32Builder},
+    array::{Array, ArrayData, ArrowPrimitiveType, AsArray, Int32Builder, make_array},
     datatypes::{Int16Type, Int32Type, Int64Type, UInt16Type, UInt32Type, UInt64Type},
     pyarrow::PyArrowType,
 };
@@ -80,7 +80,7 @@ impl IDIndex {
                 return Err(PyTypeError::new_err(format!(
                     "unsupported ID type {}",
                     ids.data_type()
-                )))
+                )));
             }
         };
 

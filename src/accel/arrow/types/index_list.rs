@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::datatypes::DataType;
-use arrow_schema::extension::ExtensionType;
 use arrow_schema::ArrowError;
+use arrow_schema::extension::ExtensionType;
 
 use super::SparseIndexType;
 
@@ -97,7 +97,7 @@ impl ExtensionType for SparseIndexListType {
                 return Err(ArrowError::InvalidArgumentError(format!(
                     "unsupported data type {}",
                     data_type
-                )))
+                )));
             }
         };
 
