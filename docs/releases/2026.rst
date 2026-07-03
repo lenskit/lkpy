@@ -23,6 +23,7 @@ Third release in 2026, with more feature updates and bug fixes.
 - Added initial support for importing Steam user/item data
   (:py:mod:`lenskit.data.sources.steam`, :pr:`1111`).
 - Support simultaneous multithreaded running in accelerator tasks (:issue:`1124`, :pr:`1125`).
+- Fix Torch compilation support bugs (:pr:`1113`).
 
 .. _2026.2.1:
 
