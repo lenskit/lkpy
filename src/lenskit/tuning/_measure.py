@@ -13,6 +13,7 @@ from lenskit.data import GenericKey, ItemList, ItemListCollection, key_dict
 from lenskit.logging import Task, get_logger, item_progress
 from lenskit.metrics import (
     DCG,
+    MAE,
     NDCG,
     RBP,
     RMSE,
@@ -80,11 +81,14 @@ def measure_recs(
     metrics["RBP"] = measure_list(RBP, recs, test)
     metrics["DCG"] = measure_list(DCG, recs, test)
     metrics["NDCG"] = measure_list(NDCG, recs, test)
+    metrics["NDCG@10"] = measure_list(NDCG, recs, test, n=10)
     metrics["RecipRank"] = measure_list(RecipRank, recs, test)
-    metrics["Hit10"] = measure_list(Hit, recs, test, n=10)
+    metrics["Hit"] = measure_list(Hit, recs, test)
+    metrics["Hit@10"] = measure_list(Hit, recs, test, n=10)
 
     if preds is not None:
         log.debug("measuring rating predictions")
         metrics["RMSE"] = measure_list(RMSE, preds, test)
+        metrics["MAE"] = measure_list(MAE, preds, test)
 
     return metrics
