@@ -10,7 +10,6 @@ perl = { version = "latest", os = ["linux", "macos"] }
 hk = "latest"
 pkl = "latest"
 taplo = "latest"
-yamllint = "latest"
 
 [settings]
 idiomatic_version_file_enable_tools = ["rust"]
