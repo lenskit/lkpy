@@ -316,7 +316,7 @@ class OptunaTuneResults(TuneResults):
                     cfg["epochs"] = np.argmax(vals).item() + 1
                 case StudyDirection.MINIMIZE:
                     cfg["epochs"] = np.argmin(vals).item() + 1
-                case _:
+                case _:  # pragma: nocover
                     raise RuntimeError("unexpected study direction")
 
         return cfg
