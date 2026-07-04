@@ -1,0 +1,52 @@
+amends "package://github.com/jdx/hk/releases/download/v1.49.0/hk@1.49.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.49.0/hk@1.49.0#/Builtins.pkl"
+
+local linters = new Mapping<String, Step> {
+  ["large-files"] = (Builtins.check_added_large_files) {
+    exclude = Regex(#"(^uv\.lock|\.ipynb|\.csv)$"#)
+  }
+  ["end-of-file-fixer"] = Builtins.newlines
+  ["mixed-line-ending"] = Builtins.mixed_line_ending
+  ["trailing-whitespace"] = Builtins.trailing_whitespace
+  // ["check-merge-conflict"] = Builtins.check_merge_conflict
+  ["check-toml"] = Builtins.taplo
+}
+
+local formatters = new Mapping<String, Step> {
+  ["format-rust"] = Builtins.rustfmt
+  // ["format-toml"] = Builtins.taplo_format
+  ["dprint"] = (Builtins.dprint) {
+    glob = Regex(#"(.*\.yaml$|.*\.yml$|.*\.toml$|.*\.json$)"#)
+  }
+  ["license-headers"] {
+    glob = Regex(#"(.*\.py$|.*\.rs$)"#)
+    check = "uv run utils/update-headers.py --check-only {{ files }}"
+    fix = "uv run utils/update-headers.py {{ files }}"
+  }
+  ["pkl-format"] = Builtins.pkl_format
+}
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps {
+      ["commit-branch"] = Builtins.no_commit_to_branch
+      ...linters
+      ...formatters
+    }
+  }
+  ["check"] {
+    steps {
+      ...linters
+      ...formatters
+    }
+  }
+  ["fix"] {
+    fix = true
+    steps {
+      ...linters
+      ...formatters
+    }
+  }
+}

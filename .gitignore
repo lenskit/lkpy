@@ -24,7 +24,6 @@ htmlcov/
 perf.data*
 *.linux-perf.txt
 *.speedscope.json
-*.pkl
 *.zst
 *.gz
 *.bz2
