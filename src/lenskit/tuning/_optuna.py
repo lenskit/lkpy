@@ -31,7 +31,7 @@ from lenskit.parallel import NestedPool
 from lenskit.pipeline import Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Component, Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
-from lenskit.random import make_seed
+from lenskit.random import int_seed, make_seed
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
 from ._base import BasePipelineTuner, TuneResults
@@ -52,6 +52,7 @@ class PipelineTuner(BasePipelineTuner):
     def run(self) -> OptunaTuneResults:
         self.out_dir.mkdir(exist_ok=True, parents=True)
         study = optuna.create_study(
+            sampler=optuna.samplers.TPESampler(seed=int_seed(self.random_seed)),
             storage=JournalStorage(JournalFileBackend(fspath(self.out_dir / "optuna.log"))),
             pruner=CompositePruner(),
             direction=StudyDirection.MINIMIZE if self.mode == "min" else StudyDirection.MAXIMIZE,
@@ -97,7 +98,9 @@ class PipelineTuner(BasePipelineTuner):
                         for t in done:
                             if exc := t.exception():
                                 _log.error("tuning trial failed", exc_info=exc)
-                                raise exc
+                                if self.spec.search.error_action == "abort":
+                                    pool.shutdown(False, cancel_futures=True)
+                                    raise exc
 
                             pb.update()
             else:
@@ -313,7 +316,7 @@ class OptunaTuneResults(TuneResults):
                     cfg["epochs"] = np.argmax(vals).item() + 1
                 case StudyDirection.MINIMIZE:
                     cfg["epochs"] = np.argmin(vals).item() + 1
-                case _:
+                case _:  # pragma: nocover
                     raise RuntimeError("unexpected study direction")
 
         return cfg
