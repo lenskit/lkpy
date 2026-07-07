@@ -299,7 +299,8 @@ class OptunaTuneResults(TuneResults):
     @override
     def trials(self) -> Iterable[dict[str, JsonValue]]:
         for trial in self.study.trials:
-            yield self._trial_result(trial)
+            if trial.state != TrialState.FAIL:
+                yield self._trial_result(trial)
 
     @override
     def epochs(self) -> Iterable[dict[str, JsonValue]]:
@@ -307,6 +308,9 @@ class OptunaTuneResults(TuneResults):
             return []
 
         for n, trial in enumerate(self.study.trials):
+            if trial.state == TrialState.FAIL:
+                continue
+
             for i in range(trial.last_step + 1):
                 out_row = {
                     "trial": n,
