@@ -274,6 +274,8 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
             out[name] = trial.suggest_float(prefix + name, spec.min, spec.max)
         elif spec.type == "float" and spec.scale == "log":
             out[name] = trial.suggest_float(prefix + name, spec.min, spec.max, log=True)
+        elif spec.type == "bool":
+            out[name] = trial.suggest_categorical(prefix + name, [False, True])
 
     return out
 

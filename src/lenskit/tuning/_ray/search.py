@@ -287,5 +287,7 @@ def _make_space(space: SearchSpace):
             out[name] = ray.tune.uniform(spec.min, spec.max)
         elif spec.type == "float" and spec.scale == "log":
             out[name] = ray.tune.loguniform(spec.min, spec.max, base=spec.base)
+        elif spec.type == "bool":
+            out[name] = ray.tune.choice([False, True])
 
     return out
