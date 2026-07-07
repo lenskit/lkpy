@@ -180,9 +180,12 @@ class SearchParam(BaseModel):
     """
     Maximum parameter value.
     """
-    scale: Literal["uniform", "log"] = "uniform"
+    scale: Literal["uniform", "log", "pow2"] = "uniform"
     """
     Search scale for parameter values.
+
+    The value ``"pow2"`` only applies to integer parameters, and
+    constrains them to be integer powers of 2.
     """
     choices: list[str | int | float | bool] = []
     """
@@ -206,6 +209,11 @@ class SearchParam(BaseModel):
         if self.type == "choice":
             if not self.choices:
                 raise ValueError("choice parameter must specify non-empty choices")
+
+    @model_validator(mode="after")
+    def _check_pow2_int(self):
+        if self.scale == "pow2" and self.type != "int":
+            raise ValueError("pow2 is only valid for integer parameters")
 
 
 type SearchSpace = dict[str, SearchParam | SearchSpace]

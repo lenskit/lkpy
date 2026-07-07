@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
@@ -270,6 +271,10 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
             assert isinstance(spec.min, int)
             assert isinstance(spec.max, int)
             out[name] = trial.suggest_int(prefix + name, spec.min, spec.max, log=True)
+        elif spec.type == "int" and spec.scale == "pow2":
+            min = int(math.sqrt(spec.min))
+            max = int(math.sqrt(spec.max))
+            out[name] = 2 ** trial.suggest_int(prefix + name, min, max)
         elif spec.type == "float" and spec.scale == "uniform":
             out[name] = trial.suggest_float(prefix + name, spec.min, spec.max)
         elif spec.type == "float" and spec.scale == "log":

@@ -25,6 +25,11 @@ def test_bool_accepts_no_range():
     assert spec.type == "bool"
 
 
+def test_pow2_must_be_int():
+    with raises(ValidationError):
+        SearchParam(type="float", min=2, max=10, scale="pow2")
+
+
 def test_require_choices():
     with raises(ValidationError):
         SearchParam(type="choice")
