@@ -168,7 +168,7 @@ class PipelineFile(BaseModel, extra="forbid"):
 
 
 class SearchParam(BaseModel):
-    type: Literal["int", "float", "bool"]
+    type: Literal["int", "float", "bool", "choice"]
     """
     The type of this parameter.
     """
@@ -184,6 +184,10 @@ class SearchParam(BaseModel):
     """
     Search scale for parameter values.
     """
+    choices: list[str | int | float | bool] = []
+    """
+    Choices for a ``"choice"`` search parameter.
+    """
     base: float | None = None
     """
     Base for logarithmic search scales.
@@ -196,6 +200,12 @@ class SearchParam(BaseModel):
                 raise TypeError("min must be provided for numeric parameter")
             if self.max is None:
                 raise TypeError("max must be provided for numeric parameter")
+
+    @model_validator(mode="after")
+    def _check_choices(self):
+        if self.type == "choice":
+            if not self.choices:
+                raise ValueError("choice parameter must specify non-empty choices")
 
 
 type SearchSpace = dict[str, SearchParam | SearchSpace]

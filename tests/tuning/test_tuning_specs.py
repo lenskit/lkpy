@@ -23,3 +23,8 @@ def test_require_range():
 def test_bool_accepts_no_range():
     spec = SearchParam(type="bool")
     assert spec.type == "bool"
+
+
+def test_require_choices():
+    with raises(ValidationError):
+        SearchParam(type="choice")

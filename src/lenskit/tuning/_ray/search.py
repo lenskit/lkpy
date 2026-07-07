@@ -289,5 +289,7 @@ def _make_space(space: SearchSpace):
             out[name] = ray.tune.loguniform(spec.min, spec.max, base=spec.base)
         elif spec.type == "bool":
             out[name] = ray.tune.choice([False, True])
+        elif spec.type == "choice":
+            out[name] = ray.tune.choice(spec.choices)
 
     return out
