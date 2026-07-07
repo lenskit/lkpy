@@ -203,17 +203,20 @@ class SearchParam(BaseModel):
                 raise TypeError("min must be provided for numeric parameter")
             if self.max is None:
                 raise TypeError("max must be provided for numeric parameter")
+        return self
 
     @model_validator(mode="after")
     def _check_choices(self):
         if self.type == "choice":
             if not self.choices:
                 raise ValueError("choice parameter must specify non-empty choices")
+        return self
 
     @model_validator(mode="after")
     def _check_pow2_int(self):
         if self.scale == "pow2" and self.type != "int":
             raise ValueError("pow2 is only valid for integer parameters")
+        return self
 
 
 type SearchSpace = dict[str, SearchParam | SearchSpace]
