@@ -12,11 +12,11 @@ from lenskit.tuning.spec import SearchParam
 
 
 def test_require_range():
-    with raises(ValidationError):
+    with raises(TypeError):
         SearchParam(type="int")
-    with raises(ValidationError):
+    with raises(TypeError):
         SearchParam(type="int", min=0)
-    with raises(ValidationError):
+    with raises(TypeError):
         SearchParam(type="int", max=0)
 
 
@@ -26,10 +26,10 @@ def test_bool_accepts_no_range():
 
 
 def test_pow2_must_be_int():
-    with raises(ValidationError):
+    with raises(ValueError):
         SearchParam(type="float", min=2, max=10, scale="pow2")
 
 
 def test_require_choices():
-    with raises(ValidationError):
+    with raises(ValueError):
         SearchParam(type="choice")
