@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Annotated, Literal
 
 from lenskit.config import lenskit_config, load_config_data
@@ -168,15 +168,15 @@ class PipelineFile(BaseModel, extra="forbid"):
 
 
 class SearchParam(BaseModel):
-    type: Literal["int", "float"]
+    type: Literal["int", "float", "bool"]
     """
     The type of this parameter.
     """
-    min: int | float
+    min: int | float | None = None
     """
     Minimum parameter value.
     """
-    max: int | float
+    max: int | float | None = None
     """
     Maximum parameter value.
     """
@@ -188,6 +188,14 @@ class SearchParam(BaseModel):
     """
     Base for logarithmic search scales.
     """
+
+    @model_validator(mode="after")
+    def _check_min_max(self):
+        if self.type in ["int", "float"]:
+            if self.min is None:
+                raise TypeError("min must be provided for numeric parameter")
+            if self.max is None:
+                raise TypeError("max must be provided for numeric parameter")
 
 
 type SearchSpace = dict[str, SearchParam | SearchSpace]
