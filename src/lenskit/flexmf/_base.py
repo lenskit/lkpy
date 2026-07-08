@@ -21,6 +21,12 @@ from lenskit.training import UsesTrainer
 
 from ._model import FlexMFModel
 
+# try to import Dynamo to prevent import problems on Torch 2.12
+try:
+    import torch._dynamo  # noqa: F401
+except ImportError:
+    pass
+
 # I want a logger for information
 _log = get_logger(__name__)
 

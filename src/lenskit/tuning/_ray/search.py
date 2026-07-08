@@ -283,9 +283,20 @@ def _make_space(space: SearchSpace):
             assert isinstance(spec.min, int)
             assert isinstance(spec.max, int)
             out[name] = ray.tune.lograndint(spec.min, spec.max, base=spec.base)
+        elif spec.type == "int" and spec.scale == "pow2":
+            powers = []
+            cur = spec.min
+            while cur <= spec.max:
+                powers.append(cur)
+                cur = cur * 2
+            out[name] = ray.tune.choice(powers)
         elif spec.type == "float" and spec.scale == "uniform":
             out[name] = ray.tune.uniform(spec.min, spec.max)
         elif spec.type == "float" and spec.scale == "log":
             out[name] = ray.tune.loguniform(spec.min, spec.max, base=spec.base)
+        elif spec.type == "bool":
+            out[name] = ray.tune.choice([False, True])
+        elif spec.type == "choice":
+            out[name] = ray.tune.choice(spec.choices)
 
     return out

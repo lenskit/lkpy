@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Annotated, Literal
 
 from lenskit.config import lenskit_config, load_config_data
@@ -168,26 +168,55 @@ class PipelineFile(BaseModel, extra="forbid"):
 
 
 class SearchParam(BaseModel):
-    type: Literal["int", "float"]
+    type: Literal["int", "float", "bool", "choice"]
     """
     The type of this parameter.
     """
-    min: int | float
+    min: int | float | None = None
     """
     Minimum parameter value.
     """
-    max: int | float
+    max: int | float | None = None
     """
     Maximum parameter value.
     """
-    scale: Literal["uniform", "log"] = "uniform"
+    scale: Literal["uniform", "log", "pow2"] = "uniform"
     """
     Search scale for parameter values.
+
+    The value ``"pow2"`` only applies to integer parameters, and
+    constrains them to be integer powers of 2.
+    """
+    choices: list[str | int | float | bool] = []
+    """
+    Choices for a ``"choice"`` search parameter.
     """
     base: float | None = None
     """
     Base for logarithmic search scales.
     """
+
+    @model_validator(mode="after")
+    def _check_min_max(self):
+        if self.type in ["int", "float"]:
+            if self.min is None:
+                raise TypeError("min must be provided for numeric parameter")
+            if self.max is None:
+                raise TypeError("max must be provided for numeric parameter")
+        return self
+
+    @model_validator(mode="after")
+    def _check_choices(self):
+        if self.type == "choice":
+            if not self.choices:
+                raise ValueError("choice parameter must specify non-empty choices")
+        return self
+
+    @model_validator(mode="after")
+    def _check_pow2_int(self):
+        if self.scale == "pow2" and self.type != "int":
+            raise ValueError("pow2 is only valid for integer parameters")
+        return self
 
 
 type SearchSpace = dict[str, SearchParam | SearchSpace]

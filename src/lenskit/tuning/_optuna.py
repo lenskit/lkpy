@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
@@ -270,10 +271,18 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
             assert isinstance(spec.min, int)
             assert isinstance(spec.max, int)
             out[name] = trial.suggest_int(prefix + name, spec.min, spec.max, log=True)
+        elif spec.type == "int" and spec.scale == "pow2":
+            min = int(math.log2(spec.min))
+            max = int(math.log2(spec.max))
+            out[name] = 2 ** trial.suggest_int(prefix + name, min, max)
         elif spec.type == "float" and spec.scale == "uniform":
             out[name] = trial.suggest_float(prefix + name, spec.min, spec.max)
         elif spec.type == "float" and spec.scale == "log":
             out[name] = trial.suggest_float(prefix + name, spec.min, spec.max, log=True)
+        elif spec.type == "bool":
+            out[name] = trial.suggest_categorical(prefix + name, [False, True])
+        elif spec.type == "choice":
+            out[name] = trial.suggest_categorical(prefix + name, spec.choices)
 
     return out
 
@@ -290,7 +299,8 @@ class OptunaTuneResults(TuneResults):
     @override
     def trials(self) -> Iterable[dict[str, JsonValue]]:
         for trial in self.study.trials:
-            yield self._trial_result(trial)
+            if trial.state != TrialState.FAIL:
+                yield self._trial_result(trial)
 
     @override
     def epochs(self) -> Iterable[dict[str, JsonValue]]:
@@ -298,6 +308,9 @@ class OptunaTuneResults(TuneResults):
             return []
 
         for n, trial in enumerate(self.study.trials):
+            if trial.state == TrialState.FAIL:
+                continue
+
             for i in range(trial.last_step + 1):
                 out_row = {
                     "trial": n,
