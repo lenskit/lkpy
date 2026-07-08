@@ -82,6 +82,10 @@ class SLIMScorer(Component, Trainable):
     config: SLIMConfig
 
     weights: csr_array
+    """
+    The *transposed* SLIM weight matrix.  That is, :math:`w_{ij}` is the weight
+    to predict item :math:`j` using :math:`w_i`, not the other way around.
+    """
     items: Vocabulary
 
     def is_trained(self) -> bool:
