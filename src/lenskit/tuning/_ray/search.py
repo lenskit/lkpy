@@ -289,7 +289,7 @@ def _make_space(space: SearchSpace):
             while cur <= spec.max:
                 powers.append(cur)
                 cur = cur * 2
-            raise ray.tune.choice(powers)
+            out[name] = ray.tune.choice(powers)
         elif spec.type == "float" and spec.scale == "uniform":
             out[name] = ray.tune.uniform(spec.min, spec.max)
         elif spec.type == "float" and spec.scale == "log":
