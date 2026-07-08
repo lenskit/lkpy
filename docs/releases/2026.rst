@@ -25,6 +25,7 @@ Third release in 2026, with more feature updates and bug fixes.
 - Support simultaneous multithreaded running in accelerator tasks (:issue:`1124`, :pr:`1125`).
 - Fix Torch compilation support bugs (:pr:`1113`).
 - Optuna fixes for random seeds, continuing when a trial fails, collecting results (:pr:`1132`, :pr:`1134`).
+- Added support for boolean and categorical hyperparameters to the tuner (:pr:`1139`).
 
 .. _2026.2.1:
 
