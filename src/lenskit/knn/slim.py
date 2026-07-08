@@ -142,7 +142,7 @@ class SLIMScorer(Component, Trainable):
         # compute the scores
         all_scores = x @ self.weights
         assert all_scores.shape == (1, tot_n)
-        all_scores = all_scores[0, :].toarray()
+        all_scores = all_scores.toarray()[0, :]
 
         # finalize result
         scores = np.full(len(items), np.nan, np.float32)
