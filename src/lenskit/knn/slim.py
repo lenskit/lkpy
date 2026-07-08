@@ -133,13 +133,16 @@ class SLIMScorer(Component, Trainable):
         # get user item numbers
         u_inos = u_items.numbers(vocabulary=self.items, missing="negative")
         u_inos = u_inos[u_inos >= 0]
+        u_n = len(u_inos)
+        tot_n = len(self.items)
 
         # prepare our initial matrix
-        x = np.zeros(len(self.items))
-        x[u_inos] = 1
+        x = csr_array((np.ones(u_n, dtype=np.float32), u_inos, [0, u_n]), shape=(1, tot_n))
 
         # compute the scores
         all_scores = x @ self.weights
+        assert all_scores.shape == (1, tot_n)
+        all_scores = all_scores[0, :].toarray()
 
         # finalize result
         scores = np.full(len(items), np.nan, np.float32)
