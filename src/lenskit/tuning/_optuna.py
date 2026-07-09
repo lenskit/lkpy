@@ -58,7 +58,6 @@ class PipelineTuner(BasePipelineTuner):
             pruner=CompositePruner(),
             direction=StudyDirection.MINIMIZE if self.mode == "min" else StudyDirection.MAXIMIZE,
         )
-        # TODO: add parallelism support
 
         self.log = _log.bind(pipeline=self.pipeline.meta.name, dataset=self.data.name)
         self.log.info(
