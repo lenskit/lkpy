@@ -6,10 +6,11 @@
 
 from pytest import importorskip
 
-from lenskit.tuning._optuna import _ask_space
-from lenskit.tuning.spec import SearchParam
+from lenskit.tuning.spec import SearchParam  # noqa: E402
 
 optuna = importorskip("optuna")
+
+from lenskit.tuning._optuna import _ask_space  # noqa: E402
 
 NTRIALS = 1000
 
