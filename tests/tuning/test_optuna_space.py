@@ -4,13 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import optuna
-
 from pytest import importorskip
 
-importorskip("optuna")
 from lenskit.tuning._optuna import _ask_space
 from lenskit.tuning.spec import SearchParam
+
+optuna = importorskip("optuna")
 
 NTRIALS = 1000
 
