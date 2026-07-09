@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Mapping
 
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Annotated, Literal
@@ -219,7 +220,7 @@ class SearchParam(BaseModel):
         return self
 
 
-type SearchSpace = dict[str, SearchParam | SearchSpace]
+type SearchSpace = Mapping[str, SearchParam | SearchSpace]
 """
 Specification of the (possibly nested) hyperparameter search space for a
 component.

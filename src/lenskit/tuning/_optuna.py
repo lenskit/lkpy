@@ -118,8 +118,8 @@ class PipelineTuner(BasePipelineTuner):
                 return self._run_trial(study)
 
         trial = study.ask()
-        config = self._ask_config(trial)
         self.log = self.log.bind(trial_num=trial.number)
+        config = self._ask_config(trial)
 
         with Task(
             label=f"trial {trial.number} to tune {self.pipeline.meta.name}",
@@ -255,7 +255,9 @@ class PipelineTuner(BasePipelineTuner):
     def _ask_config(self, trial: Trial):
         # we have exactly one
         for space in self.spec.space.values():
-            return _ask_space(trial, space)
+            cfg = _ask_space(trial, space)
+            self.log.info("obtained search point", cfg=cfg)
+            return cfg
 
 
 def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
@@ -283,6 +285,8 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
             out[name] = trial.suggest_categorical(prefix + name, [False, True])
         elif spec.type == "choice":
             out[name] = trial.suggest_categorical(prefix + name, spec.choices)
+        else:  # pragma: nocover
+            raise ValueError(f"unsupported configuration {space}")
 
     return out
 
