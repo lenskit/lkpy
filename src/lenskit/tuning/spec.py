@@ -5,9 +5,9 @@
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
-from typing import Mapping
 
 from pathlib import Path
+from typing import Mapping
 
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Annotated, Literal
