@@ -81,6 +81,29 @@ class PipelineTuner(BasePipelineTuner):
 
         return OptunaTuneResults(spec=self.spec, study=study, iterative=self.iterative, task=task)
 
+    def _enqueue_defaults(self, study: Study):
+        """
+        Enqueue the component's default hyperparameters into the study.
+        """
+        self.log.debug(
+            "instantiating pipeline to extract defaults", component=self.spec.component_name
+        )
+        pipe = Pipeline.from_config(self.pipeline)
+        comp = pipe.component(self.spec.component_name)
+        assert comp is not None
+        if not isinstance(comp, Component):
+            self.log.warn("component is not pipeline", component=self.spec.component_name)
+            return
+
+        config = _extract_defaults(self.spec.space, comp.dump_config())
+        study.enqueue_trial(
+            config,
+            user_attrs={
+                "memo": "initial default configuration",
+                "component": self.spec.component_name,
+            },
+        )
+
     def _run_study(self, study: Study):
         npts = self.spec.search.num_search_points()
         task = Task.current()
@@ -287,6 +310,18 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
         else:  # pragma: nocover
             raise ValueError(f"unsupported configuration {space}")
 
+    return out
+
+
+def _extract_defaults(
+    space: dict[str, SearchSpace], config: dict[str, JsonValue]
+) -> dict[str, JsonValue]:
+    out = {}
+    for k, v in space.items():
+        if isinstance(v, dict):
+            out[k] = _extract_defaults(v, config[k])  # type: ignore
+        else:
+            out[k] = config[k]
     return out
 
 
