@@ -43,7 +43,14 @@ def main():
 
 @click.group("lenskit", invoke_without_command=True)
 @click.help_option("-h", "--help")
-@click.option("-v", "--verbose", "verbosity", count=True, help="Enable verbose logging output.")
+@click.option(
+    "-v",
+    "--verbose",
+    "verbosity",
+    count=True,
+    envvar="LK_VERBOSE",
+    help="Enable verbose logging output.",
+)
 @click.option("--log-file", type=Path, help="Save log messages to FILE")
 @click.option(
     "--log-file-verbose",
