@@ -81,30 +81,8 @@ class PipelineTuner(BasePipelineTuner):
 
         return OptunaTuneResults(spec=self.spec, study=study, iterative=self.iterative, task=task)
 
-    def _enqueue_defaults(self, study: Study):
-        """
-        Enqueue the component's default hyperparameters into the study.
-        """
-        self.log.debug(
-            "instantiating pipeline to extract defaults", component=self.spec.component_name
-        )
-        pipe = Pipeline.from_config(self.pipeline)
-        comp = pipe.component(self.spec.component_name)
-        assert comp is not None
-        if not isinstance(comp, Component):
-            self.log.warn("component is not pipeline", component=self.spec.component_name)
-            return
-
-        config = _extract_defaults(self.spec.space, comp.dump_config())
-        study.enqueue_trial(
-            config,
-            user_attrs={
-                "memo": "initial default configuration",
-                "component": self.spec.component_name,
-            },
-        )
-
     def _run_study(self, study: Study):
+        self._enqueue_defaults(study)
         npts = self.spec.search.num_search_points()
         task = Task.current()
         with item_progress("Search trials", total=npts) as pb:
@@ -273,6 +251,29 @@ class PipelineTuner(BasePipelineTuner):
             results = measure_pipeline(self.spec, pipe, self.data.test, train_task, test_task)
 
         study.tell(trial, results[self.metric], state=TrialState.COMPLETE)
+
+    def _enqueue_defaults(self, study: Study):
+        """
+        Enqueue the component's default hyperparameters into the study.
+        """
+        self.log.debug(
+            "instantiating pipeline to extract defaults", component=self.spec.component_name
+        )
+        pipe = Pipeline.from_config(self.pipeline)
+        comp = pipe.component(self.spec.component_name)
+        assert comp is not None
+        if not isinstance(comp, Component):
+            self.log.warn("component is not pipeline", component=self.spec.component_name)
+            return
+
+        config = _extract_defaults(self.spec.space, comp.dump_config())
+        study.enqueue_trial(
+            config,
+            user_attrs={
+                "memo": "initial default configuration",
+                "component": self.spec.component_name,
+            },
+        )
 
     def _ask_config(self, trial: Trial):
         # we have exactly one
