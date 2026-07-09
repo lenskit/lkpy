@@ -4,18 +4,21 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import math
+
 from pytest import importorskip
 
-from lenskit.tuning.spec import SearchParam  # noqa: E402
+from lenskit.tuning.spec import SearchParam
 
 optuna = importorskip("optuna")
 
-from lenskit.tuning._optuna import _ask_space  # noqa: E402
 
 NTRIALS = 1000
 
 
 def test_log2_space():
+    from lenskit.tuning._optuna import _ask_space
+
     space = {"n": SearchParam(type="int", scale="pow2", min=8, max=1024)}
     study = optuna.create_study()
 
@@ -27,3 +30,5 @@ def test_log2_space():
             assert isinstance(x, int)
             assert x >= 8
             assert x <= 1024
+            base = math.log2(x)
+            assert int(base) == base
