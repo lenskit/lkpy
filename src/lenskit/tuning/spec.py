@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
+from typing import Mapping
 
 from pathlib import Path
 
@@ -219,7 +220,7 @@ class SearchParam(BaseModel):
         return self
 
 
-type SearchSpace = dict[str, SearchParam | SearchSpace]
+type SearchSpace = Mapping[str, SearchParam | SearchSpace]
 """
 Specification of the (possibly nested) hyperparameter search space for a
 component.
