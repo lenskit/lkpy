@@ -136,7 +136,7 @@ def test_type_string_generic():
 
 
 def test_type_string_class():
-    assert type_string(UUID) == "uuid.UUID"
+    assert type_string(UUID) == "uuid:UUID"
 
 
 def test_parse_string_None():
