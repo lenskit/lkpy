@@ -283,6 +283,8 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
             out[name] = trial.suggest_categorical(prefix + name, [False, True])
         elif spec.type == "choice":
             out[name] = trial.suggest_categorical(prefix + name, spec.choices)
+        else:  # pragma: nocover
+            raise ValueError(f"unsupported configuration {space}")
 
     return out
 
