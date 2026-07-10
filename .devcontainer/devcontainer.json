@@ -2,26 +2,25 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/debian
 {
   "name": "LensKit",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "image": "mcr.microsoft.com/devcontainers/base:trixie",
   "features": {
-    "ghcr.io/devcontainers/features/rust:1": {}
+    "ghcr.io/devcontainers-extra/features/mise:1": {},
+    "ghcr.io/devcontainers/features/rust:1": {},
   },
   // put the Python environment inside the container
   "containerEnv": {
-    "UV_PROJECT_ENVIRONMENT": "/home/vscode/lenskit-venv"
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/lenskit-venv",
   },
   "mounts": [
     {
       "source": "lenskit-target",
       "type": "volume",
-      "target": "${containerWorkspaceFolder}/target"
-    }
+      "target": "${containerWorkspaceFolder}/target",
+    },
   ],
   "remoteEnv": {
     "VIRTUAL_ENV": "${containerEnv:UV_PROJECT_ENVIRONMENT}",
-    "PATH": "${containerEnv:UV_PROJECT_ENVIRONMENT}/bin:${containerEnv:PATH}"
+    "PATH": "${containerEnv:UV_PROJECT_ENVIRONMENT}/bin:${containerEnv:PATH}",
   },
   "postCreateCommand": ".devcontainer/setup.sh",
   // VS Code settings
@@ -37,8 +36,8 @@
         "ms-azuretools.vscode-docker",
         "trond-snekvik.simple-rst",
         "rust-lang.rust-analyzer",
-        "hverlin.mise-vscode"
-      ]
-    }
-  }
+        "hverlin.mise-vscode",
+      ],
+    },
+  },
 }

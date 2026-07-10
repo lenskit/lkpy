@@ -5,10 +5,10 @@ sudo chown vscode:vscode target || true
 # fix git permissions warning
 git config --global --add safe.directory $PWD
 
-# install the development environment
-uv venv -p 3.12
-uv sync --all-extras --group=cpu
+# install dev tools
+mise trust -a
+mise install
 
-# get pre-commit wired up and ready
-uv run pre-commit install
-uv run pre-commit install-hooks
+# install the development environment
+mise x -- uv venv -p 3.12
+mise x -- uv sync --all-extras --group=cpu
