@@ -17,6 +17,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: 📥 Check out source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Pre-build dev container image
         uses: devcontainers/ci@v0.3
         with:
