@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   pre-commit:
-    name: Check source code lints
+    name: Check pre-commit hooks
     runs-on: ubuntu-latest
 
     steps:
