@@ -11,7 +11,7 @@ LensKit general configuration
 from __future__ import annotations
 
 import warnings
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
 from pathlib import Path
@@ -142,7 +142,7 @@ def reconfigure(
     cfg_dir: Path | LenskitSettings | None = None,
     *,
     settings_cls=LenskitSettings,
-) -> Generator[LenskitSettings]:
+):
     """
     Temporarily reconfigure LensKit, overriding the existing configuration.
 
@@ -162,7 +162,7 @@ def reconfigure(
     Stability:
         Internal
     """
-    settings = configure(cfg_dir, settings_cls, _set_global=False)  # ty:ignore[no-matching-overload]
+    settings = configure(cfg_dir, settings_cls=settings_cls, _set_global=False)  # ty:ignore[no-matching-overload]
     token = _context_settings.set(settings)
     try:
         yield settings
