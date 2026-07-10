@@ -149,8 +149,9 @@ installed.
 > [!NOTE]
 >
 > The dev container is the only supported way to develop on Windows — while
-> LensKit works and is regularly tested on Windows, we have not invested time
-> in making sure the development environment works on Windows.
+> LensKit works and is regularly tested on Windows, we have not invested time in
+> making sure the development environment works on Windows without the dev
+> container.
 
 If you want to set up yourself, we recommend using [Mise][]:
 
