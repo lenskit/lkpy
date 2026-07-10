@@ -21,3 +21,6 @@ aqua.github_attestations = false
 
 [env]
 HK_MISE = 1
+
+[hooks]
+postinstall = "hk install"
