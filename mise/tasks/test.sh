@@ -8,7 +8,7 @@
 
 set -eo pipefail
 . "$MISE_PROJECT_ROOT/mise/task-functions.sh"
-. "$MISE_PROJECT_ROOT/.venv/bin/activate"
+. "${UV_PROJECT_ENVIRONMENT:-$MISE_PROJECT_ROOT/.venv}/bin/activate"
 
 declare -a test_args=()
 declare -a build_args=()
