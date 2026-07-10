@@ -88,14 +88,9 @@ class TuneSettings(BaseModel):
     """
     Multiplier for tuning job GPU requirements.  This is to coarsely adapt GPU
     requirements from configuration files to the local machine.  If a tuning
-    specificataion requires 1 GPU, but your machine has enough capacity to run
+    specification requires 1 GPU, but your machine has enough capacity to run
     two jobs in parallel on a single GPU, you can set this to 0.5 to modify the
     tuning jobs to require 0.5 GPUs each.
-    """
-
-    max_points: int | None = None
-    """
-    Maximum number of search points for hyperparameter tuning.
     """
 
 
