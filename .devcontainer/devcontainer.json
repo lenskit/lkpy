@@ -26,5 +26,5 @@
     "PATH": "${containerEnv:UV_PROJECT_ENVIRONMENT}/bin:${containerEnv:PATH}",
   },
   "updateContentCommand": ".devcontainer/setup.sh",
-  "postCreateCommand": ".devcontainer/install-active.sh",
+  "postCreateCommand": ".devcontainer/setup-final.sh",
 }
