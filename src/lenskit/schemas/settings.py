@@ -17,6 +17,8 @@ from annotated_types import Gt, Le
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .tuning import SearchConfig
+
 
 class PowerQueries(TypedDict, total=False):
     """
@@ -91,6 +93,11 @@ class TuneSettings(BaseModel):
     specification requires 1 GPU, but your machine has enough capacity to run
     two jobs in parallel on a single GPU, you can set this to 0.5 to modify the
     tuning jobs to require 0.5 GPUs each.
+    """
+
+    defaults: SearchConfig | None = None
+    """
+    Default settings for hyperparameter search.
     """
 
 
