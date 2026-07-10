@@ -11,6 +11,9 @@ LensKit general configuration
 from __future__ import annotations
 
 import warnings
+from collections.abc import Generator
+from contextlib import AbstractContextManager, contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 from pydantic_settings import TomlConfigSettingsSource
@@ -48,6 +51,7 @@ __all__ = [
 SettingsClass = TypeVar("SettingsClass", bound="LenskitSettings", default="LenskitSettings")
 _log = get_logger(__name__)
 _settings: LenskitSettings | None = None
+_context_settings: ContextVar[LenskitSettings | None] = ContextVar("lenskit.settings", default=None)
 
 
 def lenskit_config() -> LenskitSettings:
@@ -58,12 +62,15 @@ def lenskit_config() -> LenskitSettings:
     """
     global _settings
 
-    if _settings is None:
+    settings = _context_settings.get()
+    if settings is None:
+        settings = _settings
+
+    if settings is None:
         settings = LenskitSettings()
         settings.finish_setup()
-        return settings
-    else:
-        return _settings
+
+    return settings
 
 
 @overload
@@ -85,7 +92,7 @@ def configure(
 
     LensKit does **not** automatically read configuration files — if this
     function is never called, then configuration will entirely be done through
-    defaults and environment varibles.
+    defaults and environment variables.
 
     This function will automatically configure the global RNG, if a seed is
     specified.  It does **not** configure logging.
@@ -122,9 +129,48 @@ def configure(
     return settings
 
 
-def _load_settings[SettingsClass](
-    cfg_dir: Path | None, settings_cls: type[SettingsClass]
-) -> SettingsClass:
+@overload
+def reconfigure(cfg_dir: Path | None = None) -> AbstractContextManager[LenskitSettings]: ...
+@overload
+def reconfigure(
+    cfg_dir: Path | None = None, *, settings_cls: type[SettingsClass]
+) -> AbstractContextManager[LenskitSettings]: ...
+@overload
+def reconfigure(settings: LenskitSettings, /) -> AbstractContextManager[LenskitSettings]: ...
+@contextmanager
+def reconfigure(
+    cfg_dir: Path | LenskitSettings | None = None,
+    *,
+    settings_cls=LenskitSettings,
+) -> Generator[LenskitSettings]:
+    """
+    Temporarily reconfigure LensKit, overriding the existing configuration.
+
+    .. note::
+
+        This overwrites the active :class:`LenskitSettings`, but does *not*
+        reconfigure parallelism or other globally-configured state.  It is
+        mostly useful for tests to inject a controlled LensKit settings to
+        test how other code responds to those settings.
+
+    .. seealso:: :func:`configure`
+
+    Returns:
+        A context manager that will restore the previous settings state when
+        exited.
+
+    Stability:
+        Internal
+    """
+    settings = configure(cfg_dir, settings_cls, _set_global=False)  # ty:ignore[no-matching-overload]
+    token = _context_settings.set(settings)
+    try:
+        yield settings
+    finally:
+        _context_settings.reset(token)
+
+
+def _load_settings[C](cfg_dir: Path | None, settings_cls: type[C]) -> C:
     # define a subclass so we can specify the configuration location
     toml_files = ["lenskit.toml", "lenskit.local.toml"]
     if cfg_dir is not None:
