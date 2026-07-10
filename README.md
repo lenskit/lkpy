@@ -7,7 +7,7 @@
 ![Conda Version](https://img.shields.io/conda/vn/conda-forge/lenskit)
 
 LensKit is a set of Python tools for experimenting with and studying recommender
-systems.  It provides support for training, running, and evaluating recommender
+systems. It provides support for training, running, and evaluating recommender
 algorithms in a flexible fashion suitable for research and education.
 
 LensKit for Python (LKPY) is the successor to the Java-based LensKit project.
@@ -23,7 +23,7 @@ LensKit for Python (LKPY) is the successor to the Java-based LensKit project.
 
 > [!NOTE]
 >
-> LensKit had significant changes in the 2025.1 release.  See the [Migration
+> LensKit had significant changes in the 2025.1 release. See the [Migration
 > Guide](https://lkpy.lenskit.org/stable/guide/migrating.html) for details.
 
 [release]: https://lkpy.lenskit.org/en/stable/
@@ -83,7 +83,7 @@ url = "https://pypi.lenskit.org/lenskit-dev/"
 
 Binary wheels of LensKit development (and release) versions are automatically
 pushed to this index, although they are not guaranteed to be permanently
-available.  Reproducible code should generally depend on released versions
+available. Reproducible code should generally depend on released versions
 published to PyPI.
 
 ### Simplifying PyTorch installation
@@ -91,9 +91,9 @@ published to PyPI.
 We also provide mirrors of the PyTorch package repositories that are filtered to
 only include PyTorch and directly supporting dependencies, without other
 packages that conflict with or mask packages from PyPI, and with fallbacks for
-other platforms (i.e., our CUDA indices include CPU-only MacOS packages).  This
+other platforms (i.e., our CUDA indices include CPU-only MacOS packages). This
 makes it easier to install specific versions of PyTorch in your project with
-the index priority and fallthrough logic implemented by `uv`.  To make your
+the index priority and fallthrough logic implemented by `uv`. To make your
 project only use CPU-based PyTorch, you can add to `pyproject.toml`:
 
 ```toml
@@ -111,94 +111,74 @@ url = "https://pypi.lenskit.org/torch/cu128/"
 ```
 
 These indices provide the same package distributions as the official PyTorch
-repositories (in fact, they link directly to the PyTorch packages).  They are
+repositories (in fact, they link directly to the PyTorch packages). They are
 just an alternate index view that reduces some package conflicts.
-
 
 ## Developing
 
 [issues]: https://github.com/lenskit/lkpy/issues
 [workflow]: https://github.com/lenskit/lkpy/wiki/DevWorkflow
+[Mise]: https://mise.jdx.dev
+[hk]: https://hk.jdx.dev
 
 To contribute to LensKit, clone or fork the repository, get to work, and submit
-a pull request.  We welcome contributions from anyone; if you are looking for a
+a pull request. We welcome contributions from anyone; if you are looking for a
 place to get started, see the [issue tracker][issues].
 
 Our development workflow is documented in [the wiki][workflow]; the wiki also
-contains other information on *developing* LensKit. User-facing documentation is
-at <https://lkpy.lenskit.org>.
-
-[conda-lock]: https://github.com/conda-incubator/conda-lock
-[lkdev]: https://github.com/lenskit/lkdev
+contains other information on _developing_ LensKit. User-facing documentation is
+at <https://lenskit.org>.
 
 We use [`uv`](https://astral.sh/uv/) for developing LensKit and managing
-development environments.  Our `pyproject.toml` file contains the Python
+development environments. Our `pyproject.toml` file contains the Python
 development dependencies; you also need a working Rust compiler (typically via
-[`rustup`](https://rustup.rs/)).  Before setting up to work on LensKit, you
-therefore need:
+[`rustup`](https://rustup.rs/)). We provide [Mise][] configuration to
+automatically install everything needed, including `uv` and `rust`.
 
-- Git
-- `uv`
-- `rustup` and a working Rust compiler (`rustup install stable`)
-- A working C compiler compatible with Python
-    - On Windows, this is either Visual Studio (with C++ development) or the
-      Visual C++ Build Tools. See the [Rustup Windows install
-      instructions][rsu-win] for details.
-    - On Mac, install Xcode.
-    - On Linux, see your system package manager instructions.
+The easiest way to work on LensKit is to **use the devcontainer** — in Visual
+Studio Code, Zed, and other editors supporting Dev Containers, just re-open the
+project in a dev container, and the necessary software will be automatically
+installed.
 
-<details>
-<summary>Windows</summary>
+> [!NOTE]
+>
+> The dev container is the only supported way to develop on Windows — while
+> LensKit works and is regularly tested on Windows, we have not invested time
+> in making sure the development environment works on Windows.
 
-On Windows, you can install dependencies (except for the Visual C++ tools) with `winget`:
+If you want to set up yourself, we recommend using [Mise][]:
 
 ```console
-> winget install Git.Git astral-sh.uv Rustlang.Rustup
-> rustup install stable-msvc
-```
-</details>
-
-<details>
-<summary>Mac</summary>
-
-On Mac, you can install the dependencies with Homebrew:
-
-```console
-$ brew install git uv rustup
-```
-</details>
-
-[rsu-win]: https://ehuss.github.io/rustup/installation/windows.html
-
-Once you have the dependencies installed, set up your LensKit development
-environment:
-
-```console
-$ uv venv -p 3.12
+$ mise trust
+$ mise install
 $ uv sync
 ```
 
-If you want all extras (may not work on Windows), do:
+`mise install` will automatically install `uv`, `rust`, development support tools
+and the Git pre-commit hooks (managed with [hk][]). You will also need a working
+C compiler (on macOS, install Xcode or the Xcode command-line tools).
+
+If you want to use a specific Python version, select it with `uv venv` or `uv sync`:
+
+```console
+$ uv venv -p 3.14t
+$ uv sync
+```
+
+If you want all extras, do:
 
 ```console
 $ uv sync --all-extras
-```
-
-You can then activate the virtual environment to have the tools available and
-run tools like `pytest`:
-
-```console
-$ . ./.venv/bin/activate
 ```
 
 ## Testing Changes
 
 You should always test your changes by running the LensKit test suite:
 
-    pytest tests
+    uv run pytest tests
 
 If you want to use your changes in a LensKit experiment, you can locally install
-your modified LensKit into your experiment's environment.  We recommend using
+your modified LensKit into your experiment's environment. We recommend using
 separate environments for LensKit development and for each experiment; you will
 need to install the modified LensKit into your experiment's repository:
 
