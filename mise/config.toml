@@ -4,8 +4,6 @@ usage = "latest"
 uv = "latest"
 shfmt = "latest"
 tombi = "latest"
-cargo-binstall = "latest"
-"cargo:cargo-binutils" = "0.3"
 perl = { version = "latest", os = ["linux", "macos"] }
 hk = "latest"
 pkl = "latest"

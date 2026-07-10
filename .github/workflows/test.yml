@@ -113,8 +113,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set Mise environment
+        run: |
+          echo 'env = ["extra"]' >.miserc.toml
+
       - name: Install mise-en-place
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v4
         with:
           cache: false
 
