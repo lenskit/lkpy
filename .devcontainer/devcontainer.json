@@ -12,6 +12,7 @@
   // put the Python environment inside the container
   "containerEnv": {
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/lenskit-venv",
+    "MISE_PYTHON_UV_VENV_AUTO": "false",
   },
   "mounts": [
     {
@@ -24,5 +25,6 @@
     "VIRTUAL_ENV": "${containerEnv:UV_PROJECT_ENVIRONMENT}",
     "PATH": "${containerEnv:UV_PROJECT_ENVIRONMENT}/bin:${containerEnv:PATH}",
   },
-  "postCreateCommand": ".devcontainer/setup.sh",
+  "updateContentCommand": ".devcontainer/setup.sh",
+  "postCreateCommand": ".devcontainer/install-active.sh",
 }

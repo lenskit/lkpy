@@ -12,3 +12,7 @@ mise install
 # install the development environment
 mise x -- uv venv -p 3.12
 mise x -- uv sync --all-extras --group=cpu
+
+cat >>$HOME/.profile <<EOF
+eval "$(mise activate bash)"
+EOF
