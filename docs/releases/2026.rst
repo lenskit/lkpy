@@ -26,6 +26,8 @@ Third release in 2026, with more feature updates and bug fixes.
 - Fix Torch compilation support bugs (:pr:`1113`).
 - Optuna fixes for random seeds, continuing when a trial fails, collecting results (:pr:`1132`, :pr:`1134`).
 - Added support for boolean and categorical hyperparameters to the tuner (:pr:`1139`).
+- Added ``"pow2"`` scale for integer hyperparameters to select powers of 2 (:pr:`1144`).
+- Optuna now includes the default hyperparameters as the first ones tested (:pr:`1145`).
 
 .. _2026.2.1:
 
