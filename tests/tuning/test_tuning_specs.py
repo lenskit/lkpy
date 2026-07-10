@@ -8,7 +8,15 @@ from pydantic import ValidationError
 
 from pytest import raises
 
-from lenskit.schemas.tuning import SearchParam
+from lenskit.schemas.tuning import SearchConfig, SearchParam
+
+
+def test_merge_configs():
+    first = SearchConfig(max_epochs=42)
+    second = SearchConfig(min_epochs=17)
+    both = first.merge(second)
+    assert both.max_epochs == 42
+    assert both.min_epochs == 17
 
 
 def test_require_range():

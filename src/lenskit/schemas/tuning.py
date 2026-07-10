@@ -22,6 +22,12 @@ Action to take when a trial fails.
 """
 
 
+class IterativeConfig(BaseModel):
+    """
+    Options for iterative search.
+    """
+
+
 class SearchConfig(BaseModel):
     """
     Configuration options for the hyperparameter search.
@@ -31,6 +37,7 @@ class SearchConfig(BaseModel):
     """
     The search method to use.
     """
+
     max_points: int | None = None
     """
     The maximum number of points to try.
@@ -39,22 +46,21 @@ class SearchConfig(BaseModel):
     """
     The default number of search points, if not limited by a maximum configuration.
     """
-    max_epochs: int = 100
+    error_action: ErrorAction = "continue"
     """
-    The maximum number of epochs to use in iterative training.
+    What to do when one of the search trials fails.
     """
-    min_epochs: int = 3
-    """
-    The minimum number of epochs for iterative training.
-    """
+
     metric: str | None = None
     """
     The metric to use.
     """
+
     list_length: int | None = None
     """
     The length of recommendation lists to use.
     """
+
     num_cpus: int | Literal["threads", "backend-threads", "all-threads"] = "threads"
     """
     The number of CPUs to request from Ray Tune.
@@ -63,13 +69,30 @@ class SearchConfig(BaseModel):
     """
     The number of GPUs to requrest from Ray Tune.
     """
+
+    max_epochs: int = 100
+    """
+    The maximum number of epochs to use in iterative training.
+    """
+
+    min_epochs: int = 3
+    """
+    The minimum number of epochs for iterative training.
+    """
+
+    plateau_check_iters: int = 3
+    """
+    The number of iterations to check for the plateau stopper.
+    """
+
+    plateau_min_rel_improvement: float = 0.01
+    """
+    The minimum relative improvement to continue the trial.
+    """
+
     checkpoint_iters: int = 2
     """
-    The frequency for saving checkpoints.
-    """
-    error_action: ErrorAction = "continue"
-    """
-    What to do when one of the search trials fails.
+    The frequency for saving checkpoints (only supported by Ray).
     """
 
     def resolved_direction(self) -> Literal["min", "max"]:
@@ -104,6 +127,24 @@ class SearchConfig(BaseModel):
             points = cfg.tuning.max_points
 
         return points
+
+    def merge(self, other: SearchConfig) -> SearchConfig:
+        """
+        Produce a new configuration by merging another configuration into this one.
+
+        Args:
+            other:
+                The other configuration to merge.
+        Returns:
+            The combination of ``self`` and ``other``, where values from ``other``
+            are preferred in case of conflict.
+        """
+        ours = self.model_dump()
+        theirs = other.model_dump(
+            exclude_unset=True, exclude_defaults=True, exclude_computed_fields=True
+        )
+        combined = ours | theirs
+        return self.model_validate(combined)
 
 
 class TuningSpec(BaseModel, extra="forbid"):
