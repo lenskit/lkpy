@@ -8,28 +8,16 @@
 Tune parameters using Ray Tune.
 """
 
-from lenskit.schemas.tuning import TuningSpec
+import lazy_loader as lazy
 
-from ._base import BasePipelineTuner
-
-try:
-    from ._optuna import PipelineTuner
-except ImportError:
-
-    class PipelineTuner(BasePipelineTuner):
-        def run(self):
-            raise RuntimeError("Optuna is not available")
-
-
-try:
-    from ._ray import RayPipelineTuner, RayTuneResults
-except ImportError:
-    pass
-
-__all__ = [
-    "TuningSpec",
-    "PipelineTuner",
-    "BasePipelineTuner",
-    "RayPipelineTuner",
-    "RayTuneResults",
-]
+__getattr__, __dir__, __all__ = lazy.attach(
+    __name__,
+    submodules=[
+        "spec",
+    ],
+    submod_attrs={
+        "_base": ["BasePipelineTuner", "TuningSpec"],
+        "_optuna": ["PipelineTuner"],
+        "_ray": ["RayPipelineTuner", "RayTuneResults"],
+    },
+)
