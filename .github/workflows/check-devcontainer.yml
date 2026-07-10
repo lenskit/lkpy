@@ -1,0 +1,36 @@
+name: Check Devcontainer
+on:
+  push:
+    branches:
+      - main
+      - series/*
+      - future/*
+  pull_request:
+
+concurrency:
+  group: check-${{github.ref}}
+  cancel-in-progress: true
+
+jobs:
+  check-devcontainer:
+    name: Check that dev container works
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pre-build dev container image
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/lenskit/lkpy-devcontainer
+          push: never
+
+      - name: Run tests in dev container
+        uses: devcontainers/ci@v0.3
+        with:
+          push: never
+          runCmd: mise run test
+
+      - name: Lint source code in dev container
+        uses: devcontainers/ci@v0.3
+        with:
+          push: never
+          runCmd: mise run lint
