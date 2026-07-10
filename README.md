@@ -142,6 +142,12 @@ installed.
 
 > [!NOTE]
 >
+> The Rust compiler needs some memory to work. If your Docker environment is set
+> to a very small memory capacity (e.g. Colima's default of 2GB), the build will
+> fail. Make sure your Docker has at least 4, preferably 8, GB of memory.
+
+> [!NOTE]
+>
 > VS Code may try to connect to Python before the dev container has finished
 > setting up the software dependencies, and prompt you to automatically install
 > Python. Don't click this — let the container setup do it.
