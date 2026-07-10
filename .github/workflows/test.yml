@@ -37,7 +37,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v4
         with:
           cache: false
           install: true
@@ -210,7 +210,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v4
         with:
           install: false
 
@@ -266,7 +266,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v4
         with:
           install: false
 
