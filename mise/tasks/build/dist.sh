@@ -15,6 +15,7 @@ STAGE_SOURCE=build/staged-source
 if [[ $usage_dynamic_version = true ]]; then
     if ! git-is-clean; then
         msg "dynamically-versioned build requires fully-committed source"
+        git status || true
         exit 3
     fi
 
