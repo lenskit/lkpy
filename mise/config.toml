@@ -17,7 +17,7 @@ github.github_attestations = false
 aqua.github_attestations = false
 
 [settings.python]
-uv_venv_auto = true
+# uv_venv_auto = "source"
 
 [env]
 HK_MISE = 1
