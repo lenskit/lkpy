@@ -46,6 +46,8 @@ jobs:
           uv sync --only-group=scripting -p 3.13
           mise run version --github
           mise run build:dist -sd
+        env:
+          MISE_PYTHON_UV_VENV_AUTO: source
 
       - name: 🔨 Build Conda packages
         uses: prefix-dev/rattler-build-action@v0.2.34
