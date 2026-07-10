@@ -142,6 +142,12 @@ installed.
 
 > [!NOTE]
 >
+> VS Code may try to connect to Python before the dev container has finished
+> setting up the software dependencies, and prompt you to automatically install
+> Python. Don't click this — let the container setup do it.
+
+> [!NOTE]
+>
 > The dev container is the only supported way to develop on Windows — while
 > LensKit works and is regularly tested on Windows, we have not invested time
 > in making sure the development environment works on Windows.
