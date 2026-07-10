@@ -10,9 +10,9 @@ use std::{
     ptr::NonNull,
 };
 
-use pyo3::{prelude::*, types::PyCapsule};
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyCapsule};
 
-/// Look up a Cython function pointer from a PYX CAPI capsule.
+/// Look up a Cython function pointer from a PYX C API capsule.
 pub fn resolve_ffi_funptr<'py>(
     py: Python<'py>,
     module: &str,
@@ -30,7 +30,9 @@ pub fn resolve_ffi_funptr<'py>(
     let name = cap
         .name()?
         .map(|n| unsafe { n.as_cstr().to_str().map(|s| s.to_owned()) });
-    let name = name.transpose()?;
+    let name = name
+        .transpose()
+        .map_err(|_| PyValueError::new_err("invalid UTF8"))?;
     match cap.pointer_checked(Some(&check_name)) {
         Err(e) => {
             e.add_note(

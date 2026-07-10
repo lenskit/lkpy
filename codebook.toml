@@ -1,5 +1,8 @@
 words = [
+  "BLAS",
+  "Cython",
   "Drexel",
+  "LAPACK",
   "NDCG",
   "Optuna",
   "Optuna",
