@@ -39,6 +39,8 @@ jobs:
 
       - name: Install mise-en-place
         uses: jdx/mise-action@v2
+        env:
+          MISE_DISABLE_TOOLS: hk
 
       - name: Build LensKit source distribution
         id: source
@@ -48,6 +50,7 @@ jobs:
           mise run build:dist -sd
         env:
           MISE_PYTHON_UV_VENV_AUTO: source
+          MISE_DISABLE_TOOLS: hk
 
       - name: 🔨 Build Conda packages
         uses: prefix-dev/rattler-build-action@v0.2.34
