@@ -65,6 +65,8 @@ class BasePipelineTuner(ABC):
 
         self.spec = spec.model_copy(deep=True)
         self.spec.pipeline = pb.build_config()
+        if self.settings.defaults is not None:
+            self.spec.search = self.settings.defaults.merge(self.spec.search)
         self.random_seed = spawn_seed(rng)
 
         self.log = _log.bind(model=pb.name)
