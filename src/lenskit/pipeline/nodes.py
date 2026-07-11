@@ -17,11 +17,12 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Mapping
-from types import UnionType
-from typing import Any, cast
+from types import FunctionType, UnionType
+from typing import Any, cast, get_args
 
-from pydantic import JsonValue
+from pydantic import BaseModel, JsonValue, TypeAdapter
 
+from ._types import is_union_type, make_importable_path
 from .components import (
     Component,
     ComponentConstructor,
@@ -29,6 +30,7 @@ from .components import (
     PipelineFunction,
     component_inputs,
 )
+from .config import PipelineComponent, PipelineInput
 
 
 class Node[T]:
@@ -54,6 +56,9 @@ class Node[T]:
     def __str__(self) -> str:
         return f"<{self.__class__.__name__} {self.name}>"
 
+    def to_config(self) -> BaseModel:
+        raise TypeError(f"node {self.__class__.__name__} has no config")
+
 
 class InputNode[T](Node[T]):
     """
@@ -74,6 +79,19 @@ class InputNode[T](Node[T]):
             self.type = Any  # type: ignore
         else:
             self.type = type
+
+    def to_config(self) -> PipelineInput:
+        if self.type == Any:
+            types = None
+        elif is_union_type(self.type):  # ty:ignore[invalid-argument-type]
+            types = set(get_args(self.type))
+        else:
+            types = {self.type}
+
+        if types is not None:
+            types = {make_importable_path(t) for t in types}
+
+        return PipelineInput(name=self.name, types=types)
 
 
 class LiteralNode[T](Node[T]):
@@ -123,6 +141,10 @@ class ComponentNode[T](Node[T]):
     def inputs(self) -> dict[str, ComponentInput]:  # pragma: nocover
         raise NotImplementedError()
 
+    # method to refine the return type
+    def to_config(self) -> PipelineComponent:
+        raise NotImplementedError()
+
 
 class ComponentConstructorNode[T](ComponentNode[T]):
     __match_args__ = ("name", "constructor", "config")
@@ -139,6 +161,18 @@ class ComponentConstructorNode[T](ComponentNode[T]):
     @property
     def inputs(self):
         return component_inputs(self.constructor)
+
+    def to_config(self) -> PipelineComponent:
+        if isinstance(self.constructor, type) and issubclass(self.constructor, Component):
+            config = TypeAdapter[Any](self.constructor.config_class()).dump_python(
+                self.config, mode="json"
+            )
+        else:
+            config = None
+
+        code = make_importable_path(self.constructor)  # type: ignore
+
+        return PipelineComponent(code=code, config=config)
 
 
 class ComponentInstanceNode[T](ComponentNode[T]):
@@ -157,3 +191,16 @@ class ComponentInstanceNode[T](ComponentNode[T]):
     @property
     def inputs(self):
         return component_inputs(self.component, _warn_level=2)
+
+    def to_config(self) -> PipelineComponent:
+        config = None
+        if isinstance(self.component, FunctionType):
+            ctype = self.component
+        else:
+            ctype = self.component.__class__
+            if isinstance(self.component, Component):
+                config = self.component.dump_config()
+
+        code = make_importable_path(ctype)
+
+        return PipelineComponent(code=code, config=config)

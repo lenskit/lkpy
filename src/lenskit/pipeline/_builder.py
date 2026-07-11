@@ -605,11 +605,11 @@ class PipelineBuilder:
         for node in self.nodes():
             match node:
                 case InputNode():
-                    cfg.inputs.append(config.PipelineInput.from_node(node))
+                    cfg.inputs.append(node.to_config())
                 case LiteralNode(name, value):
                     cfg.literals[name] = config.PipelineLiteral.represent(value)
                 case ComponentNode(name):
-                    c_cfg = config.PipelineComponent.from_node(node)
+                    c_cfg = node.to_config()
                     c_cfg.inputs = dict(sorted(edges.get(name, {}).items(), key=lambda kv: kv[0]))
                     cfg.components[name] = c_cfg
                 case _:  # pragma: nocover

@@ -16,18 +16,13 @@ import pickle
 import re
 from collections import OrderedDict
 from hashlib import sha256
-from types import FunctionType
-from typing import Annotated, Literal, Mapping, get_args
+from typing import Annotated, Literal, Mapping
 
 from annotated_types import Predicate
-from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
+from pydantic import AliasChoices, BaseModel, Field, JsonValue, ValidationError
 from typing_extensions import Any, Self
 
 from lenskit.diagnostics import PipelineError
-
-from ._types import is_union_type, make_importable_path
-from .components import Component
-from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
 
 VALID_NAME = re.compile(r"^[\w.@%!*?-]+$", re.UNICODE)
 UNSET_CODE = "!UNSET"
@@ -195,20 +190,6 @@ class PipelineInput(BaseModel):
     types: set[str] | None
     "The list of types for this input."
 
-    @classmethod
-    def from_node(cls, node: InputNode[Any]) -> Self:
-        if node.type == Any:
-            types = None
-        elif is_union_type(node.type):
-            types = set(get_args(node.type))
-        else:
-            types = {node.type}
-
-        if types is not None:
-            types = {make_importable_path(t) for t in types}
-
-        return cls(name=node.name, types=types)
-
 
 class PipelineComponent(BaseModel):
     """
@@ -232,29 +213,6 @@ class PipelineComponent(BaseModel):
     The component's input wirings, mapping input names to node names.  For
     certain meta-nodes, it is specified as a list instead of a dict.
     """
-
-    @classmethod
-    def from_node(cls, node: ComponentNode[Any]) -> Self:
-        match node:
-            case ComponentInstanceNode(_name, comp):
-                config = None
-                if isinstance(comp, FunctionType):
-                    ctype = comp
-                else:
-                    ctype = comp.__class__
-                    if isinstance(comp, Component):
-                        config = comp.dump_config()
-            case ComponentConstructorNode(_name, ctype, config):
-                if isinstance(ctype, type) and issubclass(ctype, Component):
-                    config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
-                else:
-                    config = None
-            case _:  # pragma: nocover
-                raise TypeError("unexpected node type")
-
-        code = make_importable_path(ctype)  # type: ignore
-
-        return cls(code=code, config=config)
 
 
 class PipelineLiteral(BaseModel):
