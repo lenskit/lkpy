@@ -1,4 +1,3 @@
 [tools]
-java = "temurin-25"
 cargo-binstall = "latest"
 "cargo:cargo-binutils" = "0.3"
