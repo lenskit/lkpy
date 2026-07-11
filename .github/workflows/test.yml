@@ -306,7 +306,7 @@ jobs:
 
       - name: Run Eval Tests
         run: |
-          pytest --cov-append --cov=src/lenskit -m 'eval or realdata' --log-file test-eval.log tests
+          pytest --cov-append --cov=src/lenskit --durations=10 -m 'eval or realdata' --log-file test-eval.log tests
 
       - name: 🕺🏻 Test LensKit CLI
         run: |
