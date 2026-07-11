@@ -146,6 +146,45 @@ checksum = "sha256:61c40e940d5e61a0c54cc6bdef6ff26d44f02aeccd19fa0407125dc617dba
 url = "https://github.com/apple/pkl/releases/download/0.32.0/pkl-windows-amd64.exe"
 url_api = "https://api.github.com/repos/apple/pkl/releases/assets/470498222"
 
+[[tools.ruff]]
+version = "0.15.21"
+backend = "aqua:astral-sh/ruff"
+
+[tools.ruff."platforms.linux-arm64"]
+checksum = "sha256:2ec7c0077431f96f74c3c72aea6505e902bc2ff47127653c8de1389ee30a3cb3"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700003"
+
+[tools.ruff."platforms.linux-arm64-musl"]
+checksum = "sha256:2ec7c0077431f96f74c3c72aea6505e902bc2ff47127653c8de1389ee30a3cb3"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700003"
+
+[tools.ruff."platforms.linux-x64"]
+checksum = "sha256:7e157ff9a2e13676118c587e6db0ec02d040e415b21014346d230e64789c0e78"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700081"
+
+[tools.ruff."platforms.linux-x64-musl"]
+checksum = "sha256:7e157ff9a2e13676118c587e6db0ec02d040e415b21014346d230e64789c0e78"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700081"
+
+[tools.ruff."platforms.macos-arm64"]
+checksum = "sha256:0452f9d5da6e8051d332cf21ae82a608d8e2cfeec5a71a46ffa9e50adbb2381d"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471699864"
+
+[tools.ruff."platforms.macos-x64"]
+checksum = "sha256:7e6ff3bd585b5b7c47634c957ac84fb5806d3c7ab4ef0e5ec1c53ce272f489da"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700061"
+
+[tools.ruff."platforms.windows-x64"]
+checksum = "sha256:035c59abfd7bd1102e0b656f5771e6ae7a712a45ef54b5ab575541c7ff7d1eb0"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700068"
+
 [[tools.rust]]
 version = "stable"
 backend = "core:rust"

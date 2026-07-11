@@ -11,7 +11,6 @@ LensKit general configuration
 from __future__ import annotations
 
 import warnings
-from collections.abc import Generator, Iterator
 from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
 from pathlib import Path
