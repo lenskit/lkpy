@@ -39,7 +39,7 @@ from .components import (
     fallback_on_none,
     is_component_class,
 )
-from .config import UNSET_CODE, PipelineConfig, PipelineHook, check_name
+from .config import UNSET_CODE, PipelineConfig, check_name
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
@@ -622,7 +622,7 @@ class PipelineBuilder:
 
         cfg.hooks.run = {}
         for name, hooks in self._run_hooks.items():
-            cfg.hooks.run[name] = [PipelineHook.from_entry(e) for e in hooks]
+            cfg.hooks.run[name] = [e.to_config() for e in hooks]
 
         if include_hash:
             cfg.meta.hash = config.hash_config(cfg)

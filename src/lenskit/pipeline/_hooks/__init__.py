@@ -10,7 +10,9 @@ Definition of pipeline hook protocols.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable
+from types import FunctionType
 
 from typing_extensions import (
     Any,
@@ -19,7 +21,10 @@ from typing_extensions import (
     TypedDict,
 )
 
+from lenskit.diagnostics import PipelineWarning
+
 from ..components import Component, ComponentInput, PipelineFunction
+from ..config import PipelineHook
 from ..nodes import ComponentInstanceNode
 
 type GenericHook = Callable[..., Any]
@@ -39,6 +44,12 @@ class HookEntry[Hook: GenericHook](NamedTuple):
 
     function: Hook
     priority: int = 1
+
+    def to_config(self) -> PipelineHook:
+        if not isinstance(self.function, FunctionType):
+            warnings.warn(f"hook {self.function} is not a function", PipelineWarning)
+        function = f"{self.function.__module__}:{self.function.__qualname__}"  # type: ignore
+        return PipelineHook(function=function, priority=self.priority)
 
 
 class ComponentInputHook(Protocol):

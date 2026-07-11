@@ -14,7 +14,6 @@ from __future__ import annotations
 import base64
 import pickle
 import re
-import warnings
 from collections import OrderedDict
 from hashlib import sha256
 from types import FunctionType
@@ -24,9 +23,8 @@ from annotated_types import Predicate
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
-from lenskit.diagnostics import PipelineError, PipelineWarning
+from lenskit.diagnostics import PipelineError
 
-from ._hooks import HookEntry
 from ._types import is_union_type, make_importable_path
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
@@ -59,13 +57,6 @@ class PipelineHook(BaseModel):
 
     function: str
     priority: Annotated[int, Predicate(lambda x: x != 0)] = 1
-
-    @classmethod
-    def from_entry(cls, hook: HookEntry[Any]):
-        if not isinstance(hook.function, FunctionType):  # type: ignore
-            warnings.warn(f"hook {hook.function} is not a function", PipelineWarning)
-        function = f"{hook.function.__module__}:{hook.function.__qualname__}"
-        return cls(function=function, priority=hook.priority)
 
 
 class PipelineHooks(BaseModel):
