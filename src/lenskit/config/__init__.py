@@ -31,11 +31,10 @@ from lenskit.schemas.settings import (
     TuneSettings,
 )
 
-from ._load import load_config_data, locate_configuration_root
+from ._load import locate_configuration_root
 
 __all__ = [
     "lenskit_config",
-    "load_config_data",
     "locate_configuration_root",
     "configure",
     "LenskitSettings",

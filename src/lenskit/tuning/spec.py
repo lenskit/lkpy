@@ -12,8 +12,9 @@ from typing import Mapping
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Annotated, Literal
 
-from lenskit.config import lenskit_config, load_config_data
+from lenskit.config import lenskit_config
 from lenskit.pipeline.config import PipelineConfig
+from lenskit.schemas import load_model_data
 
 type ErrorAction = Literal["abort", "continue"]
 """
@@ -112,7 +113,7 @@ class TuningSpec(BaseModel, extra="forbid"):
 
     @classmethod
     def load(cls, path: Path) -> TuningSpec:
-        cfg = load_config_data(path, cls)
+        cfg = load_model_data(path, cls)
         cfg.file_path = path
         return cfg
 

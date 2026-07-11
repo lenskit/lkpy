@@ -6,3 +6,11 @@ in one subpackage, so they are easy to find and can reference each other
 without as many import problems as we have when they live inside the packages
 for the different subsystems they control.
 """
+
+from . import settings
+from ._load import load_model_data
+
+__all__ = [
+    "settings",
+    "load_model_data",
+]

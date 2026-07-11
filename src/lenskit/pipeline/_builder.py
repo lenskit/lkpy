@@ -23,9 +23,9 @@ from uuid import NAMESPACE_URL, uuid5
 
 from typing_extensions import Any, Literal, TypeForm, cast, overload
 
-from lenskit.config import load_config_data
 from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
+from lenskit.schemas import load_model_data
 
 from . import config
 from ._cache import PipelineCache
@@ -667,7 +667,7 @@ class PipelineBuilder:
             :meth:`from_config` for the actual pipeline instantiation logic.
         """
         cfg_file = Path(cfg_file)
-        data = load_config_data(cfg_file, PipelineConfig)
+        data = load_model_data(cfg_file, PipelineConfig)
         return cls.from_config(data, file_path=cfg_file)
 
     @classmethod
