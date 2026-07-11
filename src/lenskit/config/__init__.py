@@ -21,9 +21,7 @@ from typing_extensions import Any, TypeVar, overload
 from lenskit.diagnostics import ConfigWarning
 from lenskit.logging import get_logger
 from lenskit.random import init_global_rng
-
-from ._load import load_config_data, locate_configuration_root
-from ._schema import (
+from lenskit.schemas.settings import (
     LenskitSettings,
     MachineSettings,
     ParallelSettings,
@@ -32,6 +30,8 @@ from ._schema import (
     RandomSettings,
     TuneSettings,
 )
+
+from ._load import load_config_data, locate_configuration_root
 
 __all__ = [
     "lenskit_config",
@@ -175,7 +175,7 @@ def _load_settings[C](cfg_dir: Path | None, settings_cls: type[C]) -> C:
     if cfg_dir is not None:
         toml_files = [cfg_dir / f for f in toml_files]
 
-    class LenskitFileSettings(settings_cls):
+    class LenskitFileSettings(settings_cls):  # ty:ignore[shadowed-type-variable, unsupported-base]
         @classmethod
         def settings_customise_sources(
             cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
@@ -196,5 +196,5 @@ def _load_settings[C](cfg_dir: Path | None, settings_cls: type[C]) -> C:
             )
 
     obj = LenskitFileSettings()
-    obj.finish_setup()  # type: ignore
+    obj.finish_setup()
     return obj  # type: ignore
