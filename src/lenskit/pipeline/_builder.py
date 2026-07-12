@@ -39,7 +39,7 @@ from .components import (
     fallback_on_none,
     is_component_class,
 )
-from .config import UNSET_CODE, PipelineConfig, PipelineHook, check_name
+from .config import UNSET_CODE, PipelineConfig, check_name
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
@@ -605,11 +605,11 @@ class PipelineBuilder:
         for node in self.nodes():
             match node:
                 case InputNode():
-                    cfg.inputs.append(config.PipelineInput.from_node(node))
+                    cfg.inputs.append(node.to_config())
                 case LiteralNode(name, value):
                     cfg.literals[name] = config.PipelineLiteral.represent(value)
                 case ComponentNode(name):
-                    c_cfg = config.PipelineComponent.from_node(node)
+                    c_cfg = node.to_config()
                     c_cfg.inputs = dict(sorted(edges.get(name, {}).items(), key=lambda kv: kv[0]))
                     cfg.components[name] = c_cfg
                 case _:  # pragma: nocover
@@ -622,7 +622,7 @@ class PipelineBuilder:
 
         cfg.hooks.run = {}
         for name, hooks in self._run_hooks.items():
-            cfg.hooks.run[name] = [PipelineHook.from_entry(e) for e in hooks]
+            cfg.hooks.run[name] = [e.to_config() for e in hooks]
 
         if include_hash:
             cfg.meta.hash = config.hash_config(cfg)

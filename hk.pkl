@@ -11,9 +11,11 @@ local linters = new Mapping<String, Step> {
   ["trailing-whitespace"] = Builtins.trailing_whitespace
   // ["check-merge-conflict"] = Builtins.check_merge_conflict
   ["check-toml"] = Builtins.taplo
+  ["ruff"] = Builtins.ruff
 }
 
 local formatters = new Mapping<String, Step> {
+  ["format-python"] = Builtins.ruff_format
   ["format-rust"] = Builtins.rustfmt
   ["format-yaml"] = Builtins.yamlfmt
   // ["format-toml"] = Builtins.taplo_format
