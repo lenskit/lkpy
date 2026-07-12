@@ -33,12 +33,12 @@ from lenskit.pipeline import Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Component, Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
 from lenskit.random import int_seed, make_seed
+from lenskit.schemas.tuning import SearchParam, SearchSpace, TuningSpec
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
 from ._base import BasePipelineTuner, TuneResults
 from ._measure import measure_pipeline
 from ._stopping import PlateauStopRule
-from .spec import SearchParam, SearchSpace, TuningSpec
 
 _log = get_logger(__name__)
 

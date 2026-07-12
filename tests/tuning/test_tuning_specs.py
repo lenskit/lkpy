@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from pytest import raises
 
-from lenskit.tuning.spec import SearchParam
+from lenskit.schemas.tuning import SearchParam
 
 
 def test_require_range():

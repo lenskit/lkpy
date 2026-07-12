@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pytest import skip
 
-from lenskit.tuning.spec import TuningSpec
+from lenskit.schemas.tuning import TuningSpec
 
 
 def test_tuner_spec():

@@ -19,8 +19,8 @@ from humanize import metric as human_metric
 from humanize import precisedelta
 
 from lenskit.logging import get_logger, stdout_console
+from lenskit.schemas.tuning import ErrorAction
 from lenskit.tuning import PipelineTuner, TuningSpec
-from lenskit.tuning.spec import ErrorAction
 
 _log = get_logger(__name__)
 

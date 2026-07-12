@@ -23,9 +23,9 @@ from lenskit.logging import Task
 from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
 from lenskit.random import int_seed
+from lenskit.schemas.tuning import SearchSpace
 
 from .._base import BasePipelineTuner, TuneResults
-from ..spec import SearchSpace
 from .iterative import IterativeEval
 from .job import TuningJobData
 from .reporting import ProgressReport, StatusCallback

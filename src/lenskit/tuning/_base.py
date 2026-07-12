@@ -24,10 +24,9 @@ from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.config import PipelineConfig
 from lenskit.pipeline.nodes import ComponentConstructorNode
 from lenskit.random import RNGInput, spawn_seed
+from lenskit.schemas.tuning import PipelineFile, TuningSpec
 from lenskit.splitting import TTSplit
 from lenskit.training import UsesTrainer
-
-from .spec import PipelineFile, TuningSpec
 
 _log = get_logger(__name__)
 
