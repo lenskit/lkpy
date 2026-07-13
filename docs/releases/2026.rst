@@ -28,6 +28,8 @@ Third release in 2026, with more feature updates and bug fixes.
 - Added support for boolean and categorical hyperparameters to the tuner (:pr:`1139`).
 - Added ``"pow2"`` scale for integer hyperparameters to select powers of 2 (:pr:`1144`).
 - Optuna now includes the default hyperparameters as the first ones tested (:pr:`1145`).
+- Moved configuration file schemas to :mod:`lenskit.schemas` (:pr:`1148`).
+- Expose batch inference results as a row-by-row iterator (:pr:`1128`).
 
 .. _2026.2.1:
 
