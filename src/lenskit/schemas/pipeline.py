@@ -28,6 +28,7 @@ VALID_NAME = re.compile(r"^[\w.@%!*?-]+$", re.UNICODE)
 UNSET_CODE = "!UNSET"
 
 __all__ = [
+    "UNSET_CODE",
     "check_name",
     "PipelineHook",
     "PipelineHooks",

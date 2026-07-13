@@ -7,6 +7,7 @@ Old location of pipeline configuration schema.
 """
 
 from lenskit.schemas.pipeline import (
+    UNSET_CODE,
     PipelineComponent,
     PipelineConfig,
     PipelineConfigFragment,
@@ -22,6 +23,7 @@ from lenskit.schemas.pipeline import (
 )
 
 __all__ = [
+    "UNSET_CODE",
     "check_name",
     "PipelineHook",
     "PipelineHooks",
