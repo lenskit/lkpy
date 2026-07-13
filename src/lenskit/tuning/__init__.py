@@ -8,8 +8,9 @@
 Tune parameters using Ray Tune.
 """
 
+from lenskit.schemas.tuning import TuningSpec
+
 from ._base import BasePipelineTuner
-from .spec import TuningSpec
 
 try:
     from ._optuna import PipelineTuner

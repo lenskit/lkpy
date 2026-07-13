@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from pytest import mark
 
-from lenskit.config import load_config_data
+from lenskit.schemas import load_model_data
 
 TEST_DIR = Path(__file__).parent
 
@@ -23,7 +23,7 @@ class HelloModel(BaseModel):
 def test_load_raw(ext):
     file = TEST_DIR / f"hello.{ext}"
 
-    data = load_config_data(file)
+    data = load_model_data(file)
     assert isinstance(data, dict)
     assert data["subject"] == "world"
 
@@ -32,6 +32,6 @@ def test_load_raw(ext):
 def test_load_model(ext):
     file = TEST_DIR / f"hello.{ext}"
 
-    data = load_config_data(file, HelloModel)
+    data = load_model_data(file, HelloModel)
     assert isinstance(data, HelloModel)
     assert data.subject == "world"

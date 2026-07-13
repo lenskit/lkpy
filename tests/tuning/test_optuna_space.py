@@ -8,7 +8,7 @@ import math
 
 from pytest import importorskip
 
-from lenskit.tuning.spec import SearchParam
+from lenskit.schemas.tuning import SearchParam
 
 optuna = importorskip("optuna")
 

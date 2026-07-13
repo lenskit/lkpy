@@ -22,8 +22,7 @@ from lenskit.metrics import (
     RecipRank,
     measure_list,
 )
-
-from .spec import TuningSpec
+from lenskit.schemas.tuning import TuningSpec
 
 _log = get_logger(__name__)
 
