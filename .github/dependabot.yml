@@ -6,7 +6,12 @@
 version: 2
 updates:
   - package-ecosystem: uv
-    directory: "/"
+    directory: /
     versioning-strategy: widen
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
