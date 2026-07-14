@@ -79,6 +79,12 @@ class SearchConfig(BaseModel):
     The minimum number of epochs for iterative training.
     """
 
+    median_min_trials: int = 5
+    """
+    The minimum number of trials at an epoch for the median pruner to
+    consider pruning.
+    """
+
     plateau_check_iters: int = 3
     """
     The number of iterations to check for the plateau stopper.
