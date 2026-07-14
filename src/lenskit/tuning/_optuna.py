@@ -33,7 +33,7 @@ from lenskit.pipeline import Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Component, Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
 from lenskit.random import int_seed, make_seed
-from lenskit.schemas.tuning import SearchParam, SearchSpace, TuningSpec
+from lenskit.schemas.tuning import SearchConfig, SearchParam, SearchSpace, TuningSpec
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
 from ._base import BasePipelineTuner, TuneResults
@@ -475,10 +475,15 @@ class CompositePruner(BasePruner):
     stops.
     """
 
+    config: SearchConfig
     median: BasePruner
 
-    def __init__(self):
-        self.median = MedianPruner(n_min_trials=3, n_warmup_steps=3)
+    def __init__(self, config: SearchConfig):
+        self.config = config
+        self.median = MedianPruner(
+            n_min_trials=config.median_min_trials,
+            n_warmup_steps=config.min_epochs,
+        )
 
     def prune(self, study, trial):
         step = trial.last_step
@@ -492,7 +497,10 @@ class CompositePruner(BasePruner):
             return False
 
         plateau = PlateauStopRule(
-            mode="min" if study.direction == StudyDirection.MINIMIZE else "max"
+            mode="min" if study.direction == StudyDirection.MINIMIZE else "max",
+            min_improvement=self.config.plateau_min_rel_improvement,
+            min_iters=self.config.min_epochs,
+            check_iters=self.config.plateau_check_iters,
         )
         metrics = [
             trial.intermediate_values[i] for i in range(step + 1) if i in trial.intermediate_values
