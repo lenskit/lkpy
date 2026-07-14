@@ -154,6 +154,13 @@ class TuningSpec(BaseModel, extra="forbid"):
 
     @classmethod
     def load(cls, path: Path) -> TuningSpec:
+        """
+        Load the tuning specification from the file.
+
+        .. note::
+
+            This load does **not** merge the global defaults.
+        """
         cfg = load_model_data(path, cls)
         cfg.file_path = path
         return cfg
