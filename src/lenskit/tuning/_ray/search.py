@@ -152,20 +152,19 @@ class RayPipelineTuner(BasePipelineTuner):
         stopper = None
         cp_config = None
         if self.iterative:
-            # FIXME: make this configurable
             min_iter = self.spec.search.min_epochs
             scheduler = ray.tune.schedulers.MedianStoppingRule(
                 time_attr="training_iteration",
                 grace_period=min_iter,
-                min_time_slice=3,
-                min_samples_required=3,
+                min_time_slice=min_iter,
+                min_samples_required=self.spec.search.median_min_trials,
             )
             stopper = RelativePlateauStopper(
                 metric=self.metric,
                 mode=self.mode,
                 grace_period=min_iter,
-                check_iters=min(min_iter, 3),
-                min_improvement=0.005,
+                check_iters=min(min_iter, self.spec.search.plateau_check_iters),
+                min_improvement=self.spec.search.plateau_min_rel_improvement,
             )
 
             cp_freq = self.spec.search.checkpoint_iters
