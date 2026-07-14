@@ -163,6 +163,12 @@ class TuneResults(ABC):
         Get the number of completed trials in this search.
         """
 
+    def num_failed(self) -> int:
+        """
+        Get the number of failed trials in this search.
+        """
+        return 0
+
     @abstractmethod
     def trials(self) -> Iterable[dict[str, JsonValue]]:
         """
