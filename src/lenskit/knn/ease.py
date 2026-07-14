@@ -8,6 +8,8 @@
 EASE scoring model.
 """
 
+from threading import Lock
+
 import numpy as np
 import scipy
 import scipy.linalg as spla
@@ -28,6 +30,8 @@ __all__ = ["EASEConfig", "EASEScorer"]
 _log = get_logger(__name__)
 
 MIN_SCIPY_VERSION = Version("1.17")
+# lock for PyTorch Cholesky operations
+_chol_lock = Lock()
 
 
 class EASEConfig(BaseModel):
@@ -194,7 +198,9 @@ def _chol_invert_torch(
         cooc_t = torch.from_numpy(cooc).to(device)
         del cooc
 
-        decomp, info = torch.linalg.cholesky_ex(cooc_t)
+        with _chol_lock:
+            decomp, info = torch.linalg.cholesky_ex(cooc_t)
+
         if info.item():
             raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
 
