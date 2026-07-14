@@ -392,8 +392,11 @@ class OptunaTuneResults(TuneResults):
     study: Study
     iterative: bool
 
-    def num_trials(self):
-        return len(self.study.trials)
+    def num_trials(self) -> int:
+        return len([t for t in self.study.trials if t.state != TrialState.FAIL])
+
+    def num_failed(self) -> int:
+        return len([t for t in self.study.trials if t.state == TrialState.FAIL])
 
     @override
     def trials(self) -> Iterable[dict[str, JsonValue]]:
