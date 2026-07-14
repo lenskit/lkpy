@@ -191,7 +191,7 @@ def _chol_invert_torch(
     cooc: NPMatrix[np.float32], device: str, *, raise_oom: bool = False
 ) -> NPMatrix[np.float32] | None:
     """
-    Invert the co-occurrance matrix using SciPy.
+    Invert the co-occurrance matrix using PyTorch.
     """
 
     with torch.inference_mode():
