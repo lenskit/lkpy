@@ -12,9 +12,8 @@ from typing import Mapping
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Annotated, Literal
 
-from lenskit.config import lenskit_config
-from lenskit.pipeline.config import PipelineConfig
-from lenskit.schemas import load_model_data
+from ._load import load_model_data
+from .pipeline import PipelineConfig
 
 type ErrorAction = Literal["abort", "continue"]
 """
@@ -116,15 +115,10 @@ class SearchConfig(BaseModel):
         """
         Get the number of search points to use.
         """
-        cfg = lenskit_config()
-
         points = self.default_points
 
         if self.max_points is not None and points > self.max_points:
             points = self.max_points
-
-        if cfg.tuning.max_points is not None and points > cfg.tuning.max_points:
-            points = cfg.tuning.max_points
 
         return points
 

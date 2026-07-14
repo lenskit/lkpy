@@ -18,7 +18,7 @@ def test_tuner_spec():
     assert spec.component_name == "scorer"
 
 
-def test_tuner_spec():
+def test_tuner_merge_defaults():
     try:
         from lenskit.tuning import PipelineTuner
     except ImportError:
