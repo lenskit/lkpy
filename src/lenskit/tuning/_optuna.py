@@ -55,7 +55,7 @@ class PipelineTuner(BasePipelineTuner):
         study = optuna.create_study(
             sampler=optuna.samplers.TPESampler(seed=int_seed(self.random_seed)),
             storage=JournalStorage(JournalFileBackend(fspath(self.out_dir / "optuna.log"))),
-            pruner=CompositePruner(),
+            pruner=CompositePruner(self.spec.search),
             direction=StudyDirection.MINIMIZE if self.mode == "min" else StudyDirection.MAXIMIZE,
         )
 
