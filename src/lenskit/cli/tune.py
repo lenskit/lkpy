@@ -20,7 +20,7 @@ from humanize import precisedelta
 
 from lenskit.logging import get_logger, stdout_console
 from lenskit.schemas.tuning import ErrorAction
-from lenskit.tuning import PipelineTuner, TuningSpec
+from lenskit.tuning import TuningSpec
 
 _log = get_logger(__name__)
 
@@ -128,6 +128,8 @@ def tune(
 
         controller = RayPipelineTuner(spec, out)
     else:
+        from lenskit.tuning import PipelineTuner
+
         controller = PipelineTuner(spec, out)
 
     if job_limit is not None:
