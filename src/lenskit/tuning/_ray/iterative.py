@@ -19,7 +19,6 @@ import torch
 from pydantic_core import to_json
 from structlog.stdlib import BoundLogger
 
-from lenskit.batch import BatchPipelineRunner
 from lenskit.logging import Task, get_logger
 from lenskit.logging.multiprocess import send_task
 from lenskit.pipeline import Component, Pipeline, PipelineBuilder
@@ -100,11 +99,6 @@ class IterativeEval(ray.tune.Trainable):
         )
         self.trainer = self.scorer.create_trainer(self.data.train, options)
         send_task(self.task)
-
-        self.runner = BatchPipelineRunner(n_jobs=1)  # single-threaded inside tuning
-        self.runner.recommend()
-        if self.pipeline.node("rating-predictor", missing=None) is not None:
-            self.runner.predict()
 
     def step(self):
         epoch = self.iteration
