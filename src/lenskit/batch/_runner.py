@@ -245,7 +245,7 @@ class BatchPipelineRunner:
                 n = 0
                 for key, outs in tasks:
                     n += 1
-                    yield key, outs
+                    yield BatchResultRow(key, outs)
 
                     progress.update()
                 timer.stop()
