@@ -17,7 +17,7 @@ NTRIALS = 1000
 
 
 def test_log2_space():
-    from lenskit.tuning._optuna import _ask_space
+    from lenskit.tuning._optuna.search import _ask_space
 
     space = {"n": SearchParam(type="int", scale="pow2", min=8, max=1024)}
     study = optuna.create_study()
