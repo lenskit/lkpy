@@ -1,4 +1,4 @@
-name: Automatic Tests
+name: Test suite
 
 on:
   push:
@@ -85,22 +85,8 @@ jobs:
         env:
           MERMAID_DOCKER: 1
 
-      - name: 📐 Coverage results
-        if: ${{ !cancelled() }}
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-
-      - name: 📤 Upload test results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: "test-vanilla-${{matrix.platform}}-py${{matrix.python}}"
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
+      - name: 📤 Upload coverage to CodeCov
+        uses: codecov/codecov-action@v7.0.0
 
   rust-cover:
     name: Rust test coverage
@@ -130,24 +116,8 @@ jobs:
         run: |
           mise run test -- --coverage --accel-coverage -- --log-file=test.log
 
-      - name: 📐 Coverage results
-        if: ${{ !cancelled() }}
-        run: |
-          uv run coverage report
-          cp .coverage coverage.db
-        env:
-          UV_NO_SYNC: 1
-
-      - name: 📤 Upload test results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: "test-rust-coverage"
-          path: |
-            test*.log
-            lcov.info
-            coverage.db
-            coverage.xml
+      - name: 📤 Upload coverage to CodeCov
+        uses: codecov/codecov-action@v7.0.0
 
   mindep-all:
     name: Minimal dependency tests (all options)
@@ -182,22 +152,8 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
 
-      - name: 📐 Coverage results
-        if: ${{ !cancelled() }}
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-
-      - name: 📤 Upload test results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: test-mindep-all
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
+      - name: 📤 Upload coverage to CodeCov
+        uses: codecov/codecov-action@v7.0.0
 
   mindep:
     name: Minimal dependency tests
@@ -239,229 +195,5 @@ jobs:
           mise run test-cli -- --coverage --cov-append
         shell: bash -e {0}
 
-      - name: 📐 Coverage results
-        if: ${{ !cancelled() }}
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-
-      - name: 📤 Upload test results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: test-mindep
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-
-  eval-tests:
-    name: Evaluation-based tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: jdx/mise-action@v4
-        with:
-          install: false
-
-      - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v8.0.0
-        with:
-          python-version: "3.12.5"
-          activate-environment: true
-          cache-suffix: "-20260407"
-
-      - name: 📦 Set up Python dependencies (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          uv sync --all-extras --no-default-groups --group test
-          uv pip install optuna
-        env:
-          DONT_SET_MARCH: 1
-
-      - name: Cache ML data
-        uses: actions/cache@v4
-        with:
-          path: |
-            data
-          key: test-eval-data
-
-      - name: Download datasets
-        run: |
-          coverage run --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-20m ml-1m ml-10m
-          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az23 --amazon --core Video_Games
-          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az18 --amazon --edition 2018 Video_Games
-          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az14 --amazon --edition 2014 Video_Games
-          coverage run -a --source=src/lenskit -m lenskit data fetch --ms-web
-          if [[ ! -f data/australian_users_items.json.gz ]]; then
-            curl -fsL -o data/australian_users_items.json.gz.tmp https://mcauleylab.ucsd.edu/public_datasets/data/steam/australian_users_items.json.gz
-            mv data/australian_users_items.json.gz.tmp data/australian_users_items.json.gz
-          fi
-
-      - name: Run Eval Tests
-        run: |
-          pytest --cov-append --cov=src/lenskit --durations=10 -m 'eval or realdata' --log-file test-eval.log tests
-
-      - name: 🕺🏻 Test LensKit CLI
-        run: |
-          mise run test-cli -- --coverage --cov-append
-        shell: bash -e {0}
-        env:
-          LK_TUNE_JOBS: 2
-
-      - name: 🕺🏻 Test LensKit tune CLI (with Ray)
-        run: |
-          mise run test-cli -- --coverage --cov-append tests/cli/test-tune.sh
-        shell: bash -e {0}
-        env:
-          LK_USE_RAY_TUNE: 1
-
-      - name: 📐 Coverage results
-        if: ${{ !cancelled() }}
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-
-      - name: 📤 Upload test results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: test-eval-tests
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-
-  doc-tests:
-    name: Demos, examples, and docs
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.12.5"
-          activate-environment: true
-
-      - name: 📦 Set up Python dependencies (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          uv sync --all-extras --no-default-groups --group test --group doc  --group demo
-
-      - name: Cache ML data
-        uses: actions/cache@v4
-        with:
-          path: |
-            data
-            !data/*.zip
-          key: test-doc-mldata
-
-      - name: Download ML data
-        run: |
-          coverage run --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-1m ml-10m ml-20m
-
-      - name: 📕 Validate code examples
-        run: |
-          sphinx-build -b doctest docs build/doc
-
-      - name: 📕 Validate example notebooks
-        run: |
-          pytest --cov=src/lenskit --nbval-lax --log-file test-notebooks.log docs
-
-      - name: 📐 Coverage results
-        if: ${{ !cancelled() }}
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-
-      - name: 📤 Upload test results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: test-examples
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-
-  results:
-    name: Test suite results
-    runs-on: ubuntu-latest
-    needs:
-      - vanilla
-      - rust-cover
-      - mindep-all
-      - mindep
-      - eval-tests
-      - doc-tests
-
-    if: ${{ !cancelled() }}
-    steps:
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Add upstream remote & author config
-        run: |
-          git remote add upstream https://github.com/lenskit/lkpy.git
-          git fetch upstream
-          git config user.name "LensKit Bot"
-          git config user.email lkbot@lenskit.org
-
-      - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v8.0.0
-        with:
-          python-version: "3.12.5"
-          activate-environment: true
-          cache-suffix: "-20260407"
-
-      - name: 📦 Set up Python dependencies
-        run: |
-          uv sync --only-group=reporting
-
-      - name: 📥 Download test artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: test-*
-          path: test-logs
-
-      - name: 📋 List log files
-        run: ls -laR test-logs
-
-      - name: 🔧 Fix coverage databases
-        run: |
-          for dbf in test-logs/*/coverage.db; do
-              echo "fixing $dbf"
-              sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\', '/');"
-          done
-
-      - name: ⛙ Merge and report
-        run: |
-          coverage combine --keep test-logs/*/coverage.db
-          coverage html -d lenskit-coverage
-          coverage report
-
-      - name: Upload coverage HTML
-        uses: actions/upload-artifact@v4
-        with:
-          path: lenskit-coverage
-          name: lenskit-coverage-report
-
       - name: 📤 Upload coverage to CodeCov
-        uses: codecov/codecov-action@v4.2.0
-        env:
-          CODECOV_TOKEN: ab58c9cf-25b8-4283-a485-0b6382dc9a61
+        uses: codecov/codecov-action@v7.0.0

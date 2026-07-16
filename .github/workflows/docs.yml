@@ -122,3 +122,64 @@ jobs:
               workflow_id: 'publish.yml',
               ref: 'main',
             })
+
+  test:
+    name: Run documentation tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12.5"
+          activate-environment: true
+
+      - name: 📦 Set up Python dependencies (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          uv sync --all-extras --no-default-groups --group test --group doc  --group demo
+
+      - name: Cache ML data
+        uses: actions/cache@v4
+        with:
+          path: |
+            data
+            !data/*.zip
+          key: test-doc-mldata
+
+      - name: Download ML data
+        run: |
+          coverage run --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-1m ml-10m ml-20m
+
+      - name: 📕 Validate code examples
+        run: |
+          sphinx-build -b doctest docs build/doc
+
+      - name: 📕 Validate example notebooks
+        run: |
+          pytest --cov=src/lenskit --nbval-lax --log-file test-notebooks.log docs
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
+        run: |
+          coverage xml
+          coverage report
+          cp .coverage coverage.db
+
+      - name: 📤 Upload test results
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-examples
+          path: |
+            test*.log
+            coverage.db
+            coverage.xml
+
+      - name: 📤 Upload coverage to CodeCov
+        uses: codecov/codecov-action@v7.0.0
