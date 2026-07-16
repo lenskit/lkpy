@@ -19,25 +19,23 @@ class SearchPoint:
     Single search point in the Optuna space.
     """
 
-    space: SearchSpace
     params: OptunaPoint
     """
     Sampled parameters (Optuna format).
     """
 
-    def __init__(self, space: SearchSpace, params: OptunaPoint):
-        self.space = space
+    def __init__(self, params: OptunaPoint):
         self.params = params
 
     @classmethod
     def defaults(cls, space: SearchSpace, config: dict[str, JsonValue]) -> SearchPoint:
         params = _extract_defaults(space, config)
-        return cls(space, params)
+        return cls(params)
 
     @classmethod
     def ask(cls, space: SearchSpace, trial: Trial) -> SearchPoint:
         params = _ask_space(trial, space)
-        return cls(space, params)
+        return cls(params)
 
     def to_config(self) -> dict[str, JsonValue]:
         """

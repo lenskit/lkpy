@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-import math
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from os import fspath
 
@@ -16,19 +15,19 @@ from optuna.pruners import BasePruner, MedianPruner
 from optuna.storages.journal import JournalFileBackend, JournalStorage
 from optuna.study import StudyDirection
 from optuna.trial import TrialState
-from pydantic import JsonValue
 from pydantic_core import to_json
 from structlog.stdlib import BoundLogger
 
-from lenskit.logging import Task, get_logger, item_progress, trace
+from lenskit.logging import Task, get_logger, item_progress
 from lenskit.logging.tasks import add_context_task
 from lenskit.parallel import NestedPool
 from lenskit.pipeline import Pipeline, PipelineBuilder
 from lenskit.pipeline.components import Component, Placeholder
 from lenskit.pipeline.nodes import ComponentConstructorNode, ComponentInstanceNode
 from lenskit.random import int_seed, make_seed
-from lenskit.schemas.tuning import SearchConfig, SearchParam, SearchSpace
+from lenskit.schemas.tuning import SearchConfig
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
+from lenskit.tuning._optuna.point import SearchPoint
 
 from .._base import BasePipelineTuner
 from .._measure import measure_pipeline
@@ -114,7 +113,8 @@ class PipelineTuner(BasePipelineTuner):
 
         trial = study.ask()
         self.log = self.log.bind(trial_num=trial.number)
-        config = self._ask_config(trial)
+        point = self._ask_point(trial)
+        config = point.to_config()
 
         with Task(
             label=f"trial {trial.number} to tune {self.pipeline.meta.name}",
@@ -263,123 +263,24 @@ class PipelineTuner(BasePipelineTuner):
             self.log.warn("component is not pipeline", component=self.spec.component_name)
             return
 
-        config = _extract_defaults(self.spec.space[self.spec.component_name], comp.dump_config())
-        self.log.info("enqueueing default point", config=config)
+        point = SearchPoint.defaults(self.spec.space[self.spec.component_name], comp.dump_config())
+        self.log.info("enqueueing default point", config=point.to_config())
         study.enqueue_trial(
-            config,
+            point.params,
             user_attrs={
                 "memo": "initial default configuration",
                 "component": self.spec.component_name,
             },
         )
 
-    def _ask_config(self, trial: Trial):
+    def _ask_point(self, trial: Trial) -> SearchPoint:
         # we have exactly one
         for space in self.spec.space.values():
-            cfg = _ask_space(trial, space)
-            self.log.info("sampled search point", config=cfg)
-            return cfg
+            point = SearchPoint.ask(space, trial)
+            self.log.info("sampled search point", config=point.to_config())
+            return point
 
-
-def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
-    out = {}
-    for name, spec in space.items():
-        if isinstance(spec, dict):
-            out[name] = _ask_space(trial, spec, prefix=f"{prefix}{name}.")
-        elif spec.type == "int" and spec.scale == "uniform":
-            assert isinstance(spec.min, int)
-            assert isinstance(spec.max, int)
-            out[name] = trial.suggest_int(prefix + name, spec.min, spec.max)
-            trace(
-                _log, "sampled int", name=prefix + name, min=spec.min, max=spec.max, value=out[name]
-            )
-        elif spec.type == "int" and spec.scale == "log":
-            assert isinstance(spec.min, int)
-            assert isinstance(spec.max, int)
-            out[name] = trial.suggest_int(prefix + name, spec.min, spec.max, log=True)
-            trace(
-                _log,
-                "sampled int/log2",
-                name=prefix + name,
-                min=spec.min,
-                max=spec.max,
-                value=out[name],
-            )
-        elif spec.type == "int" and spec.scale == "pow2":
-            min = int(math.log2(spec.min))
-            max = int(math.log2(spec.max))
-            p = trial.suggest_int(prefix + name, min, max)
-            out[f"{name}"] = 2**p
-            trace(
-                _log,
-                "sampled int/pow2",
-                name=prefix + name,
-                min=min,
-                max=max,
-                power=p,
-                value=out[name],
-            )
-        elif spec.type == "float" and spec.scale == "uniform":
-            out[name] = trial.suggest_float(prefix + name, spec.min, spec.max)
-            trace(
-                _log,
-                "sampled float",
-                name=prefix + name,
-                min=spec.min,
-                max=spec.max,
-                value=out[name],
-            )
-        elif spec.type == "float" and spec.scale == "log":
-            out[name] = trial.suggest_float(prefix + name, spec.min, spec.max, log=True)
-            trace(
-                _log,
-                "sampled float/log",
-                name=prefix + name,
-                min=spec.min,
-                max=spec.max,
-                value=out[name],
-            )
-        elif spec.type == "bool":
-            out[name] = trial.suggest_categorical(prefix + name, [False, True])
-            trace(_log, "sampled bool", name=prefix + name, value=out[name])
-        elif spec.type == "choice":
-            out[name] = trial.suggest_categorical(prefix + name, spec.choices)
-            trace(_log, "sampled choice", name=prefix + name, value=out[name])
-        else:  # pragma: nocover
-            raise ValueError(f"unsupported configuration {space}")
-
-    return out
-
-
-def _extract_defaults(
-    space: dict[str, SearchSpace],
-    config: dict[str, JsonValue],
-    *,
-    out: dict[str, JsonValue] | None = None,
-    prefix: str = "",
-) -> dict[str, JsonValue]:
-    # FIXME this whole function is ugly but seems to work
-    if out is None:
-        out = {}
-    for k, v in space.items():
-        if isinstance(v, dict):
-            _extract_defaults(v, config[k], out=out, prefix=f"{prefix}{k}.")  # type: ignore
-        elif isinstance(config, dict):
-            assert isinstance(v, SearchParam)
-            try:
-                out[k] = config[k]
-            except KeyError as e:
-                if k.endswith("_exp"):
-                    out[k] = int(math.log2(config[k[:-4]]))  # type: ignore
-                else:
-                    raise e
-            if v.scale == "pow2":
-                out[f"{k}%pow2"] = int(math.log2(out[k]))  # type: ignore
-                del out[k]
-        else:
-            # FIXME this is an ugly hack for single / multiple configs
-            out[k] = config
-    return out
+        raise RuntimeError("empty search space")
 
 
 class CompositePruner(BasePruner):

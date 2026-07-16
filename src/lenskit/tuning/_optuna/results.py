@@ -8,10 +8,10 @@ from optuna.study import StudyDirection
 from optuna.trial import FrozenTrial, TrialState
 from pydantic import JsonValue
 
-from lenskit.data import unflatten_dict
 from lenskit.schemas.tuning import TuningSpec
 
 from .._base import TuneResults
+from .point import SearchPoint
 
 
 @dataclass
@@ -51,18 +51,18 @@ class OptunaTuneResults(TuneResults):
 
     def best_config(self):
         best = self.study.best_trial
-        cfg = unflatten_dict(best.params)
+        point = SearchPoint(best.params)
         if self.iterative:
             vals = [best.intermediate_values.get(i) for i in range(best.last_step + 1)]
             match self.study.direction:
                 case StudyDirection.MAXIMIZE:
-                    cfg["epochs"] = np.argmax(vals).item() + 1
+                    point.params["epochs"] = np.argmax(vals).item() + 1
                 case StudyDirection.MINIMIZE:
-                    cfg["epochs"] = np.argmin(vals).item() + 1
+                    point.params["epochs"] = np.argmin(vals).item() + 1
                 case _:  # pragma: nocover
                     raise RuntimeError("unexpected study direction")
 
-        return cfg
+        return point.to_config()
 
     def best_result(self) -> dict[str, JsonValue]:
         return self._trial_result(self.study.best_trial)
@@ -91,10 +91,10 @@ class OptunaTuneResults(TuneResults):
         return result
 
     def _trial_config(self, trial: FrozenTrial) -> dict[str, JsonValue]:
-        cfg = unflatten_dict(trial.params)
+        point = SearchPoint(trial.params)
         if self.iterative:
             assert trial.last_step is not None
             vals = [trial.intermediate_values.get(i) for i in range(trial.last_step + 1)]
-            cfg["epochs"] = np.argmax(vals).item()
+            point.params["epochs"] = np.argmax(vals).item()
 
-        return cfg
+        return point.to_config()
