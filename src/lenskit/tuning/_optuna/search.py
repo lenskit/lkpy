@@ -309,7 +309,7 @@ def _ask_space(trial: Trial, space: SearchSpace, *, prefix: str = ""):
             min = int(math.log2(spec.min))
             max = int(math.log2(spec.max))
             p = trial.suggest_int(prefix + name, min, max)
-            out[f"{name}%pow2"] = 2**p
+            out[f"{name}"] = 2**p
             trace(
                 _log,
                 "sampled int/pow2",
