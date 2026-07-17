@@ -17,7 +17,7 @@ NTRIALS = 1000
 
 
 def test_log2_space():
-    from lenskit.tuning._optuna.search import _ask_space
+    from lenskit.tuning._optuna.point import SearchPoint
 
     space = {"n": SearchParam(type="int", scale="pow2", min=8, max=1024)}
     study = optuna.create_study()
@@ -25,8 +25,8 @@ def test_log2_space():
     for _t in range(NTRIALS):
         trial = study.ask()
         for p in range(10):
-            pt = _ask_space(trial, space)
-            x = pt["n"]
+            pt = SearchPoint.ask(space, trial)
+            x = pt.to_config()["n"]
             assert isinstance(x, int)
             assert x >= 8
             assert x <= 1024
