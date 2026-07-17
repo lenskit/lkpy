@@ -42,6 +42,7 @@ def test_tune_als(ml_100k, tmpdir, tuner_class, version: str):
     spec = TuningSpec.load(Path(f"pipelines/als-{version}-search.toml"))
     spec.search.method = "random"
     spec.search.max_points = 10
+    spec.search.min_epochs = 2
     spec.search.max_epochs = 5
     spec.search.plateau_min_rel_improvement = 0.05
     spec.search.median_min_trials = 3
