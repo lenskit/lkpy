@@ -74,38 +74,38 @@ url = "https://github.com/jdx/hk/releases/download/v1.51.0/hk-x86_64-pc-windows-
 url_api = "https://api.github.com/repos/jdx/hk/releases/assets/476588075"
 
 [[tools.perl]]
-version = "5.42.2.0"
+version = "5.44.0.0"
 backend = "aqua:skaji/relocatable-perl"
 
 [tools.perl."platforms.linux-arm64"]
-checksum = "sha256:ba0d2d24ad34d7c467e298af901caef93fd313c2385d8af61058a0fef811bac1"
-url = "https://github.com/skaji/relocatable-perl/releases/download/5.42.2.0/perl-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/384065287"
+checksum = "sha256:b1a3aa7be1ea0239a29e503b63a52a694371670d4dc535c716d9a16ea2aaa453"
+url = "https://github.com/skaji/relocatable-perl/releases/download/5.44.0.0/perl-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/478554568"
 
 [tools.perl."platforms.linux-arm64-musl"]
-checksum = "sha256:ba0d2d24ad34d7c467e298af901caef93fd313c2385d8af61058a0fef811bac1"
-url = "https://github.com/skaji/relocatable-perl/releases/download/5.42.2.0/perl-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/384065287"
+checksum = "sha256:b1a3aa7be1ea0239a29e503b63a52a694371670d4dc535c716d9a16ea2aaa453"
+url = "https://github.com/skaji/relocatable-perl/releases/download/5.44.0.0/perl-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/478554568"
 
 [tools.perl."platforms.linux-x64"]
-checksum = "sha256:18d9dc642abbf94bfb9871ae4dbddd8477984557c627a9ffcf83c834935f681f"
-url = "https://github.com/skaji/relocatable-perl/releases/download/5.42.2.0/perl-linux-amd64.tar.gz"
-url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/384065285"
+checksum = "sha256:99fa984bab4eb536dae9630d5d47f3f5bd23a71c361d94dc6ef3a68a7186dcb0"
+url = "https://github.com/skaji/relocatable-perl/releases/download/5.44.0.0/perl-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/478554569"
 
 [tools.perl."platforms.linux-x64-musl"]
-checksum = "sha256:18d9dc642abbf94bfb9871ae4dbddd8477984557c627a9ffcf83c834935f681f"
-url = "https://github.com/skaji/relocatable-perl/releases/download/5.42.2.0/perl-linux-amd64.tar.gz"
-url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/384065285"
+checksum = "sha256:99fa984bab4eb536dae9630d5d47f3f5bd23a71c361d94dc6ef3a68a7186dcb0"
+url = "https://github.com/skaji/relocatable-perl/releases/download/5.44.0.0/perl-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/478554569"
 
 [tools.perl."platforms.macos-arm64"]
-checksum = "sha256:a8f0a254336e6be8c86285cad75731deef265e98256e61a820aa2151eaf7405a"
-url = "https://github.com/skaji/relocatable-perl/releases/download/5.42.2.0/perl-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/384065293"
+checksum = "sha256:213733e18662720a3d25fd6e1adeddd05f56ce50b5e1f8bc6bd194e3f43e44d2"
+url = "https://github.com/skaji/relocatable-perl/releases/download/5.44.0.0/perl-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/478554580"
 
 [tools.perl."platforms.macos-x64"]
-checksum = "sha256:3049a3304e78064a27c3a22054fb08f4c07eba97151a8c92fe9dc56e9cbca317"
-url = "https://github.com/skaji/relocatable-perl/releases/download/5.42.2.0/perl-darwin-amd64.tar.gz"
-url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/384065283"
+checksum = "sha256:1898662f3526d87e666fc9000a6ce8ef6d8a81fcc072c998eafae8004389619b"
+url = "https://github.com/skaji/relocatable-perl/releases/download/5.44.0.0/perl-darwin-amd64.tar.gz"
+url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/478554571"
 
 [[tools.pkl]]
 version = "0.32.0"
@@ -147,43 +147,43 @@ url = "https://github.com/apple/pkl/releases/download/0.32.0/pkl-windows-amd64.e
 url_api = "https://api.github.com/repos/apple/pkl/releases/assets/470498222"
 
 [[tools.ruff]]
-version = "0.15.21"
+version = "0.15.22"
 backend = "aqua:astral-sh/ruff"
 
 [tools.ruff."platforms.linux-arm64"]
-checksum = "sha256:2ec7c0077431f96f74c3c72aea6505e902bc2ff47127653c8de1389ee30a3cb3"
-url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700003"
+checksum = "sha256:88feb2dc2fafb92482185201f4d483134fbaab10370c79512d3dd372f1d3f28b"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.22/ruff-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/479313917"
 
 [tools.ruff."platforms.linux-arm64-musl"]
-checksum = "sha256:2ec7c0077431f96f74c3c72aea6505e902bc2ff47127653c8de1389ee30a3cb3"
-url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700003"
+checksum = "sha256:88feb2dc2fafb92482185201f4d483134fbaab10370c79512d3dd372f1d3f28b"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.22/ruff-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/479313917"
 
 [tools.ruff."platforms.linux-x64"]
-checksum = "sha256:7e157ff9a2e13676118c587e6db0ec02d040e415b21014346d230e64789c0e78"
-url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700081"
+checksum = "sha256:853462df618fb9f156a9f04d9d899d9e5a9e1a43fbffaec72df4bb159348e71b"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.22/ruff-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/479314045"
 
 [tools.ruff."platforms.linux-x64-musl"]
-checksum = "sha256:7e157ff9a2e13676118c587e6db0ec02d040e415b21014346d230e64789c0e78"
-url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700081"
+checksum = "sha256:853462df618fb9f156a9f04d9d899d9e5a9e1a43fbffaec72df4bb159348e71b"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.22/ruff-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/479314045"
 
 [tools.ruff."platforms.macos-arm64"]
-checksum = "sha256:0452f9d5da6e8051d332cf21ae82a608d8e2cfeec5a71a46ffa9e50adbb2381d"
-url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471699864"
+checksum = "sha256:a2881af26fd1d19f4932c4ddf1e70b4e0efcf48513c5dae082564e03f0b467a3"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.22/ruff-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/479313898"
 
 [tools.ruff."platforms.macos-x64"]
-checksum = "sha256:7e6ff3bd585b5b7c47634c957ac84fb5806d3c7ab4ef0e5ec1c53ce272f489da"
-url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700061"
+checksum = "sha256:687a9ceb88ab85dab061026d5017218225a481121b1a40862cc8f92b56f18090"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.22/ruff-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/479314007"
 
 [tools.ruff."platforms.windows-x64"]
-checksum = "sha256:035c59abfd7bd1102e0b656f5771e6ae7a712a45ef54b5ab575541c7ff7d1eb0"
-url = "https://github.com/astral-sh/ruff/releases/download/0.15.21/ruff-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/471700068"
+checksum = "sha256:6e5419593984941405e9add902e89c6ea4af87d97919ac5ef82e1bc4e43bbd8d"
+url = "https://github.com/astral-sh/ruff/releases/download/0.15.22/ruff-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/479314019"
 
 [[tools.rust]]
 version = "stable"
@@ -339,43 +339,43 @@ url = "https://github.com/jdx/usage/releases/download/v3.5.5/usage-x86_64-pc-win
 url_api = "https://api.github.com/repos/jdx/usage/releases/assets/476576776"
 
 [[tools.uv]]
-version = "0.11.28"
+version = "0.11.29"
 backend = "aqua:astral-sh/uv"
 
 [tools.uv."platforms.linux-arm64"]
-checksum = "sha256:da10cdfa7d92212b7acb62021a0fd61bcf8580c58c3632ec915d10c3a1a7906b"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.28/uv-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/469655715"
+checksum = "sha256:593d79a797ece3f1dfaaf3e0a973263422a135d9262c7dbc6cd75d9c11acc0b4"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.29/uv-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/478261262"
 
 [tools.uv."platforms.linux-arm64-musl"]
-checksum = "sha256:da10cdfa7d92212b7acb62021a0fd61bcf8580c58c3632ec915d10c3a1a7906b"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.28/uv-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/469655715"
+checksum = "sha256:593d79a797ece3f1dfaaf3e0a973263422a135d9262c7dbc6cd75d9c11acc0b4"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.29/uv-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/478261262"
 
 [tools.uv."platforms.linux-x64"]
-checksum = "sha256:f02146b371c35c287d860f003ece7345c86e358a3fd70a9b63700cd141ee7fb4"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.28/uv-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/469655835"
+checksum = "sha256:46711858adb2a3acaa9cee00f9060688ad1fd5706aecc005b96a6a7f285a00b7"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.29/uv-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/478261352"
 
 [tools.uv."platforms.linux-x64-musl"]
-checksum = "sha256:f02146b371c35c287d860f003ece7345c86e358a3fd70a9b63700cd141ee7fb4"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.28/uv-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/469655835"
+checksum = "sha256:46711858adb2a3acaa9cee00f9060688ad1fd5706aecc005b96a6a7f285a00b7"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.29/uv-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/478261352"
 
 [tools.uv."platforms.macos-arm64"]
-checksum = "sha256:33540eb7c883ab857eff79bd5ac2aa31fe27b595abecb4a9c003a2c998447232"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.28/uv-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/469655699"
+checksum = "sha256:61c04acc52a33ef0f331e494bdfbedcdb6c26c6970c022ed3699e5860f8930e3"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.29/uv-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/478261245"
 
 [tools.uv."platforms.macos-x64"]
-checksum = "sha256:2ad79983127ffca7d77b77ce6a24278d7e4f7b817a1acf72fea5f8124b4aac5e"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.28/uv-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/469655811"
+checksum = "sha256:c4c4de482da9ccdd076dc4fb5cfe7b740609029385c72f58606be3153602387d"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.29/uv-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/478261331"
 
 [tools.uv."platforms.windows-x64"]
-checksum = "sha256:0a23463216d09c6a72ff80ef5dc5a795f07dc1575cb84d24596c2f124a441b7b"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.28/uv-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/469655815"
+checksum = "sha256:a047d55651bc3e0ca24595b25ec4cfcb10f9dca9fb56514e661269b37d4fae68"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.29/uv-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/478261333"
 
 [[tools.yamlfmt]]
 version = "0.21.0"
