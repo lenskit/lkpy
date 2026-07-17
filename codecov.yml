@@ -1,3 +1,7 @@
+codecov:
+  notify:
+    after_n_builds: 10
+    wait_for_ci: true
 ignore:
   - build*.py
   - build-tools/*
