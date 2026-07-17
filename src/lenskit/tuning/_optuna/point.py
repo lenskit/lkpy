@@ -65,67 +65,37 @@ def _ask_space(
             assert isinstance(spec.min, int)
             assert isinstance(spec.max, int)
             out[key] = trial.suggest_int(prefix + name, spec.min, spec.max)
-            trace(
-                _log, "sampled int", name=prefix + name, min=spec.min, max=spec.max, value=out[key]
-            )
+            trace(_log, "sampled int", name=key, min=spec.min, max=spec.max, value=out[key])
         elif spec.type == "int" and spec.scale == "log":
             assert isinstance(spec.min, int)
             assert isinstance(spec.max, int)
             out[key] = trial.suggest_int(prefix + name, spec.min, spec.max, log=True)
-            trace(
-                _log,
-                "sampled int/log2",
-                name=prefix + name,
-                min=spec.min,
-                max=spec.max,
-                value=out[key],
-            )
+            trace(_log, "sampled int/log2", name=key, min=spec.min, max=spec.max, value=out[key])
         elif spec.type == "int" and spec.scale == "pow2":
             assert spec.min is not None
             assert spec.max is not None
             min = int(math.log2(spec.min))
             max = int(math.log2(spec.max))
             p = trial.suggest_int(prefix + name, min, max)
-            out[f"{name}%pow2"] = 2**p
-            trace(
-                _log,
-                "sampled int/pow2",
-                name=prefix + name,
-                min=min,
-                max=max,
-                power=p,
-                value=out[key],
-            )
+            key = f"{name}%pow2"
+            out[key] = p
+            trace(_log, "sampled int/pow2", name=key, min=min, max=max, power=p, value=2**p)
         elif spec.type == "float" and spec.scale == "uniform":
             assert spec.min is not None
             assert spec.max is not None
             out[key] = trial.suggest_float(prefix + name, spec.min, spec.max)
-            trace(
-                _log,
-                "sampled float",
-                name=prefix + name,
-                min=spec.min,
-                max=spec.max,
-                value=out[key],
-            )
+            trace(_log, "sampled float", name=key, min=spec.min, max=spec.max, value=out[key])
         elif spec.type == "float" and spec.scale == "log":
             assert spec.min is not None
             assert spec.max is not None
             out[key] = trial.suggest_float(prefix + name, spec.min, spec.max, log=True)
-            trace(
-                _log,
-                "sampled float/log",
-                name=prefix + name,
-                min=spec.min,
-                max=spec.max,
-                value=out[key],
-            )
+            trace(_log, "sampled float/log", name=key, min=spec.min, max=spec.max, value=out[key])
         elif spec.type == "bool":
             out[key] = trial.suggest_categorical(prefix + name, [False, True])
-            trace(_log, "sampled bool", name=prefix + name, value=out[key])
+            trace(_log, "sampled bool", name=key, value=out[key])
         elif spec.type == "choice":
             out[key] = trial.suggest_categorical(prefix + name, spec.choices)
-            trace(_log, "sampled choice", name=prefix + name, value=out[key])
+            trace(_log, "sampled choice", name=key, value=out[key])
         else:  # pragma: nocover
             raise ValueError(f"unsupported configuration {space}")
 
