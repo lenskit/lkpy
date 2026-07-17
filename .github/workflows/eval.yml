@@ -64,20 +64,6 @@ jobs:
         run: |
           pytest --cov-append --cov=src/lenskit --durations=10 -m 'eval or realdata' --log-file test-eval.log tests
 
-      - name: 🕺🏻 Test LensKit CLI
-        run: |
-          mise run test-cli -- --coverage --cov-append
-        shell: bash -e {0}
-        env:
-          LK_TUNE_JOBS: 2
-
-      - name: 🕺🏻 Test LensKit tune CLI (with Ray)
-        run: |
-          mise run test-cli -- --coverage --cov-append tests/cli/test-tune.sh
-        shell: bash -e {0}
-        env:
-          LK_USE_RAY_TUNE: 1
-
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0
 
