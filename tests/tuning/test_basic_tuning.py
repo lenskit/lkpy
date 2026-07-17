@@ -37,11 +37,14 @@ def tuner_class(request):
 @mark.slow
 @mark.realdata
 def test_tune_bias(ml_100k, tmpdir, tuner_class):
+    # mostly just test that it runs… we aren't checking final results
     spec = TuningSpec.load(Path("pipelines/bias-search.toml"))
+    spec.search.max_points = 5
     tuner = tuner_class(spec, Path(tmpdir))
     split = sample_records(from_interactions_df(ml_100k), 20000)
 
     tuner.set_data(split.train, split.test)
 
     result = tuner.run()
+    assert result.num_trials() == 5
     print(result.best_result())
