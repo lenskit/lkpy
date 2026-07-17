@@ -76,7 +76,7 @@ def _ask_space(
             assert spec.max is not None
             min = int(math.log2(spec.min))
             max = int(math.log2(spec.max))
-            key = f"{name}%pow2"
+            key = f"{prefix}{name}%pow2"
             p = trial.suggest_int(key, min, max)
             out[key] = p
             trace(_log, "sampled int/pow2", name=key, min=min, max=max, power=p, value=2**p)
