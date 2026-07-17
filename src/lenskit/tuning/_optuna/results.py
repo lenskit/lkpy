@@ -87,6 +87,7 @@ class OptunaTuneResults(TuneResults):
             result = {self.spec.search.metric: trial.value}
 
         if include_config:
+            result["params"] = trial.params
             result["config"] = self._trial_config(trial)
         return result
 
