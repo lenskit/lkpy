@@ -27,8 +27,9 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from pyarrow.parquet import ParquetDataset, ParquetWriter
+from pyarrow.parquet import ParquetDataset
 from pydantic import JsonValue
+from typing_extensions import Self
 
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
@@ -367,20 +368,11 @@ class ItemListCollection(Generic[KL], ABC):
         if layout == "flat":
             log.debug("saving flat Parquet file")
             self.to_df().to_parquet(path, compression=compression)
-            return
+        else:
+            from ._parquet import ParquetItemListCollector
 
-        writer = None
-        try:
-            for batch in self.record_batches(batch_size):
-                if writer is None:
-                    log.debug("opening Parquet writer", schema=batch.schema)
-                    writer = ParquetWriter(
-                        Path(path), batch.schema, compression=compression or "snappy"
-                    )
-                writer.write_batch(batch)
-        finally:
-            if writer is not None:
-                writer.close()
+            with ParquetItemListCollector(path, self.key_type) as out:
+                out.add_from(self)
 
     @overload
     @classmethod
@@ -595,6 +587,12 @@ class ItemListCollection(Generic[KL], ABC):
 class ItemListCollector(Protocol):
     """
     Collect item lists with associated keys, as in :class:`ItemListCollection`.
+
+    An item list collector is also a context manager that yields itself and
+    calls :meth:`close` on exit.
+
+    Stability:
+        Caller
     """
 
     @abstractmethod
@@ -610,7 +608,6 @@ class ItemListCollector(Protocol):
         """
         raise NotImplementedError()
 
-    @abstractmethod
     def add_from(self, other: ItemListCollection, **fields: ID):
         """
         Add all collection from another collection to this collection.  If field
@@ -618,13 +615,31 @@ class ItemListCollector(Protocol):
         in ``other``; a common use case is to add results from multiple
         recommendation runs and save them a single field.
 
+        The default implementation delegates to :meth:`add` in a loop.
+
         Args:
             other:
                 The item list collection to incorporate into this one.
             fields:
                 Additional key fields (must be specified by name).
         """
-        raise NotImplementedError()
+        for key, list in other:
+            kd = fields | key_dict(key)
+            self.add(list, **kd)
+
+    def close(self):
+        """
+        Close this collector. After the collector is closed, no further writes are
+        an error (but may not be proactively checked).
+
+        The default implementation does nothing.
+        """
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
 
 class MutableItemListCollection[K: GenericKey](ItemListCollector, ItemListCollection[K]):
