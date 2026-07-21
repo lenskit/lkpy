@@ -69,7 +69,7 @@ class DataContainer:
         self.__dict__.update(state)
         self.tables = {name: _resolve_compat_table(tbl) for name, tbl in state["tables"].items()}
 
-    def save(self, path: str | PathLike[str]):
+    def save(self, path: str | PathLike[str], *, summary: bool = True):
         """
         Save the data to disk.
         """
@@ -94,8 +94,9 @@ class DataContainer:
             log.debug("writing table", table=name, rows=table.num_rows)
             write_table(table, path / f"{name}.parquet", compression="zstd")
 
-        log.debug("writing summary file")
-        save_stats(self, path / "summary.md")
+        if summary:
+            log.debug("writing summary file")
+            save_stats(self, path / "summary.md")
 
     @classmethod
     def load(cls, path: str | PathLike[str]):

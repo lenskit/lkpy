@@ -110,7 +110,7 @@ class Dataset:
         container = DataContainer.load(path)
         return cls(container)
 
-    def save(self, path: str | PathLike[str]):
+    def save(self, path: str | PathLike[str], *, summary: bool = True):
         """
         Save the data set in the LensKit native format.
 
@@ -119,7 +119,7 @@ class Dataset:
                 The path in which to save the data set (will be created as a
                 directory).
         """
-        self._data.save(path)
+        self._data.save(path, summary=summary)
 
     @property
     def name(self) -> str | None:

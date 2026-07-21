@@ -21,9 +21,17 @@ _log = get_logger(__name__)
 @click.option(
     "--item-lists", is_flag=True, help="Convert to an ItemListCollection instead of Dataset."
 )
+@click.option(
+    "--summary/--no-summary",
+    "summary",
+    default=True,
+    help="Include a summary Markdown file in the exported dataset.",
+)
 @click.argument("src", type=Path, nargs=-1, required=True)
 @click.argument("dst", type=Path, required=True)
-def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = False):
+def convert(
+    format: str | None, summary: bool, src: list[Path], dst: Path, item_lists: bool = False
+):
     """
     Convert data into the LensKit native format.
 
@@ -71,4 +79,4 @@ def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = F
         ilc.save_parquet(dst)
     else:
         log.info("saving data in native format")
-        data.save(dst)
+        data.save(dst, summary=summary)
