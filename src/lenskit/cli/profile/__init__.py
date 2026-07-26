@@ -14,7 +14,6 @@ def profile():
     """
     Summarize and manipulate profile data.
     """
-    pass
 
 
 profile.add_command(summarize_profile)

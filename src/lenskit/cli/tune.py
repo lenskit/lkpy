@@ -151,12 +151,9 @@ def tune(
         save_pipeline.write_text(pipe_json + "\n")
 
     console.print("[bold yellow]Hyperparameter search completed![/bold yellow]")
-    console.print("Best {} is [bold red]{:.3f}[/bold red]".format(metric, best[metric]))
+    console.print(f"Best {metric} is [bold red]{best[metric]:.3f}[/bold red]")
     assert results.task.duration is not None
-    line = "[bold magenta]{}[/bold magenta] trials took [bold cyan]{}[/bold cyan]".format(
-        results.num_trials(),
-        precisedelta(results.task.duration),
-    )
+    line = f"[bold magenta]{results.num_trials()}[/bold magenta] trials took [bold cyan]{precisedelta(results.task.duration)}[/bold cyan]"
     if results.task.system_power:
         line += " and consumed [bold green]{}[/bold green]".format(
             human_metric(results.task.system_power / 3600, unit="Wh")

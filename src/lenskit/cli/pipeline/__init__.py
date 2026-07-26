@@ -4,12 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from . import diagram, expand  # noqa: E402, F401
+from . import diagram, expand  # noqa: F401
 from ._group import pipeline
 from ._load import PipelineLoadSpec, wants_pipeline_config
 
 __all__ = [
+    "PipelineLoadSpec",
     "pipeline",
     "wants_pipeline_config",
-    "PipelineLoadSpec",
 ]

@@ -120,7 +120,7 @@ def recommend(
                 ulog.info(
                     "generated recommendation list",
                     length=len(recs),
-                    time="{:.1f}ms".format(timer.elapsed(accumulated=False) * 1000),
+                    time=f"{timer.elapsed(accumulated=False) * 1000:.1f}ms",
                 )
 
                 if all_recs is not None:
@@ -177,15 +177,15 @@ def print_recommendation_list(
                 ref_title = items.select(ids=[ref_item]).attribute("title").value()
 
     if user is not None:
-        print("recommendations for user {}:".format(user))
+        print(f"recommendations for user {user}:")
     elif ref_item is not None:
         if ref_title is not None:
-            print("related items for item {} ([italic]{}[/italic]):".format(ref_item, ref_title))
+            print(f"related items for item {ref_item} ([italic]{ref_title}[/italic]):")
         else:
-            print("related items for item {}:".format(ref_item))
+            print(f"related items for item {ref_item}:")
 
     for item in recs.ids():
         if titles is not None:
-            print("  [bold]item {}[/bold]: [italic]{}[/italic]".format(item, titles.loc[item]))
+            print(f"  [bold]item {item}[/bold]: [italic]{titles.loc[item]}[/italic]")
         else:
-            print("  [bold]item {}[/bold]".format(item))
+            print(f"  [bold]item {item}[/bold]")

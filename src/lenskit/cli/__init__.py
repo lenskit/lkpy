@@ -33,7 +33,7 @@ def main():
     except click.Abort:  # pragma: nocover
         _log.error("Program interrupted")
         sys.exit(3)
-    except Exception as e:  # pragma: nocover
+    except Exception as e:  # pragma: nocover  # ruff: ignore[blind-except]
         _log.error("LensKit command failed", exc_info=e)
         sys.exit(3)
 

@@ -195,7 +195,7 @@ def inspect_compute():
         yield "[bold]PyTorch GPUs[/bold]:"
         for dev in range(torch.cuda.device_count()):
             props = torch.cuda.get_device_properties(dev)
-            yield "  [green]cuda:{}[/green]: [bold cyan]{}[/bold cyan]".format(dev, props.name)
+            yield f"  [green]cuda:{dev}[/green]: [bold cyan]{props.name}[/bold cyan]"
             yield kvp("capability", f"{props.major}.{props.minor}", level=2)
             yield kvp("memory", naturalsize(props.total_memory, binary=True), level=2)
             yield kvp("L2 cache", naturalsize(props.L2_cache_size, binary=True), level=2)

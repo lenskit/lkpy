@@ -61,7 +61,7 @@ def subset(
         dataset = Dataset.load(src)
         log.info("extracting default interactions")
         if len(dataset.schema.relationships) > 1:
-            log.warn("Dataset has multiple relationships, only default interactions are subset")
+            log.warning("Dataset has multiple relationships, only default interactions are subset")
 
         # TODO: support non-default interactions / multiple interaction sets
         lists = dataset.interactions().matrix().to_ilc()
@@ -84,7 +84,7 @@ def _subset_lists(lists: ItemListCollection, n: int) -> ItemListCollection:
     """
     log = _log.bind(n_input=len(lists), n_output=n)
     if len(lists) <= n:
-        log.warn("input count exceeds target count, keeping all")
+        log.warning("input count exceeds target count, keeping all")
         return lists
 
     rng = random_generator()

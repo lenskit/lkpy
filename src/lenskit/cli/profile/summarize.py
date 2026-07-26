@@ -34,6 +34,6 @@ def summarize_profile(file: Path):
         tbl.add_column(c, justify="right")
 
     for row in summary.itertuples():
-        tbl.add_row(row[0], *["{:.4f}".format(r) for r in row[1:]])
+        tbl.add_row(row[0], *[f"{r:.4f}" for r in row[1:]])
 
     console.print(tbl)
