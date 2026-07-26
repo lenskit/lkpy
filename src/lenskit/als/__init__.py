@@ -15,8 +15,8 @@ from ._implicit import ImplicitMFConfig, ImplicitMFScorer
 __all__ = [
     "ALSBase",
     "ALSConfig",
-    "BiasedMFScorer",
     "BiasedMFConfig",
-    "ImplicitMFScorer",
+    "BiasedMFScorer",
     "ImplicitMFConfig",
+    "ImplicitMFScorer",
 ]

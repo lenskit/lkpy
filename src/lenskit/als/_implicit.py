@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
+from typing import override
+
 import numpy as np
 from scipy.sparse import coo_array
-from typing_extensions import override
 
 from lenskit._accel import als
 from lenskit.data import Dataset, ItemList

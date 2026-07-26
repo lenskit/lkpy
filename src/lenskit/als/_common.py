@@ -7,13 +7,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Literal, Mapping, TypeAlias, cast
+from collections.abc import Mapping
+from typing import Literal, NamedTuple, cast, override
 
 import numpy as np
 import structlog
 from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt
 from scipy.sparse import coo_array
-from typing_extensions import Generic, NamedTuple, TypeVar, override
+from typing_extensions import TypeVar
 
 from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -26,7 +27,7 @@ from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
 _log = get_logger(__name__)
 
-EntityClass: TypeAlias = Literal["user", "item"]
+type EntityClass = Literal["user", "item"]
 
 Scorer = TypeVar("Scorer", bound="ALSBase")
 Config = TypeVar("Config", bound="ALSConfig")
@@ -165,8 +166,8 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
             scores[item_mask] = i_feats @ u_feat
         else:
             # larger set — subset outputs
-            allmult = self.item_embeddings @ u_feat
-            scores[item_mask] = allmult[item_nums[item_mask]]
+            all_mult = self.item_embeddings @ u_feat
+            scores[item_mask] = all_mult[item_nums[item_mask]]
 
         log.debug("scored %d items", np.sum(item_mask))
 
@@ -191,7 +192,7 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
         return items
 
 
-class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
+class ALSTrainerBase[Scorer, Config](ModelTrainer):
     scorer: Scorer
 
     rng: np.random.Generator
