@@ -100,9 +100,10 @@ def is_free_threaded(*, require_active: bool = False) -> bool:
         Whether or not this Python supports free-threading.
     """
     if sysconfig.get_config_var("Py_GIL_DISABLED"):
-        if require_active and sys._is_gil_enabled():
-            return False
-        return True
+        if require_active:
+            return not sys._is_gil_enabled()
+        else:
+            return True
     else:
         return False
 

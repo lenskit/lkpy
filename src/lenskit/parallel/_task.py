@@ -128,7 +128,7 @@ class AccelTaskThread[R](threading.Thread):
             res = self._accel_context.run(self._task.invoke, pool=NestedPool.active_accel_pool())
             res = Some(res)
             _log.debug("accelerator task finished", task=self._task)
-        except BaseException as e:
+        except BaseException as e:  # ruff: ignore[blind-except]
             _log.error("accelerator task failed", task=self._task, exc_info=e)
             res = e
 

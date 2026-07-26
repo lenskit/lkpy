@@ -23,10 +23,10 @@ from .config import (
 __all__ = [
     "AccelTask",
     "NestedPool",
-    "init_threading",
-    "get_parallel_config",
     "effective_cpu_count",
     "ensure_parallel_init",
+    "get_parallel_config",
+    "init_threading",
     "is_free_threaded",
     "run_accel_task",
 ]
