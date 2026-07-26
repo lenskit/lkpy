@@ -13,11 +13,9 @@ from __future__ import annotations
 import warnings
 from collections.abc import Callable
 from types import FunctionType
+from typing import Any, NamedTuple, Protocol
 
 from typing_extensions import (
-    Any,
-    NamedTuple,
-    Protocol,
     TypedDict,
 )
 
@@ -92,7 +90,6 @@ class ComponentInputHook(Protocol):
             will just be ``value``; hooks can also substitute alternative
             values depending on application needs.
         """
-        pass
 
 
 RunHooks = TypedDict(

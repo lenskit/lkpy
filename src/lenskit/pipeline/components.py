@@ -12,19 +12,15 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from inspect import Parameter, isabstract, signature
 from types import FunctionType, NoneType
-from typing import TypeVar, get_args
+from typing import Any, Protocol, TypeVar, get_args, get_origin
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 from typing_extensions import (
-    Any,
-    Callable,
-    Mapping,
-    Protocol,
     get_annotations,
-    get_origin,
     get_type_hints,
     runtime_checkable,
 )
@@ -122,9 +118,7 @@ class Component[COut](ABC):
             else:
                 if ct == Any:
                     warnings.warn(
-                        "component class {} does not define a config attribute type".format(
-                            cls.__qualname__
-                        ),
+                        f"component class {cls.__qualname__} does not define a config attribute type",
                         PipelineWarning,
                         stacklevel=2,
                     )
@@ -138,9 +132,7 @@ class Component[COut](ABC):
         cfg_cls = self.config_class(return_any=True)
         if cfg_cls == Any:
             warnings.warn(
-                "component class {} does not define a config attribute type".format(
-                    self.__class__.__qualname__
-                ),
+                f"component class {self.__class__.__qualname__} does not define a config attribute type",
                 PipelineWarning,
                 stacklevel=2,
             )
@@ -188,7 +180,7 @@ class Component[COut](ABC):
             return TypeAdapter(cfg_cls).validate_python(data)  # type: ignore
         elif data:  # pragma: nocover
             raise RuntimeError(
-                "supplied configuration options but {} has no config class".format(cls.__name__)
+                f"supplied configuration options but {cls.__name__} has no config class"
             )
         else:
             return None
@@ -211,8 +203,6 @@ class PlaceholderConfig(BaseModel, extra="allow"):
     Configuration for the placeholder component.
     """
 
-    pass
-
 
 class Placeholder(Component[Any]):
     """
@@ -233,8 +223,8 @@ def component_inputs[COut](
 ) -> dict[str, ComponentInput]:
     if isinstance(component, FunctionType):
         function = component
-    elif hasattr(component, "__call__"):
-        function = getattr(component, "__call__")
+    elif callable(component):
+        function = component.__call__
     else:
         raise TypeError("invalid component " + repr(component))
 
@@ -276,8 +266,8 @@ def component_return_type[COut](
 ) -> type[COut] | None:
     if isinstance(component, FunctionType):
         function = component
-    elif hasattr(component, "__call__"):
-        function = getattr(component, "__call__")
+    elif callable(component):
+        function = component.__call__
     else:
         raise TypeError("invalid component " + repr(component))
 

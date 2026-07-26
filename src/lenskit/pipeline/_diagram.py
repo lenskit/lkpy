@@ -38,7 +38,7 @@ class GraphDiagrammer(ABC):
         if isinstance(self.output, io.StringIO):
             return self.output.getvalue()
         else:
-            raise RuntimeError("cannot get text for non-string output")
+            raise RuntimeError("cannot get text for non-string output")  # ruff: ignore[type-check-without-type-error]
 
     @abstractmethod
     def render_pipeline(self, pipe: Pipeline): ...

@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
-from collections.abc import Mapping
-from typing import Any, Iterator, cast
+from collections.abc import Iterator, Mapping
+from typing import Any, cast
 
 from .config import PipelineMeta
 

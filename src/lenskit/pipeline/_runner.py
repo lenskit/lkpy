@@ -152,7 +152,7 @@ class PipelineRunner:
                 except SkipInput:
                     continue
                 except SkipComponent:
-                    return None
+                    return
 
             in_data[cin.name] = ival
 

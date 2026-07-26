@@ -18,10 +18,10 @@ from graphlib import CycleError, TopologicalSorter
 from os import PathLike
 from pathlib import Path
 from types import GenericAlias, UnionType
-from typing import TypeAliasType, Union, get_origin
+from typing import Any, Literal, TypeAliasType, Union, cast, get_origin, overload
 from uuid import NAMESPACE_URL, uuid5
 
-from typing_extensions import Any, Literal, TypeForm, cast, overload
+from typing_extensions import TypeForm
 
 from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
@@ -381,12 +381,11 @@ class PipelineBuilder:
         check_name(name, what="component")
         self._check_available_name(name)
 
-        if hasattr(comp, "train"):
-            if not is_instance_or_subclass(comp, Trainable):
-                warnings.warn(
-                    f"{comp} has “train” method but does not fully implement Trainable",
-                    PipelineWarning,
-                )
+        if hasattr(comp, "train") and not is_instance_or_subclass(comp, Trainable):
+            warnings.warn(
+                f"{comp} has “train” method but does not fully implement Trainable",
+                PipelineWarning,
+            )
 
         node = ComponentNode[T].create(name, comp, config)
         self._nodes[name] = node
@@ -597,7 +596,7 @@ class PipelineBuilder:
                 c_ins = edges.get(node.name, None)
                 if c_ins is None:
                     edges[node.name] = c_ins = {}
-                for iname in node.inputs.keys():
+                for iname in node.inputs:
                     if iname not in c_ins and iname in self._default_connections:
                         c_ins[iname] = self._default_connections[iname]
 

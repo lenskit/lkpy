@@ -47,13 +47,9 @@ This type is intended to encapsulate any fully-resolved type expression.
 class SkipComponent(Exception):
     "Internal exception used to skip an optional component."
 
-    pass
-
 
 class SkipInput(Exception):
     "Internal exception used to skip an optional component input."
-
-    pass
 
 
 def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
@@ -109,9 +105,9 @@ def _compat_type_inner(typ: type, target: TypeExpr) -> bool:
         return is_compatible_type(typ, *types)
 
     # handle numeric hierarchy
-    if typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
+    if typ == int and isinstance(target, type) and issubclass(target, (float, complex)):
         return True
-    if typ == float and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
+    if typ == float and isinstance(target, type) and issubclass(target, complex):
         return True
 
     # try to handle generic types
@@ -172,12 +168,12 @@ def _compat_data_inner(obj: object, target: TypeExpr) -> bool:
         return is_compatible_data(obj, *types)
 
     # resolve numeric type hierarchy
-    if isinstance(obj, int) and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
+    if isinstance(obj, int) and isinstance(target, type) and issubclass(target, (float, complex)):
         return True
-    if isinstance(obj, float) and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
+    if isinstance(obj, float) and isinstance(target, type) and issubclass(target, complex):
         return True
 
-    if isinstance(target, TypeVar):
+    if isinstance(target, TypeVar):  # ruff: ignore[collapsible-if]
         # check type variable bounds (we can't fully resolve type variables)
         if target.__bound__ is None or is_compatible_data(obj, target.__bound__):
             return True
@@ -263,7 +259,7 @@ def make_importable_path(
 def import_path_string(tstr: str) -> Any:
     """
     Resolve a type string into an actual type or function.  This parses a string
-    referenceing a class or function (as returned by :func:`make_importable_path`),
+    referencing a class or function (as returned by :func:`make_importable_path`),
     imports the module, and resolves the final member.
 
     Stability:

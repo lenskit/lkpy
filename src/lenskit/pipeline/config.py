@@ -24,16 +24,16 @@ from lenskit.schemas.pipeline import (
 
 __all__ = [
     "UNSET_CODE",
-    "check_name",
+    "PipelineComponent",
+    "PipelineConfig",
+    "PipelineConfigFragment",
     "PipelineHook",
     "PipelineHooks",
-    "PipelineOptions",
-    "PipelineConfigFragment",
-    "PipelineConfig",
-    "PipelineMeta",
     "PipelineInput",
-    "PipelineComponent",
     "PipelineLiteral",
-    "merge_configs",
+    "PipelineMeta",
+    "PipelineOptions",
+    "check_name",
     "hash_config",
+    "merge_configs",
 ]
