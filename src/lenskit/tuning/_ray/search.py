@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import override
 
 import ray
 import ray.tune
@@ -17,7 +18,6 @@ from numpy.random import default_rng
 from pydantic import JsonValue
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.tune.search.optuna import OptunaSearch
-from typing_extensions import override
 
 from lenskit.logging import Task
 from lenskit.parallel import get_parallel_config

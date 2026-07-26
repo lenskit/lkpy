@@ -260,7 +260,7 @@ class PipelineTuner(BasePipelineTuner):
         comp = pipe.component(self.spec.component_name)
         assert comp is not None
         if not isinstance(comp, Component):
-            self.log.warn("component is not pipeline", component=self.spec.component_name)
+            self.log.warning("component is not pipeline", component=self.spec.component_name)
             return
 
         point = SearchPoint.defaults(self.spec.space[self.spec.component_name], comp.dump_config())

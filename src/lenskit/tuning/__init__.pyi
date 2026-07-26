@@ -5,9 +5,9 @@ from ._optuna import PipelineTuner
 from ._ray import RayPipelineTuner, RayTuneResults
 
 __all__ = [
-    "TuningSpec",
-    "PipelineTuner",
     "BasePipelineTuner",
+    "PipelineTuner",
     "RayPipelineTuner",
     "RayTuneResults",
+    "TuningSpec",
 ]

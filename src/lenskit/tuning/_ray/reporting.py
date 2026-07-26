@@ -113,13 +113,7 @@ class ProgressReport(ray.tune.ProgressReporter):
     def _update_metric(self, trial):
         if self.metric is not None and trial.last_result and self.metric in trial.last_result:
             mv = trial.last_result[self.metric]
-            if self.best_metric is None:
-                self.best_metric = mv
-                return True
-            elif self.mode == "max" and mv > self.best_metric:
-                self.best_metric = mv
-                return True
-            elif self.mode == "min" and mv < self.best_metric:
+            if self.best_metric is None or self.mode == "max" and mv > self.best_metric or self.mode == "min" and mv < self.best_metric:
                 self.best_metric = mv
                 return True
 

@@ -78,8 +78,8 @@ class PlateauStopRule:
 
         # check if we have improved enough lately
         if np.all(imp[-self.check_iters :] < self.min_improvement).item():
-            log.debug("stopping early, last improvement {:.2%}".format(imp[-1]))
+            log.debug(f"stopping early, last improvement {imp[-1]:.2%}")
             return True
         else:
-            log.debug("continuing, last improvement {:.2%}".format(imp[-1]))
+            log.debug(f"continuing, last improvement {imp[-1]:.2%}")
             return False
