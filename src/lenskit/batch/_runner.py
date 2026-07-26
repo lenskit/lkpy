@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal
 
 from lenskit.data import (
     GenericKey,
@@ -28,7 +28,7 @@ from ._results import BatchResultRow, BatchResults
 
 _log = get_logger(__name__)
 
-ItemSource: TypeAlias = None | Literal["test-items", "candidates"]
+type ItemSource = None | Literal["test-items", "candidates"]
 """
 Source for the ``items`` input to the recommendation pipeline.
 """
@@ -237,21 +237,23 @@ class BatchPipelineRunner:
 
         log.info("beginning batch run")
 
-        with closing(self._run_results(pipeline, prof, queries.queries)) as tasks:
-            with item_progress("Inference", queries.count) as progress:
-                # release our reference, will sometimes free the pipeline memory in this process
-                del pipeline
-                timer = Stopwatch()
-                n = 0
-                for key, outs in tasks:
-                    n += 1
-                    yield BatchResultRow(key, outs)
+        with (
+            closing(self._run_results(pipeline, prof, queries.queries)) as tasks,
+            item_progress("Inference", queries.count) as progress,
+        ):
+            # release our reference, will sometimes free the pipeline memory in this process
+            del pipeline
+            timer = Stopwatch()
+            n = 0
+            for key, outs in tasks:
+                n += 1
+                yield BatchResultRow(key, outs)
 
-                    progress.update()
-                timer.stop()
+                progress.update()
+            timer.stop()
 
-                rate_ms = timer.elapsed() / n * 1000
-                log.info("finished running in %s", timer, time_per_query="{:.1f}ms".format(rate_ms))
+            rate_ms = timer.elapsed() / n * 1000
+            log.info("finished running in %s", timer, time_per_query=f"{rate_ms:.1f}ms")
 
     def _run_results(
         self,

@@ -20,13 +20,13 @@ from ._results import BatchResultRow, BatchResults
 from ._runner import BatchPipelineRunner, InvocationSpec
 
 __all__ = [
+    "BatchInput",
     "BatchPipelineRunner",
+    "BatchRecRequest",
     "BatchResultRow",
     "BatchResults",
-    "BatchRecRequest",
-    "BatchInput",
-    "TestRequestAdapter",
     "InvocationSpec",
+    "TestRequestAdapter",
     "predict",
     "recommend",
 ]
