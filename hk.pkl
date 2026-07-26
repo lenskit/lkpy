@@ -18,7 +18,7 @@ local formatters = new Mapping<String, Step> {
   ["format-python"] = Builtins.ruff_format
   ["format-rust"] = Builtins.rustfmt
   ["format-yaml"] = Builtins.yamlfmt
-  // ["format-toml"] = Builtins.taplo_format
+  ["format-toml"] = Builtins.taplo_format
   ["dprint"] = (Builtins.dprint) {
     glob = Regex(#"(.*\.toml$|.*\.json$)"#)
   }
