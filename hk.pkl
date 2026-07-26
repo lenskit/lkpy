@@ -27,7 +27,7 @@ local formatters = new Mapping<String, Step> {
     check = "uv run utils/update-headers.py --check-only {{ files }}"
     fix = "uv run utils/update-headers.py {{ files }}"
   }
-  ["pkl-format"] = Builtins.pkl_format
+  ["format-pkl"] = Builtins.pkl_format
 }
 
 hooks {
