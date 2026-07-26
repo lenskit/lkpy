@@ -11,13 +11,13 @@ LightGCN recommendation.
 from __future__ import annotations
 
 import warnings
+from typing import Literal, Self
 
 import numpy as np
 import torch
 from pydantic import BaseModel, PositiveFloat, PositiveInt, model_validator
 from structlog.stdlib import BoundLogger
 from torch_geometric.nn import LightGCN
-from typing_extensions import Literal, Self
 
 from lenskit import logging
 from lenskit.config.common import EmbeddingSizeMixin
@@ -318,7 +318,6 @@ class LogisticLightGCNTrainer(LightGCNTrainer):
 
 class PairwiseLightGCNTrainer(LightGCNTrainer):
     def batch_loss(self, mb_edges: torch.Tensor, scores: torch.Tensor):
-        (n,) = scores.shape
         pos_score, neg_score = scores.chunk(2)
         # FIXME: set up better regularization
         return self.model.recommendation_loss(pos_score, neg_score, node_id=mb_edges.ravel())
