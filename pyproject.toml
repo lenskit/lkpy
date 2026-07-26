@@ -78,11 +78,7 @@ demo = [
   "seaborn >=0.13.2,<0.14",
 ]
 reporting = ["coverage >=5"]
-package = [
-  "maturin ~=1.10",
-  "lazy-loader >=0.4",
-  "packaging >=25.0",
-]
+package = ["maturin ~=1.10", "lazy-loader >=0.4", "packaging >=25.0"]
 scripting = [
   "docopt-ng >=0.9.0",
   "tomlkit ~=0.14.0",
@@ -123,9 +119,7 @@ gnn = ["torch_geometric ~=2.6"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
 cli-extra = ["termaid ~= 0.6.1"]
-tune = [
-  "optuna ~=4.8",
-]
+tune = ["optuna ~=4.8"]
 
 [project.urls]
 homepage = "https://lenskit.org"
@@ -192,13 +186,17 @@ target-version = "py312"
 
 [tool.ruff.lint]
 preview = true
-select = ["E", "F", "I", "W", "Q", "B904", "PLC2701"]
+extend-select = ["I", "W", "Q", "PLC2701"]
+ignore = ["TRY201"]
 unfixable = ["F401"]
 exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.ruff.lint.per-file-ignores]
 # Importing PyTest fixtures triggers F811
 "tests/*.py" = ["F811", "F401", "PLC2701"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["lenskit.training.TrainingOptions", "pyarrow.float32"]
 
 [tool.ruff.lint.isort]
 section-order = [
@@ -216,7 +214,16 @@ testing = ["pytest", "hypothesis"]
 
 [tool.pyright]
 typeCheckingMode = "basic"
-exclude = ["docs/*", ".pixi", ".venv", ".nox", "target", "build", "dist", "output"]
+exclude = [
+  "docs/*",
+  ".pixi",
+  ".venv",
+  ".nox",
+  "target",
+  "build",
+  "dist",
+  "output",
+]
 reportMissingImports = true
 reportMissingTypeStubs = false
 
