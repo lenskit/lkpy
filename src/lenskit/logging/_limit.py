@@ -32,10 +32,7 @@ class RateLimit:
         if now is None:
             now = perf_counter()
 
-        if now - self._last_update >= self._interval:
-            return True
-        else:
-            return False
+        return now - self._last_update >= self._interval
 
     def mark_update(self, now: float | None = None):
         """

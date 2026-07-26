@@ -8,13 +8,11 @@
 Support for arbitrary record sinks.
 """
 
-from typing import Generic, Protocol, TypeVar
+from typing import Protocol
 from uuid import UUID
 
-R = TypeVar("R", contravariant=True)
 
-
-class RecordSink(Protocol, Generic[R]):
+class RecordSink[R](Protocol):
     """
     Generic interface for record sinks.
 

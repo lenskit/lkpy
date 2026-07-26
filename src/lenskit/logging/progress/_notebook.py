@@ -58,7 +58,7 @@ class JupyterProgress(Progress):  # pragma: nocover
 
         self.text = widgets.Label()
         if total:
-            self.text.value = "0 / {}".format(metric(total))
+            self.text.value = f"0 / {metric(total)}"
         pieces.append(self.text)
 
         self.box = widgets.HBox(pieces)
@@ -74,7 +74,7 @@ class JupyterProgress(Progress):  # pragma: nocover
         advance: int = 1,
         completed: int | None = None,
         total: int | None = None,
-        **kwargs: float | int | str,
+        **kwargs: float | str,
     ):
         """
         Update the progress bar.
@@ -90,13 +90,13 @@ class JupyterProgress(Progress):  # pragma: nocover
             self.widget.value = self.current
             if self.total:
                 if self.total >= 1000:
-                    txt = "{} / {}".format(metric(self.current), metric(self.total))
+                    txt = f"{metric(self.current)} / {metric(self.total)}"
                 else:
-                    txt = "{} / {}".format(self.current, self.total)
+                    txt = f"{self.current} / {self.total}"
             else:
-                txt = "{} / ?".format(metric(self.current))
+                txt = f"{metric(self.current)} / ?"
             if self._field_format:
-                txt += " ({})".format(self._field_format.format(**kwargs))
+                txt += f" ({self._field_format.format(**kwargs)})"
             self.text.value = txt
 
             self._limit.mark_update(now)

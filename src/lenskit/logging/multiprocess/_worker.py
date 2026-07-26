@@ -206,7 +206,7 @@ class WorkerProgress(Progress):  # pragma: nocover
     label: str
     context: WorkerContext | None
     completed: float = 0
-    _fields: dict[str, str | None] = {}
+    _fields: dict[str, str | None]
     _limit: RateLimit
 
     def __init__(
@@ -227,7 +227,7 @@ class WorkerProgress(Progress):  # pragma: nocover
         advance: int = 1,
         completed: int | None = None,
         total: int | None = None,
-        **kwargs: float | int | str,
+        **kwargs: float | str,
     ):
         if self.context is None:
             return

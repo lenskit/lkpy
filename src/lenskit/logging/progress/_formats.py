@@ -7,6 +7,6 @@
 # extra comment to make license headers happy
 def field_format(name: str, fs: str | None):
     if fs:
-        return "{%s:%s}" % (name, fs)
+        return f"{{{name}:{fs}}}"
     else:
-        return "{%s}" % (name,)
+        return f"{{{name}}}"

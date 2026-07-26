@@ -74,6 +74,6 @@ class Stopwatch:
     def __repr__(self):
         elapsed = self.elapsed()
         if self.stop_time:
-            return "<Stopwatch stopped at {:.3f}s>".format(elapsed)
+            return f"<Stopwatch stopped at {elapsed:.3f}s>"
         else:
-            return "<Stopwatch running at {:.3f}s>".format(elapsed)
+            return f"<Stopwatch running at {elapsed:.3f}s>"

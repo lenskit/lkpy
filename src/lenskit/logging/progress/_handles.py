@@ -10,8 +10,8 @@ Utility code for logging and progress reporting from LensKit components.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 from uuid import uuid4
 
 import torch
@@ -37,7 +37,7 @@ def item_progress_handle(
 
 @torch.jit.ignore  # type: ignore
 def pbh_update(h, incr=1):
-    # type: (str, int) -> None
+    # type: (str, int) -> None  # ruff: ignore[legacy-type-comment]
     # we need old-school annotations to make pytorch happy
     pb = _active_pbs[h]
     pb.update(incr)

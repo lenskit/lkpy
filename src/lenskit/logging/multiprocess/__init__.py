@@ -18,9 +18,9 @@ from ._worker import WorkerContext, WorkerLogConfig, send_task
 
 __all__ = [
     "Monitor",
-    "get_monitor",
+    "RecordSink",
     "WorkerContext",
     "WorkerLogConfig",
+    "get_monitor",
     "send_task",
-    "RecordSink",
 ]

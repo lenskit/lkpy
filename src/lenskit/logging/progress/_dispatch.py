@@ -26,7 +26,7 @@ class ProgressBackend(Protocol):
     """
 
     def __call__(
-        self, label: str, total: int | float | None, fields: Mapping[str, str | None] | None
+        self, label: str, total: float | None, fields: Mapping[str, str | None] | None
     ) -> Progress: ...
 
     @classmethod

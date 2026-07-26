@@ -19,13 +19,13 @@ def friendly_duration(elapsed: float | timedelta):
         elapsed = elapsed.total_seconds()
 
     if elapsed < 1:
-        return "{: 0.0f}ms".format(elapsed * 1000)
+        return f"{elapsed * 1000: 0.0f}ms"
     elif elapsed > 60 * 60:
         h, m = divmod(elapsed, 60 * 60)
         m, s = divmod(m, 60)
-        return "{:0.0f}h{:0.0f}m{:0.2f}s".format(h, m, s)
+        return f"{h:0.0f}h{m:0.0f}m{s:0.2f}s"
     elif elapsed > 60:
         m, s = divmod(elapsed, 60)
-        return "{:0.0f}m{:0.2f}s".format(m, s)
+        return f"{m:0.0f}m{s:0.2f}s"
     else:
-        return "{:0.2f}s".format(elapsed)
+        return f"{elapsed:0.2f}s"

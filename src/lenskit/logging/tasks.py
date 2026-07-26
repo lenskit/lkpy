@@ -17,12 +17,11 @@ from contextlib import contextmanager
 from enum import Enum
 from os import PathLike
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
 import requests
 from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, SerializeAsAny
-from typing_extensions import Literal
 
 from lenskit.util import Latch
 
@@ -313,7 +312,7 @@ class Task(BaseModel, extra="allow"):
                 if cur.task_id == self.parent_id:
                     cur.add_subtask(self)
                 else:
-                    log.warn("active task is not parent")
+                    log.warning("active task is not parent")
             else:
                 log.debug("have a task but no parent")
 
@@ -331,7 +330,7 @@ class Task(BaseModel, extra="allow"):
         log = _log.bind(task_id=str(self.task_id), label=self.label)
         tasks = _task_stack()
         if tasks[-1] is not self:
-            log.warn("attempted to finish non-active task")
+            log.warning("attempted to finish non-active task")
             tasks.remove(self)
         else:
             tasks.pop()
@@ -408,7 +407,10 @@ class Task(BaseModel, extra="allow"):
         return self
 
     def __exit__(
-        self, exc_type: type[Exception] | None, exc_value: Exception | None, traceback: Any
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: object,
     ):
         log = _log.bind(task_id=str(self.task_id), label=self.label)
         if exc_type is None:

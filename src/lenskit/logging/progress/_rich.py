@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from threading import RLock
+from typing import TYPE_CHECKING, override
 from uuid import UUID
 
 import structlog
@@ -24,7 +25,6 @@ from rich.progress import (
 )
 from rich.progress import Progress as ProgressImpl
 from rich.text import Text
-from typing_extensions import TYPE_CHECKING, override
 
 from .._console import console, get_live
 from .._proxy import get_logger
@@ -53,7 +53,7 @@ class RichProgress(Progress):
     def __init__(
         self,
         label: str,
-        total: int | float | None,
+        total: float | None,
         fields: dict[str, str | None] | None,
         *,
         uuid: UUID | None = None,
@@ -95,9 +95,9 @@ class RichProgress(Progress):
     def update(
         self,
         advance: int = 1,
-        completed: int | float | None = None,
-        total: int | float | None = None,
-        **kwargs: float | int | str,
+        completed: float | None = None,
+        total: float | None = None,
+        **kwargs: float | str,
     ):
         extra = ""
         if self._field_format:
@@ -173,10 +173,10 @@ class RateColumn(ProgressColumn):
         if speed is None:
             disp = "?"
         elif speed > 1000:
-            disp = "{:d} it/s".format(int(speed))
+            disp = f"{int(speed):d} it/s"
         elif speed > 1:
-            disp = "{:.3g} it/s".format(speed)
+            disp = f"{speed:.3g} it/s"
         else:
-            disp = "{:.3g} s/it".format(1.0 / speed)
+            disp = f"{1.0 / speed:.3g} s/it"
 
         return Text(disp, "progress.percentage")

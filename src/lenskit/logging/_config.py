@@ -266,7 +266,7 @@ def _verbose_level(verbose: bool | int):
     if isinstance(verbose, int) and verbose > 1:
         return LVL_TRACE
     elif isinstance(verbose, int) and verbose < 0:
-        return logging.WARN
+        return logging.WARNING
     elif verbose:
         return logging.DEBUG
     else:
