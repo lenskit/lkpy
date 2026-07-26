@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 import numpy as np
 import pyarrow as pa
@@ -21,7 +20,6 @@ def negative_mask(n: int, indices: pa.Int32Array) -> pa.BooleanArray:
     """
     Efficiently create a boolean array that is true everywhere except ``indices``.
     """
-    ...
 
 def count_cooc(
     n_groups: int,

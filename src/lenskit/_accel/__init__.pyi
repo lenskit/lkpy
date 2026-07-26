@@ -2,8 +2,6 @@
 Rust acceleration code.
 """
 
-from __future__ import annotations
-
 from typing import TypedDict
 
 import pyarrow as pa
@@ -14,13 +12,13 @@ from lenskit.funksvd import FunkSVDTrainingData, FunkSVDTrainingParams
 from . import als, data, knn, slim
 
 __all__ = [
+    "FunkSVDTrainer",
     "als",
     "data",
+    "init_accel_pool",
     "knn",
     "slim",
-    "init_accel_pool",
     "thread_count",
-    "FunkSVDTrainer",
 ]
 
 def init_accel_pool(n_threads: int): ...

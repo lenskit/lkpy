@@ -30,44 +30,37 @@ from .pipeline import Component, Pipeline, RecPipelineBuilder, topn_pipeline
 from .splitting import TTSplit
 
 __all__ = [
-    # modules
-    "batch",
-    "config",
-    "data",
-    "logging",
-    "metrics",
-    "pipeline",
-    "operations",
-    "schemas",
-    "splitting",
-    "stats",
-    "torch",
-    "training",
-    # component modules
+    "Component",
+    "Dataset",
+    "DatasetBuilder",
+    "Pipeline",
+    "RecPipelineBuilder",
+    "TTSplit",
     "als",
     "basic",
+    "batch",
+    "config",
+    "configure",
+    "data",
     "flexmf",
     "funksvd",
     "hpf",
     "knn",
-    "sklearn",
-    # setup
-    "configure",
     "lenskit_config",
-    # operations
+    "logging",
+    "metrics",
+    "operations",
+    "pipeline",
     "predict",
     "recommend",
+    "schemas",
     "score",
-    # pipeline
-    "Pipeline",
-    "Component",
-    "RecPipelineBuilder",
+    "sklearn",
+    "splitting",
+    "stats",
     "topn_pipeline",
-    # data
-    "Dataset",
-    "DatasetBuilder",
-    # splitting
-    "TTSplit",
+    "torch",
+    "training",
 ]
 
 __version__: str
