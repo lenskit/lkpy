@@ -134,7 +134,7 @@ def init_global_rng(
     """
     global _global_rng, _global_seed
 
-    if isinstance(seed, RNGLike):
+    if isinstance(seed, np.random.Generator | np.random.BitGenerator):
         _global_rng = default_rng(seed)
         int_seed = _global_rng.integers(np.iinfo("i4").max)
     else:
