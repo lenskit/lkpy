@@ -11,10 +11,11 @@ Types and functions for lazy values.  These are used mostly for pipeline inputs.
 # pyright: strict
 from __future__ import annotations
 
+from collections.abc import Callable
 from threading import Lock
-from typing import Callable, Protocol
+from typing import Protocol
 
-__all__ = ["Lazy", "lazy_value", "lazy_thunk"]
+__all__ = ["Lazy", "lazy_thunk", "lazy_value"]
 
 
 class Lazy[T](Protocol):

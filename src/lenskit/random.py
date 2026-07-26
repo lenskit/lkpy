@@ -13,53 +13,53 @@ from __future__ import annotations
 
 import os
 from abc import abstractmethod
+from collections.abc import Sequence
 from hashlib import md5
 from pathlib import Path
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload, override
 from uuid import UUID
 
 import numpy as np
 from numpy.random import Generator, SeedSequence, default_rng
-from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
 if TYPE_CHECKING:  # avoid circular import
     import torch
 
     from lenskit.data import RecQuery
 
-SeedLike: TypeAlias = int | Sequence[int] | np.random.SeedSequence
+type SeedLike = int | Sequence[int] | np.random.SeedSequence
 """
 Type for RNG seeds (see `SPEC 7`_).
 
 .. _SPEC 7: https://scientific-python.org/specs/spec-0007/
 """
 
-RNGLike: TypeAlias = np.random.Generator | np.random.BitGenerator
+type RNGLike = np.random.Generator | np.random.BitGenerator
 """
 Type for random number generators as inputs (see `SPEC 7`_).
 
 .. _SPEC 7: https://scientific-python.org/specs/spec-0007/
 """
 
-RNGInput: TypeAlias = SeedLike | RNGLike | None
+type RNGInput = SeedLike | RNGLike | None
 """
 Type for RNG inputs (see `SPEC 7`_).
 
 .. _SPEC 7: https://scientific-python.org/specs/spec-0007/
 """
 
-ConfiguredSeed: TypeAlias = int | Sequence[int] | None
+type ConfiguredSeed = int | Sequence[int] | None
 """
 Random number seed that can be configured.
 """
 
-SeedDependency = Literal["user"]
+type SeedDependency = Literal["user"]
 
 _global_seed: SeedSequence | None = None
 _global_rng: Generator | None = None
 
 
-DerivableSeed: TypeAlias = ConfiguredSeed | SeedDependency | tuple[ConfiguredSeed, SeedDependency]
+type DerivableSeed = ConfiguredSeed | SeedDependency | tuple[ConfiguredSeed, SeedDependency]
 
 
 def load_seed(file: Path | os.PathLike[str] | str, key: str = "random.seed") -> SeedSequence:
@@ -168,8 +168,6 @@ def random_generator(
     generator if no seed is provided.  If no global generator has been
     configured with :func:`set_global_rng`, it returns a fresh random RNG.
     """
-
-    global _global_rng
     match type:
         case "numpy":
             return _numpy_rng(seed)
@@ -291,7 +289,7 @@ class FixedRNG(RNGFactory):
         return self.rng
 
     def __str__(self):
-        return "Fixed({})".format(self.rng)
+        return f"Fixed({self.rng})"
 
 
 class DerivingRNG(RNGFactory):
@@ -311,7 +309,7 @@ class DerivingRNG(RNGFactory):
             return default_rng(seed)
 
     def __str__(self):
-        return "Derive({})".format(self.seed)
+        return f"Derive({self.seed})"
 
 
 def derivable_rng(spec: DerivableSeed) -> RNGFactory:

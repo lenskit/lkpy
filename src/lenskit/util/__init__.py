@@ -12,4 +12,4 @@ LensKit implementations.
 from ._indent import IndentWriter
 from ._latch import Latch
 
-__all__ = ["Latch", "IndentWriter"]
+__all__ = ["IndentWriter", "Latch"]

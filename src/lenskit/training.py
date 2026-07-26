@@ -84,7 +84,7 @@ class TrainingOptions:
     that into a NumPy :class:`~numpy.random.Generator`.
     """
 
-    environment: dict[str, str] = field(default_factory=lambda: {})
+    environment: dict[str, str] = field(default_factory=dict)
     """
     Additional training environment variables to control training behavior.
     Variables and their meanings are defined by individual components.
@@ -376,4 +376,3 @@ class ModelTrainer(ABC):
 
         The default implementation does nothing.
         """
-        pass

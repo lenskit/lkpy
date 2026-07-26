@@ -14,7 +14,6 @@ class DataWarning(UserWarning):
     Warning raised for detectable problems with input data.
     """
 
-    pass
 
 
 class DataError(Exception):
@@ -22,7 +21,6 @@ class DataError(Exception):
     Error raised for detectable problesms with input data.
     """
 
-    pass
 
 
 class FieldError(KeyError):
@@ -39,13 +37,11 @@ class ConfigWarning(UserWarning):
     Warning raised for detectable problems with component configurations.
     """
 
-    pass
 
 
 class TypecheckWarning(UserWarning):
     "Warnings for runtime type check failures."
 
-    pass
 
 
 class PipelineError(Exception):
