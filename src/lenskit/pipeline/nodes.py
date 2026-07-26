@@ -18,11 +18,11 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import Mapping
 from types import FunctionType, UnionType
-from typing import Any, cast, get_args
+from typing import Any, cast
 
 from pydantic import BaseModel, JsonValue, TypeAdapter
 
-from ._types import is_union_type, make_importable_path
+from ._types import expand_type_set, make_importable_path
 from .components import (
     Component,
     ComponentConstructor,
@@ -81,12 +81,7 @@ class InputNode[T](Node[T]):
             self.type = type
 
     def to_config(self) -> PipelineInput:
-        if self.type == Any:
-            types = None
-        elif is_union_type(self.type):  # ty:ignore[invalid-argument-type]
-            types = set(get_args(self.type))
-        else:
-            types = {self.type}
+        types = expand_type_set(self.type)
 
         if types is not None:
             types = {make_importable_path(t) for t in types}

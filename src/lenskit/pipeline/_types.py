@@ -201,6 +201,31 @@ def _compat_data_inner(obj: object, target: TypeExpr) -> bool:
     return False
 
 
+def expand_type_set(
+    *types: type[Any] | UnionType, out: set[type[Any]] | None = None
+) -> set[type[Any]] | None:
+    """
+    Expand one or more types into a set of resolved types.
+
+    Stability:
+        Internal
+    """
+    if out is None:
+        out = set()
+    for ty in types:
+        if isinstance(ty, TypeAliasType):
+            ty = ty.__value__
+
+        if ty is None or ty is Any:
+            return None
+        elif is_union_type(ty):
+            expand_type_set(*get_args(ty), out=out)
+        else:
+            out.add(ty)
+
+    return out
+
+
 def is_instance_or_subclass(obj: Any, typ: type):
     """
     Query if an object is an instance or subclass of the specified type.
