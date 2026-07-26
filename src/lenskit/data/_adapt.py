@@ -13,12 +13,10 @@ from __future__ import annotations
 
 import logging
 import warnings
+from collections.abc import Collection, Iterable
 from typing import (
     Any,
-    Collection,
-    Iterable,
     Literal,
-    Optional,
 )
 
 import numpy as np
@@ -186,10 +184,10 @@ def from_interactions_df(
 def normalize_interactions_df(
     df: pd.DataFrame,
     *,
-    user_col: Optional[str] = None,
-    item_col: Optional[str] = None,
-    rating_col: Optional[str] = None,
-    timestamp_col: Optional[str] = None,
+    user_col: str | None = None,
+    item_col: str | None = None,
+    rating_col: str | None = None,
+    timestamp_col: str | None = None,
 ) -> pd.DataFrame:
     """
     Normalize the column names and layout for an interaction data frame.

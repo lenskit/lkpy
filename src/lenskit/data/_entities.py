@@ -10,10 +10,11 @@ Entity accessors for data sets.
 
 from __future__ import annotations
 
+from typing import Any, overload
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from typing_extensions import Any, overload
 
 from lenskit.logging import get_logger
 

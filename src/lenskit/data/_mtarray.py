@@ -11,19 +11,19 @@ Multi-format array layout.
 # pyright: basic
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Literal, LiteralString, Self, overload
+
 import numpy as np
 import pyarrow as pa
 import torch
 from numpy.typing import ArrayLike, NDArray
-from typing_extensions import Generic, Literal, LiteralString, Self, Sequence, TypeVar, overload
 
 from lenskit._accel import data as _data_accel
 from lenskit.torch import safe_tensor
 
-NPT = TypeVar("NPT", bound=np.generic)
 
-
-class MTArray(Generic[NPT]):
+class MTArray[NPT: np.generic]:
     """
     Multi-typed array class, allowing arrays to be easily converted between
     NumPy, PyTorch, and other supported backends, caching the conversion result.

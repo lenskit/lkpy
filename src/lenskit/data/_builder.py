@@ -93,7 +93,7 @@ class DatasetBuilder:
             self._tables = {n: t for (n, t) in name.tables.items()}
             self._vocabularies = {
                 n: Vocabulary(name.tables[n].column(id_col_name(n)), name=n)
-                for n in name.schema.entities.keys()
+                for n in name.schema.entities
             }
             # reuse _rel_coords if we have them
             if name._rel_coords is not None:
@@ -214,9 +214,7 @@ class DatasetBuilder:
         enames = list(e_dict.keys())
         if interaction and enames[-1] != "item":
             warnings.warn(
-                "the last entity class for relationship class {} is {}, exepected item".format(
-                    name, enames[-1]
-                ),
+                f"the last entity class for relationship class {name} is {enames[-1]}, exepected item",
                 DataWarning,
                 stacklevel=2,
             )
@@ -622,8 +620,8 @@ class DatasetBuilder:
     def filter_interactions(
         self,
         cls: str,
-        min_time: int | float | dt.datetime | None = None,
-        max_time: int | float | dt.datetime | None = None,
+        min_time: float | dt.datetime | None = None,
+        max_time: float | dt.datetime | None = None,
         remove: pa.Table | dict[str, ArrayLike] | pd.DataFrame | None = None,
     ):
         """
@@ -1106,7 +1104,7 @@ class DatasetBuilder:
     ):
         if len(values.shape) != 2:
             raise TypeError("values must be 2D array")
-        nrow, ncol = values.shape
+        _nrow, ncol = values.shape
         arr = pa.FixedSizeListArray.from_arrays(values.ravel(), ncol)
         return self._add_dense_vector_attribute(cls, name, arr, rows, table, valid)
 
@@ -1129,11 +1127,11 @@ class DatasetBuilder:
                 tables[n] = pa.table({id_col_name(n): pa.array([], type=pa.int64())})
             else:
                 rel = self.schema.relationships.get(n, None)
-                if rel is not None:
+                if rel is not None:  # ruff: ignore[collapsible-if]
                     # currently not used due to coordinate table
                     # self._check_repeat_interactions(t, rel)
                     if rel.repeats.is_forbidden and len(rel.entities) == 2:
-                        e_cols = [e + "_num" for e in rel.entities.keys()]
+                        e_cols = [e + "_num" for e in rel.entities]
                         if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
                             log.debug("sorting non-repeating relationship %s", n)
                             t = t.sort_by([(c, "ascending") for c in e_cols])
@@ -1228,7 +1226,7 @@ def _empty_rel_table(types: list[str]) -> pa.Table:
     return pa.table({num_col_name(t): pa.array([], pa.int32()) for t in types})
 
 
-def _conform_time(time: int | float | str | dt.datetime, col_type: pa.DataType):
+def _conform_time(time: float | str | dt.datetime, col_type: pa.DataType):
     if isinstance(time, str):
         time = dt.datetime.fromisoformat(time)
     elif not isinstance(time, dt.datetime):

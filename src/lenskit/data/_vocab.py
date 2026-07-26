@@ -11,7 +11,8 @@ Vocabularies of IDs, tags, etc.
 # pyright: basic
 from __future__ import annotations
 
-from typing import Hashable, Iterable, Iterator, Literal, Sequence, overload
+from collections.abc import Hashable, Iterable, Iterator, Sequence
+from typing import Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -85,7 +86,7 @@ class Vocabulary:
         elif isinstance(keys, pd.Index):
             self._pd_index = keys
             key_arr = pa.array(keys.values)
-        elif isinstance(keys, np.ndarray) or isinstance(keys, list) or isinstance(keys, pd.Series):
+        elif isinstance(keys, (np.ndarray, list, pd.Series)):
             key_arr = pa.array(keys)  # type: ignore
         elif isinstance(keys, pa.ChunkedArray):
             key_arr = keys.combine_chunks()
@@ -267,7 +268,7 @@ class Vocabulary:
     def id_array(self) -> pa.Array:
         return self._array
 
-    def __eq__(self, other: Vocabulary) -> bool:  # noqa: F821
+    def __eq__(self, other: Vocabulary) -> bool:
         if self is other:
             return True
         elif not isinstance(other, Vocabulary):

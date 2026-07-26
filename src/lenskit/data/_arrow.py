@@ -8,14 +8,14 @@
 Arrow utility functions.
 """
 
+from collections.abc import Callable
 from functools import partial
-from typing import Any
+from typing import Any, Literal, overload
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import torch
-from typing_extensions import Callable, Literal, overload
 
 from ._mtarray import MTArray
 

@@ -51,7 +51,7 @@ class DataContainer:
             if len(rel.entities) == 2 and not rel.repeats.is_present:
                 # make sure they are a sorted matrix
                 tbl = self.tables[name]
-                e_cols = [e + "_num" for e in rel.entities.keys()]
+                e_cols = [e + "_num" for e in rel.entities]
                 if not _data_accel.is_sorted_coo(tbl.to_batches(), *e_cols):
                     log.debug("sorting non-repeating relationship %s", name)
                     self.tables[name] = tbl.sort_by([(c, "ascending") for c in e_cols])
@@ -80,7 +80,7 @@ class DataContainer:
         log.info("saving dataset")
 
         if path.exists():
-            log.warn("path already exists, removing")
+            log.warning("path already exists, removing")
             rmtree(path)
 
         log.debug("ensuring path exists")

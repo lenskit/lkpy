@@ -16,6 +16,7 @@ import io
 from abc import abstractmethod
 from collections.abc import Callable
 from os import PathLike
+from typing import Any, Literal, overload
 
 import pandas as pd
 import pyarrow as pa
@@ -23,7 +24,7 @@ import scipy.sparse as sps
 import torch
 from humanize import metric
 from numpy.typing import NDArray
-from typing_extensions import Any, Literal, TypeAlias, TypedDict, TypeVar, overload
+from typing_extensions import TypedDict
 
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
@@ -39,9 +40,7 @@ from .types import ID, LAYOUT
 
 _log = get_logger(__name__)
 
-ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
-
-K = TypeVar("K")
+type ACTION_FIELDS = Literal["ratings", "timestamps"] | str
 
 
 def _uses_data(func):
@@ -533,9 +532,7 @@ class Dataset:
         s = "<Dataset"
         if self.name is not None:
             s += " " + self.name
-        s += " ({} users, {} items, {} interactions)>".format(
-            metric(self.user_count), metric(self.item_count), metric(self.interaction_count)
-        )
+        s += f" ({metric(self.user_count)} users, {metric(self.item_count)} items, {metric(self.interaction_count)} interactions)>"
         return s
 
     def __repr__(self) -> str:
@@ -547,15 +544,15 @@ class Dataset:
         for entity in self.schema.entities:
             eset = self._entities.get(entity, None)
             if eset is not None:
-                out.write("  {}: {:,d},\n".format(entity, eset.count()))
+                out.write(f"  {entity}: {eset.count():,d},\n")
             else:
-                out.write("  {}: <not loaded>,\n".format(entity))
+                out.write(f"  {entity}: <not loaded>,\n")
         for rel in self.schema.relationships:
             rset = self._relationships.get(rel, None)
             if rset is not None:
-                out.write("  {}: {:,d},\n".format(rel, rset.count()))
+                out.write(f"  {rel}: {rset.count():,d},\n")
             else:
-                out.write("  {}: <not loaded>,\n".format(rel))
+                out.write(f"  {rel}: <not loaded>,\n")
         out.write("}")
 
         return out.getvalue()

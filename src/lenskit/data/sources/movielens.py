@@ -14,7 +14,6 @@ import re
 from collections.abc import Callable
 from io import TextIOWrapper
 from pathlib import Path
-from typing import TypeAlias
 from zipfile import ZipFile
 
 import numpy as np
@@ -29,7 +28,7 @@ from .._dataset import Dataset
 
 _log = get_logger(__name__)
 
-LOC: TypeAlias = Path | tuple[ZipFile, str]
+type LOC = Path | tuple[ZipFile, str]
 
 
 class MLData:
@@ -310,7 +309,7 @@ class MLMLoader(MLData):
             for i, line in enumerate(TextIOWrapper(data, "latin1"), 1):
                 m = lpat.match(line)
                 if not m:  # pragma: nocover
-                    self._logger.warn("invalid line", line=i)
+                    self._logger.warning("invalid line", line=i)
                     continue
 
                 lines.append((int(m[1]), int(m[2]), m[3], int(m[4])))

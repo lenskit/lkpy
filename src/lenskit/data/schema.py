@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import Annotated, Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -37,7 +37,7 @@ OLDEST_VERSION = "2025.1"
 LOAD_CONTEXT = {"version": "compat"}
 
 NAME_PATTERN = re.compile(r"^[\w_]+$")
-Name: TypeAlias = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
+type Name = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
 
 
 def id_col_name(name: str) -> str:

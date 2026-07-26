@@ -10,7 +10,7 @@ Relationship accessors for Dataset.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, overload, override
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,6 @@ import pyarrow.compute as pc
 import scipy.sparse as sps
 import torch
 from numpy.typing import NDArray
-from typing_extensions import Literal, overload, override
 
 from lenskit._accel import data as _accel_data
 from lenskit.diagnostics import FieldError
@@ -189,9 +188,9 @@ class RelationshipSet:
         co-occurrences. For example, if a relationship connects the ``user``,
         ``session``, and ``item`` classes, then:
 
-        - ``rs.co_occurrances("item")`` counts the number of times each pair of
+        - ``rs.co_occurrences("item")`` counts the number of times each pair of
           items appear together in a session.
-        - ``rs.co_occurrances("item", group="user")`` counts the number of times
+        - ``rs.co_occurrences("item", group="user")`` counts the number of times
           each pair of items were interacted with by the same user, regardless
           of session.
 
@@ -336,10 +335,10 @@ class RelationshipSet:
     def _make_matrix(
         self, *, row_entity: str = "user", col_entity: str = "item"
     ) -> MatrixRelationshipSet:
-        if row_entity not in self.schema.entities.keys():
+        if row_entity not in self.schema.entities:
             raise FieldError(self.name, row_entity)
 
-        if col_entity not in self.schema.entities.keys():
+        if col_entity not in self.schema.entities:
             raise FieldError(self.name, col_entity)
 
         if col_entity == row_entity:

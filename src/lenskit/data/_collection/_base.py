@@ -9,18 +9,15 @@ from __future__ import annotations
 import json
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Generator, Iterator, Mapping, Sequence
 from itertools import batched
 from os import PathLike
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
-    Generator,
     Generic,
-    Iterator,
     Literal,
-    Mapping,
     Protocol,
     overload,
 )
@@ -40,7 +37,7 @@ from .._container import DataContainer
 from .._items import ItemList
 from ..repr import object_repr
 from ..types import ID, Column
-from ._keys import KL, GenericKey, create_key_type, key_dict, key_fields, project_key
+from ._keys import GenericKey, KL_co, create_key_type, key_dict, key_fields, project_key
 
 if TYPE_CHECKING:
     from .._dataset import Dataset
@@ -48,7 +45,7 @@ if TYPE_CHECKING:
 _log = get_logger(__name__)
 
 
-class ItemListCollection(Generic[KL], ABC):
+class ItemListCollection(ABC, Generic[KL_co]):  # ruff: ignore[non-pep695-generic-class]
     """
     A collection of item lists.  This protocol defines read access to the
     collection; see :class:`ItemListCollector` for the ability to add new lists.
@@ -100,15 +97,15 @@ class ItemListCollection(Generic[KL], ABC):
             Whether or not to index lists by key to facilitate fast lookups.
     """
 
-    _key_class: type[KL]
+    _key_class: type[KL_co]
 
-    def __new__(cls, key: type[KL] | Sequence[str] | None = None, *, index: bool = True):
+    def __new__(cls, key: type[KL_co] | Sequence[str] | None = None, *, index: bool = True):
         if key is not None and (cls == ItemListCollection or cls == MutableItemListCollection):
             return cls.empty(key, index=index)
         else:
             return super().__new__(cls)
 
-    def __init__(self, key: type[KL] | Sequence[str]):
+    def __init__(self, key: type[KL_co] | Sequence[str]):
         if isinstance(key, type):
             self._key_class = key
         else:
@@ -317,7 +314,7 @@ class ItemListCollection(Generic[KL], ABC):
         for ecls in entities:
             dsb.add_entity_class(ecls)
             # speed up?
-            dsb.add_entities(ecls, list(set(getattr(k, f"{ecls}_id") for k in self.keys())))
+            dsb.add_entities(ecls, list({getattr(k, f"{ecls}_id") for k in self.keys()}))
 
         entities += ["item"]
         dsb.add_interactions(class_name, data, entities=entities, missing="insert")
@@ -467,9 +464,7 @@ class ItemListCollection(Generic[KL], ABC):
             tbl = keys.add_column(keys.num_columns, "items", col)
             if layout == "flat":
                 tbl = explode_column(tbl, "items").flatten()
-                tbl = tbl.rename_columns(
-                    [(c[6:] if c.startswith("items.") else c) for c in tbl.column_names]
-                )
+                tbl = tbl.rename_columns([(c.removeprefix("items.")) for c in tbl.column_names])
             yield from tbl.to_batches()
 
     @property
@@ -478,7 +473,7 @@ class ItemListCollection(Generic[KL], ABC):
         return key_fields(self.key_type)
 
     @property
-    def key_type(self) -> type[KL]:
+    def key_type(self) -> type[KL_co]:
         """
         The type of collection keys.
         """
@@ -550,26 +545,26 @@ class ItemListCollection(Generic[KL], ABC):
         return sum(len(il) for il in self.lists())
 
     @abstractmethod
-    def items(self) -> Iterator[tuple[KL, ItemList]]:
+    def items(self) -> Iterator[tuple[KL_co, ItemList]]:
         "Iterate over item lists and keys."
         ...
 
     def lists(self) -> Iterator[ItemList]:
         "Iterate over item lists without keys."
-        return (il for (_k, il) in self.items())
+        return (il for (_k, il) in self.items())  # ruff: ignore[incorrect-dict-iterator]
 
-    def keys(self) -> Iterator[KL]:
+    def keys(self) -> Iterator[KL_co]:
         "Iterate over keys."
-        return (k for (k, _il) in self.items())
+        return (k for (k, _il) in self.items())  # ruff: ignore[incorrect-dict-iterator]
 
     @abstractmethod
     def __len__(self) -> int: ...
 
-    def __iter__(self) -> Iterator[tuple[KL, ItemList]]:
+    def __iter__(self) -> Iterator[tuple[KL_co, ItemList]]:
         return self.items()
 
     @abstractmethod
-    def __getitem__(self, pos: int, /) -> tuple[KL, ItemList]:
+    def __getitem__(self, pos: int, /) -> tuple[KL_co, ItemList]:
         """
         Get an item list and its key by position.
 
@@ -584,7 +579,6 @@ class ItemListCollection(Generic[KL], ABC):
             IndexError:
                 when ``pos`` is out-of-bounds.
         """
-        pass
 
     def __str__(self):
         return object_repr(
@@ -632,5 +626,3 @@ class MutableItemListCollection[K: GenericKey](ItemListCollector, ItemListCollec
     Intersection type of :class:`ItemListCollection` and
     :class:`ItemListCollector`.
     """
-
-    pass

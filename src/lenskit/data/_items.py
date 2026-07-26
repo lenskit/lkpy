@@ -13,6 +13,7 @@ from __future__ import annotations
 import io
 import warnings
 from collections.abc import Sequence
+from typing import Any, Literal, LiteralString, overload
 
 import numpy as np
 import pandas as pd
@@ -20,12 +21,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import torch
 from numpy.typing import ArrayLike, NDArray
-from typing_extensions import (
-    Any,
-    Literal,
-    LiteralString,
-    overload,
-)
 
 from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataWarning
@@ -390,7 +385,7 @@ class ItemList:
                 raise AssertionError("unreachable")
 
     def _init_fields(self, *, scores=None, score=None, rank=None, **other):
-        if any(k[0] == "_" for k in other.keys()):  # pragma: nocover
+        if any(k[0] == "_" for k in other):  # pragma: nocover
             raise ValueError("item list fields cannot start with _")
 
         fields = getattr(self, "_fields", {}).copy()

@@ -416,7 +416,7 @@ class SparseRowArray(pa.ExtensionArray):
         elif matrix.nnz < smax:
             offsets = np.require(offsets, dtype=np.int32)
         elif large is False:
-            raise ValueError("sparse matrix size {:,d} too large for list".format(matrix.nnz))
+            raise ValueError(f"sparse matrix size {matrix.nnz:,d} too large for list")
         cols = pa.array(matrix.indices, SparseIndexType(dim))
 
         vals = pa.array(matrix.data) if values else None
@@ -453,7 +453,7 @@ class SparseRowArray(pa.ExtensionArray):
         """
         Convert this array to table representing the array in COO format.
         """
-        nr, nc = self.shape
+        nr, _nc = self.shape
         lengths = self.storage.value_lengths()
         assert len(lengths) == nr
         rowinds = np.repeat(np.arange(nr, dtype=np.int32), lengths)

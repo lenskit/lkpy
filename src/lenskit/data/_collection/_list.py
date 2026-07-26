@@ -23,7 +23,7 @@ from ._keys import ID, GenericKey, K, Ko, create_key_type, key_dict, key_fields
 _log = get_logger(__name__)
 
 
-class ListILC(MutableItemListCollection[K], Generic[K]):
+class ListILC(MutableItemListCollection[K], Generic[K]):  # ruff: ignore[non-pep695-generic-class]
     """
     Mutable item list collection backed by a Python list.
     """
@@ -71,7 +71,7 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
             ilc = ListILC(key)
         else:
             k = next(iter(data.keys()))
-            if isinstance(k, tuple) and getattr(k, "_fields"):
+            if isinstance(k, tuple) and k._fields:
                 ilc = ListILC(type(k))
             else:
                 warnings.warn(
