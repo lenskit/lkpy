@@ -12,11 +12,11 @@ FA*IR top-N re-ranking.
 from __future__ import annotations
 
 from collections import deque
+from typing import override
 
 import numpy as np
 from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
 from scipy.stats import binom
-from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList
 from lenskit.logging import Stopwatch, get_logger
@@ -149,7 +149,7 @@ class FAIRReranker(Component[ItemList], Trainable):
         return hasattr(self, "alpha_c")
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+    def train(self, data: Dataset, options: TrainingOptions):
         """
         Precompute adjusted alpha and m-table for the configured (n,p,alpha)
 
