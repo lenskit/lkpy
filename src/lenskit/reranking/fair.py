@@ -149,7 +149,7 @@ class FAIRReranker(Component[ItemList], Trainable):
         return hasattr(self, "alpha_c")
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Precompute adjusted alpha and m-table for the configured (n,p,alpha)
 

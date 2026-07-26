@@ -72,7 +72,7 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
         return hasattr(self, "factorization")
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         timer = Stopwatch()
         _log.info("[%s] computing bias", timer)
         self.bias = BiasModel.learn(data, self.config.damping)

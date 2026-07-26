@@ -92,7 +92,7 @@ class SLIMScorer(Component, Trainable):
     def is_trained(self) -> bool:
         return hasattr(self, "weights")
 
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         ensure_parallel_init()
         ui_matrix = data.interactions().matrix().csr_structure(format="arrow")
         _log.info(

@@ -70,7 +70,7 @@ class NMFScorer(Component[ItemList], Trainable):
         return hasattr(self, "item_components")
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         timer = Stopwatch()
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
