@@ -13,11 +13,12 @@ This module contains a truncated SVD explicit-feedback scorer built on
 
 from __future__ import annotations
 
+from typing import Literal, override
+
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import AliasChoices, BaseModel, Field
 from sklearn.decomposition import TruncatedSVD
-from typing_extensions import Literal, override
 
 from lenskit.basic import BiasModel, Damping
 from lenskit.config.common import EmbeddingSizeMixin
@@ -71,7 +72,7 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
         return hasattr(self, "factorization")
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+    def train(self, data: Dataset, options: TrainingOptions):
         timer = Stopwatch()
         _log.info("[%s] computing bias", timer)
         self.bias = BiasModel.learn(data, self.config.damping)

@@ -13,10 +13,11 @@ This module contains a non-negative factorization implicit-feedback scorer built
 
 from __future__ import annotations
 
+from typing import Literal, override
+
 import numpy as np
 from pydantic import AliasChoices, BaseModel, Field, PositiveInt
 from sklearn.decomposition import MiniBatchNMF, non_negative_factorization
-from typing_extensions import Literal, override
 
 from lenskit.config.common import EmbeddingSizeMixin
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -69,7 +70,7 @@ class NMFScorer(Component[ItemList], Trainable):
         return hasattr(self, "item_components")
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+    def train(self, data: Dataset, options: TrainingOptions):
         timer = Stopwatch()
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
