@@ -15,9 +15,10 @@ from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
 from os import PathLike
 from pathlib import Path
+from typing import Any, overload
 
 from pydantic_settings import TomlConfigSettingsSource
-from typing_extensions import Any, TypeVar, overload
+from typing_extensions import TypeVar
 
 from lenskit.diagnostics import ConfigWarning
 from lenskit.logging import get_logger
@@ -33,16 +34,16 @@ from lenskit.schemas.settings import (
 )
 
 __all__ = [
-    "lenskit_config",
-    "locate_configuration_root",
-    "configure",
     "LenskitSettings",
-    "RandomSettings",
     "MachineSettings",
     "ParallelSettings",
     "PowerQueries",
     "PrometheusSettings",
+    "RandomSettings",
     "TuneSettings",
+    "configure",
+    "lenskit_config",
+    "locate_configuration_root",
 ]
 
 SettingsClass = TypeVar("SettingsClass", bound="LenskitSettings", default="LenskitSettings")
@@ -57,8 +58,6 @@ def lenskit_config() -> LenskitSettings:
 
     If no configuration has been specified, returns a default settings object.
     """
-    global _settings
-
     settings = _context_settings.get()
     if settings is None:
         settings = _settings
