@@ -9,11 +9,11 @@ Hierarchical Poisson factorization from ``hpfrec``.
 """
 
 import logging
+from typing import override
 
 import hpfrec
 import numpy as np
 from pydantic import AliasChoices, BaseModel, Field, JsonValue
-from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline import Component

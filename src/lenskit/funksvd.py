@@ -10,11 +10,11 @@ FunkSVD (biased MF).
 
 import time
 from dataclasses import dataclass
+from typing import override
 
 import numpy as np
 import pyarrow as pa
 from pydantic import AliasChoices, BaseModel, Field, NonNegativeFloat, PositiveFloat, PositiveInt
-from typing_extensions import override
 
 from lenskit._accel import FunkSVDTrainer
 from lenskit.basic import BiasModel, Damping
