@@ -15,12 +15,12 @@ import base64
 import pickle
 import re
 from collections import OrderedDict
+from collections.abc import Mapping
 from hashlib import sha256
-from typing import Annotated, Literal, Mapping
+from typing import Annotated, Any, Literal, Self
 
 from annotated_types import Predicate
 from pydantic import AliasChoices, BaseModel, Field, JsonValue, ValidationError
-from typing_extensions import Any, Self
 
 from lenskit.diagnostics import PipelineError
 
@@ -29,18 +29,18 @@ UNSET_CODE = "!UNSET"
 
 __all__ = [
     "UNSET_CODE",
-    "check_name",
+    "PipelineComponent",
+    "PipelineConfig",
+    "PipelineConfigFragment",
     "PipelineHook",
     "PipelineHooks",
-    "PipelineOptions",
-    "PipelineConfigFragment",
-    "PipelineConfig",
-    "PipelineMeta",
     "PipelineInput",
-    "PipelineComponent",
     "PipelineLiteral",
-    "merge_configs",
+    "PipelineMeta",
+    "PipelineOptions",
+    "check_name",
     "hash_config",
+    "merge_configs",
 ]
 
 
@@ -160,7 +160,7 @@ class PipelineConfig(BaseModel):
             try:
                 comp = pipe.components[name]
             except KeyError:
-                raise PipelineError(f"unknown component {name}")  # noqa: B904
+                raise PipelineError(f"unknown component {name}")
 
             # make sure we have a mutable dictionary
             if comp.config is None:

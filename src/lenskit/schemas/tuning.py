@@ -6,11 +6,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, model_validator
-from typing_extensions import Annotated, Literal
 
 from ._load import load_model_data
 from .pipeline import PipelineConfig
@@ -66,7 +66,7 @@ class SearchConfig(BaseModel):
     """
     num_gpus: int | float = 0
     """
-    The number of GPUs to requrest from Ray Tune.
+    The number of GPUs to request from Ray Tune.
     """
 
     max_epochs: int = 100
@@ -113,9 +113,8 @@ class SearchConfig(BaseModel):
         """
         Limit the search points to a new maximum, if it exceeds the current maximum.
         """
-        if n is not None:
-            if self.max_points is None or self.max_points > n:
-                self.max_points = n
+        if n is not None and (self.max_points is None or self.max_points > n):
+            self.max_points = n
 
     def num_search_points(self) -> int:
         """
@@ -191,7 +190,7 @@ class TuningSpec(BaseModel, extra="forbid"):
         parameters for a single component.
         """
         if len(self.space) == 1:
-            for name in self.space.keys():
+            for name in self.space:
                 return name
         else:
             return None
@@ -213,7 +212,7 @@ class PipelineFile(BaseModel, extra="forbid"):
 
     file: Path
     """
-    The file from whic to load the pipeline.
+    The file from which to load the pipeline.
     """
 
 
@@ -257,9 +256,8 @@ class SearchParam(BaseModel):
 
     @model_validator(mode="after")
     def _check_choices(self):
-        if self.type == "choice":
-            if not self.choices:
-                raise ValueError("choice parameter must specify non-empty choices")
+        if self.type == "choice" and not self.choices:
+            raise ValueError("choice parameter must specify non-empty choices")
         return self
 
     @model_validator(mode="after")

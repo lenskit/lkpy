@@ -262,9 +262,8 @@ class LenskitSettings(BaseSettings, extra="allow"):
 
     @property
     def current_machine(self) -> MachineSettings | None:
-        if self.machine:
-            if ms := self.machines.get(self.machine, None):
-                return ms
+        if self.machine and (ms := self.machines.get(self.machine, None)):
+            return ms
 
     @classmethod
     def settings_customise_sources(

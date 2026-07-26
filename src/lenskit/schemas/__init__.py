@@ -11,6 +11,6 @@ from . import settings
 from ._load import load_model_data
 
 __all__ = [
-    "settings",
     "load_model_data",
+    "settings",
 ]
