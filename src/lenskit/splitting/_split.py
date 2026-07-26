@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Literal, TypeAlias
+from typing import Literal
 
 import pandas as pd
 
@@ -16,7 +16,7 @@ from lenskit.batch import TestRequestAdapter
 from lenskit.data import Dataset, ItemListCollection
 from lenskit.diagnostics import DataWarning
 
-SplitTable: TypeAlias = Literal["matrix"]
+type SplitTable = Literal["matrix"]
 
 
 @dataclass

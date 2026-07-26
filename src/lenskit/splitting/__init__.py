@@ -19,19 +19,19 @@ from ._temporal import split_global_time, split_temporal_fraction
 from ._users import crossfold_users, sample_users
 
 __all__ = [
-    "TTSplit",
     "HoldoutMethod",
     "LastFrac",
     "LastN",
     "SampleFrac",
     "SampleN",
-    "split_global_time",
-    "split_temporal_fraction",
+    "TTSplit",
     "crossfold_records",
-    "sample_records",
     "crossfold_users",
+    "sample_records",
     "sample_users",
     "simple_test_pair",
+    "split_global_time",
+    "split_temporal_fraction",
 ]
 
 

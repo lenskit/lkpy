@@ -5,7 +5,8 @@
 # SPDX-License-Identifier: MIT
 
 import datetime as dt
-from typing import Sequence, overload
+from collections.abc import Sequence
+from typing import overload
 
 from lenskit.data import Dataset, DatasetBuilder, ItemListCollection
 from lenskit.logging import get_logger
@@ -18,21 +19,21 @@ _log = get_logger(__name__)
 @overload
 def split_global_time(
     data: Dataset,
-    time: int | float | str | dt.datetime,
-    end: int | float | str | dt.datetime | None = None,
+    time: float | str | dt.datetime,
+    end: float | str | dt.datetime | None = None,
     filter_test_users: bool | int | None = False,
 ) -> TTSplit: ...
 @overload
 def split_global_time(
     data: Dataset,
     time: Sequence[int | float | str | dt.datetime],
-    end: int | float | str | dt.datetime | None = None,
+    end: float | str | dt.datetime | None = None,
     filter_test_users: bool | int | None = False,
 ) -> list[TTSplit]: ...
 def split_global_time(
     data: Dataset,
-    time: int | float | str | dt.datetime | Sequence[int | float | str | dt.datetime],
-    end: int | float | str | dt.datetime | None = None,
+    time: float | str | dt.datetime | Sequence[int | float | str | dt.datetime],
+    end: float | str | dt.datetime | None = None,
     filter_test_users: bool | int | None = False,
 ) -> TTSplit | list[TTSplit]:
     """
@@ -139,9 +140,9 @@ def split_temporal_fraction(
     return split_global_time(data, point, filter_test_users=filter_test_users)
 
 
-def _make_time(t: int | float | str | dt.datetime) -> dt.datetime:
+def _make_time(t: float | str | dt.datetime) -> dt.datetime:
     if isinstance(t, (int, float)):
-        return dt.datetime.fromtimestamp(t)
+        return dt.datetime.fromtimestamp(t, tz=dt.UTC)
     elif isinstance(t, str):
         return dt.datetime.fromisoformat(t)
     else:

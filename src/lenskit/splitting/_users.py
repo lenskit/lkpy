@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterator, overload
+from collections.abc import Iterator
+from typing import overload
 
 import numpy as np
 import pandas as pd
