@@ -3,7 +3,7 @@
 # Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
-
+# ruff: noqa: B008
 """
 Hypothesis strategies that generate arrays and lists.
 """

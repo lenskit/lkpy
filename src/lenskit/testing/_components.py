@@ -28,7 +28,7 @@ _log = get_logger(__name__)
 
 class BasicComponentTests:
     component: type[Component]
-    configs = []
+    configs = []  # ruff: ignore[mutable-class-default]
 
     def test_instantiate_default(self):
         inst = self.component()
@@ -42,7 +42,7 @@ class BasicComponentTests:
     def test_default_config_vars(self):
         inst = self.component()
         cfg = inst.dump_config()
-        for name, value in cfg.items():
+        for name in cfg:
             assert hasattr(inst.config, name)
 
     def test_default_config_round_trip(self):
@@ -127,7 +127,6 @@ class ScorerTests(TrainingTests):
 
     def verify_models_equivalent(self, orig, copy):
         "Verify that two models are equivalent."
-        pass
 
     def test_score_known(
         self, rng: np.random.Generator, ml_ds: Dataset, trained_pipeline: Pipeline
