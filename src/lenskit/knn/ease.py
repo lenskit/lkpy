@@ -9,6 +9,7 @@ EASE scoring model.
 """
 
 from threading import Lock
+from typing import override
 
 import numpy as np
 import scipy
@@ -17,7 +18,6 @@ import torch
 from humanize import naturalsize
 from packaging.version import Version
 from pydantic import BaseModel, PositiveFloat
-from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.types import NPMatrix

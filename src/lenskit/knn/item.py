@@ -13,13 +13,13 @@ from __future__ import annotations
 
 import gc
 import warnings
+from typing import override
 
 import numpy as np
 import pyarrow as pa
 import scipy.sparse.linalg as spla
 from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import coo_array, sparray
-from typing_extensions import override
 
 from lenskit import _accel
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary

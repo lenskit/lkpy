@@ -9,15 +9,15 @@ from .slim import SLIMConfig, SLIMScorer
 from .user import UserKNNConfig, UserKNNScorer
 
 __all__ = [
-    "ItemKNNScorer",
-    "ItemKNNConfig",
-    "UserKNNScorer",
-    "UserKNNConfig",
-    "EASEScorer",
-    "EASEConfig",
-    "SLIMConfig",
-    "SLIMScorer",
     "AssociationConfig",
     "AssociationMethod",
     "AssociationScorer",
+    "EASEConfig",
+    "EASEScorer",
+    "ItemKNNConfig",
+    "ItemKNNScorer",
+    "SLIMConfig",
+    "SLIMScorer",
+    "UserKNNConfig",
+    "UserKNNScorer",
 ]

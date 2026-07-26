@@ -12,6 +12,7 @@ User-based k-NN collaborative filtering.
 from __future__ import annotations
 
 import warnings
+from typing import NamedTuple, override
 
 import numpy as np
 import pandas as pd
@@ -19,7 +20,6 @@ import pyarrow as pa
 import scipy.sparse.linalg as spla
 from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import csr_array
-from typing_extensions import NamedTuple, Optional, override
 
 from lenskit._accel import knn
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
@@ -251,7 +251,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
         )
         return ItemList(items, scores=results.values)  # type: ignore
 
-    def _get_user_data(self, query: RecQuery) -> Optional[UserRatings]:
+    def _get_user_data(self, query: RecQuery) -> UserRatings | None:
         "Get a user's data for user-user CF"
 
         index = self.users.number(query.user_id, missing=None)
