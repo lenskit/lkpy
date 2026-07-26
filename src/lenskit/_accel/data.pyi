@@ -1,4 +1,3 @@
-
 import numpy as np
 import pyarrow as pa
 from pydantic import JsonValue
@@ -8,7 +7,7 @@ from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import ID
 from lenskit.parallel import AccelTask
 
-A = TypeVar("A", bound=pa.Array, default=pa.Array)
+_A = TypeVar("_A", bound=pa.Array, default=pa.Array)
 
 def transpose_csr(
     matrix: SparseRowArray, permute: bool
@@ -38,8 +37,8 @@ def dense_cooc(
     *,
     diagonal: bool = True,
 ) -> AccelTask[np.ndarray[tuple[int, int], np.dtype[np.float32]]]: ...
-def scatter_array(dst: A, idx: pa.Array, src: A) -> A: ...
-def scatter_array_empty(dst_size: int, idx: pa.Array, src: A) -> A: ...
+def scatter_array(dst: _A, idx: pa.Array, src: _A) -> _A: ...
+def scatter_array_empty(dst_size: int, idx: pa.Array, src: _A) -> _A: ...
 def sample_negatives(
     coords: CoordinateTable,
     rows: np.ndarray[tuple[int], np.dtype[np.int32]],
