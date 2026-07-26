@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import math
 from abc import abstractmethod
-from collections.abc import Callable, Generator, Sequence
+from collections.abc import Callable, Generator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Mapping
+from typing import TYPE_CHECKING, Generic, Self
 
 import numpy as np
 import structlog
 import torch
 from torch import Tensor
-from typing_extensions import TYPE_CHECKING, Generic, Self, TypeVar
+from typing_extensions import TypeVar
 
 from lenskit.data import Dataset, MatrixRelationshipSet
 from lenskit.logging import get_logger, item_progress

@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
-from typing import Literal, TypeAlias
+from typing import Literal, override
 
 import numpy as np
 import torch
 from pydantic import NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 from torch.nn import functional as F
-from typing_extensions import override
 
 from lenskit.data import Dataset
 from lenskit.logging import get_logger
@@ -25,8 +24,8 @@ from ._training import FlexMFTrainerBase, FlexMFTrainingBatch, FlexMFTrainingDat
 
 WARP_CAND_BATCH_SIZE = 10
 MAX_TRIES = 200
-ImplicitLoss: TypeAlias = Literal["logistic", "pairwise", "warp"]
-NegativeStrategy: TypeAlias = Literal["uniform", "popular", "misranked"]
+type ImplicitLoss = Literal["logistic", "pairwise", "warp"]
+type NegativeStrategy = Literal["uniform", "popular", "misranked"]
 
 _log = get_logger(__name__)
 
@@ -262,7 +261,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
         pos_pred, pos_norm = self.score(users, positives)
 
-        neg_items, neg_pred, neg_norm, weights = self.scored_negatives(batch, users, pos_pred)
+        _neg_items, neg_pred, neg_norm, weights = self.scored_negatives(batch, users, pos_pred)
 
         loss = self._loss(pos_pred, neg_pred, self.config.positive_weight, weights)
 
