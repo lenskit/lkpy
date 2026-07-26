@@ -20,17 +20,17 @@ from .random import RandomSelector
 from .topn import TopNConfig, TopNRanker
 
 __all__ = [
-    "BiasModel",
     "BiasConfig",
+    "BiasModel",
     "BiasScorer",
     "Damping",
+    "FallbackScorer",
     "PopConfig",
     "PopScorer",
+    "RandomSelector",
     "TopNConfig",
     "TopNRanker",
-    "RandomSelector",
-    "UserTrainingHistoryLookup",
     "TrainingItemsCandidateConfig",
     "TrainingItemsCandidateSelector",
-    "FallbackScorer",
+    "UserTrainingHistoryLookup",
 ]

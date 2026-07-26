@@ -9,9 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
-
-from typing_extensions import override
+from typing import Literal, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline import Component

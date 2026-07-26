@@ -11,11 +11,10 @@ Components that look up user history from the training data.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, override
 
 import numpy as np
 import pandas as pd
-from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, MatrixRelationshipSet, QueryInput, RecQuery
 from lenskit.diagnostics import DataError
@@ -35,7 +34,7 @@ class LookupConfig:
     """
 
 
-class UserTrainingHistoryLookup(Component[ItemList], Trainable):
+class UserTrainingHistoryLookup(Component[RecQuery], Trainable):
     """
     Look up a user's history from the training data.
 

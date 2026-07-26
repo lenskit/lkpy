@@ -14,13 +14,12 @@ from __future__ import annotations
 import logging
 from collections.abc import Container
 from dataclasses import dataclass
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self, overload
 
 import numpy as np
 import torch
 from pydantic import BaseModel, NonNegativeFloat, PlainSerializer
 from scipy.sparse import coo_array
-from typing_extensions import Self, TypeAlias, overload
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline.components import Component
@@ -28,8 +27,8 @@ from lenskit.torch import safe_tensor
 from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
-BiasEntity: TypeAlias = Literal["user", "item"]
-Damping: TypeAlias = float | dict[BiasEntity, float]
+type BiasEntity = Literal["user", "item"]
+type Damping = float | dict[BiasEntity, float]
 
 
 @dataclass
