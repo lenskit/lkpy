@@ -43,7 +43,6 @@ def least_item_promoted(reference: ItemList, reranked: ItemList, n: int = 10) ->
         indices = np.where(reference_ids == item_id)[0]
         if indices.size > 0:
             rank = indices[0]
-            if rank > lip_rank:
-                lip_rank = rank
+            lip_rank = max(lip_rank, rank)
 
     return lip_rank - n

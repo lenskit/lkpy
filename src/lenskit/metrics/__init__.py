@@ -9,7 +9,7 @@ Metrics for evaluating recommender outputs.
 """
 
 import warnings
-from typing import Callable
+from collections.abc import Callable
 
 from lenskit.data import ItemList
 
@@ -41,39 +41,39 @@ from .ranking import (
 from .reranking import least_item_promoted, rank_biased_overlap
 
 __all__ = [
+    "DCG",
+    "ILS",
+    "MAE",
+    "NDCG",
+    "RBP",
+    "RMSE",
+    "Entropy",
+    "ExposureGini",
+    "GeometricRankWeight",
+    "Hit",
+    "ListGini",
+    "ListLength",
+    "ListMetric",
+    "LogRankWeight",
+    "MeanPopRank",
+    "MeasurementCollector",
     "Metric",
     "MetricFunction",
     "MetricResult",
     "MetricVal",
-    "MeasurementCollector",
-    "RunMetrics",
-    "ListMetric",
-    "RankingMetricBase",
-    "RunAnalysis",
-    "RunAnalysisResult",
-    "ListLength",
-    "TestItemCount",
-    "RankWeight",
-    "GeometricRankWeight",
-    "LogRankWeight",
-    "RMSE",
-    "MAE",
-    "NDCG",
-    "DCG",
-    "RBP",
-    "Hit",
     "Precision",
+    "RankBiasedEntropy",
+    "RankWeight",
+    "RankingMetricBase",
     "Recall",
     "RecipRank",
-    "MeanPopRank",
-    "ListGini",
-    "ExposureGini",
-    "quick_measure_model",
+    "RunAnalysis",
+    "RunAnalysisResult",
+    "RunMetrics",
+    "TestItemCount",
     "least_item_promoted",
+    "quick_measure_model",
     "rank_biased_overlap",
-    "ILS",
-    "Entropy",
-    "RankBiasedEntropy",
 ]
 
 

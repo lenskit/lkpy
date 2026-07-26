@@ -12,13 +12,13 @@ and instructions on using these metrics.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from math import sqrt
-from typing import cast
+from typing import Literal, cast, override
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
-from typing_extensions import Callable, Literal, TypeAlias, override
 
 from lenskit.data import ItemList
 from lenskit.data._adapt import ITEM_COMPAT_COLUMN, normalize_columns
@@ -29,9 +29,9 @@ from ._base import Metric
 
 _log = logging.getLogger(__name__)
 
-MissingDisposition: TypeAlias = Literal["error", "ignore"]
-ScoreArray: TypeAlias = NDArray[np.floating] | pd.Series
-PredMetric: TypeAlias = Callable[[ScoreArray, ScoreArray], float]
+type MissingDisposition = Literal["error", "ignore"]
+type ScoreArray = NDArray[np.floating] | pd.Series
+type PredMetric = Callable[[ScoreArray, ScoreArray], float]
 
 
 class PredictMetric(Metric):

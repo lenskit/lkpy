@@ -4,8 +4,9 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from typing import override
+
 import numpy as np
-from typing_extensions import override
 
 from lenskit.data import ItemList
 

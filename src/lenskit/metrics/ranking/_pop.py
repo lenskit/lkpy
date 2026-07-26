@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
+from typing import Literal, override
+
 import numpy as np
 import pandas as pd
-from typing_extensions import Literal, override
 
 from lenskit.data import Dataset, ItemList
 

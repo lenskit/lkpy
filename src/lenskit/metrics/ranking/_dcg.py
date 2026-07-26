@@ -4,12 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+# ruff: noqa: B008
 import os
 import warnings
+from collections.abc import Callable
+from typing import override
 
 import numpy as np
 from numpy.typing import NDArray
-from typing_extensions import Callable, TypeAlias, override
 
 from lenskit.data import ItemList
 from lenskit.diagnostics import DataWarning
@@ -17,7 +19,7 @@ from lenskit.diagnostics import DataWarning
 from ._base import ListMetric, RankingMetricBase
 from ._weighting import LogRankWeight, RankWeight
 
-Discount: TypeAlias = Callable[[NDArray[np.number]], NDArray[np.float64]]
+type Discount = Callable[[NDArray[np.number]], NDArray[np.float64]]
 _warn_skips = (os.path.dirname(os.path.dirname(__file__)),)
 
 
