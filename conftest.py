@@ -22,7 +22,7 @@ from lenskit.random import init_global_rng
 register_assert_rewrite("lenskit.testing")
 
 # bring common fixtures into scope
-from lenskit.testing import ml_100k, ml_ds, ml_ds_unchecked, ml_ratings  # noqa: E402, F401
+from lenskit.testing import ml_100k, ml_ds, ml_ds_unchecked, ml_ratings  # noqa: F401
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
@@ -86,7 +86,7 @@ def torch_device(request):
 def log_test(request):
     try:
         modname = request.module.__name__ if request.module else "<unknown>"
-    except Exception:
+    except AttributeError:
         modname = "<unknown>"
     funcname = request.function.__name__ if request.function else "<unknown>"
     _log.info("running test %s:%s", modname, funcname)

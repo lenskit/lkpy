@@ -19,7 +19,7 @@ SRC_DIR = CONF_DIR.parent / "src"
 sys.path.append(fspath((Path(__file__).parent / "_ext").resolve()))
 sys.path.insert(0, fspath(SRC_DIR.resolve()))
 
-from lenskit._version import lenskit_version  # noqa: PLC2701, E402
+from lenskit._version import lenskit_version  # noqa: PLC2701
 
 _log = getLogger("sphinx.lenskit")
 
@@ -212,4 +212,3 @@ def skip_alias_imports(app, what, name, obj, skip, options):
 
 def setup(app: Sphinx):
     app.connect("autoapi-skip-member", skip_alias_imports)
-    pass
