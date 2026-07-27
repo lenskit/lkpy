@@ -25,8 +25,8 @@ def test_crossfold_users(ml_ds: Dataset):
     users = set()
     for s in splits:
         assert all(len(il) for il in s.test.lists())
-        assert not any(u in users for u in s.test)
-        users |= {k.user_id for k in s.test}
+        assert not any(u in users for u in s.test.keys())
+        users |= {k.user_id for k in s.test.keys()}
 
         test_pairs = {(u, i) for (u, il) in s.test for i in il.ids()}
         tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
@@ -97,8 +97,8 @@ def test_sample_users(ml_ds: Dataset):
         assert len(s.test) == 100
         assert s.test_size == 500
         # users are disjoint
-        assert not any(u in aus for u in s.test)
-        aus |= {k.user_id for k in s.test}
+        assert not any(u in aus for u in s.test.keys())
+        aus |= {k.user_id for k in s.test.keys()}
 
         test_pairs = {(u, i) for (u, il) in s.test for i in il.ids()}
         assert len(test_pairs) == s.test_size
@@ -130,7 +130,7 @@ def test_sample_users_non_disjoint(ml_ds: Dataset):
     for s in splits:
         assert len(s.test) == 100
         assert s.test_size == 500
-        aus |= {k.user_id for k in s.test}
+        aus |= {k.user_id for k in s.test.keys()}
 
         test_pairs = {(u, i) for (u, il) in s.test for i in il.ids()}
         assert len(test_pairs) == s.test_size
