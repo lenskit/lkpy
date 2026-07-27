@@ -414,7 +414,7 @@ def test_ii_known_preds(ml_ds):
     from lenskit import batch
 
     iknn = ItemKNNScorer(k=20, min_sim=1.0e-6)
-    pipe = predict_pipeline(iknn, fallback=False)  # noqa: F821
+    pipe = predict_pipeline(iknn, fallback=False)
     _log.info("training %s on ml data", iknn)
     pipe.train(ml_ds)
     _log.info("model means: %s", iknn.item_means)

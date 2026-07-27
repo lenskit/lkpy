@@ -100,8 +100,8 @@ def test_als_basic_build():
     assert algo.users is not None
     assert algo.user_embeddings is not None
 
-    assert set(algo.users.ids()) == set([10, 12, 13])
-    assert set(algo.items.ids()) == set([1, 2, 3])
+    assert set(algo.users.ids()) == {10, 12, 13}
+    assert set(algo.items.ids()) == {1, 2, 3}
     assert algo.user_embeddings.shape == (3, 20)
     assert algo.item_embeddings.shape == (3, 20)
 
@@ -226,7 +226,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
     is the same as a user in ml-latest-small dataset.
     The test is run for more than one user.
     """
-    import scipy.stats as stats
+    from scipy import stats
 
     n_users = 10
 

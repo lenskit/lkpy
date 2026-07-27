@@ -55,7 +55,7 @@ def draw_problem(
     mask = data.draw(nph.arrays(np.bool_, (nrows, ncols)))
     M[~mask] = 0.0
     nnz = np.sum(M != 0.0)
-    note("matrix {} x {} ({} nnz)".format(nrows, ncols, nnz))
+    note(f"matrix {nrows} x {ncols} ({nnz} nnz)")
 
     # multiply them (dense operation with NumPy) to get expected result
     res = M @ v

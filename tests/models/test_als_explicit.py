@@ -54,8 +54,8 @@ def test_als_basic_build():
     assert algo.user_embeddings is not None
 
     assert algo.bias.global_bias == approx(simple_df.rating.mean())
-    assert set(algo.users.ids()) == set([10, 12, 13])
-    assert set(algo.items.ids()) == set([1, 2, 3])
+    assert set(algo.users.ids()) == {10, 12, 13}
+    assert set(algo.items.ids()) == {1, 2, 3}
     assert algo.user_embeddings.shape == (3, 20)
     assert algo.item_embeddings.shape == (3, 20)
 

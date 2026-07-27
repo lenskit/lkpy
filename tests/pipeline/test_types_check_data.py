@@ -83,7 +83,7 @@ def test_numpy_scalar_typecheck2():
 
 def test_compatible_data_union():
     assert is_compatible_data("foo", str | bytes)
-    assert is_compatible_data("foo", Union[str, bytes])
+    assert is_compatible_data("foo", Union[str, bytes])  # ruff: ignore[non-pep604-annotation-union]
 
 
 def test_compatible_any():

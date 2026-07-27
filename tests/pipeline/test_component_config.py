@@ -100,7 +100,7 @@ def test_pipeline_config(prefixer: ComponentConstructor[Any, str]):
     pn = pipe.add_component("prefix", prefixer, {"prefix": "scroll named "}, msg=msg)
     assert isinstance(pn, ComponentConstructorNode)
     assert pn.constructor == prefixer
-    assert getattr(pn.config, "prefix") == "scroll named "
+    assert pn.config.prefix == "scroll named "
 
     pipe = pipe.build()
     assert pipe.run("prefix", msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"

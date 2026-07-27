@@ -122,10 +122,10 @@ def test_lookup_id_index(keys: set[int | str]):
     assert len(vocab) == len(klist)
 
     # make sure the numbers are right
-    assert all([vocab.number(k) == i for (i, k) in enumerate(klist)])
+    assert all(vocab.number(k) == i for (i, k) in enumerate(klist))
 
     # make sure the IDs are right
-    assert all([vocab.term(i) == k for (i, k) in enumerate(klist)])
+    assert all(vocab.term(i) == k for (i, k) in enumerate(klist))
 
 
 @given(

@@ -18,7 +18,7 @@ from lenskit.random import random_generator
 torch = importorskip("torch")
 
 if TYPE_CHECKING:
-    import torch
+    import torch  # ruff: ignore[runtime-import-in-type-checking-block]
 
 
 def test_torch_rng_none():

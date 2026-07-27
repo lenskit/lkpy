@@ -17,7 +17,7 @@ from lenskit.data import ItemList
 from lenskit.metrics import call_metric
 from lenskit.metrics.ranking import RBP, LogRankWeight
 from lenskit.metrics.ranking._rbp import rank_biased_precision
-from lenskit.testing import demo_recs, integer_ids  # noqa: F401
+from lenskit.testing import demo_recs, integer_ids
 
 _log = logging.getLogger(__name__)
 

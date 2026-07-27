@@ -170,7 +170,7 @@ def test_from_df(rng, ml_ratings: pd.DataFrame):
     ml_ratings = ml_ratings.rename(columns={"user": "user_id", "item": "item_id"})
     ilc = ItemListCollection.from_df(ml_ratings, UserIDKey)
     assert len(ilc) == ml_ratings["user_id"].nunique()
-    assert set(k.user_id for k in ilc.keys()) == set(ml_ratings["user_id"])
+    assert {k.user_id for k in ilc.keys()} == set(ml_ratings["user_id"])
 
     for uid in rng.choice(ml_ratings["user_id"].unique(), 25):
         items = ilc.lookup(user_id=uid)
@@ -190,7 +190,7 @@ def test_from_df_auto(rng, ml_ratings: pd.DataFrame):
         ilc = ItemListCollection.from_df(ml_ratings)
 
     assert len(ilc) == ml_ratings["user_id"].nunique()
-    assert set(k.user_id for k in ilc.keys()) == set(ml_ratings["user_id"])
+    assert {k.user_id for k in ilc.keys()} == set(ml_ratings["user_id"])
 
     for uid in rng.choice(ml_ratings["user_id"].unique(), 25):
         items = ilc.lookup(user_id=uid)
@@ -416,7 +416,7 @@ def test_to_dataset(demo_recs: DemoRecs):
     test = demo_recs.split.test
     test_ds = test.to_dataset()
     assert test_ds.user_count == len(test)
-    assert set(test_ds.users.ids()) == set(k.user_id for k in test.keys())
+    assert set(test_ds.users.ids()) == {k.user_id for k in test.keys()}
 
     test_df = test.to_df()
     assert test_ds.interaction_count == len(test_df)

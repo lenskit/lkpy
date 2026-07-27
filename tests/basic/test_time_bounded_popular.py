@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import pickle
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from lenskit.basic import popularity
 from lenskit.data import ItemList, from_interactions_df
 from lenskit.testing import ScorerTests
 
-ts = datetime(year=2024, month=1, day=1)
+ts = datetime(year=2024, month=1, day=1, tzinfo=UTC)
 one_day_ago = ts - timedelta(days=1)
 two_days_ago = ts - timedelta(days=2)
 simple_df = pd.DataFrame(

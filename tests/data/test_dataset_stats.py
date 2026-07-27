@@ -14,7 +14,7 @@ import pandas as pd
 from pytest import approx
 
 from lenskit.data import Dataset
-from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings
 
 
 def test_item_stats(ml_ratings: pd.DataFrame, ml_ds: Dataset):

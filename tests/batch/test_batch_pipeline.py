@@ -5,7 +5,8 @@
 # SPDX-License-Identifier: MIT
 
 import logging
-from typing import Generator, NamedTuple
+from collections.abc import Generator
+from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -21,7 +22,7 @@ from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
 from lenskit.parallel.ray import ray_available
 from lenskit.pipeline import Pipeline, topn_pipeline
 from lenskit.splitting import SampleN, TTSplit, sample_users
-from lenskit.testing import ml_100k, ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_100k, ml_ds, ml_ratings
 
 _log = logging.getLogger(__name__)
 

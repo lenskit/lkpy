@@ -4,7 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import pandas as pd  # noqa: F401
+import pandas as pd
 
 from pytest import approx, raises
 

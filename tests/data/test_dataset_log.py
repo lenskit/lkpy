@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from lenskit.data import Dataset
-from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings
 
 
 def test_pandas_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):

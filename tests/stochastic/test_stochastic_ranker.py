@@ -71,7 +71,7 @@ def test_unlimited_ranking(items: ItemList, transform):
         assert not np.any(np.isnan(src_s))
         assert np.all(rank_s == src_s)
     except AssertionError as e:
-        e.add_note("ranked {} items ({} invalid)".format(len(ids), np.sum(invalid)))
+        e.add_note(f"ranked {len(ids)} items ({np.sum(invalid)} invalid)")
         raise e
 
 
@@ -178,7 +178,7 @@ def test_overflow(items: ItemList, scale: float):
         assert not np.any(np.isnan(src_s))
         assert np.all(rank_s == src_s)
     except AssertionError as e:
-        e.add_note("ranked {} items".format(len(ids)))
+        e.add_note(f"ranked {len(ids)} items")
         raise e
 
 

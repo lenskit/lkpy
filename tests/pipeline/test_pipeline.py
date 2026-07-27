@@ -5,10 +5,10 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
+from typing import assert_type
 from uuid import UUID
 
 import numpy as np
-from typing_extensions import assert_type
 
 from pytest import mark, raises
 
@@ -65,7 +65,7 @@ def test_create_input_list():
     assert_type(src, Node[list[str]])
     assert isinstance(src, InputNode)
     assert src.name == "features"
-    assert src.type == list  # noqa: E721
+    assert src.type == list
     # assert src.type == list[str]
 
     assert len(pipe.nodes()) == 1

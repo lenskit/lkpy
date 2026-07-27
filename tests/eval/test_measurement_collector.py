@@ -193,7 +193,7 @@ def test_full_workflow_integration_improved(ml_ds):
     assert len(summary) > 0
     for key, value in summary.items():
         if value is not None:
-            if key.endswith(".std") or key.endswith(".n"):
+            if key.endswith((".std", ".n")):
                 assert value >= 0
             else:
                 assert 0 <= value <= 1

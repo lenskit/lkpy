@@ -29,7 +29,7 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestBias(BasicComponentTests, ScorerTests):
     component = BiasScorer
-    configs = [{"damping": 10}, {"damping": {"user": 5, "item": 25}}]
+    configs = [{"damping": 10}, {"damping": {"user": 5, "item": 25}}]  # ruff: ignore[mutable-class-default]
     can_score = "all"
 
 
@@ -63,7 +63,7 @@ def test_bias_full():
     assert bias.global_bias == approx(3.5)
 
     assert bias.items is not None
-    assert set(bias.items.ids()) == set([1, 2, 3])
+    assert set(bias.items.ids()) == {1, 2, 3}
     off = bias.item_biases
     assert off is not None
     exp = pd.Series([0, 1.5, -1.5], index=[1, 2, 3])
@@ -75,7 +75,7 @@ def test_bias_full():
     assert off == approx(exp.values)
 
     assert bias.users is not None
-    assert set(bias.users.ids()) == set([10, 12, 13])
+    assert set(bias.users.ids()) == {10, 12, 13}
     off = bias.user_biases
     assert off is not None
     exp = pd.Series([0.25, -0.5, 0], index=[10, 12, 13])
@@ -158,7 +158,7 @@ def test_bias_item_predict():
     p = bias(10, ItemList(item_ids=[1, 2, 3]))
 
     assert len(p) == 3
-    assert p.scores() == approx((bias.model.item_biases + bias.model.global_bias))
+    assert p.scores() == approx(bias.model.item_biases + bias.model.global_bias)
 
 
 def test_bias_user_predict():
@@ -225,7 +225,7 @@ def test_bias_predict_unknown_user():
 
     assert len(p) == 2
     locs = bm.items.numbers([1, 3])
-    assert p.scores() == approx((bm.item_biases[locs] + bm.global_bias))
+    assert p.scores() == approx(bm.item_biases[locs] + bm.global_bias)
 
 
 def test_bias_train_ml_ratings(ml_ratings: pd.DataFrame, ml_ds: Dataset):
