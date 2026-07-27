@@ -187,13 +187,13 @@ target-version = "py312"
 [tool.ruff.lint]
 preview = true
 extend-select = ["I", "W", "Q", "PLC2701"]
-ignore = ["TRY201"]
+ignore = ["TRY201", "SIM118"]
 unfixable = ["F401"]
 exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.ruff.lint.per-file-ignores]
 # Importing PyTest fixtures triggers F811
-"tests/*.py" = ["F811", "F401", "PLC2701"]
+"tests/*.py" = ["F811", "F401", "PLC2701", "RUF059"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["lenskit.training.TrainingOptions", "pyarrow.float32"]
