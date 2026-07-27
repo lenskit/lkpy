@@ -15,12 +15,10 @@ class DataWarning(UserWarning):
     """
 
 
-
 class DataError(Exception):
     """
     Error raised for detectable problesms with input data.
     """
-
 
 
 class FieldError(KeyError):
@@ -38,10 +36,8 @@ class ConfigWarning(UserWarning):
     """
 
 
-
 class TypecheckWarning(UserWarning):
     "Warnings for runtime type check failures."
-
 
 
 class PipelineError(Exception):
