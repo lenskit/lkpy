@@ -7,6 +7,7 @@
 # pyright: basic
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass
 from datetime import datetime
 from itertools import product
@@ -19,6 +20,7 @@ import pyarrow as pa
 from pytest import approx, mark, raises, warns
 
 from lenskit.data import Dataset, DatasetBuilder
+from lenskit.data._builder import _conform_time
 from lenskit.data.schema import AllowableTroolean
 from lenskit.diagnostics import DataError, DataWarning
 
@@ -225,3 +227,28 @@ def test_filter_ratings_readd(rng, ml_ds: Dataset):
 
     ds2 = dsb2.build()
     assert ds2.interaction_count == ml_ds.interaction_count
+
+
+def test_conform_str_nodate():
+    qt = _conform_time("2026-07-07", pa.timestamp("s"))
+    assert isinstance(qt, datetime)
+    assert qt.year == 2026
+    assert qt.day == 7
+
+
+def test_conform_int():
+    # this TS is 11:00 AM EST, Dec. 31, 2025 - it should be in 2025
+    qt = _conform_time(1767196800, pa.timestamp("s"))
+    assert isinstance(qt, datetime)
+    assert qt.year == 2025
+    assert qt.month == 12
+    assert qt.day == 31
+
+
+def test_conform_boundary():
+    # this TS is 11:00 PM EST, Dec. 31, 2025 - it should be in 2026 UTC
+    qt = _conform_time(1767240000, pa.timestamp("s"))
+    assert isinstance(qt, datetime)
+    assert qt.year == 2026
+    assert qt.month == 1
+    assert qt.day == 1

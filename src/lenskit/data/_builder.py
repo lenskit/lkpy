@@ -1213,10 +1213,15 @@ def _empty_rel_table(types: list[str]) -> pa.Table:
 def _conform_time(time: int | float | str | dt.datetime, col_type: pa.DataType):
     if isinstance(time, str):
         time = dt.datetime.fromisoformat(time)
+    elif not isinstance(time, dt.datetime):
+        time = dt.datetime.fromtimestamp(time, tz=dt.UTC)
 
     if pa.types.is_timestamp(col_type):
-        if not isinstance(time, dt.datetime):
-            return dt.datetime.fromtimestamp(time)
+        if col_type.tz is None:
+            # we assume time-zone-free data is UTC
+            return time.replace(tzinfo=None)
+        else:
+            return time
     elif isinstance(time, dt.datetime):
         return time.timestamp()
 
