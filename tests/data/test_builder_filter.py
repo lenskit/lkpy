@@ -16,6 +16,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+from matplotlib.pylab import isin
 
 from pytest import approx, mark, raises, warns
 
