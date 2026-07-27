@@ -17,8 +17,17 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 
 Third release in 2026, with more feature updates and bug fixes.
 
+.. important::
+
+    This release updates :meth:`lenskit.data.DatasetBuilder.filter_interactions` to
+    explicitly and consistently handle time zones, independent of the local time zone.
+    In some cases, such as filtering by a numeric timestamp, the previous code was
+    (incorrectly) time-zone-dependent.
+
 - Fixed bug in FlexMF's ``"misranked"`` sampler (for WARP), where it did
   not correctly continue sampling (:pr:`1121`).
+- Made time zone handling in :meth:`lenskit.data.DatasetBuilder.filter_interactions` explicit (:pr:`1162`).  This may affect
+  filter results by a few hours, because previous behavior was unspecified and time-zone-dependent.
 - Reworked type checking logic in the pipeline to fix type bugs with NumPy 2.5, and hopefully reduce brittleness (:pr:`1120`).
 - Added initial support for importing Steam user/item data
   (:py:mod:`lenskit.data.sources.steam`, :pr:`1111`).

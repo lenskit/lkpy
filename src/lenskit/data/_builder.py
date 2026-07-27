@@ -629,6 +629,11 @@ class DatasetBuilder:
         """
         Filter interactions based on timestamp or to remove particular entities.
 
+        .. versionchanged:: 2026.3
+
+            Time stamp filtering is now consistent and independent of the local
+            time zone (unless naïve date/times are passed).
+
         Args:
             cls:
                 The interaction class to filter.
@@ -645,6 +650,19 @@ class DatasetBuilder:
         tbl = self._tables[cls]
         if tbl is None:  # pragma: nocover
             raise ValueError(f"interaction class {cls} is empty")
+
+        if isinstance(min_time, dt.datetime) and min_time.tzinfo is None:  # pragma: nocover
+            warnings.warn(
+                "minimum time is naïve, result may be time-zone-dependent",
+                DataWarning,
+                stacklevel=2,
+            )
+        if isinstance(max_time, dt.datetime) and max_time.tzinfo is None:  # pragma: nocover
+            warnings.warn(
+                "maximum time is naïve, result may be time-zone-dependent",
+                DataWarning,
+                stacklevel=2,
+            )
 
         if min_time is not None or max_time is not None:
             if "timestamp" not in tbl.column_names:
