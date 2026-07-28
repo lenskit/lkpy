@@ -11,6 +11,7 @@ local linters = new Mapping<String, Step> {
   ["trailing-whitespace"] = Builtins.trailing_whitespace
   // ["check-merge-conflict"] = Builtins.check_merge_conflict
   ["check-toml"] = Builtins.taplo
+  ["clippy"] = Builtins.cargo_clippy
   ["ruff"] = Builtins.ruff
 }
 
