@@ -101,7 +101,7 @@ impl<C: IndirectHashContent> PositionLookup for IndirectHashTable<C> {
         let res = self
             .table
             .find(hash, |jr| search.compare_with_entry(0, *jr));
-        Ok(res.map(|ir| *ir))
+        Ok(res.copied())
     }
 
     fn lookup_array<'py>(&self, py: Python<'py>, val: Bound<'py, PyAny>) -> PyResult<Int32Array> {

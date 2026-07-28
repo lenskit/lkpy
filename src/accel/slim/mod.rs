@@ -55,7 +55,7 @@ pub fn register_slim(parent: &Bound<'_, PyModule>) -> PyResult<()> {
 /// This returns the **transpose** of the weight matrix, for convenient
 /// implementation.
 #[pyfunction]
-fn train_slim<'py>(
+fn train_slim(
     ui_matrix: PyArrowType<ArrayData>,
     iu_matrix: PyArrowType<ArrayData>,
     l1_reg: FP,
@@ -107,10 +107,9 @@ impl AccelTaskImpl for SLIMTask {
         task.set_cancel(IterCancel::from_adapter(&adapter));
 
         let chunks = py.detach(move || {
-            let chunks = maybe_fuse(adapter)
+            maybe_fuse(adapter)
                 .map(|i| self.compute_column(i))
-                .drive_unindexed(collector);
-            chunks
+                .drive_unindexed(collector)
         });
         let result: Vec<_> = py.detach(move || {
             chunks
@@ -154,7 +153,7 @@ impl SLIMTask {
         let mut weights = vec![0.0; self.n_items()];
         let mut resids = vec![0.0; self.n_users()];
 
-        let active = self.prep_resid_and_active(item, &i_users, &mut resids);
+        let active = self.prep_resid_and_active(item, i_users, &mut resids);
 
         // iteratively apply coordinate descent until we converge
         let n_iters = self.run_cd(item, &mut weights, &mut resids, &active);
@@ -215,8 +214,8 @@ impl SLIMTask {
             }
         }
 
-        if let Some(k) = self.options.max_nbrs {
-            if k < active.len() {
+        match self.options.max_nbrs {
+            Some(k) if k < active.len() => {
                 debug!("limiting column {} to {} active neighbors", item, k);
                 // co-rating count is the numerator of cosine, so we just need
                 // the denominators to sort the items & pick the top K.
@@ -228,6 +227,7 @@ impl SLIMTask {
                 });
                 active.resize(k, 0);
             }
+            _ => (),
         }
 
         active

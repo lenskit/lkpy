@@ -45,9 +45,9 @@ pub fn checked_array_ref<'array, T: Array + 'static>(
     )
 }
 
-pub fn checked_array<'array, E: ArrowPrimitiveType + 'static>(
+pub fn checked_array<E: ArrowPrimitiveType + 'static>(
     name: &str,
-    array: &'array dyn Array,
+    array: &dyn Array,
 ) -> PyResult<PrimitiveArray<E>> {
     if array.data_type().equals_datatype(&E::DATA_TYPE) {
         Ok(downcast_array(array))

@@ -26,6 +26,7 @@ pub struct SymmetricPairCounter {
 }
 
 impl SymmetricPairCounter {
+    #[allow(clippy::missing_transmute_annotations)]
     pub fn with_diagonal(n: usize, diagonal: bool) -> Self {
         let cap = arith_tot(n);
         SymmetricPairCounter {

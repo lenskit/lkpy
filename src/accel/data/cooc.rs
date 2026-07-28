@@ -201,10 +201,9 @@ fn count_cooc_parallel<PC: ConcurrentPairCounter>(
         let n = items.len();
 
         for i in 0..n {
-            let ri = items[i as usize];
-            for j in i..n {
-                let ci = items[j as usize];
-                counts.crecord(ri, ci);
+            let ri = items[i];
+            for ci in &items[i..n] {
+                counts.crecord(ri, *ci);
             }
         }
         cancel.advance(items.len());
@@ -239,12 +238,9 @@ fn compute_group_pointers(n_groups: usize, gvals: &[i32]) -> PyResult<Vec<usize>
 fn count_items<PC: PairCounter>(counts: &mut PC, items: &[i32]) {
     let n = items.len();
     for i in 0..n {
-        let ri = items[i as usize];
-        for j in (i + 1)..n {
-            if i != j {
-                let ci = items[j as usize];
-                counts.record(ri, ci);
-            }
+        let ri = items[i];
+        for ci in &items[(i + 1)..n] {
+            counts.record(ri, *ci);
         }
     }
 }

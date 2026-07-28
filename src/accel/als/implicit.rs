@@ -95,13 +95,13 @@ fn train_row_solve(
     let cols = matrix.row_cols(row_num);
     let vals = matrix.row_vals(row_num);
 
-    if cols.len() == 0 {
+    if cols.is_empty() {
         row_data.fill(0.0);
         return Ok(0.0);
     }
 
     let cols: Vec<_> = cols.iter().map(|c| *c as usize).collect();
-    let mut vals: Array1<_> = vals.iter().map(|f| *f).collect();
+    let mut vals: Array1<_> = vals.iter().copied().collect();
 
     let nd = row_data.len();
 

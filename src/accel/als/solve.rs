@@ -38,6 +38,7 @@ pub enum SolveError {
 
 /// Wrapper for LAPACK solver functions.
 #[derive(Clone, Copy)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct POSV {
     lapack_fn: LapackSPOSV,
 }
@@ -105,8 +106,8 @@ impl POSV {
     }
 }
 
-impl Into<PyErr> for SolveError {
-    fn into(self) -> PyErr {
-        PyRuntimeError::new_err(format!("LAPACK error: {}", self))
+impl From<SolveError> for PyErr {
+    fn from(val: SolveError) -> Self {
+        PyRuntimeError::new_err(format!("LAPACK error: {}", val))
     }
 }

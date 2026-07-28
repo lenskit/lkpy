@@ -51,7 +51,6 @@ pub fn score_explicit<'py>(
             let rv = *rv;
             let (sp, ep) = sims.extent(ri);
             for i in sp..ep {
-                let i = i as usize;
                 let ti = sims.col_inds.value(i);
                 let sim = sims.values.value(i);
 
@@ -95,7 +94,6 @@ pub fn score_implicit<'py>(
             let ri = *ri as usize;
             let (sp, ep) = sims.extent(ri);
             for i in sp..ep {
-                let i = i as usize;
                 let ti = sims.col_inds.value(i);
                 let sim = sims.values.value(i);
 
@@ -104,7 +102,7 @@ pub fn score_implicit<'py>(
             }
         }
 
-        let out = collect_items_summed(&heaps, &tgt_is, min_nbrs);
+        let out = collect_items_summed(&heaps, tgt_is, min_nbrs);
         let counts = collect_items_counts(&heaps, tgt_is);
         assert_eq!(out.len(), tgt_is.len());
 

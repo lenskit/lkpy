@@ -30,7 +30,7 @@ struct ItemSimTask {
 }
 
 #[pyfunction]
-pub fn compute_similarities<'py>(
+pub fn compute_similarities(
     ui_ratings: PyArrowType<ArrayData>,
     iu_ratings: PyArrowType<ArrayData>,
     shape: (usize, usize),
@@ -110,13 +110,12 @@ fn sim_row(
 
     // loop over the users
     for i in r_start..r_end {
-        let u = iu_mat.col_inds.value(i as usize);
-        let r = iu_mat.values.value(i as usize);
+        let u = iu_mat.col_inds.value(i);
+        let r = iu_mat.values.value(i);
 
         let (u_start, u_end) = ui_mat.extent(u as usize);
         // loop over the users' items
         for j in u_start..u_end {
-            let j = j as usize;
             let other = ui_mat.col_inds.value(j) as usize;
             if other == row {
                 continue;
@@ -138,13 +137,13 @@ fn sim_row(
         .collect();
 
     // truncate if needed
-    if let Some(limit) = save_nbrs {
-        if limit > 0 {
-            // sort by value number
-            sims.sort_by_key(|(_i, s)| Reverse(NotNan::new(*s).unwrap()));
-            sims.truncate(limit as usize);
-            sims.shrink_to_fit();
-        }
+    if let Some(limit) = save_nbrs
+        && limit > 0
+    {
+        // sort by value number
+        sims.sort_by_key(|(_i, s)| Reverse(NotNan::new(*s).unwrap()));
+        sims.truncate(limit as usize);
+        sims.shrink_to_fit();
     }
     // sort by column number
     sims.sort_by_key(|(i, _s)| *i);

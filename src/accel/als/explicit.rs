@@ -12,7 +12,6 @@ use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
 use pyo3::{IntoPyObjectExt, exceptions::PyRuntimeError, prelude::*};
 use rayon::prelude::*;
-use thiserror::Error;
 
 use rayon_cancel::CancelAdapter;
 
@@ -89,13 +88,13 @@ fn train_row_solve(
     let cols = matrix.row_cols(row_num);
     let vals = matrix.row_vals(row_num);
 
-    if cols.len() == 0 {
+    if cols.is_empty() {
         row_data.fill(0.0);
         return Ok(0.0);
     }
 
     let cols: Vec<_> = cols.iter().map(|c| *c as usize).collect();
-    let vals: Array1<_> = vals.iter().map(|f| *f).collect();
+    let vals: Array1<_> = vals.iter().copied().collect();
 
     let nd = row_data.len();
 

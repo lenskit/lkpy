@@ -50,6 +50,7 @@ pub struct CSRMatrix<Ix: OffsetSizeTrait = i32, V: ArrowPrimitiveType = Float32T
 }
 
 /// Common methods for compressed sparse row matrices.
+#[allow(clippy::upper_case_acronyms)]
 pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
     /// Get the underlying Arrow array of rows.
     fn array(&self) -> &GenericListArray<Ix>;

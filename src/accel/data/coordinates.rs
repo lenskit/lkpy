@@ -231,7 +231,7 @@ impl ChunkIndex {
 
 fn hash_entry(chunks: &[Vec<Int32Array>], ix: &ChunkIndex) -> u64 {
     let chunk = &chunks[ix.chunk_index()];
-    hash_chunk_entry(&chunk, ix.item)
+    hash_chunk_entry(chunk, ix.item)
 }
 
 fn hash_chunk_entry(chunk: &[Int32Array], ri: u32) -> u64 {

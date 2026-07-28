@@ -47,6 +47,6 @@ impl ExtractListArray for LargeListArray {
 
 impl ExtractListArray for ListArray {
     fn extract_list_array(array: &dyn Array) -> Option<Self> {
-        array.as_any().downcast_ref::<Self>().map(Clone::clone)
+        array.as_any().downcast_ref::<Self>().cloned()
     }
 }

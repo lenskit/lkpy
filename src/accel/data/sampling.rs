@@ -16,6 +16,7 @@ use crate::data::CoordinateTable;
 /// Sample negative columns for given rows from a coordinate table.
 #[pyfunction]
 #[pyo3(signature=(coords, rows, n_cols, *, n=1, max_attempts=10, pop_weighted=false, seed))]
+#[allow(clippy::too_many_arguments)]
 pub fn sample_negatives<'py>(
     py: Python<'py>,
     coords: &CoordinateTable,

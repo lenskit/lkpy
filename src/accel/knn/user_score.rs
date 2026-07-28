@@ -19,7 +19,7 @@ use crate::{
 use super::accum::{ScoreAccumulator, collect_items_averaged, collect_items_summed};
 
 #[pyfunction]
-pub fn user_score_items_explicit<'py>(
+pub fn user_score_items_explicit(
     tgt_items: PyArrowType<ArrayData>,
     nbr_rows: PyArrowType<ArrayData>,
     nbr_sims: PyArrowType<ArrayData>,
@@ -47,7 +47,6 @@ pub fn user_score_items_explicit<'py>(
     for (nbr, sim) in iter {
         let (sp, ep) = rmat.extent(nbr as usize);
         for i in sp..ep {
-            let i = i as usize;
             let item = rmat.col_inds.value(i);
             let rating = rmat.values.value(i);
             heaps[item as usize].add_value(max_nbrs, sim, rating)?;
@@ -60,7 +59,7 @@ pub fn user_score_items_explicit<'py>(
 }
 
 #[pyfunction]
-pub fn user_score_items_implicit<'py>(
+pub fn user_score_items_implicit(
     tgt_items: PyArrowType<ArrayData>,
     nbr_rows: PyArrowType<ArrayData>,
     nbr_sims: PyArrowType<ArrayData>,
@@ -88,7 +87,6 @@ pub fn user_score_items_implicit<'py>(
     for (nbr, sim) in iter {
         let (sp, ep) = rmat.extent(nbr as usize);
         for i in sp..ep {
-            let i = i as usize;
             let item = rmat.col_inds.value(i);
             heaps[item as usize].add_weight(max_nbrs, sim)?;
         }

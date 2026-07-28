@@ -22,6 +22,7 @@ pub struct DensePairCounter {
 }
 
 impl DensePairCounter {
+    #[allow(clippy::missing_transmute_annotations)]
     pub fn with_diagonal(n: usize, diagonal: bool) -> Self {
         DensePairCounter {
             n_items: n,
@@ -67,10 +68,9 @@ impl PairCounter for DensePairCounter {
         let data: Vec<f32> = unsafe { transmute(data) };
 
         let arr = Array1::from_vec(data);
-        let mat = arr
-            .into_shape_with_order((self.n_items, self.n_items))
-            .expect("array reshape failed");
-        mat
+
+        arr.into_shape_with_order((self.n_items, self.n_items))
+            .expect("array reshape failed")
     }
 }
 

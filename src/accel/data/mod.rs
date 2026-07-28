@@ -74,5 +74,5 @@ fn hash_array(arr: PyArrowType<ArrayData>) -> PyResult<String> {
         start += bsize;
     }
 
-    Ok(hex::encode(&hash.finalize()))
+    Ok(hex::encode(hash.finalize()))
 }

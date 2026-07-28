@@ -17,6 +17,7 @@ use crate::sparse::{CSR, CSRStructure, IxVar, csr_structure};
 
 /// Transpose the structure of a CSR matrix.
 #[pyfunction]
+#[allow(clippy::type_complexity)]
 pub fn transpose_csr(
     arr: PyArrowType<ArrayData>,
     permute: bool,
@@ -55,8 +56,7 @@ where
     let nnz = csr.nnz();
     let mut row_ptrs = Vec::with_capacity(csr.n_cols + 1);
     row_ptrs.resize(csr.n_cols + 1, It::Native::from(0));
-    let mut col_inds = Vec::with_capacity(nnz);
-    col_inds.resize(nnz, 0);
+    let mut col_inds = vec![0; nnz];
     let mut permutation = if permute {
         let mut p = Vec::with_capacity(nnz);
         p.resize(nnz, It::Native::from(0));

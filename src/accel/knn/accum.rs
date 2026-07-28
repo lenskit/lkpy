@@ -30,10 +30,8 @@ impl<T: Clone> ScoreAccumulator<T> {
     pub fn new_array(n: usize, active: &Int32Array) -> Vec<ScoreAccumulator<T>> {
         // create accumulators for all items, and enable the targets
         let mut heaps: Vec<ScoreAccumulator<T>> = vec![ScoreAccumulator::disabled(); n];
-        for i in active.iter() {
-            if let Some(i) = i {
-                heaps[i as usize].enable()
-            }
+        for i in active.iter().flatten() {
+            heaps[i as usize].enable()
         }
         heaps
     }
@@ -47,17 +45,13 @@ impl<T> ScoreAccumulator<T> {
 
     /// Enable a score accumulator.
     pub fn enable(&mut self) {
-        match self {
-            Self::Disabled => *self = Self::Empty,
-            _ => (),
+        if let Self::Disabled = self {
+            *self = Self::Empty
         }
     }
 
     pub fn enabled(&self) -> bool {
-        match self {
-            ScoreAccumulator::Disabled => false,
-            _ => true,
-        }
+        !matches!(self, ScoreAccumulator::Disabled)
     }
 
     pub fn len(&self) -> usize {
@@ -170,6 +164,7 @@ impl<T> PartialEq for AccEntry<T> {
 
 impl<T> Eq for AccEntry<T> {}
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl<T> PartialOrd for AccEntry<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // reverse the ordering to make a min-heap

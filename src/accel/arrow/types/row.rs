@@ -52,7 +52,7 @@ impl TryFrom<&DataType> for SparseRowType {
     type Error = ArrowError;
 
     fn try_from(value: &DataType) -> Result<Self, Self::Error> {
-        Self::try_new(&value, ())
+        Self::try_new(value, ())
     }
 }
 
@@ -126,7 +126,7 @@ impl ExtensionType for SparseRowType {
             )));
         }
 
-        let idx_f = fields.get(0).unwrap();
+        let idx_f = fields.first().unwrap();
         let idx_name = idx_f.name();
         let idx_t: SparseIndexType = idx_f.try_extension_type()?;
 

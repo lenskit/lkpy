@@ -49,7 +49,7 @@ impl TryFrom<&DataType> for SparseIndexListType {
     type Error = ArrowError;
 
     fn try_from(value: &DataType) -> Result<Self, Self::Error> {
-        Self::try_new(&value, ())
+        Self::try_new(value, ())
     }
 }
 

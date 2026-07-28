@@ -6,9 +6,9 @@
 
 //! Support for monitored accelerator tasks.
 
-use std::{panic::catch_unwind, sync::Mutex};
+use std::sync::Mutex;
 
-use pyo3::{IntoPyObjectExt, exceptions::PyRuntimeError, prelude::*, types::PyNone};
+use pyo3::{IntoPyObjectExt, prelude::*, types::PyNone};
 mod atomic;
 mod progress;
 
@@ -67,15 +67,13 @@ impl AccelTask {
         py: Python<'py>,
         pool: Option<PyRef<'py, NestedAccelPool>>,
     ) -> PyResult<Py<PyAny>> {
-        let pool = pool
-            .map(|p| {
-                let ip = p.get_pool();
-                if ip.is_none() {
-                    warn!("attempted to invoke accelerator task with shut-down thread pool")
-                }
-                ip
-            })
-            .flatten();
+        let pool = pool.and_then(|p| {
+            let ip = p.get_pool();
+            if ip.is_none() {
+                warn!("attempted to invoke accelerator task with shut-down thread pool")
+            }
+            ip
+        });
 
         if let Some(pool) = pool {
             py.detach(|| {
