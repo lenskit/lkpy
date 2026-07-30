@@ -15,6 +15,7 @@ from ._proxy import get_logger
 from ._resource import ResourceMeasurement
 from ._stopwatch import Stopwatch
 from ._tracing import Tracer, get_tracer, trace
+from ._warnings import batch_warnings
 from .progress import Progress, item_progress, set_progress_impl
 from .tasks import Task
 
@@ -27,6 +28,7 @@ __all__ = [
     "Task",
     "Tracer",
     "basic_logging",
+    "batch_warnings",
     "console",
     "friendly_duration",
     "get_logger",

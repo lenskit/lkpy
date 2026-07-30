@@ -25,6 +25,7 @@ from ._accel import update_log_level
 from ._console import ConsoleHandler, console, setup_console
 from ._processors import filter_exceptions, format_timestamp, log_warning, remove_internal
 from ._tracing import activate_tracing, lenskit_filtering_logger
+from ._warnings import collect_warnings
 
 LVL_TRACE = 5
 CORE_PROCESSORS = [
@@ -32,6 +33,8 @@ CORE_PROCESSORS = [
     structlog.stdlib.add_logger_name,
     structlog.stdlib.PositionalArgumentsFormatter(),
     structlog.processors.MaybeTimeStamper(),
+    # TODO: only do this for console, not for log files
+    collect_warnings,
 ]
 type LogFormat = Literal["json", "logfmt", "text"]
 
