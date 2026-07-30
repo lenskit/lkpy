@@ -229,6 +229,7 @@ class MeasurementCollector:
         results = {}
 
         for state in self._metrics:
+            _log.debug("accumulating metric %s", state.label)
             agg = state.accumulator.accumulate()
             _add_values(results, state.label, agg)
 
