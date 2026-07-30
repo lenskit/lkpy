@@ -299,6 +299,21 @@ def test_to_arrow():
     assert names == ["item_id", "score"]
 
 
+def test_to_arrow_with_null():
+    ilc = ItemListCollection.from_dict(
+        {
+            72: ItemList(["a"], scores=[1], widgets=[3]),
+            82: ItemList(["a", "b", "c"], scores=[3, 4, 10], widgets=[2, 2, 2]),
+            85: ItemList(ItemList(["a"], scores=[1]), widgets=None),
+        },
+        key="user_id",
+    )
+    tbl = ilc.to_arrow()
+    ic = tbl.column("items")
+    assert "widgets" in ic.type.value_type.names
+    assert pa.types.is_integer(ic.type.value_type.field("widgets").type)
+
+
 def test_to_arrow_flat():
     ilc = ItemListCollection.from_dict(
         {72: ItemList(["a"], scores=[1]), 82: ItemList(["a", "b", "c"], scores=[3, 4, 10])},
