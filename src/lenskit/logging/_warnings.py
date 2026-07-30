@@ -32,7 +32,7 @@ def collect_warnings(logger: Any, method: str, event_dict: EventDict) -> EventDi
     """
     Structlog processor that collects warnings when inside :func:`batch_warnings`.
     """
-    if method != "warn":
+    if method != "warning":
         return event_dict
 
     collector = _warning_batch.get()
@@ -48,7 +48,7 @@ def collect_warnings(logger: Any, method: str, event_dict: EventDict) -> EventDi
             batch.count += 1
             batch.last_time = event_dict["timestamp"]
             if batch.count > 1:
-                raise DropEvent
+                raise DropEvent()
 
     return event_dict
 
@@ -88,5 +88,6 @@ def _log_warning_batches(batches: Mapping[str, WarningBatch]):
         if batch.count == 1:
             continue
 
+        n = batch.count - 1
         log = get_logger(batch.logger)
-        log.warning("warning repeated %d times: %s", batch.count, batch.message, count=batch.count)
+        log.warning("warning repeated %d more times: %s", n, batch.message, count=n)
