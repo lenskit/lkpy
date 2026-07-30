@@ -33,6 +33,9 @@ from lenskit.training import Trainable, TrainingOptions
 __all__ = ["UserKNNConfig", "UserKNNScorer"]
 _log = get_logger(__name__)
 
+MISSING_HISTORY_KEY = "lenskit.knn.user.NO_HISTORY"
+MISSING_RATINGS_KEY = "lenskit.knn.user.NO_RATINGS"
+
 
 class UserKNNConfig(BaseModel, extra="forbid"):
     "Configuration for :class:`ItemKNNScorer`."
@@ -258,7 +261,11 @@ class UserKNNScorer(Component[ItemList], Trainable):
 
         if query.query_items is None:
             if index is None:
-                _log.warning("user %s has no ratings and none provided", query.user_id)
+                _log.warning(
+                    "user %s has no ratings and none provided",
+                    query.user_id,
+                    _batch=MISSING_HISTORY_KEY,
+                )
                 return None
 
             index = int(index)
@@ -280,7 +287,11 @@ class UserKNNScorer(Component[ItemList], Trainable):
             if self.config.explicit:
                 urv = query.query_items.field("rating")
                 if urv is None:
-                    _log.warning("user %s has items but no ratings", query.user_id)
+                    _log.warning(
+                        "user %s has items but no ratings",
+                        query.user_id,
+                        _batch=MISSING_RATINGS_KEY,
+                    )
                     return None
 
                 urv = np.require(urv, dtype=np.float32)
