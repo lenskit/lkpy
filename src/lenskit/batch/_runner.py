@@ -19,7 +19,7 @@ from lenskit.data import (
     QueryIDKey,
     UserIDKey,
 )
-from lenskit.logging import Stopwatch, get_logger, item_progress
+from lenskit.logging import Stopwatch, batch_warnings, get_logger, item_progress
 from lenskit.parallel import get_parallel_config, is_free_threaded
 from lenskit.pipeline import Pipeline, PipelineProfiler, ProfileSink
 
@@ -238,6 +238,7 @@ class BatchPipelineRunner:
         log.info("beginning batch run")
 
         with (
+            batch_warnings(),
             closing(self._run_results(pipeline, prof, queries.queries)) as tasks,
             item_progress("Inference", queries.count) as progress,
         ):
