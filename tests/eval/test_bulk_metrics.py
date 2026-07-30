@@ -10,7 +10,7 @@ from pytest import approx, raises
 
 from lenskit.data import ItemListCollection
 from lenskit.data._adapt import ITEM_COMPAT_COLUMN, USER_COMPAT_COLUMN
-from lenskit.metrics.basic import ListLength, TestItemCount
+from lenskit.metrics.basic import ListLength, TestItemCount, UniqueItemCount
 from lenskit.metrics.bulk import RunAnalysis
 from lenskit.metrics.predict import RMSE
 from lenskit.metrics.ranking import DCG, NDCG, RBP, Precision, RecipRank
@@ -41,6 +41,7 @@ def test_recs(demo_recs):
     bms = RunAnalysis()
     bms.add_metric(ListLength())
     bms.add_metric(TestItemCount())
+    bms.add_metric(UniqueItemCount())
     bms.add_metric(Precision())
     bms.add_metric(NDCG())
     bms.add_metric(DCG())
@@ -52,6 +53,9 @@ def test_recs(demo_recs):
     stats = metrics.list_summary()
     print(stats)
     for m in bms.collector.metric_names:
+        if m == "UniqueItemCount":
+            continue
+
         assert stats.loc[m, "mean"] == approx(scores[m].mean())
 
 

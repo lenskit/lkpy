@@ -8,7 +8,12 @@
 Basic set statistics.
 """
 
-from lenskit.data import ItemList
+from typing import override
+
+from lenskit.data import ID, ItemList
+from lenskit.data.accum import Accumulator
+from lenskit.data.types import IDSequence
+from lenskit.metrics import Metric
 
 from ._base import ListMetric
 
@@ -39,3 +44,33 @@ class TestItemCount(ListMetric):
 
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         return len(test)
+
+
+class UniqueItemCount(Metric[IDSequence, int]):
+    """
+    Count the number of unique items in the recommendation lists.
+
+    Stability:
+        Caller
+    """
+
+    def measure_list(self, recs: ItemList, test: ItemList) -> IDSequence:
+        return recs.ids()
+
+    def create_accumulator(self):
+        return UniqueItemAccumulator()
+
+
+class UniqueItemAccumulator(Accumulator):
+    _ids: set[ID]
+
+    def __init__(self):
+        self._ids = set()
+
+    @override
+    def add(self, value: IDSequence) -> None:
+        self._ids.update(value)
+
+    @override
+    def accumulate(self) -> int:
+        return len(self._ids)

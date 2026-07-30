@@ -16,7 +16,7 @@ from lenskit.data import ItemList
 from ._base import ListMetric, Metric, MetricFunction, MetricResult, MetricVal
 from ._collect import MeasurementCollector, RunMetrics
 from ._quick import quick_measure_model
-from .basic import ListLength, TestItemCount
+from .basic import ListLength, TestItemCount, UniqueItemCount
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
 from .ranking import (
@@ -71,6 +71,7 @@ __all__ = [
     "RunAnalysisResult",
     "RunMetrics",
     "TestItemCount",
+    "UniqueItemCount",
     "least_item_promoted",
     "quick_measure_model",
     "rank_biased_overlap",
