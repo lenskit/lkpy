@@ -26,6 +26,8 @@ Third release in 2026, with more feature updates and bug fixes.
 
 - Fixed bug in FlexMF's ``"misranked"`` sampler (for WARP), where it did
   not correctly continue sampling (:pr:`1121`).
+- Fixed a bug in :class:`~lenskit.data.ItemListCollection` where item lists missing
+  fields would fail to convert to Arrow (:issue:`1164`, :pr:`1165`).
 - Made time zone handling in :meth:`lenskit.data.DatasetBuilder.filter_interactions` explicit (:pr:`1162`).  This may affect
   filter results by a few hours, because previous behavior was unspecified and time-zone-dependent.
 - Upgraded to Ruff 0.16 and fixed new default lints, including upgrade lints (:pr:`1161`). This also improves the handling modern type aliases in a few places.
