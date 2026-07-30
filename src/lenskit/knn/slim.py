@@ -8,8 +8,6 @@
 Sparse LInear Methods for Recommendation :cite:p:`ningSLIMSparseLinear2011`.
 """
 
-import warnings
-
 import numpy as np
 import pyarrow as pa
 from pydantic import BaseModel, PositiveFloat, PositiveInt
@@ -18,7 +16,6 @@ from scipy.sparse import csr_array
 from lenskit._accel import slim as _slim_accel
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
-from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger, item_progress
 from lenskit.parallel import ensure_parallel_init, run_accel_task
 from lenskit.pipeline.components import Component
@@ -26,6 +23,7 @@ from lenskit.training import Trainable, TrainingOptions
 
 __all__ = ["SLIMConfig", "SLIMScorer"]
 _log = get_logger(__name__)
+MISSING_HISTORY_KEY = "lenskit.knn.slim.NO_HISTORY"
 
 
 class SLIMConfig(BaseModel):
@@ -122,8 +120,9 @@ class SLIMScorer(Component, Trainable):
 
     def __call__(self, query: RecQuery, items: ItemList) -> ItemList:
         u_items = query.query_items
+        log = _log.bind(user_id=query.user_id)
         if u_items is None:
-            warnings.warn("no user history available", DataWarning)
+            log.warning("no user history available", _batch=MISSING_HISTORY_KEY)
             return ItemList(items, scores=np.nan)
 
         if len(u_items) == 0:
