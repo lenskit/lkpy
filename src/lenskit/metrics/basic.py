@@ -10,7 +10,7 @@ Basic set statistics.
 
 from lenskit.data import ItemList
 
-from ._base import ListMetric, Metric
+from ._base import ListMetric
 
 
 class ListLength(ListMetric):
@@ -27,7 +27,7 @@ class ListLength(ListMetric):
         return len(recs)
 
 
-class TestItemCount(Metric):
+class TestItemCount(ListMetric):
     """
     Report the number of test items.
 
