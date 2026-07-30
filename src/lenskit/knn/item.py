@@ -35,6 +35,7 @@ __all__ = ["ItemKNNConfig", "ItemKNNScorer"]
 
 _log = get_logger(__name__)
 MAX_BLOCKS = 1024
+MISSING_HISTORY_KEY = "lenskit.knn.item.NO_HISTORY"
 
 
 class ItemKNNConfig(BaseModel, extra="forbid"):
@@ -237,7 +238,9 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         ratings = query.query_items
         if ratings is None or len(ratings) == 0:
             if ratings is None:
-                warnings.warn("no query items, did you omit a history component?", DataWarning)
+                log.warning(
+                    "no query items, did you omit a history component?", _batch=MISSING_HISTORY_KEY
+                )
             log.debug("user has no history, returning")
             return ItemList(items, scores=np.nan)
 
