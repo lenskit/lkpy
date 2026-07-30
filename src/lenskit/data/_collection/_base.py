@@ -453,11 +453,16 @@ class ItemListCollection(ABC, Generic[KL_co]):  # ruff: ignore[non-pep695-generi
         else:
             schema = pa.schema(columns)
 
+        il_type = pa.struct(list(schema))  # type: ignore
+        item_type = pa.list_(il_type)
+
         for batch in batched(self.items(), batch_size):
             keys = pa.Table.from_pylist([key_dict(k) for (k, _il) in batch])
-            item_type = pa.list_(pa.struct(list(schema)))  # type: ignore
+
             col_elts = [
-                il.to_arrow(ids=True, numbers=False, type="array", columns=schema.names)
+                il.to_arrow(ids=True, numbers=False, type="array", columns=schema.names).cast(
+                    il_type
+                )
                 for (_k, il) in batch
             ]
             col = pa.array(col_elts, item_type)
