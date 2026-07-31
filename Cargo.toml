@@ -3,17 +3,17 @@
 name = "lenskit"
 version = "2026.3.0-beta2"
 edition = "2024"
-license = "MIT"
 rust-version = "1.89"
+license = "MIT"
 
 [lib]
+crate-type = ["cdylib"]
 name = "lenskit_accel"
 path = "src/accel/lib.rs"
-crate-type = ["cdylib"]
 
 [dependencies]
 log = { version = "^0.4", features = ["release_max_level_debug", "serde"] }
-pyo3 = { version = "^0.29", features = ["extension-module", "abi3-py312"] }
+pyo3 = { version = "^0.29", features = ["abi3-py312", "extension-module"] }
 thiserror = "^2"
 
 arc-swap = "^1.9"
@@ -33,7 +33,7 @@ peg = "^0.8"
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "^1.0"
 
-arrow = { version = "^59", features = ["pyarrow"], default-features = false }
+arrow = { version = "^59", default-features = false, features = ["pyarrow"] }
 arrow-schema = { version = "^59", features = ["serde"] }
 ndarray = { version = "^0.17", features = ["rayon"] }
 numpy = "^0.29"
@@ -42,10 +42,10 @@ numpy = "^0.29"
 ntest = "^0.9"
 
 [profile.dev]
-lto = "thin"
 opt-level = 2
 debug-assertions = true
+lto = "thin"
 
 [profile.release]
-lto = true
 debug = "line-tables-only"
+lto = true
