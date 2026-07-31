@@ -10,7 +10,7 @@ local linters = new Mapping<String, Step> {
   ["mixed-line-ending"] = Builtins.mixed_line_ending
   ["trailing-whitespace"] = Builtins.trailing_whitespace
   // ["check-merge-conflict"] = Builtins.check_merge_conflict
-  ["check-toml"] = Builtins.taplo
+  ["check-toml"] = Builtins.tombi
   ["clippy"] = Builtins.cargo_clippy
   ["ruff"] = Builtins.ruff
 }
@@ -19,9 +19,9 @@ local formatters = new Mapping<String, Step> {
   ["format-python"] = Builtins.ruff_format
   ["format-rust"] = Builtins.rustfmt
   ["format-yaml"] = Builtins.yamlfmt
-  ["format-toml"] = Builtins.taplo_format
+  ["format-toml"] = Builtins.tombi_format
   ["dprint"] = (Builtins.dprint) {
-    glob = Regex(#"(.*\.toml$|.*\.json$)"#)
+    glob = Regex(#"(.*\.json$)"#)
   }
   ["license-headers"] {
     glob = Regex(#"(.*\.py$|.*\.rs$)"#)
