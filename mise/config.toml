@@ -8,7 +8,6 @@ perl = { version = "latest", os = ["linux", "macos"] }
 hk = "latest"
 pkl = "latest"
 taplo = "latest"
-dprint = "latest"
 yamlfmt = "latest"
 ruff = "latest"
 

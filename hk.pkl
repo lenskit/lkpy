@@ -20,9 +20,6 @@ local formatters = new Mapping<String, Step> {
   ["format-rust"] = Builtins.rustfmt
   ["format-yaml"] = Builtins.yamlfmt
   ["format-toml"] = Builtins.tombi_format
-  ["dprint"] = (Builtins.dprint) {
-    glob = Regex(#"(.*\.json$)"#)
-  }
   ["license-headers"] {
     glob = Regex(#"(.*\.py$|.*\.rs$)"#)
     check = "uv run utils/update-headers.py --check-only {{ files }}"
