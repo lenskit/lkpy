@@ -35,6 +35,18 @@ aggregation (see :ref:`eval-collection` for more details).
     The top-N accuracy metric interface has changed to use item lists, and to
     be simpler to implement.
 
+Descriptive Metrics
+~~~~~~~~~~~~~~~~~~~
+
+These metrics provide basic descriptive statistics of the recommendations and evaluation.
+
+.. autoapisummary::
+    :nosignatures:
+
+    lenskit.metrics.ListLength
+    lenskit.metrics.TestItemCount
+    lenskit.metrics.UniqueItemCount
+
 Included Effectiveness Metrics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -67,7 +79,7 @@ or graded relevance scores).
     lenskit.metrics.DCG
 
 Beyond Accuracy
----------------
+~~~~~~~~~~~~~~~
 
 These metrics measure **non-accuracy** properties of recommendation lists, such
 as popularity/obscurity or diversity.
@@ -77,3 +89,5 @@ as popularity/obscurity or diversity.
     :nosignatures:
 
     lenskit.metrics.MeanPopRank
+    lenskit.metrics.ListGini
+    lenskit.metrics.ExposureGini
