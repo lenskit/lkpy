@@ -169,7 +169,7 @@ class DatasetBuilder:
         name: str,
         entities: RelationshipEntities,
         allow_repeats: bool = True,
-        interaction: bool = False,
+        interaction: bool | Literal["default"] = False,
     ) -> None:
         """
         Add a relationship class to the dataset.  This usually doesn't need to
@@ -198,7 +198,8 @@ class DatasetBuilder:
                 Whether repeated records for the same combination of entities
                 are allowed.
             interaction:
-                Whether this is an interaction relationship.
+                Whether this is an interaction relationship.  The string ``"default"``
+                marks this as the default interaction relationship.
         """
         if name in self._tables:
             raise ValueError(f"relationship class name “{name}” already defined")
@@ -221,9 +222,12 @@ class DatasetBuilder:
 
         self.schema.relationships[name] = RelationshipSchema(
             entities=e_dict,
-            interaction=interaction,
+            interaction=bool(interaction),
             repeats=AllowableTroolean.ALLOWED if allow_repeats else AllowableTroolean.FORBIDDEN,
         )
+        if interaction == "default":
+            self.schema.default_interaction = name
+
         self._tables[name] = _empty_rel_table(enames)
 
     @overload
@@ -443,10 +447,8 @@ class DatasetBuilder:
                 cls,
                 entities,
                 allow_repeats=allow_repeats,
-                interaction=bool(interaction),
+                interaction=interaction,
             )
-            if interaction == "default":
-                self.schema.default_interaction = cls
             rc_def = self.schema.relationships[cls]
 
         # FIXME: remove this segment when we can make it work
