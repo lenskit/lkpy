@@ -94,7 +94,7 @@ def load_steam(*files: Path, reviews: bool = False) -> Dataset:
         return _load_au_steam(au_interactions, au_reviews if reviews else None)
 
     elif all_reviews is not None:
-        _log.debug("looking for full-data inteactions")
+        _log.debug("looking for full-data interactions")
         if au_reviews is not None:
             _log.error("cannot specify both Australian and overall input files")
             raise DataError("invalid combination of Steam input files")
