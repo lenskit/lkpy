@@ -154,7 +154,16 @@ def _load_au_steam(interactions: Path, reviews: Path | None) -> Dataset:
         assert isinstance(chunk.values, pa.StructArray)
         chunk_item_ids = chunk.values.field("item_id")
         assert len(chunk_user_ids) == len(chunk_item_ids)
-        chunk_tbl = pa.table({"user_id": chunk_user_ids, "item_id": chunk_item_ids})
+        chunk_playtime = chunk.values.field("playtime_forever")
+        chunk_playtime2 = chunk.values.field("playtime_2weeks")
+        chunk_tbl = pa.table(
+            {
+                "user_id": chunk_user_ids,
+                "item_id": chunk_item_ids,
+                "playtime": chunk_playtime,
+                "playtime_2weeks": chunk_playtime2,
+            }
+        )
         _log.debug("adding %d interactions", chunk_tbl.num_rows)
         dsb.add_interactions("plays", chunk_tbl, missing="error")
 
