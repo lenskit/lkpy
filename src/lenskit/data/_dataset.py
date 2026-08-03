@@ -43,7 +43,7 @@ _log = get_logger(__name__)
 type ACTION_FIELDS = Literal["ratings", "timestamps"] | str
 
 
-def _uses_data(func):
+def _uses_data[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """
     Decorator to make sure the data is loaded.
     """
