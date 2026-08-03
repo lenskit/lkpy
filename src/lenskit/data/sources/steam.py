@@ -142,7 +142,21 @@ def _load_au_steam(interactions: Path, reviews: Path | None) -> Dataset:
     dsb.add_entities("user", users)
 
     _log.info("adding user-item interactions")
-    # TODO: make DSB work better with CSR-shaped data
+    dsb.add_relationship_class(
+        "plays", ["user", "item"], allow_repeats=False, interaction="default"
+    )
+    for chunk in items.chunks:
+        assert isinstance(chunk, pa.ListArray)
+        # get the user that goes with each (nested) list element
+        chunk_user_nums = pc.list_parent_indices(chunk)
+        chunk_user_ids = ui_data.column("steam_id").take(chunk_user_nums)
+        # get the item IDs
+        assert isinstance(chunk.values, pa.StructArray)
+        chunk_item_ids = chunk.values.field("item_id")
+        assert len(chunk_user_ids) == len(chunk_item_ids)
+        chunk_tbl = pa.table({"user_id": chunk_user_ids, "item_id": chunk_item_ids})
+        _log.debug("adding %d interactions", chunk_tbl.num_rows)
+        dsb.add_interactions("plays", chunk_tbl, missing="error")
 
     return dsb.build()
 
