@@ -45,6 +45,7 @@ fixed issues and merged PRs is on `milestone 2026.3`_.
 - Expose batch inference results as a row-by-row iterator (:pr:`1128`).
 - Certain per-request warnings in batch inference are now aggregated (:issue:`1113`, :pr:`1168`).
 - Added :class:`lenskit.metrics.UniqueItemCount` (:issue:`1005`, :pr:`1169`).
+- Added support for ``interaction="default"`` to :meth:`~lenskit.data.DatasetBuilder.add_relationship_class` (:pr:`1174`).
 
 .. _milestone 2026.3: https://github.com/lenskit/lkpy/milestone/28?closed=1
 
