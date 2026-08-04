@@ -1,0 +1,23 @@
+when:
+  - event: push
+    branch: main
+  - event: pull_request
+
+labels:
+  backend: docker
+
+steps:
+  - name: build and run data tests
+    image: codeberg.org/mdekstrand/woodpecker-mise:v1-f44-dev
+    pull: true
+    settings:
+      task: test --coverage -m realdata
+      mise-env: ci
+
+  - name: upload code coverage
+    image: woodpeckerci/plugin-codecov
+    settings:
+      files:
+        - coverage.xml
+      token:
+        from_secret: codecov-token
