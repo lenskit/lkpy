@@ -1,0 +1,5 @@
+[settings]
+disable_tools = ["pkl", "perl"]
+
+[settings.python]
+uv_venv_auto = "source"

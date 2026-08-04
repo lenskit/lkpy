@@ -12,12 +12,15 @@ yamlfmt = "latest"
 ruff = "latest"
 
 [settings]
+experimental = true
 idiomatic_version_file_enable_tools = ["rust"]
 github.github_attestations = false
 aqua.github_attestations = false
 
 [settings.python]
 # uv_venv_auto = "source"
+
+[deps.uv]
 
 [env]
 HK_MISE = 1
