@@ -11,7 +11,7 @@ steps:
     image: codeberg.org/mdekstrand/woodpecker-mise:v1-f44-dev
     pull: true
     settings:
-      task: test --coverage -m realdata
+      task: "ci:prepare ::: test --coverage -m realdata"
       mise-env: ci
 
   - name: upload code coverage

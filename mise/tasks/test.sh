@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Run tests"
+#MISE wait_for=["ci:prepare"]
 #USAGE flag "--coverage" help="Run tests with coverage."
 #USAGE flag "--accel-coverage" help="Run tests with Rust accelerator coverage."
 #USAGE flag "--slow" help="Include slow tests."
