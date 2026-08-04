@@ -23,4 +23,8 @@ aqua.github_attestations = false
 HK_MISE = 1
 
 [hooks]
-postinstall = "hk install"
+postinstall = '''
+if [ -z "$CI" ]; then
+  hk install
+fi
+'''
