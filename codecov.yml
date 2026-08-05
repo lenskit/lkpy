@@ -2,6 +2,7 @@ codecov:
   notify:
     after_n_builds: 10
     wait_for_ci: true
+  token: ab58c9cf-25b8-4283-a485-0b6382dc9a61
 ignore:
   - build*.py
   - build-tools/*
