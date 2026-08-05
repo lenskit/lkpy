@@ -50,15 +50,7 @@ jobs:
 
       - name: Download datasets
         run: |
-          lenskit data fetch -D data --movielens ml-100k ml-1m ml-10m
-          lenskit data fetch -D data/az23 --amazon --core Video_Games
-          lenskit data fetch -D data/az18 --amazon --edition 2018 Video_Games
-          lenskit data fetch -D data/az14 --amazon --edition 2014 Video_Games
-          lenskit data fetch --ms-web
-          if [[ ! -f data/australian_users_items.json.gz ]]; then
-            curl -fsL -o data/australian_users_items.json.gz.tmp https://mcauleylab.ucsd.edu/public_datasets/data/steam/australian_users_items.json.gz
-            mv data/australian_users_items.json.gz.tmp data/australian_users_items.json.gz
-          fi
+          lenskit data fetch -D data --movielens ml-100k
 
       - name: Run Eval Tests
         run: |
@@ -103,15 +95,7 @@ jobs:
 
       - name: Download datasets
         run: |
-          coverage run -a --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-20m ml-1m ml-10m
-          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az23 --amazon --core Video_Games
-          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az18 --amazon --edition 2018 Video_Games
-          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az14 --amazon --edition 2014 Video_Games
-          coverage run -a --source=src/lenskit -m lenskit data fetch --ms-web
-          if [[ ! -f data/australian_users_items.json.gz ]]; then
-            curl -fsL -o data/australian_users_items.json.gz.tmp https://mcauleylab.ucsd.edu/public_datasets/data/steam/australian_users_items.json.gz
-            mv data/australian_users_items.json.gz.tmp data/australian_users_items.json.gz
-          fi
+          coverage run -a --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k
 
       - name: 🕺🏻 Test LensKit CLI
         run: |
