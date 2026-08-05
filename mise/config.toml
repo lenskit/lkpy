@@ -2,6 +2,7 @@
 rust = "stable"
 usage = "latest"
 uv = "latest"
+jq = "latest"
 shfmt = "latest"
 tombi = "latest"
 perl = { version = "latest", os = ["linux", "macos"] }
