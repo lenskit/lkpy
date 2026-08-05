@@ -1,3 +1,8 @@
+> [!NOTE]
+> The following license applies to the LensKit source code. The data sets
+> under `data/` have their own terms, described in their respective README
+> files.
+
 Copyright (c) 2018–2023 Boise State University
 Copyright (c) 2023-2026 Drexel University and contributors
 
