@@ -46,6 +46,9 @@ fixed issues and merged PRs is on `milestone 2026.3`_.
 - Certain per-request warnings in batch inference are now aggregated (:issue:`1113`, :pr:`1168`).
 - Added :class:`lenskit.metrics.UniqueItemCount` (:issue:`1005`, :pr:`1169`).
 - Added support for ``interaction="default"`` to :meth:`~lenskit.data.DatasetBuilder.add_relationship_class` (:pr:`1174`).
+- Added :class:`lenskit.metrics.IPSRBP`, an IPS-weighted rank-biased precision
+  for missing-not-at-random implicit feedback, along with the propensity models
+  it uses (:issue:`1155`).
 
 .. _milestone 2026.3: https://github.com/lenskit/lkpy/milestone/28?closed=1
 
