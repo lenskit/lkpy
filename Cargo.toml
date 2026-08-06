@@ -1,7 +1,7 @@
 # :tombi toml-version = "v1.0.0
 [package]
 name = "lenskit"
-version = "2026.3.0-beta2"
+version = "2026.3.0"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT"
