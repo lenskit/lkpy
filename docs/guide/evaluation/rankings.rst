@@ -75,8 +75,36 @@ or graded relevance scores).
 
     lenskit.metrics.RecipRank
     lenskit.metrics.RBP
+    lenskit.metrics.IPSRBP
     lenskit.metrics.NDCG
     lenskit.metrics.DCG
+
+Unbiased Evaluation
+-------------------
+
+Logged implicit feedback is missing-not-at-random: popular items are more likely
+to be presented, and therefore more likely to be interacted with, so metrics
+measured over such a log reward accuracy on popular items more than accuracy on
+long-tail ones :cite:p:`yangUnbiasedOfflineRecommender2018`.
+:class:`~lenskit.metrics.IPSRBP` corrects for this with inverse propensity
+scoring, weighting each observed relevant item by the inverse of its propensity
+to be observed.
+
+Propensities are supplied by a :class:`~lenskit.metrics.PropensityModel`.
+:class:`~lenskit.metrics.PopularityPropensity` estimates them from item
+popularity in the training data, and
+:func:`~lenskit.metrics.estimate_power_law_gamma` fits its exponent from a set
+of recommendations::
+
+    propensity = PopularityPropensity(split.train, gamma=1.87)
+    mc.add_metric(RBP(n=10))
+    mc.add_metric(IPSRBP(n=10, propensity=propensity))
+
+Estimate propensities from the training data, not from the test data being
+measured: the unbiasedness argument holds them fixed with respect to the
+observations they weight.
+
+.. versionadded:: 2026.3
 
 Beyond Accuracy
 ~~~~~~~~~~~~~~~
