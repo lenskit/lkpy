@@ -37,6 +37,9 @@ def main():
         _log.error("LensKit command failed", exc_info=e)
         sys.exit(3)
 
+    _log.info("If you use LensKit in published research, please cite the CIKM 2020 paper.")
+    _log.info("See https://lenskit.org/research/ for citation details.")
+
     if isinstance(ec, int):
         sys.exit(ec)
 
