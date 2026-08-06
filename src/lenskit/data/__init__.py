@@ -37,6 +37,7 @@ from ._vocab import Vocabulary
 from .msweb import load_ms_web
 from .sources.amazon import load_amazon_ratings
 from .sources.movielens import load_movielens, load_movielens_df
+from .sources.steam import load_steam
 from .types import ID, NPID, FeedbackType
 
 __all__ = [
@@ -71,5 +72,6 @@ __all__ = [
     "load_movielens",
     "load_movielens_df",
     "load_ms_web",
+    "load_steam",
     "unflatten_dict",
 ]
