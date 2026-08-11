@@ -38,7 +38,7 @@ def test_sort_floats(arr):
 
 @given(
     nph.arrays(
-        nph.integer_dtypes(endianness="="),
+        st.one_of(nph.integer_dtypes(endianness="="), nph.unsigned_integer_dtypes(endianness="=")),
         nph.array_shapes(max_dims=1),
         elements={"allow_nan": False, "allow_infinity": False},
     )
