@@ -21,6 +21,7 @@ from lenskit._accel import data
     nph.arrays(
         st.one_of(
             nph.integer_dtypes(endianness="="),
+            nph.unsigned_integer_dtypes(endianness="="),
             nph.floating_dtypes(endianness="=", sizes=(16, 32, 64)),
         ),
         nph.array_shapes(max_dims=1),
