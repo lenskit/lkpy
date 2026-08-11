@@ -60,7 +60,6 @@ done
 
 if [[ $usage_coverage = true ]]; then
     coverage report
-    coverage xml
 fi
 
 exec prove "${taps[@]}"
