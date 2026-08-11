@@ -114,7 +114,7 @@ jobs:
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
-          mise run test -- --coverage --accel-coverage -- --log-file=test.log
+          mise run test -- --coverage --accel-coverage -- --log-level=debug
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0
