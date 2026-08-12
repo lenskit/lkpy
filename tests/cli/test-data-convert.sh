@@ -20,3 +20,11 @@ if [[ -f data/anonymous-msweb.data.gz ]]; then
 else
     skip 3
 fi
+
+if [[ -f data/az23/Video_Games.csv.gz ]]; then
+    run-lenskit data convert --amazon data/az23/Video_Games.csv.gz "$TEST_WORK/az23-games"
+    require -d "$TEST_WORK/az23-games"
+    require -f "$TEST_WORK/az23-games/schema.json"
+else
+    skip 3
+fi
