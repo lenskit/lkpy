@@ -12,6 +12,7 @@ import pyarrow as pa
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given
+from pytest import raises
 
 from lenskit._accel import data
 
@@ -82,3 +83,15 @@ def test_scatter_dst_size(hd: st.DataObject, size, idx_t: np.dtype):
     arr = arr_a.to_numpy(zero_copy_only=False)
 
     assert np.array_equal(arr[idx], src, equal_nan=True)
+
+
+def test_scatter_rejects_strings():
+    strings = pa.array(["a", "b", "c", "x", "9", "0", "3", "@"])
+    with raises(TypeError):
+        data.scatter_array(strings, pa.array([2, 7, 0]), strings)
+
+
+def test_scatter_empty_rejects_strings():
+    strings = pa.array(["a", "b", "c", "x", "9", "0", "3", "@"])
+    with raises(TypeError):
+        data.scatter_array_empty(100, pa.array([2, 7, 0]), strings)

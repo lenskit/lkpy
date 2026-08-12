@@ -10,7 +10,7 @@ import pyarrow as pa
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given
-from pytest import mark
+from pytest import mark, raises
 
 from lenskit._accel import data
 
@@ -209,3 +209,9 @@ def test_topn_any_float(arr, n):
         mask[np.isnan(arr)] = False
         nopes = arr[mask]
         assert np.all(nopes <= np.min(items))
+
+
+def test_topn_rejects_strings():
+    strings = pa.array(["a", "b", "c", "x", "9", "0", "3", "@"])
+    with raises(TypeError):
+        data.argtopn(strings, 5)
