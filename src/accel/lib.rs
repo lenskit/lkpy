@@ -3,7 +3,7 @@
 // Copyright (C) 2023-2026 Drexel University.
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
-
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
 mod als;

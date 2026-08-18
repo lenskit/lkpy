@@ -16,6 +16,7 @@ from numpy.random import Generator, default_rng
 from hypothesis import settings
 from pytest import fixture, register_assert_rewrite, skip
 
+from lenskit.logging._accel import update_log_level  # ruff: ignore[import-private-name]
 from lenskit.parallel import ensure_parallel_init
 from lenskit.random import init_global_rng
 
@@ -105,3 +106,4 @@ def pytest_collection_modifyitems(items):
 
 settings.register_profile("default", deadline=1000)
 ensure_parallel_init()
+update_log_level()

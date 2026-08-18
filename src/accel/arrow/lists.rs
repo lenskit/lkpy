@@ -28,9 +28,9 @@ impl ExtractListArray for LargeListArray {
         if let Some(arr) = any.downcast_ref::<LargeListArray>() {
             Some(arr.clone())
         } else if let Some(arr) = any.downcast_ref::<ListArray>() {
-            info!("converting type {}", arr.data_type());
+            debug!("converting type {}", arr.data_type());
             let (field, offsets, values, nulls) = arr.clone().into_parts();
-            info!("field: {}", field);
+            debug!("field: {}", field);
             // convert offsets into Int64
             let offsets: Vec<_> = offsets.iter().map(|o| *o as i64).collect();
             let offsets = ScalarBuffer::from(offsets);
