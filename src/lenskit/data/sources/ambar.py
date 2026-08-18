@@ -24,9 +24,11 @@ _log = get_logger(__name__)
 
 
 def _read_table(path: Path, **convert_kwargs) -> pa.Table:
-    with xopen(path, "rb") as f:
-        with open_csv(f, convert_options=ConvertOptions(**convert_kwargs)) as reader:
-            return pa.Table.from_batches(reader, schema=reader.schema)
+    with (
+        xopen(path, "rb") as f,
+        open_csv(f, convert_options=ConvertOptions(**convert_kwargs)) as reader,
+    ):
+        return pa.Table.from_batches(reader, schema=reader.schema)
 
 
 def load_ambar(path: Path | str | PathLike[str]) -> Dataset:
