@@ -23,6 +23,7 @@ _log = get_logger(__name__)
 @click.option("--movielens", "format", flag_value="movielens", help="Describe MovieLens data.")
 @click.option("--amazon", "format", flag_value="amazon", help="Describe Amazon rating data.")
 @click.option("--steam", "format", flag_value="steam", help="Describe Steam interaction data.")
+@click.option("--ambar", "format", flag_value="ambar", help="Describe AMBAR music data.")
 @click.option("--markdown", is_flag=True, help="output raw Markdown")
 @click.argument("path", type=Path, nargs=-1, required=True)
 def describe(format: str | None, markdown: bool, path: list[Path]):
@@ -54,6 +55,11 @@ def describe(format: str | None, markdown: bool, path: list[Path]):
 
             log.info("loading Steam data")
             data = load_steam(*path)
+        case "ambar":
+            from lenskit.data.sources.ambar import load_ambar
+
+            log.info("loading AMBAR data")
+            data = load_ambar(path[0])
         case _:
             raise ValueError(f"unknown data format {format}")
 
