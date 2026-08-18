@@ -54,7 +54,7 @@ def recommend(
     if items is not None and not isinstance(items, ItemList):
         items = ItemList(items)
     res = pipeline.run(node, query=query, n=n, items=items, _profile=profiler)
-    if not isinstance(res, ItemList):
+    if not isinstance(res, ItemList):  # pragma: nocover
         raise TypeError("recommender pipeline did not return an item list")
 
     return res
@@ -93,7 +93,7 @@ def score(
     if items is not None and not isinstance(items, ItemList):
         items = ItemList(items)
     res = pipeline.run(node, query=query, items=items, _profile=profiler)
-    if not isinstance(res, ItemList):
+    if not isinstance(res, ItemList):  # pragma: nocover
         raise TypeError("scorer pipeline did not return an item list")
 
     return res

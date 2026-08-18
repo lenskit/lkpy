@@ -18,7 +18,7 @@ import numpy as np
 
 import hypothesis.strategies as st
 
-from ._arrays import coo_arrays, scored_lists, sparse_arrays, sparse_tensors
+from ._arrays import coo_arrays, scored_lists, sparse_arrays
 from ._components import BasicComponentTests, ScorerTests
 from ._movielens import (
     DemoRecs,
@@ -52,7 +52,6 @@ __all__ = [
     "scored_lists",
     "set_env_var",
     "sparse_arrays",
-    "sparse_tensors",
 ]
 
 

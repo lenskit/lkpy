@@ -41,6 +41,9 @@ numpy = "^0.29"
 [dev-dependencies]
 ntest = "^0.9"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage_nightly)"] }
+
 [profile.dev]
 opt-level = 2
 debug-assertions = true

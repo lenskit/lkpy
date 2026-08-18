@@ -37,8 +37,16 @@ def dense_cooc(
     *,
     diagonal: bool = True,
 ) -> AccelTask[np.ndarray[tuple[int, int], np.dtype[np.float32]]]: ...
-def scatter_array(dst: _A, idx: pa.Array, src: _A) -> _A: ...
-def scatter_array_empty(dst_size: int, idx: pa.Array, src: _A) -> _A: ...
+def scatter_array(dst: _A, idx: pa.Array, src: _A) -> _A:
+    """
+    Create a new array merging a base array with the scattered content of a second array.
+    """
+
+def scatter_array_empty(dst_size: int, idx: pa.Array, src: _A) -> _A:
+    """
+    Scatter array elements into a new, otherwise-empty array.
+    """
+
 def sample_negatives(
     coords: CoordinateTable,
     rows: np.ndarray[tuple[int], np.dtype[np.int32]],
