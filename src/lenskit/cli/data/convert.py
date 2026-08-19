@@ -18,6 +18,7 @@ _log = get_logger(__name__)
 @click.option("--amazon", "format", flag_value="amazon", help="Convert Amazon rating data.")
 @click.option("--ms-web", "format", flag_value="ms-web", help="Convert MSWeb visit logs.")
 @click.option("--steam", "format", flag_value="steam", help="Convert Steam interaction data")
+@click.option("--ambar", "format", flag_value="ambar", help="Convert AMBAR music data.")
 @click.option(
     "--item-lists", is_flag=True, help="Convert to an ItemListCollection instead of Dataset."
 )
@@ -66,6 +67,10 @@ def convert(
             from lenskit.data.sources.steam import load_steam
 
             data = load_steam(src[0])
+        case "ambar":
+            from lenskit.data.sources.ambar import load_ambar
+
+            data = load_ambar(src[0])
         case _:
             raise ValueError(f"unknown data format {format}")
 

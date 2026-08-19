@@ -28,3 +28,11 @@ if [[ -f data/az23/Video_Games.csv.gz ]]; then
 else
     skip 3
 fi
+
+if [[ -d data/ambar ]]; then
+    run-lenskit data convert --ambar data/ambar "$TEST_WORK/ambar-data"
+    require -d "$TEST_WORK/ambar-data"
+    require -f "$TEST_WORK/ambar-data/schema.json"
+else
+    skip 3
+fi

@@ -40,7 +40,7 @@ def load_ambar(path: Path | str | PathLike[str]) -> Dataset:
     derived from quintiles of each user's listening-history playcounts.
 
     The dataset directory is expected to contain four files:
-    ``user_info.csv``, ``tracks_info.csv``, ``artists_info.csv``, and
+    ``users_info.csv``, ``tracks_info.csv``, ``artists_info.csv``, and
     ``ratings_info.csv``.
 
     Args:
@@ -56,7 +56,7 @@ def load_ambar(path: Path | str | PathLike[str]) -> Dataset:
     dsb = DatasetBuilder("ambar")
 
     log.debug("reading user info")
-    users = _read_table(path / "user_info.csv", column_types={"user_id": pa.int64()})
+    users = _read_table(path / "users_info.csv", column_types={"user_id": pa.int64()})
     dsb.add_entities("user", users)
 
     log.debug("reading artist info")
