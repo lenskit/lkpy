@@ -39,7 +39,6 @@ def test_ambar():
 @mark.skipif(not AMBAR_DIR.exists(), reason="input data does not exist")
 @mark.realdata
 def test_ambar_artist_attribute():
-    tracks = pd.read_csv(TRACKS_FILE)
     data = load_ambar(AMBAR_DIR)
 
     items = data.entities("item")
