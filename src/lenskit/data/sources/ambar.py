@@ -31,6 +31,22 @@ def _read_table(path: Path, **convert_kwargs) -> pa.Table:
         return pa.Table.from_batches(reader, schema=reader.schema)
 
 
+def _clean_user_duplicates(users: pa.Table) -> pa.Table:
+    df = users.to_pandas()
+
+    # exact duplicate rows collapse to one
+    df = df.drop_duplicates()
+
+    # still duplicated on user_id has a conflict
+    conflict_mask = df["user_id"].duplicated(keep=False)
+    n_conflicts = df.loc[conflict_mask, "user_id"].nunique()
+    if n_conflicts:
+        _log.warning("dropping %d users with conflicting duplicate records", n_conflicts)
+        df = df[~conflict_mask]
+
+    return pa.Table.from_pandas(df, preserve_index=False)
+
+
 def load_ambar(path: Path | str | PathLike[str]) -> Dataset:
     """
     Load the AMBAR music dataset.
@@ -57,6 +73,7 @@ def load_ambar(path: Path | str | PathLike[str]) -> Dataset:
 
     log.debug("reading user info")
     users = _read_table(path / "users_info.csv", column_types={"user_id": pa.int64()})
+    users = _clean_user_duplicates(users)
     dsb.add_entities("user", users)
 
     log.debug("reading artist info")
@@ -86,7 +103,7 @@ def load_ambar(path: Path | str | PathLike[str]) -> Dataset:
     )
     ratings = ratings.rename_columns(["user_id", "item_id", "rating"])
 
-    dsb.add_interactions("rating", ratings, entities=["user", "item"], missing="insert")
+    dsb.add_interactions("rating", ratings, entities=["user", "item"], missing="error")
 
     log.info(
         "loaded AMBAR data",
