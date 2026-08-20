@@ -1,0 +1,26 @@
+when:
+  - event: push
+    branch: main
+  - event: pull_request
+  - event: manual
+
+labels:
+  backend: docker
+  gpu: cuda
+
+steps:
+  - name: build and run tests
+    image: codeberg.org/mdekstrand/woodpecker-mise:v1-f44-dev
+    pull: true
+    settings:
+      task: "ci:cuda-tests"
+      mise-env: ci
+      mise-deps: no
+
+  - name: upload code coverage
+    image: woodpeckerci/plugin-codecov
+    settings:
+      files:
+        - coverage.xml
+      token:
+        from_secret: codecov-token
