@@ -116,6 +116,8 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.model.train(True)
 
         if options.torch_compilation_enabled():
+            from torch._inductor.exc import InductorError  # ruff: ignore[import-private-name]
+
             try:
                 self._compiled_model = torch.compile(self.model)
             except RuntimeError as e:
@@ -128,6 +130,12 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
                     )
                 else:
                     raise e
+            except InductorError as e:
+                _log.warn(
+                    "Torch compilation failed, using uncompiled model",
+                    exc_info=e,
+                    err_code="LKW-TCOMP",
+                )
 
         self.setup_optimizer()
 
