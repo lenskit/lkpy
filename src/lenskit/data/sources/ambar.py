@@ -103,14 +103,8 @@ def load_ambar(path: Path | str | PathLike[str]) -> Dataset:
     )
     ratings = ratings.rename_columns(["user_id", "item_id", "rating"])
 
-    # user_ids that appear in ratings but have no users_info record at all
-    valid_user_ids = set(users.column("user_id").to_pylist())
-    ratings_df = ratings.to_pandas()
-    ratings_df = ratings_df[ratings_df["user_id"].isin(valid_user_ids)]
-    ratings = pa.Table.from_pandas(ratings_df, preserve_index=False)
-
     dsb.add_interactions(
-        "rating", ratings, entities=["user", "item"], missing="error", allow_repeats=True
+        "rating", ratings, entities=["user", "item"], missing="insert", allow_repeats=True
     )
 
     log.info(
