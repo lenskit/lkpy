@@ -31,7 +31,12 @@ def test_ambar():
     data = load_ambar(AMBAR_DIR)
 
     assert data.interaction_count == len(ratings)
-    assert data.user_count == users["user_id"].nunique()
+
+    ratings_only_users = set(ratings["user_id"].unique()) - set(users["user_id"].unique())
+    expected_user_count = users["user_id"].nunique() + len(ratings_only_users)
+
+    assert data.user_count == expected_user_count
+
     assert data.item_count == tracks["track_id"].nunique()
     assert data.entities("artist").count() == artists["artist_id"].nunique()
 
