@@ -8,21 +8,22 @@ import os
 import platform
 import re
 import sys
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from importlib.metadata import distributions, version
 from pathlib import Path
+from typing import Any
 
 import click
 import psutil
-import threadpoolctl
+import rich
 from cpuinfo import get_cpu_info
 from humanize import metric, naturalsize
-from rich.console import Console, ConsoleOptions, group
+from rich.console import Console, ConsoleOptions, Group, group
 from rich.padding import Padding
 from rich.table import Table
 
 from lenskit import __version__, _accel
-from lenskit.config import ParallelSettings
 from lenskit.logging import get_logger, stdout_console
 from lenskit.parallel import ensure_parallel_init
 from lenskit.parallel.config import (
@@ -34,6 +35,27 @@ from lenskit.parallel.ray import ray_available
 
 _log = get_logger(__name__)
 _gh_out: Path | None = None
+
+INDENT_SIZE = 2
+
+
+class Inspector(ABC):
+    """
+    Base class for individual inspectors.
+    """
+
+    def enabled(self) -> bool:
+        "Query whether this inspector is enabled."
+        return True
+
+    @abstractmethod
+    def header(self) -> Any:
+        "Section header for the inspector."
+        ...
+
+    def body(self) -> Any:
+        "Emit the inspector body."
+        return []
 
 
 @click.command("doctor")
@@ -55,223 +77,272 @@ def doctor(gh_output: Path | None, packages: bool, paths: bool, full: bool):
     _gh_out = gh_output
     ensure_parallel_init()
     console = stdout_console()
-    console.print(inspect_version(), highlight=False)
-    console.print(inspect_platform(), highlight=False)
-    console.print(inspect_system(), highlight=False)
-    console.print(inspect_compute(), highlight=False)
-    if ray_available():
-        console.print(inspect_ray(), highlight=False)
-    console.print(inspect_parallel_config(), highlight=False)
-    console.print(inspect_env(paths or full), highlight=False)
+
+    inspect(VersionInspector(), console)
+    inspect(PlatformInspector(), console)
+    inspect(SystemInspector(), console)
+    inspect(ComputeInspector(), console)
+    inspect(TorchInspector(), console)
+    inspect(ThreadInspector(), console)
+    inspect(RayInspector(), console)
+    inspect(ParallelInspector(), console)
+    inspect(EnvInspector(), console)
+    if paths or full:
+        inspect(PythonPathInspector(), console)
+        inspect(ProgramPathInspector(), console)
     if packages or full:
-        console.print(inspect_packages(), highlight=False)
+        inspect(PackageInspector(), console)
+
+
+def inspect(what: Inspector, console: rich.console.Console):
+    if what.enabled():
+        console.print(what.header(), highlight=False)
+        console.print(indent(what.body()), highlight=False)
+        console.print()
+
+
+def indent(obj):
+    return Padding.indent(obj, INDENT_SIZE)
 
 
 @dataclass
 class kvp:
     name: str
     value: str | int | bool | float | None
-    level: int = 1
     value_style: str = "cyan"
 
     def __rich_console__(self, console: Console, options: ConsoleOptions):
-        text = ""
-        if self.level == 1:
-            text += f"[bold]{self.name}[/bold]: "
-        else:
-            text += "  " * (self.level - 1)
-            text += self.name + ": "
+        text = f"[bold]{self.name}[/bold]: "
         text += f"[{self.value_style}]"
         text += str(self.value)
         text += f"[/{self.value_style}]"
         return [text]
 
 
-@group()
-def inspect_version():
-    dist_ver = version("lenskit")
-    if _gh_out:
-        with _gh_out.open("at") as ghf:
-            print(f"lenskit_version={dist_ver}", file=ghf)
+class VersionInspector(Inspector):
+    def header(self):
+        dist_ver = version("lenskit")
+        if _gh_out:
+            with _gh_out.open("at") as ghf:
+                print(f"lenskit_version={dist_ver}", file=ghf)
 
-    yield f"[bold]LensKit version:[/bold] [cyan]{dist_ver}[/cyan]"
-    if str(dist_ver) != __version__:
-        yield f"   [yellow]Version mismatch, internal package version is {__version__}[/yellow]"
+        return f"[bold]LensKit version:[/bold] [cyan]{dist_ver}[/cyan]"
 
-
-@group()
-def inspect_platform():
-    yield kvp("Python version", platform.python_version())
-    yield kvp("Platform", platform.platform(), level=2)
-    yield kvp("Location", sys.executable, level=2)
-    if is_free_threaded(require_active=True):
-        yield "  [bold][green]Free-threading available[/green][/bold]"
-    elif is_free_threaded():
-        yield "  [bold][yellow]Python is free-threaded but cannot disable GIL[/yellow][/bold]"
-    else:
-        yield "  [yellow]Python GIL enabled[/yellow]"
+    @group()
+    def body(self):
+        dist_ver = version("lenskit")
+        if str(dist_ver) != __version__:
+            yield f"[yellow]Version mismatch, internal package version is {__version__}[/yellow]"
 
 
-@group()
-def inspect_system():
-    yield ""
-    yield "[bold]System information:[/bold]"
+class PlatformInspector(Inspector):
+    def header(self):
+        return kvp("Python version", platform.python_version())
 
-    cpu = get_cpu_info()
-    yield kvp("Processor", cpu["brand_raw"], level=2)
-    if freq := cpu.get("hz_advertised", None):
-        yield kvp("CPU Frequency", metric(freq[0], unit="Hz"), level=2)
-
-    eff_cpu = effective_cpu_count()
-    ncpus = os.cpu_count()
-    cpus = f"[bold]{ncpus}[/bold]"
-    nphys = psutil.cpu_count(logical=False)
-    if nphys != ncpus:
-        cpus += f" ({nphys} physical)"
-    if ncpus != eff_cpu:
-        cpus += f", limited to {ncpus}"
-    yield kvp("CPU cores", cpus, level=2)
-
-    vmem = psutil.virtual_memory()
-    yield kvp(
-        "Memory",
-        f"[bold]{naturalsize(vmem.total, binary=True)}[/bold]"
-        f" ({naturalsize(vmem.available, binary=True)} available)",
-        level=2,
-    )
-
-
-@group()
-def inspect_parallel_config():
-    yield ""
-    yield "[bold]Parallel configuration[/bold]:"
-    pc = get_parallel_config()
-    yield _inspect_pc(pc, level=2)
-
-
-@group()
-def _inspect_pc(pc: ParallelSettings, *, level: int):
-    yield kvp("available CPUs", pc.num_cpus, level=level)
-    yield kvp("batch jobs", pc.num_batch_jobs, level=level)
-    yield kvp("threads", pc.num_threads, level=level)
-    yield kvp("backend threads", pc.num_backend_threads, level=level)
-
-
-@group()
-def inspect_compute():
-    import numpy as np
-    import torch
-
-    try:
-        import cupy  # type: ignore
-
-        _log.debug("imported CuPy version %s", cupy.__version__)
-    except ImportError:
-        _log.debug("CuPy unavailable")
-        cupy = None
-
-    yield ""
-    yield kvp("NumPy version", np.__version__)
-    yield kvp("PyTorch version", torch.__version__)
-    if _gh_out:
-        with _gh_out.open("at") as ghf:
-            print(f"numpy_version={np.__version__}", file=ghf)
-            print(f"pytorch_version={torch.__version__}", file=ghf)
-
-    yield "[bold]PyTorch backends[/bold]:"
-    yield kvp("cpu", torch.backends.cpu.get_cpu_capability(), level=2)
-    for mod in [torch.cuda, torch.backends.mkl, torch.backends.mps]:
-        if mod.is_available():
-            stat = "available"
-        elif hasattr(mod, "is_built") and mod.is_built():
-            stat = "unavailable"
+    @group()
+    def body(self):
+        yield kvp("Platform", platform.platform())
+        yield kvp("Location", sys.executable)
+        if is_free_threaded(require_active=True):
+            yield "[bold][green]Free-threading available[/green][/bold]"
+        elif is_free_threaded():
+            yield "[bold][yellow]Python is free-threaded but cannot disable GIL[/yellow][/bold]"
         else:
-            stat = "absent"
-        name = mod.__name__.split(".")[-1]
-        yield kvp(name, stat, level=2)
-
-    if torch.cuda.is_available():
-        yield ""
-        yield "[bold]PyTorch GPUs[/bold]:"
-        for dev in range(torch.cuda.device_count()):
-            props = torch.cuda.get_device_properties(dev)
-            yield f"  [green]cuda:{dev}[/green]: [bold cyan]{props.name}[/bold cyan]"
-            yield kvp("capability", f"{props.major}.{props.minor}", level=2)
-            yield kvp("memory", naturalsize(props.total_memory, binary=True), level=2)
-            yield kvp("L2 cache", naturalsize(props.L2_cache_size, binary=True), level=2)
-            yield kvp("MP count", props.multi_processor_count, level=2)
-            if cupy is not None:
-                cd = cupy.cuda.Device(dev)
-                yield kvp("warp size", cd.attributes["WarpSize"], level=2)
-                yield kvp("blocks/MP", cd.attributes["MaxBlocksPerMultiprocessor"], level=2)
-                yield kvp("clock rate", metric(cd.attributes["ClockRate"], unit="Hz"), level=2)
-                yield kvp("sp/dp ratio", cd.attributes["SingleToDoublePrecisionPerfRatio"], level=2)
-
-    yield ""
-    yield "[bold]Threading layers[/bold]:"
-    yield "  Rayon:"
-    yield kvp("threads", _accel.thread_count(), level=3)
-    for i, pool in enumerate(threadpoolctl.threadpool_info(), 1):
-        yield f"  Backend {i}:"
-        for k, v in pool.items():
-            yield kvp(k, v, level=3)
+            yield "[yellow]Python GIL enabled[/yellow]"
 
 
-@group()
-def inspect_ray():
-    import ray  # type: ignore
+class SystemInspector(Inspector):
+    def header(self):
+        return "[bold]System information:[/bold]"
 
-    yield ""
-    yield "[bold]Ray cluster ([yellow]experimental[/yellow])[/bold]:"
+    @group()
+    def body(self):
+        cpu = get_cpu_info()
+        yield kvp("Processor", cpu["brand_raw"])
+        if freq := cpu.get("hz_advertised", None):
+            yield kvp("CPU Frequency", metric(freq[0], unit="Hz"))
 
-    try:
-        ray.init("auto", configure_logging=False)
-    except ConnectionError:
-        yield "  Installed but inactive"
-    except RuntimeError:
-        yield "  Cannot connect"
-    else:
-        yield "  Resources:"
-        for name, val in ray.cluster_resources().items():
-            if name.startswith("node:"):
-                continue
-            if name.endswith("memory"):
-                val = naturalsize(val)
-            yield kvp(name, val, level=3)
+        eff_cpu = effective_cpu_count()
+        ncpus = os.cpu_count()
+        cpus = f"[bold]{ncpus}[/bold]"
+        nphys = psutil.cpu_count(logical=False)
+        if nphys != ncpus:
+            cpus += f" ({nphys} physical)"
+        if ncpus != eff_cpu:
+            cpus += f", limited to {ncpus}"
+        yield kvp("CPU cores", cpus)
 
-
-@group()
-def inspect_env(paths: bool):
-    yield ""
-    yield "[bold]Relevant environment variables[/bold]:"
-    for k, v in os.environ.items():
-        if re.match(r"^(LK_|OMP_|NUMBA_|MKL_|TORCH_|PY)", k):
-            yield kvp(k, v, level=2)
-
-    if not paths:
-        return
-
-    yield ""
-    yield "[bold]Python search paths[/bold]:"
-    for path in sys.path:
-        yield f"- {path}"
-
-    yield ""
-    yield "[bold]Executable search paths[/bold]:"
-    exe_paths = os.environ["PATH"].split(os.pathsep)
-    for path in exe_paths:
-        yield f"- {path}"
+        vmem = psutil.virtual_memory()
+        yield kvp(
+            "Memory",
+            f"[bold]{naturalsize(vmem.total, binary=True)}[/bold]"
+            f" ({naturalsize(vmem.available, binary=True)} available)",
+        )
 
 
-def inspect_packages():
-    dists = sorted(distributions(), key=lambda d: d.name or "UNNAMED")
+class ParallelInspector(Inspector):
+    def header(self):
+        return "[bold]Parallel configuration:[/bold]"
 
-    n = len(dists)
-    table = Table(title=f"Installed Packages ({n})")
-    table.add_column("Package")
-    table.add_column("Version", justify="right")
+    @group()
+    def body(self):
+        pc = get_parallel_config()
+        yield kvp("available CPUs", pc.num_cpus)
+        yield kvp("batch jobs", pc.num_batch_jobs)
+        yield kvp("threads", pc.num_threads)
+        yield kvp("backend threads", pc.num_backend_threads)
 
-    for dist in dists:
-        table.add_row(dist.name, dist.version)
 
-    return Padding(table, (1, 0, 0, 2))
+class ComputeInspector(Inspector):
+    def header(self):
+        return "[bold]Compute configuration:[/bold]"
+
+    @group()
+    def body(self):
+        import numpy as np
+        import torch
+
+        yield kvp("NumPy version", np.__version__)
+        yield kvp("PyTorch version", torch.__version__)
+        if _gh_out:
+            with _gh_out.open("at") as ghf:
+                print(f"numpy_version={np.__version__}", file=ghf)
+                print(f"pytorch_version={torch.__version__}", file=ghf)
+
+
+class TorchInspector(Inspector):
+    def header(self):
+        return "[bold]PyTorch backends[/bold]:"
+
+    @group()
+    def body(self):
+        import torch
+
+        try:
+            import cupy  # type: ignore
+
+            _log.debug("imported CuPy version %s", cupy.__version__)
+        except ImportError:
+            _log.debug("CuPy unavailable")
+            cupy = None
+
+        yield kvp("cpu", torch.backends.cpu.get_cpu_capability())
+        for mod in [torch.cuda, torch.backends.mkl, torch.backends.mps]:
+            if mod.is_available():
+                stat = "available"
+            elif hasattr(mod, "is_built") and mod.is_built():
+                stat = "unavailable"
+            else:
+                stat = "absent"
+            name = mod.__name__.split(".")[-1]
+            yield kvp(name, stat)
+
+        if torch.cuda.is_available():
+            yield ""
+            yield "[bold]PyTorch GPUs[/bold]:"
+            for dev in range(torch.cuda.device_count()):
+                props = torch.cuda.get_device_properties(dev)
+                yield f"  [green]cuda:{dev}[/green]: [bold cyan]{props.name}[/bold cyan]"
+                yield kvp("capability", f"{props.major}.{props.minor}")
+                yield kvp("memory", naturalsize(props.total_memory, binary=True))
+                yield kvp("L2 cache", naturalsize(props.L2_cache_size, binary=True))
+                yield kvp("MP count", props.multi_processor_count)
+                if cupy is not None:
+                    cd = cupy.cuda.Device(dev)
+                    yield kvp("warp size", cd.attributes["WarpSize"])
+                    yield kvp("blocks/MP", cd.attributes["MaxBlocksPerMultiprocessor"])
+                    yield kvp("clock rate", metric(cd.attributes["ClockRate"], unit="Hz"))
+                    yield kvp("sp/dp ratio", cd.attributes["SingleToDoublePrecisionPerfRatio"])
+
+
+class ThreadInspector(Inspector):
+    def header(self):
+        return "[bold]Threading layers[/bold]"
+
+    @group()
+    def body(self):
+        import threadpoolctl
+
+        yield "Rayon:"
+        yield indent(kvp("threads", _accel.thread_count()))
+        for i, pool in enumerate(threadpoolctl.threadpool_info(), 1):
+            yield f"Backend {i}:"
+            yield indent(Group(*[kvp(k, v) for (k, v) in pool.items()]))
+
+
+class RayInspector(Inspector):
+    def enabled(self):
+        return ray_available()
+
+    def header(self):
+        return "[bold]Ray cluster ([yellow]experimental[/yellow])[/bold]"
+
+    @group()
+    def body(self):
+        import ray
+
+        try:
+            ray.init("auto", configure_logging=False)
+        except ConnectionError:
+            yield "Installed but inactive"
+        except RuntimeError:
+            yield "Cannot connect"
+        else:
+            yield "Resources:"
+            for name, val in ray.cluster_resources().items():
+                if name.startswith("node:"):
+                    continue
+                if name.endswith("memory"):
+                    val = naturalsize(val)
+                yield indent(kvp(name, val))
+
+
+class EnvInspector(Inspector):
+    def header(self):
+        return "[bold]Relevant environment variables[/bold]"
+
+    @group()
+    def body(self):
+        for k, v in os.environ.items():
+            if re.match(r"^(LK_|OMP_|NUMBA_|MKL_|TORCH_|PY)", k):
+                yield kvp(k, v)
+
+
+class PythonPathInspector(Inspector):
+    def header(self):
+        return "[bold]Python search paths[/bold]:"
+
+    @group()
+    def body(self):
+        for path in sys.path:
+            yield f"{path}"
+
+
+class ProgramPathInspector(Inspector):
+    def header(self):
+        return "[bold]Executable search paths[/bold]:"
+
+    @group()
+    def body(self):
+        exe_paths = os.environ["PATH"].split(os.pathsep)
+        for path in exe_paths:
+            yield f"- {path}"
+
+
+class PackageInspector(Inspector):
+    def header(self):
+        return ""
+
+    @group()
+    def body(self):
+        dists = sorted(distributions(), key=lambda d: d.name or "UNNAMED")
+
+        n = len(dists)
+        table = Table(title=f"Installed Packages ({n})")
+        table.add_column("Package")
+        table.add_column("Version", justify="right")
+
+        for dist in dists:
+            table.add_row(dist.name, dist.version)
+
+        return Padding(table, (1, 0, 0, 2))
