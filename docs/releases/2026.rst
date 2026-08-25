@@ -10,6 +10,18 @@ There are no new major paradigm shifts, though — pipelines, datasets, and
 components work as they do in the 2025 series, but with more features, some
 rough corners polished off the interfaces, and hopefully fewer bugs.
 
+.. _2026.4.0:
+
+2026.4.0 (in progress)
+~~~~~~~~~~~~~~~~~~~~~~
+
+Third feature release in 2026, with more feature updates and bug fixes.  A full list of
+fixed issues and merged PRs is on `milestone 2026.4`_.
+
+- Made pipeline schemas more strict to catch misconfiguration errors.
+
+.. _milestone 2026.4: https://github.com/lenskit/lkpy/milestone/29
+
 .. _2026.3.0:
 
 2026.3.0
