@@ -111,7 +111,7 @@ class PipelineConfigFragment(BaseModel, extra="allow"):
     "Pipeline metadata."
 
 
-class PipelineConfig(BaseModel):
+class PipelineConfig(BaseModel, extra="forbid"):
     """
     Root type for serialized pipeline configuration.  A pipeline config contains
     the full configuration, components, and wiring for the pipeline, but does
@@ -174,7 +174,7 @@ class PipelineConfig(BaseModel):
         return pipe
 
 
-class PipelineMeta(BaseModel):
+class PipelineMeta(BaseModel, extra="allow"):
     """
     Pipeline metadata.
 
@@ -193,7 +193,7 @@ class PipelineMeta(BaseModel):
     """
 
 
-class PipelineInput(BaseModel):
+class PipelineInput(BaseModel, extra="forbid"):
     """
     Spcification of a pipeline input.
 
@@ -207,7 +207,7 @@ class PipelineInput(BaseModel):
     "The list of types for this input."
 
 
-class PipelineComponent(BaseModel):
+class PipelineComponent(BaseModel, extra="forbid"):
     """
     Specification of a pipeline component.
     """
@@ -231,7 +231,7 @@ class PipelineComponent(BaseModel):
     """
 
 
-class PipelineLiteral(BaseModel):
+class PipelineLiteral(BaseModel, extra="forbid"):
     """
     Literal nodes represented in the pipeline.
 
