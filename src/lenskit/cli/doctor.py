@@ -384,7 +384,6 @@ class PackageInspector(Inspector):
     def header(self):
         return ""
 
-    @group()
     def body(self):
         dists = sorted(distributions(), key=lambda d: d.name or "UNNAMED")
 
