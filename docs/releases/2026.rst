@@ -19,6 +19,7 @@ Third feature release in 2026, with more feature updates and bug fixes.  A full 
 fixed issues and merged PRs is on `milestone 2026.4`_.
 
 - Made pipeline schemas more strict to catch misconfiguration errors (:pr:`1193`).
+- Published JSON schemas for configuration and tuning files (:pr:`1194`).
 
 .. _milestone 2026.4: https://github.com/lenskit/lkpy/milestone/29
 
