@@ -23,8 +23,10 @@ from rich.console import Console, ConsoleOptions, Group, group
 from rich.padding import Padding
 from rich.table import Table
 
-from lenskit import __version__, _accel
+from lenskit import __version__, _accel, lenskit_config
+from lenskit.config import LenskitSettings
 from lenskit.logging import get_logger, stdout_console
+from lenskit.logging.tasks import measure_power
 from lenskit.parallel import ensure_parallel_init
 from lenskit.parallel.config import (
     effective_cpu_count,
@@ -75,6 +77,7 @@ def doctor(gh_output: Path | None, packages: bool, paths: bool, full: bool):
     """
     global _gh_out
     _gh_out = gh_output
+    config = lenskit_config()
     ensure_parallel_init()
     console = stdout_console()
 
@@ -86,6 +89,7 @@ def doctor(gh_output: Path | None, packages: bool, paths: bool, full: bool):
     inspect(ThreadInspector(), console)
     inspect(RayInspector(), console)
     inspect(ParallelInspector(), console)
+    inspect(PowerInspector(config), console)
     inspect(EnvInspector(), console)
     if paths or full:
         inspect(PythonPathInspector(), console)
@@ -99,6 +103,8 @@ def inspect(what: Inspector, console: rich.console.Console):
         console.print(what.header(), highlight=False)
         console.print(indent(what.body()), highlight=False)
         console.print()
+    else:
+        _log.debug("%s disabled", what.__class__.__name__)
 
 
 def indent(obj):
@@ -297,9 +303,54 @@ class RayInspector(Inspector):
                 yield indent(kvp(name, val))
 
 
+class PowerInspector(Inspector):
+    config: LenskitSettings
+
+    def __init__(self, config: LenskitSettings):
+        self.config = config
+
+    def enabled(self):
+        return self.config.machines
+
+    def header(self):
+        return "[bold]Power Measurement:[/bold]"
+
+    @group()
+    def body(self):
+        if m := self.config.current_machine:
+            yield kvp("Machine", f"[bold][yellow]{self.config.machine}[/yellow][/bold]")
+
+            if "system" in m.power_queries:
+                pow = measure_power("system", 60, config=self.config)
+                pow_s = metric(pow, "J")
+                yield kvp("System power", f"{pow_s} (in last 60s)")
+            else:
+                yield kvp("System power", "not configured")
+
+            if "cpu" in m.power_queries:
+                pow = measure_power("cpu", 60, config=self.config)
+                pow_s = metric(pow, "J")
+                yield kvp("CPU power", f"{pow_s} (in last 60s)")
+            else:
+                yield kvp("CPU power", "not configured")
+
+            if "gpu" in m.power_queries:
+                pow = measure_power("gpu", 60, config=self.config)
+                pow_s = metric(pow, "J")
+                yield kvp("GPU power", f"{pow_s} (in last 60s)")
+            else:
+                yield kvp("GPU power", "not configured")
+
+        elif self.config.machine:
+            yield f"[red]Machine [white]{self.config.machine}[/white] is not configured[/red] (see https://lenskit.org/q/power)"
+
+        else:
+            yield "[yellow]No machine configured[/yellow] (see https://lenskit.org/q/power)"
+
+
 class EnvInspector(Inspector):
     def header(self):
-        return "[bold]Relevant environment variables[/bold]"
+        return "[bold]Relevant environment variables:[/bold]"
 
     @group()
     def body(self):
@@ -310,7 +361,7 @@ class EnvInspector(Inspector):
 
 class PythonPathInspector(Inspector):
     def header(self):
-        return "[bold]Python search paths[/bold]:"
+        return "[bold]Python search paths:[/bold]"
 
     @group()
     def body(self):
@@ -320,7 +371,7 @@ class PythonPathInspector(Inspector):
 
 class ProgramPathInspector(Inspector):
     def header(self):
-        return "[bold]Executable search paths[/bold]:"
+        return "[bold]Executable search paths:[/bold]"
 
     @group()
     def body(self):
