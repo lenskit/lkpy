@@ -303,7 +303,7 @@ class RayInspector(Inspector):
                 yield indent(kvp(name, val))
 
 
-class PowerInspector(Inspector):
+class PowerInspector(Inspector):  # pragma: nocover
     config: LenskitSettings
 
     def __init__(self, config: LenskitSettings):
