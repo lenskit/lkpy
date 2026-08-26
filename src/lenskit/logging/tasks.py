@@ -23,6 +23,7 @@ from uuid import UUID, uuid4
 import requests
 from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, SerializeAsAny
 
+from lenskit.schemas.settings import LenskitSettings
 from lenskit.util import Latch
 
 from ._formats import friendly_duration
@@ -431,12 +432,19 @@ class Task(BaseModel, extra="allow"):
         return f"<Task {self.task_id}: {self.label}>"
 
 
-def measure_power(scope: Literal["system", "cpu", "gpu"], duration: float):
-    from lenskit.config import lenskit_config
+def measure_power(
+    scope: Literal["system", "cpu", "gpu"],
+    duration: float,
+    *,
+    config: LenskitSettings | None = None,
+):
+    if config is None:
+        from lenskit.config import lenskit_config
+
+        config = lenskit_config()
 
     time_ms = int(duration * 1000)
 
-    config = lenskit_config()
     prom = config.prometheus.url
     if not prom:
         return None
