@@ -39,9 +39,7 @@ fi
 msg "running ${#test_files[@]} test suites"
 declare -a taps=()
 for test in "${test_files[@]}"; do
-    if [[ $CI ]]; then
-        echo ::group::"CLI test $test"
-    fi
+    start-group "CLI test $test"
     msg "running test $test"
     tap_file="${test%%.sh}.tap"
     dbg "saving output to $tap_file"
@@ -59,13 +57,13 @@ for test in "${test_files[@]}"; do
     if [[ -s "$tap_file" ]]; then
         taps+=("$tap_file")
     fi
-    if [[ $CI ]]; then
-        echo ::endgroup::
-    fi
+    end-group
 done
 
 if [[ $usage_coverage = true ]]; then
+    start-group "test coverage"
     coverage report
+    end-group
 fi
 
 exec prove "${taps[@]}"
