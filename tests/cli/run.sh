@@ -39,6 +39,9 @@ fi
 msg "running ${#test_files[@]} test suites"
 declare -a taps=()
 for test in "${test_files[@]}"; do
+    if [[ $CI ]]; then
+        echo ::group::"CLI test $test"
+    fi
     msg "running test $test"
     tap_file="${test%%.sh}.tap"
     dbg "saving output to $tap_file"
@@ -55,6 +58,9 @@ for test in "${test_files[@]}"; do
     rm -rf "$TEST_WORK"
     if [[ -s "$tap_file" ]]; then
         taps+=("$tap_file")
+    fi
+    if [[ $CI ]]; then
+        echo ::endgroup::
     fi
 done
 
