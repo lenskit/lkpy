@@ -40,6 +40,18 @@ echo-run() {
     return "$?"
 }
 
+start-group() {
+    if [[ $CI ]]; then
+        echo "::group::$*"
+    fi
+}
+
+end-group() {
+    if [[ $CI ]]; then
+        echo ::endgroup::
+    fi
+}
+
 git-is-clean() {
     if [[ -z "$(git status -u --porcelain)" ]]; then
         return 0
