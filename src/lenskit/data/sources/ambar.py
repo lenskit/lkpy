@@ -94,7 +94,7 @@ def load_ambar(path: Path | str | PathLike[str]) -> Dataset:
     tracks_meta = tracks.drop_columns(["artist_id"])
 
     dsb.add_entities("item", tracks_meta)
-    dsb.add_scalar_attribute("item", "artist_id", track_ids, track_artist_ids)
+    dsb.add_scalar_attribute("item", "artist", track_ids, track_artist_ids)
 
     log.debug("reading ratings")
     ratings = _read_table(

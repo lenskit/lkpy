@@ -47,8 +47,8 @@ def test_ambar_artist_attribute():
     data = load_ambar(AMBAR_DIR)
 
     items = data.entities("item")
-    assert "artist_id" in items.attributes
+    assert "artist" in items.attributes
 
-    artist_attr = items.attribute("artist_id")
+    artist_attr = items.attribute("artist")
     assert len(artist_attr) == data.item_count
     assert artist_attr.arrow().null_count == 0
