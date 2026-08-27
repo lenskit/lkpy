@@ -4,28 +4,9 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-"""
-Export a LensKit schema.
-
-Usage:
-    lenskit.schemas [-v] [-o file] (--pipeline | --tuner | --config)
-
-Options:
-    -v, --verbose
-        Enable verbose logging.
-    -o FILE, --output=FILE
-        Output file to write schema to.
-    --pipeline
-        Export pipeline schema.
-    --tuner
-        Export tuner schema.
-    --config
-        Export config schema.
-"""
-
+import argparse
 import json
-
-from docopt import docopt
+from pathlib import Path
 
 from lenskit.logging import LoggingConfig, get_logger, stdout_console
 
@@ -36,28 +17,45 @@ from .tuning import TuningSpec
 _log = get_logger("lenskit.schemas")
 
 
-def main(args):
+def main():
+    parser = _arg_parser()
+    args = parser.parse_args()
     lc = LoggingConfig()
-    if args["--verbose"]:
+    if args.verbose:
         lc.set_verbose()
     lc.apply()
 
-    if args["--pipeline"]:
+    if args.pipeline:
         schema = PipelineConfig.model_json_schema()
-    elif args["--tuner"]:
+    elif args.tuner:
         schema = TuningSpec.model_json_schema()
-    else:
+    elif args.config:
         schema = LenskitSettings.model_json_schema()
+    else:  # pragma: nocover
+        raise RuntimeError("no schema specified")
 
-    if out := args["--output"]:
-        _log.info("saving schema to %s", out)
-        with open(out, "w") as f:
+    if args.output:
+        _log.info("saving schema to %s", args.output)
+        with open(args.output, "w") as f:
             json.dump(schema, f, indent=2)
     else:
         console = stdout_console()
         console.print_json(json.dumps(schema))
 
 
+def _arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Export a LensKit schema.")
+
+    parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose logging")
+    parser.add_argument("-o", "--output", type=Path, metavar="FILE", help="write schema to FILE")
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--pipeline", action="store_true", help="export pipeline schema")
+    group.add_argument("--tuner", action="store_true", help="export tuner schema")
+    group.add_argument("--config", action="store_true", help="export config schema")
+
+    return parser
+
+
 if __name__ == "__main__":
-    args = docopt(__doc__)
-    main(args)
+    main()
