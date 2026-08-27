@@ -320,32 +320,29 @@ class PowerInspector(Inspector):  # pragma: nocover
         if m := self.config.current_machine:
             yield kvp("Machine", f"[bold][yellow]{self.config.machine}[/yellow][/bold]")
 
-            if "system" in m.power_queries:
-                pow = measure_power("system", 60, config=self.config)
-                pow_s = metric(pow, "J")
-                yield kvp("System power", f"{pow_s} (in last 60s)")
-            else:
-                yield kvp("System power", "not configured")
-
-            if "cpu" in m.power_queries:
-                pow = measure_power("cpu", 60, config=self.config)
-                pow_s = metric(pow, "J")
-                yield kvp("CPU power", f"{pow_s} (in last 60s)")
-            else:
-                yield kvp("CPU power", "not configured")
-
-            if "gpu" in m.power_queries:
-                pow = measure_power("gpu", 60, config=self.config)
-                pow_s = metric(pow, "J")
-                yield kvp("GPU power", f"{pow_s} (in last 60s)")
-            else:
-                yield kvp("GPU power", "not configured")
+            yield self._measure_power(m.power_queries, "system", "System")
+            yield self._measure_power(m.power_queries, "cpu", "CPU")
+            yield self._measure_power(m.power_queries, "gpu", "GPU")
 
         elif self.config.machine:
             yield f"[red]Machine [white]{self.config.machine}[/white] is not configured[/red] (see https://lenskit.org/q/power)"
 
         else:
             yield "[yellow]No machine configured[/yellow] (see https://lenskit.org/q/power)"
+
+    def _measure_power(self, pqs, key: str, label: str):
+        title = f"{label} power"
+        if key in pqs:
+            pow = measure_power(key, 60, config=self.config)
+            if pow is None:
+                result = "[bold][red]no result[/red][/bold]"
+            else:
+                pow_s = metric(pow, "J")
+                result = f"{pow_s} (in last 60s)"
+        else:
+            result = "not configured"
+
+        return kvp(title, result)
 
 
 class EnvInspector(Inspector):
