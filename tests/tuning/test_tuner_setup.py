@@ -11,6 +11,9 @@ from pytest import skip
 from lenskit.config import LenskitSettings, reconfigure
 from lenskit.schemas.tuning import TuningSpec
 
+test_dir = Path(__file__).parent
+root_dir = test_dir.parent.parent
+
 
 def test_tuner_spec():
     spec = TuningSpec.load(Path("pipelines/iknn-explicit-search.toml"))
@@ -34,6 +37,32 @@ def test_tuner_merge_defaults():
 
         assert tuner.spec.search.max_points == 30
         assert tuner.spec.search.max_epochs == 15
+
+
+def test_tuner_external_config():
+    try:
+        from lenskit.tuning import PipelineTuner
+    except ImportError:
+        skip("optuna not available")
+
+    spec = TuningSpec.load(root_dir / "pipelines/slim-search.toml")
+    tuner = PipelineTuner(spec)
+
+    pipe = tuner.pipeline
+    assert pipe.components["scorer"].config["max_nbrs"] == 500
+
+
+def test_tuner_inline_config():
+    try:
+        from lenskit.tuning import PipelineTuner
+    except ImportError:
+        skip("optuna not available")
+
+    spec = TuningSpec.load(test_dir / "slim-inline-pipeline.toml")
+    tuner = PipelineTuner(spec)
+
+    pipe = tuner.pipeline
+    assert pipe.components["scorer"].config["max_nbrs"] == 500
 
 
 def test_ray_tuner_space():
