@@ -128,7 +128,6 @@ class FlexMFModel(nn.Module):
         else:
             return self.i_embed(items)
 
-
     def score_user_vector(self, user_vector: Tensor, items: Tensor) -> Tensor:
         """
         Score items against a supplied user vector.
