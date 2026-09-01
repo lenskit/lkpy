@@ -30,18 +30,20 @@ type NegativeStrategy = Literal["uniform", "popular", "misranked"]
 _log = get_logger(__name__)
 
 PRESETS = {
-    "bpr": {"loss": "pairwise", "user_bias": False, "item_bias": False},
+    "bpr": {"loss": "pairwise", "user_bias": False, "item_bias": False, "user_embeddings": "prefer"},
     "warp": {
         "loss": "warp",
         "negative_strategy": "misranked",
         "user_bias": False,
         "item_bias": False,
+        "user_embeddings": "prefer",
     },
     "lightgcn": {
         "loss": "pairwise",
         "user_bias": False,
         "item_bias": False,
         "convolution_layers": 3,
+        "user_embeddings": "prefer",
     },
 }
 

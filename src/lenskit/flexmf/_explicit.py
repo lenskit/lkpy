@@ -54,6 +54,9 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
     def score_items(self, users: torch.Tensor, items: torch.Tensor) -> torch.Tensor:
         return super().score_items(users, items) + self.global_bias
 
+    def score_user_embedding(self, user: torch.Tensor, items: torch.Tensor) -> torch.Tensor:
+        return super().score_user_embedding(user, items) + self.global_bias
+
 
 class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
     @override

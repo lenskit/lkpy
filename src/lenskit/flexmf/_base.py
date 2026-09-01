@@ -94,6 +94,14 @@ class FlexMFConfigBase(EmbeddingSizeMixin, BaseModel):
         for the different regularization methods.
     """
 
+    user_embeddings: bool | Literal["prefer"] = True
+    """
+    Whether to use trained user embeddings for scoring.  If ``True``, trained
+    embeddings are used when the query does not provide usable query items. If
+    ``False``, trained user embeddings are not used for scoring. If set to
+    ``"prefer"``, the trained embedding is used for known users even when the
+    query provides items.
+    """
 
 class FlexMFScorerBase(UsesTrainer, Component):
     """
@@ -123,20 +131,49 @@ class FlexMFScorerBase(UsesTrainer, Component):
         # make sure the query is in a known / usable format
         query = RecQuery.create(query)
 
-        # if we have no user ID, we cannot score items
-        # TODO: support pooling from user history
+        # resolve the user, if it is known
         u_row = None
         if query.user_id is not None:
             u_row = self.users.number(query.user_id, missing=None)
-
-        if u_row is None:
-            return ItemList(items, scores=np.nan)
-
-        # look up the user row in the embedding matrix
-        u_tensor = torch.IntTensor([u_row])
+        
         # make sure it's on the right device
         device = self.model.device
-        u_tensor = u_tensor.to(device, non_blocking=True)
+        u_tensor = None
+        if u_row is not None:
+            # look up the user row in the embedding matrix
+            u_tensor = torch.IntTensor([u_row])
+            u_tensor = u_tensor.to(device, non_blocking=True)
+
+        # decide whether query items should provide the user embedding
+        query_items = query.query_items
+        pool_query = (
+            query_items is not None
+            and len(query_items) > 0
+            and (u_row is None or self.config.user_embeddings != "prefer"))
+
+        pooled_user = None
+        if pool_query:
+            # resolve query items against the model's item vocabulary
+            q_cols = query_items.numbers(
+                vocabulary=self.items,
+                missing="negative",
+                format="torch")
+            q_cols = q_cols.to(device, non_blocking=True)
+
+            # ignore query items that were not known during model training
+            q_cols = q_cols.masked_select(q_cols.ge(0))
+
+            if len(q_cols) > 0:
+                # mean-pool the item embeddings to obtain a query-time
+                # representation of the user
+                q_vectors = self.model.i_embed(q_cols)
+                pooled_user = q_vectors.mean(dim=0)
+
+        # if pooling was not possible, fall back to the trained user embedding 
+        if pooled_user is None:
+            if u_tensor is None or not self.config.user_embeddings:
+                return ItemList(items, scores=np.nan)
+
 
         # look up the item columns in the embedding matrix
         i_cols = items.numbers(vocabulary=self.items, missing="negative", format="torch")
@@ -148,7 +185,12 @@ class FlexMFScorerBase(UsesTrainer, Component):
         i_cols = i_cols.masked_select(scorable_mask)
 
         # get scores
-        scores = self.score_items(u_tensor, i_cols)
+        if pooled_user is not None:
+            scores = self.score_user_embedding(pooled_user, i_cols)
+        else:
+            assert u_tensor is not None
+            scores = self.score_items(u_tensor, i_cols)
+
         # initialize output score array, fill with missing
         full_scores = torch.full((len(items),), np.nan, dtype=torch.float32, device=scores.device)
         full_scores.masked_scatter_(scorable_mask, scores)
@@ -162,3 +204,9 @@ class FlexMFScorerBase(UsesTrainer, Component):
         users and items.
         """
         return self.model(users, items)
+    
+    def score_user_embedding(self, user: torch.Tensor, items: torch.Tensor) -> torch.Tensor:
+        """
+        Score items against a user embedding.
+        """
+        return self.model.score_user_vector(user, items)
