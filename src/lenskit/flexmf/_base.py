@@ -103,6 +103,7 @@ class FlexMFConfigBase(EmbeddingSizeMixin, BaseModel):
     query provides items.
     """
 
+
 class FlexMFScorerBase(UsesTrainer, Component):
     """
     Base class for the FlexMF scorers, providing common Torch support.
@@ -135,7 +136,7 @@ class FlexMFScorerBase(UsesTrainer, Component):
         u_row = None
         if query.user_id is not None:
             u_row = self.users.number(query.user_id, missing=None)
-        
+
         # make sure it's on the right device
         device = self.model.device
         u_tensor = None
@@ -149,15 +150,13 @@ class FlexMFScorerBase(UsesTrainer, Component):
         pool_query = (
             query_items is not None
             and len(query_items) > 0
-            and (u_row is None or self.config.user_embeddings != "prefer"))
+            and (u_row is None or self.config.user_embeddings != "prefer")
+        )
 
         pooled_user = None
         if pool_query:
             # resolve query items against the model's item vocabulary
-            q_cols = query_items.numbers(
-                vocabulary=self.items,
-                missing="negative",
-                format="torch")
+            q_cols = query_items.numbers(vocabulary=self.items, missing="negative", format="torch")
             q_cols = q_cols.to(device, non_blocking=True)
 
             # ignore query items that were not known during model training
@@ -169,11 +168,9 @@ class FlexMFScorerBase(UsesTrainer, Component):
                 q_vectors = self.model.i_embed(q_cols)
                 pooled_user = q_vectors.mean(dim=0)
 
-        # if pooling was not possible, fall back to the trained user embedding 
-        if pooled_user is None:
-            if u_tensor is None or not self.config.user_embeddings:
-                return ItemList(items, scores=np.nan)
-
+        # if pooling was not possible, fall back to the trained user embedding
+        if pooled_user is None and (u_tensor is None or not self.config.user_embeddings):
+            return ItemList(items, scores=np.nan)
 
         # look up the item columns in the embedding matrix
         i_cols = items.numbers(vocabulary=self.items, missing="negative", format="torch")
@@ -204,7 +201,7 @@ class FlexMFScorerBase(UsesTrainer, Component):
         users and items.
         """
         return self.model(users, items)
-    
+
     def score_user_embedding(self, user: torch.Tensor, items: torch.Tensor) -> torch.Tensor:
         """
         Score items against a user embedding.

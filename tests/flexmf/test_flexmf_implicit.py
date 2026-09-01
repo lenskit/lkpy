@@ -8,6 +8,7 @@ from itertools import product
 
 import numpy as np
 import torch
+
 from pytest import mark, skip
 
 from lenskit.data import ItemList, RecQuery
@@ -118,6 +119,7 @@ def test_flexmf_train_config(ml_ds, loss, reg):
 
     assert model.model is not None
 
+
 @mark.parametrize("user_id", [None, "not-a-trained-user"])
 def test_flexmf_pool_query_items_for_unknown_user(ml_ds, user_id):
     config = FlexMFImplicitConfig(preset="bpr", epochs=1, embedding_size=8)
@@ -128,7 +130,7 @@ def test_flexmf_pool_query_items_for_unknown_user(ml_ds, user_id):
     history = ItemList(item_ids[:2])
     candidates = ItemList(item_ids[2:5])
 
-    query = RecQuery(user_id=user_id,  history_items=history)
+    query = RecQuery(user_id=user_id, history_items=history)
     result = scorer(query, candidates)
 
     scores = result.scores()
@@ -137,12 +139,8 @@ def test_flexmf_pool_query_items_for_unknown_user(ml_ds, user_id):
 
 
 def test_flexmf_pool_is_mean_of_item_embeddings(ml_ds):
-    config = FlexMFImplicitConfig(
-        preset="bpr",
-        epochs=3,
-        embedding_size=8,
-        user_embeddings=True)
-    
+    config = FlexMFImplicitConfig(preset="bpr", epochs=3, embedding_size=8, user_embeddings=True)
+
     scorer = FlexMFImplicitScorer(config)
     scorer.train(ml_ds)
 
@@ -156,20 +154,16 @@ def test_flexmf_pool_is_mean_of_item_embeddings(ml_ds):
 
     device = scorer.model.device
 
-    history_nums = history.numbers(
-        vocabulary=scorer.items,
-        missing="negative",
-        format="torch").to(device)
+    history_nums = history.numbers(vocabulary=scorer.items, missing="negative", format="torch").to(
+        device
+    )
 
     candidate_nums = candidates.numbers(
-        vocabulary=scorer.items,
-        missing="negative",
-        format="torch").to(device)
+        vocabulary=scorer.items, missing="negative", format="torch"
+    ).to(device)
 
     expected_user = scorer.model.i_embed(history_nums).mean(dim=0)
-    expected_score = scorer.model.score_user_vector(
-        expected_user,
-        candidate_nums)
+    expected_score = scorer.model.score_user_vector(expected_user, candidate_nums)
 
     actual_tensor = torch.as_tensor(scores, device=device)
 
@@ -177,16 +171,12 @@ def test_flexmf_pool_is_mean_of_item_embeddings(ml_ds):
 
 
 def test_flexmf_known_user_uses_pool_by_default(ml_ds):
-    config = FlexMFImplicitConfig(
-        preset="bpr",
-        epochs=3,
-        embedding_size=8,
-        user_embeddings=True)
-    
+    config = FlexMFImplicitConfig(preset="bpr", epochs=3, embedding_size=8, user_embeddings=True)
+
     scorer = FlexMFImplicitScorer(config)
     scorer.train(ml_ds)
 
-    user_id = list(ml_ds.users.ids())[0]
+    user_id = next(iter(ml_ds.users.ids()))
     item_ids = list(ml_ds.items.ids())
 
     history = ItemList(item_ids[:2])
@@ -205,15 +195,12 @@ def test_flexmf_known_user_uses_pool_by_default(ml_ds):
 
 
 def test_flexmf_prefer_uses_trained_embedding_for_known_user(ml_ds):
-    config = FlexMFImplicitConfig(
-        preset="bpr",
-        epochs=3,
-        embedding_size=8)
-    
+    config = FlexMFImplicitConfig(preset="bpr", epochs=3, embedding_size=8)
+
     scorer = FlexMFImplicitScorer(config)
     scorer.train(ml_ds)
 
-    user_id = list(ml_ds.users.ids())[0]
+    user_id = next(iter(ml_ds.users.ids()))
     item_ids = list(ml_ds.items.ids())
 
     history = ItemList(item_ids[:2])
@@ -222,8 +209,9 @@ def test_flexmf_prefer_uses_trained_embedding_for_known_user(ml_ds):
     normal_scores = scorer(user_id, candidates).scores()
 
     history_scores = scorer(
-        RecQuery(user_id=user_id, history_items=history), candidates,
-        ).scores()
+        RecQuery(user_id=user_id, history_items=history),
+        candidates,
+    ).scores()
 
     assert normal_scores is not None
     assert history_scores is not None
@@ -232,12 +220,8 @@ def test_flexmf_prefer_uses_trained_embedding_for_known_user(ml_ds):
 
 
 def test_flexmf_pool_ignores_unknown_history_items(ml_ds):
-    config = FlexMFImplicitConfig(
-        preset="bpr",
-        epochs=3,
-        embedding_size=8,
-        user_embeddings=True)
-    
+    config = FlexMFImplicitConfig(preset="bpr", epochs=3, embedding_size=8, user_embeddings=True)
+
     scorer = FlexMFImplicitScorer(config)
     scorer.train(ml_ds)
 
@@ -246,12 +230,10 @@ def test_flexmf_pool_ignores_unknown_history_items(ml_ds):
     candidates = ItemList(item_ids[1:4])
 
     with_unknown = scorer(
-        RecQuery(history_items=ItemList([known_item, max(item_ids) + 1])
-                 ), candidates).scores()
+        RecQuery(history_items=ItemList([known_item, max(item_ids) + 1])), candidates
+    ).scores()
 
-    known_only = scorer(
-        RecQuery(history_items=ItemList([known_item])
-                 ), candidates).scores()
+    known_only = scorer(RecQuery(history_items=ItemList([known_item])), candidates).scores()
 
     assert with_unknown is not None
     assert known_only is not None
@@ -260,20 +242,15 @@ def test_flexmf_pool_ignores_unknown_history_items(ml_ds):
 
 
 def test_flexmf_unknown_user_with_no_known_history_items_is_unscorable(ml_ds):
-    config = FlexMFImplicitConfig(
-        preset="bpr",
-        epochs=3,
-        embedding_size=8)
-    
+    config = FlexMFImplicitConfig(preset="bpr", epochs=3, embedding_size=8)
+
     scorer = FlexMFImplicitScorer(config)
     scorer.train(ml_ds)
 
     item_ids = list(ml_ds.items.ids())
     candidates = ItemList(item_ids[:3])
 
-    query = RecQuery(
-        user_id="not-a-trained-user",
-        history_items=ItemList(["not-a-trained-item"]))
+    query = RecQuery(user_id="not-a-trained-user", history_items=ItemList(["not-a-trained-item"]))
 
     scores = scorer(query, candidates).scores()
 
@@ -282,25 +259,20 @@ def test_flexmf_unknown_user_with_no_known_history_items_is_unscorable(ml_ds):
 
 
 def test_flexmf_known_user_falls_back_when_pooling_fails(ml_ds):
-    config = FlexMFImplicitConfig(
-        preset="bpr",
-        epochs=3,
-        embedding_size=8,
-        user_embeddings=True)
-    
+    config = FlexMFImplicitConfig(preset="bpr", epochs=3, embedding_size=8, user_embeddings=True)
+
     scorer = FlexMFImplicitScorer(config)
     scorer.train(ml_ds)
 
-    user_id = list(ml_ds.users.ids())[0]
+    user_id = next(iter(ml_ds.users.ids()))
     item_ids = list(ml_ds.items.ids())
     candidates = ItemList(item_ids[:3])
 
     regular_scores = scorer(user_id, candidates).scores()
 
     query_scores = scorer(
-        RecQuery(user_id=user_id, 
-                 history_items=ItemList(["not-a-trained-item"])
-                 ), candidates).scores()
+        RecQuery(user_id=user_id, history_items=ItemList(["not-a-trained-item"])), candidates
+    ).scores()
 
     assert regular_scores is not None
     assert query_scores is not None
@@ -309,15 +281,12 @@ def test_flexmf_known_user_falls_back_when_pooling_fails(ml_ds):
 
 
 def test_flexmf_disable_trained_user_embeddings(ml_ds):
-    config = FlexMFImplicitConfig(
-        epochs=3,
-        embedding_size=8,
-        user_embeddings=False)
-    
+    config = FlexMFImplicitConfig(epochs=3, embedding_size=8, user_embeddings=False)
+
     scorer = FlexMFImplicitScorer(config)
     scorer.train(ml_ds)
 
-    user_id = list(ml_ds.users.ids())[0]
+    user_id = next(iter(ml_ds.users.ids()))
     item_ids = list(ml_ds.items.ids())
     candidates = ItemList(item_ids[:3])
 
@@ -326,12 +295,10 @@ def test_flexmf_disable_trained_user_embeddings(ml_ds):
     assert scores is not None
     assert np.all(np.isnan(scores))
 
+
 def test_flexmf_disable_trained_embeddings_still_pools(ml_ds):
-    config = FlexMFImplicitConfig(
-        epochs=3,
-        embedding_size=8,
-        user_embeddings=False)
-    
+    config = FlexMFImplicitConfig(epochs=3, embedding_size=8, user_embeddings=False)
+
     scorer = FlexMFImplicitScorer(config)
     scorer.train(ml_ds)
 
@@ -340,6 +307,6 @@ def test_flexmf_disable_trained_embeddings_still_pools(ml_ds):
     candidates = ItemList(item_ids[2:5])
 
     scores = scorer(RecQuery(history_items=history), candidates).scores()
-   
+
     assert scores is not None
     assert np.all(np.isfinite(scores))
