@@ -15,8 +15,9 @@ import torch
 from pydantic import NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 from torch.nn import functional as F
 
-from lenskit.data import Dataset
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.logging import get_logger
+from lenskit.torch import inference_mode
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
 from ._model import FlexMFModel
@@ -111,6 +112,15 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
     configures for standard matrix factorization.
     """
 
+    user_embeddings: bool | Literal["prefer"] = True
+    """
+    Whether to use trained user embeddings for scoring.  If ``True``, trained
+    embeddings are used when the query does not provide usable query items. If
+    ``False``, trained user embeddings are not used for scoring. If set to
+    ``"prefer"``, the trained embedding is used for known users even when the
+    query provides items.
+    """
+
     def selected_negative_strategy(self) -> NegativeStrategy:
         if self.negative_strategy is not None:
             return self.negative_strategy
@@ -160,6 +170,56 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
     """
 
     config: FlexMFImplicitConfig
+
+    @inference_mode
+    def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
+        query = RecQuery.create(query)
+
+        u_row = None
+        if query.user_id is not None:
+            u_row = self.users.number(query.user_id, missing=None)
+
+        # if we prefer the trained embedding for a known user, use the normal FlexMF scoring path
+        if u_row is not None and self.config.user_embeddings == "prefer":
+            return super().__call__(query, items)
+
+        query_items = query.query_items
+        if query_items is not None and len(query_items) > 0:
+            device = self.model.device
+
+            q_cols = query_items.numbers(vocabulary=self.items, missing="negative", format="torch")
+            q_cols = q_cols.to(device, non_blocking=True)
+            # ignore query items that were not known during model training
+            q_cols = q_cols.masked_select(q_cols.ge(0))
+
+            if len(q_cols) > 0:
+                # mean-pool the item embeddings to obtain a query-time representation of the user
+                user_vector = self.model.i_embed(q_cols).mean(dim=0)
+
+                # resolve candidate items against the model's item vocabulary
+                i_cols = items.numbers(vocabulary=self.items, missing="negative", format="torch")
+                i_cols = i_cols.to(device, non_blocking=True)
+
+                # ignore candidate items that were not known during model training
+                scorable_mask = i_cols.ge(0)
+                i_cols = i_cols.masked_select(scorable_mask)
+
+                scores = self.model.score_user_vector(user_vector, i_cols)
+
+                full_scores = torch.full(
+                    (len(items),), np.nan, dtype=torch.float32, device=scores.device
+                )
+                full_scores.masked_scatter_(scorable_mask, scores)
+
+                return ItemList(items, scores=full_scores)
+
+        # no usable query-time embedding.
+        # if trained embeddings are disabled, we cannot score
+        if not self.config.user_embeddings:
+            return ItemList(items, scores=np.nan)
+
+        # otherwise fall back to the original FlexMF behavior
+        return super().__call__(query, items)
 
     def create_trainer(self, data, options):
         if self.config.selected_negative_strategy() == "misranked":
