@@ -231,13 +231,18 @@ class ItemKNNScorer(Component[ItemList], Trainable):
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         ensure_parallel_init()
 
+        # A caller that hands us a bare user ID has no history-bearing component in
+        # front of us, so an absent history is a pipeline configuration problem. A
+        # caller that hands us a query has already run one, and an absent history
+        # there just means it found nothing for this user — usually an unknown user.
+        query_supplied = isinstance(query, RecQuery)
         query = RecQuery.create(query)
         log = _log.bind(user_id=query.user_id, n_items=len(items))
         trace(log, "beginning prediction")
 
         ratings = query.query_items
         if ratings is None or len(ratings) == 0:
-            if ratings is None:
+            if ratings is None and not query_supplied:
                 log.warning(
                     "no query items, did you omit a history component?", _batch=MISSING_HISTORY_KEY
                 )
