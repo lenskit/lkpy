@@ -4,8 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import pandas as pd
+import torch
+
 from pytest import approx
 
+from lenskit.data import ItemList, RecQuery, from_interactions_df
 from lenskit.flexmf import FlexMFExplicitScorer
 from lenskit.flexmf._explicit import FlexMFExplicitConfig
 from lenskit.testing import BasicComponentTests, ScorerTests
