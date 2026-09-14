@@ -630,6 +630,8 @@ class MatrixRelationshipSet(RelationshipSet):
             values = np.ones(nnz, dtype=np.float32)
         else:
             value_col = self._table.column(attribute)
+            if pa.types.is_timestamp(self._table.field(attribute).type):
+                value_col = value_col.cast(pa.timestamp("s")).cast(pa.int64())
             if value_col.null_count:
                 mask = value_col.is_valid()
                 values = value_col.filter(mask).to_numpy()

@@ -72,14 +72,17 @@ def test_filter_ratings_min_time(
         ml_ratings = ml_ratings.assign(
             timestamp=(ml_ratings["timestamp"] - pd.Timestamp("1970-01-01")) // pd.Timedelta("1s")
         )
+        expected_timestamps = pd.to_datetime(ml_ratings["timestamp"], unit="s")
+    else:
+        expected_timestamps = ml_ratings["timestamp"]
     dsb.add_interactions(
         "rating", ml_ratings, entities=["user", "item"], missing="insert", default=True
     )
-    q = QueryDT.create("2001-01-01", q_fmt, ts_fmt)
+    q = QueryDT.create("2001-01-01", q_fmt, "timestamp")
     dsb.filter_interactions("rating", min_time=q.thresh)
     ds = dsb.build()
     assert ds.interactions().pandas()["timestamp"].min() >= q.compare
-    assert ds.interactions().pandas()["timestamp"].max() == ml_ratings["timestamp"].max()
+    assert ds.interactions().pandas()["timestamp"].max() == expected_timestamps.max()
 
 
 @mark.parametrize(
@@ -95,13 +98,16 @@ def test_filter_ratings_max_time(
         ml_ratings = ml_ratings.assign(
             timestamp=(ml_ratings["timestamp"] - pd.Timestamp("1970-01-01")) // pd.Timedelta("1s")
         )
+        expected_timestamps = pd.to_datetime(ml_ratings["timestamp"], unit="s")
+    else:
+        expected_timestamps = ml_ratings["timestamp"]
     dsb.add_interactions(
         "rating", ml_ratings, entities=["user", "item"], missing="insert", default=True
     )
-    q = QueryDT.create("2001-01-01", q_fmt, ts_fmt)
+    q = QueryDT.create("2001-01-01", q_fmt, "timestamp")
     dsb.filter_interactions("rating", max_time=q.thresh)
     ds = dsb.build()
-    assert ds.interactions().pandas()["timestamp"].min() == ml_ratings["timestamp"].min()
+    assert ds.interactions().pandas()["timestamp"].min() == expected_timestamps.min()
     assert ds.interactions().pandas()["timestamp"].max() < q.compare
 
 
@@ -118,11 +124,12 @@ def test_filter_ratings_min_max_time(
         ml_ratings = ml_ratings.assign(
             timestamp=(ml_ratings["timestamp"] - pd.Timestamp("1970-01-01")) // pd.Timedelta("1s")
         )
+
     dsb.add_interactions(
         "rating", ml_ratings, entities=["user", "item"], missing="insert", default=True
     )
-    q1 = QueryDT.create("2001-01-01", q_fmt, ts_fmt)
-    q2 = QueryDT.create("2004-01-01", q_fmt, ts_fmt)
+    q1 = QueryDT.create("2001-01-01", q_fmt, "timestamp")
+    q2 = QueryDT.create("2004-01-01", q_fmt, "timestamp")
     dsb.filter_interactions("rating", min_time=q1.thresh, max_time=q2.thresh)
     ds = dsb.build()
     assert ds.interactions().pandas()["timestamp"].min() >= q1.compare

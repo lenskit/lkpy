@@ -6,8 +6,24 @@
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from lenskit.data import from_interactions_df
+
+
+def test_from_interactions_df_forwards_timestamp_unit():
+    data = pd.DataFrame(
+        {
+            "user_id": ["u1", "u2"],
+            "item_id": ["i1", "i2"],
+            "time": [1_700_000_000_123, 1_700_000_000_456],
+        }
+    )
+
+    ds = from_interactions_df(data, timestamp_col="time", timestamp_unit="ms")
+
+    log = ds.interaction_table(format="arrow")
+    assert log.field("timestamp").type == pa.timestamp("ms")
 
 
 def test_item_subset(rng: np.random.Generator, ml_ratings: pd.DataFrame):
