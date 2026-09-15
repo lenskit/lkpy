@@ -16,6 +16,10 @@ msg() {
     echo "$@" >&2
 }
 
+step() {
+    echo "▶ $*"
+}
+
 err() {
     echo "ERROR: $*" >&2
 }
