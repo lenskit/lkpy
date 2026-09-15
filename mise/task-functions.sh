@@ -45,7 +45,9 @@ echo-run() {
 }
 
 start-group() {
-    if [[ $CI ]]; then
+    if [[ $CI_SYSTEM_NAME = woodpecker ]]; then
+        step "$*"
+    elif [[ $CI ]]; then
         echo "::group::$*"
     fi
 }

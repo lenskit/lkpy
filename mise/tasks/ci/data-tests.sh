@@ -5,6 +5,7 @@
 
 . "$MISE_PROJECT_ROOT/mise/task-functions.sh"
 
+step "running basic tests"
 echo-run mise run test -- -v --coverage -m realdata
 if (($?)); then
     die "tests failed"
@@ -15,4 +16,5 @@ if (($?)); then
     die "CLI tests failed"
 fi
 
+step "uploading coverage"
 mise run coverage:export || die "coverage export failed"
