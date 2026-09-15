@@ -50,7 +50,7 @@ year = options["--year"]
 files = options["FILE"]
 
 if year is None:
-    today = date.today()  # ruff: ignore[call-date-today]
+    today = date.today()
     year = today.year
 
 if files:
