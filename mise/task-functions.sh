@@ -17,7 +17,7 @@ msg() {
 }
 
 step() {
-    echo "▶ $*"
+    echo "▶  $*"
 }
 
 err() {
