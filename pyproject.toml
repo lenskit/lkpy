@@ -121,11 +121,7 @@ doc = [
 gpu = ["torch ~=2.4"]
 package = ["lazy-loader >=0.4", "maturin ~=1.10", "packaging >=25.0"]
 reporting = ["coverage >=5"]
-scripting = [
-  "docopt-ng >=0.9.0",
-  "tomlkit ~=0.14.0",
-  { include-group = "package" },
-]
+scripting = ["docopt-ng >=0.9.0", "tomlkit ~=0.14.0", { include-group = "package" }]
 test = [
   "hypothesis ~=6.139",
   "pytest-benchmark ~=5.1",
@@ -156,16 +152,7 @@ python-source = "src"
 
 [tool.pyright]
 typeCheckingMode = "basic"
-exclude = [
-  "docs/*",
-  ".pixi",
-  ".venv",
-  ".nox",
-  "target",
-  "build",
-  "dist",
-  "output",
-]
+exclude = ["docs/*", ".pixi", ".venv", ".nox", "target", "build", "dist", "output"]
 reportMissingImports = true
 reportMissingTypeStubs = false
 
@@ -203,13 +190,21 @@ target-version = "py312"
 [tool.ruff.lint]
 preview = true
 extend-select = ["I", "W", "Q", "PLC2701"]
-ignore = ["TRY201", "SIM118"]
+ignore = ["TRY201", "SIM118", "pandas-use-of-pd-merge", "unnecessary-lambda"]
 unfixable = ["F401"]
 exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.ruff.lint.per-file-ignores]
 # Importing PyTest fixtures triggers F811
-"tests/*.py" = ["F811", "F401", "PLC2701", "RUF059"]
+"tests/*.py" = [
+  "F811",
+  "F401",
+  "PLC2701",
+  "RUF059",
+  "numpy-legacy-random",
+  "float-equality-comparison",
+  "pytest-raises-with-multiple-statements",
+]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["lenskit.training.TrainingOptions", "pyarrow.float32"]
@@ -233,10 +228,7 @@ testing = ["pytest", "hypothesis"]
 conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
 
 [tool.uv.sources]
-torch = [
-  { index = "pytorch-cpu", group = "cpu" },
-  { index = "pytorch-gpu", group = "gpu" },
-]
+torch = [{ index = "pytorch-cpu", group = "cpu" }, { index = "pytorch-gpu", group = "gpu" }]
 
 # use the LensKit index to prefer CPU PyTorch
 [[tool.uv.index]]
