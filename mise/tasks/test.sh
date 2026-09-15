@@ -11,7 +11,7 @@ set -eo pipefail
 . "$MISE_PROJECT_ROOT/mise/task-functions.sh"
 . "${UV_PROJECT_ENVIRONMENT:-$MISE_PROJECT_ROOT/.venv}/bin/activate"
 
-declare -a test_args=()
+declare -a test_args=(--durations=10)
 declare -a build_args=()
 
 if [[ $usage_coverage = true ]]; then
