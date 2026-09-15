@@ -3,3 +3,6 @@ disable_tools = ["pkl", "perl"]
 
 [settings.python]
 uv_venv_auto = "source"
+
+[env]
+LK_TORCH_COMPILE = "no"
