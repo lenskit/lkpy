@@ -676,8 +676,8 @@ def test_from_arrow_table_nullable():
     assert np.all(il.ids() == np.arange(1, 100))
     scores = il.scores()
     assert scores is not None
-    assert np.all(np.isfinite(scores) == df["score"].notnull())
-    assert np.all(scores[df["score"].notnull()] == df.loc[df["score"].notnull(), "score"])
+    assert np.all(np.isfinite(scores) == df["score"].notna())
+    assert np.all(scores[df["score"].notna()] == df.loc[df["score"].notna(), "score"])
     assert not il.ordered
 
 
@@ -911,7 +911,7 @@ def test_repr_ids():
     ilr = repr(il)
     print(ilr)
     assert re.search(r"ids: \['a'.*\]", ilr)
-    assert re.search(r"numbers: <lazy>", ilr)
+    assert r"numbers: <lazy>" in ilr
 
 
 def test_repr_numbers():
@@ -919,7 +919,7 @@ def test_repr_numbers():
     ilr = repr(il)
     print(ilr)
     assert re.search(r"numbers: \[0.*\]", ilr)
-    assert re.search(r"ids: <lazy>", ilr)
+    assert r"ids: <lazy>" in ilr
 
 
 @mark.skip("ranks are not stable")
@@ -928,15 +928,15 @@ def test_repr_lazy_rank():
     ilr = repr(il)
     print(ilr)
     assert re.search(r"numbers: \[0 .*\]", ilr)
-    assert re.search(r"ids: <lazy>", ilr)
-    assert re.search(r"rank: <lazy>", ilr)
+    assert r"ids: <lazy>" in ilr
+    assert r"rank: <lazy>" in ilr
 
     _rank = il.ranks()
 
     ilr = repr(il)
     print(ilr)
     assert re.search(r"numbers: \[0 .*\]", ilr)
-    assert re.search(r"ids: <lazy>", ilr)
+    assert r"ids: <lazy>" in ilr
     assert re.search(r"rank: \[0 .*\]", ilr)
 
 

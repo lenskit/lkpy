@@ -63,7 +63,6 @@ def test_map_unordered():
 
     results = set()
 
-    for result in limit.imap(_dummy_task, range(50), ordered=False):
-        results.add(result)
+    results.update(limit.imap(_dummy_task, range(50), ordered=False))
 
     assert results == {i * 100 for i in range(50)}

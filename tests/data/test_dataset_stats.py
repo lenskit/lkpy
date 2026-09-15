@@ -43,7 +43,7 @@ def test_item_stats(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
     ts = ml_ratings.groupby("item_id")["timestamp"].min().reindex(ml_ds.items)
     bad = stats["first_time"] != ts
-    bad &= stats["first_time"].isnull() != ts.isnull()
+    bad &= stats["first_time"].isna() != ts.isna()
     nbad = np.sum(bad)
     if nbad:
         df = stats[["first_time"]].assign(expected=ts)

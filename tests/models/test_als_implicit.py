@@ -270,7 +270,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
 
     _log.debug("correlations: %s", correlations)
 
-    assert not (any(correlations.isnull()))
+    assert not (any(correlations.isna()))
     assert all(correlations >= 0.5)
 
 
