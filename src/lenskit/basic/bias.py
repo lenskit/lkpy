@@ -33,7 +33,7 @@ type Damping = float | dict[BiasEntity, float]
 
 @dataclass
 class BiasModel:
-    """
+    r"""
     User-item bias models learned from rating data.  The :class:`BiasScorer`
     class uses this model to score items in a pipeline; the model is reusable
     in other components that need user-item bias models.
@@ -49,11 +49,11 @@ class BiasModel:
     are computed as follows:
 
     .. math::
-       \\begin{align*}
-       b_g & = \\frac{\\sum_{r_{ui} \\in R} r_{ui}}{|R|} &
-       b_i & = \\frac{\\sum_{r_{ui} \\in R_i} (r_{ui} - b_g)}{|R_i| + \\beta_{\\mathrm{i}}} &
-       b_u & = \\frac{\\sum_{r_{ui} \\in R_u} (r_{ui} - b_g - b_i)}{|R_u| + \\beta_{\\mathrm{u}}}
-       \\end{align*}
+       \begin{align*}
+       b_g & = \frac{\sum_{r_{ui} \in R} r_{ui}}{|R|} &
+       b_i & = \frac{\sum_{r_{ui} \in R_i} (r_{ui} - b_g)}{|R_i| + \beta_{\mathrm{i}}} &
+       b_u & = \frac{\sum_{r_{ui} \in R_u} (r_{ui} - b_g - b_i)}{|R_u| + \beta_{\mathrm{u}}}
+       \end{align*}
 
     The damping values can be interpreted as the number of default (mean)
     ratings to assume *a priori* for each user or item, damping low-information

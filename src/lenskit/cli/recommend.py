@@ -151,7 +151,7 @@ def recommend(
 
     if out_file is not None:
         assert all_recs is not None
-        log.info("saving recommendations to %s", str(out_file), count=len(all_recs))
+        log.info("saving recommendations to %s", out_file, count=len(all_recs))
         if json:
             with open(out_file, "w") as jsf:
                 dump_json(all_recs.to_json_data(object=True), jsf)

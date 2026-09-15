@@ -369,7 +369,7 @@ class ModelTrainer(ABC):
         must be usable.
         """
 
-    def finalize(self) -> None:
+    def finalize(self) -> None:  # ruff: ignore[empty-method-without-abstract-decorator]
         """
         Finish the training process, cleaning up any unneeded data structures
         and doing any finalization steps to the model.

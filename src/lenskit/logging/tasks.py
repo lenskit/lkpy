@@ -14,7 +14,7 @@ from __future__ import annotations
 import socket
 import threading
 from contextlib import contextmanager
-from enum import Enum
+from enum import StrEnum
 from os import PathLike
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -77,7 +77,7 @@ def adopt_parent_task(task: Task):
         stack.remove(task)
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """
     Statuses for task records.
     """

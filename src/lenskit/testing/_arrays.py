@@ -7,6 +7,7 @@
 """
 Hypothesis strategies that generate arrays and lists.
 """
+# ruff: noqa: B008
 
 from typing import Literal
 

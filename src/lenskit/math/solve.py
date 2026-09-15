@@ -15,8 +15,8 @@ from lenskit.data.types import NPMatrix, NPVector
 
 
 def solve_cholesky(A: NPMatrix, y: NPVector) -> NPVector:
-    """
-    Solve the system :math:`A\\mathbf{x}=\\mathbf{y}` for :math:`\\mathbf{x}`
+    r"""
+    Solve the system :math:`A\mathbf{x}=\mathbf{y}` for :math:`\mathbf{x}`
     with Cholesky decomposition.
 
     This wraps :func:`torch.linalg.cholesky_ex` and :func:`torch.cholesky_solve`
@@ -26,10 +26,10 @@ def solve_cholesky(A: NPMatrix, y: NPVector) -> NPVector:
         A:
             the left-hand matrix :math:`A`
         y:
-            the right-hand vector :math:`\\mathbf{y}`
+            the right-hand vector :math:`\mathbf{y}`
 
     Returns:
-        the solution :math:`\\mathbf{x}`
+        the solution :math:`\mathbf{x}`
     """
     if len(y.shape) > 1:  # pragma: no cover
         raise TypeError(f"y must be 1D (found shape {y.shape})")

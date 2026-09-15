@@ -38,17 +38,17 @@ def rank_biased_precision(
 
 
 class RBP(ListMetric, RankingMetricBase):
-    """
+    r"""
     Evaluate recommendations with rank-biased precision :cite:p:`rbp`.
 
-    If :math:`r_{ui} \\in \\{0, 1\\}` is binary implicit ratings, and the
+    If :math:`r_{ui} \in \{0, 1\}` is binary implicit ratings, and the
     weighting is the default geometric weight with patience :math:`p`, the RBP
     is computed by:
 
     .. math::
-        \\begin{align*}
-        \\operatorname{RBP}_p(L, u) & =(1 - p) \\sum_i r_{ui} p^i
-        \\end{align*}
+        \begin{align*}
+        \operatorname{RBP}_p(L, u) & =(1 - p) \sum_i r_{ui} p^i
+        \end{align*}
 
     The original RBP metric depends on the idea that the rank-biased sum of
     binary relevance scores in an infinitely-long, perfectly-precise list has is
@@ -57,7 +57,7 @@ class RBP(ListMetric, RankingMetricBase):
     the sum of the discounts for the recommendation list.
 
     :cite:t:`rbp` provide an extended discussion on choosing the patience
-    parameter :math:`\\gamma`.  This metric defaults to :math:`\\gamma=0.85`, to
+    parameter :math:`\gamma`.  This metric defaults to :math:`\\gamma=0.85`, to
     provide a relatively shallow curve and reward good items on the first few
     pages of results (in a 10-per-page setting).  Recommendation systems data
     has no pooling, so the variance of this estimator may be high as they note

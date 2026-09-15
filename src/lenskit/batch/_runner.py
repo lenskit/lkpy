@@ -28,7 +28,7 @@ from ._results import BatchResultRow, BatchResults
 
 _log = get_logger(__name__)
 
-type ItemSource = None | Literal["test-items", "candidates"]
+type ItemSource = Literal["test-items", "candidates"] | None
 """
 Source for the ``items`` input to the recommendation pipeline.
 """

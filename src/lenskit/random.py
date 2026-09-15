@@ -148,7 +148,7 @@ def init_global_rng(
         random.seed(int(int_seed))
 
     if seed_numpy:
-        np.random.seed(int_seed)
+        np.random.seed(int_seed)  # ruff: ignore[numpy-legacy-random]
 
     if seed_pytorch:
         import torch

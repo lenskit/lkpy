@@ -41,7 +41,7 @@ class OptunaTuneResults(TuneResults):
     @override
     def epochs(self) -> Iterable[dict[str, JsonValue]]:
         if not self.iterative:
-            return []
+            return
 
         for n, trial in enumerate(self.study.trials):
             if trial.state == TrialState.FAIL:

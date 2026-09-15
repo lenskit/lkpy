@@ -389,7 +389,7 @@ class MLModernLoader(MLData):
                 dtype={"userId": np.int32, "movieId": np.int32, "tag": "string"},
             ).rename(columns={"userId": "user_id", "movieId": "item_id"})
             df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
-            df = df[df["tag"].notnull()]
+            df = df[df["tag"].notna()]
             return df
 
     def genome_df(self):

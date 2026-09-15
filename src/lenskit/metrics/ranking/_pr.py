@@ -14,11 +14,11 @@ from ._base import ListMetric, RankingMetricBase
 
 
 class Precision(ListMetric, RankingMetricBase):
-    """
+    r"""
     Compute recommendation precision.  This is computed as:
 
     .. math::
-        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{|L|}
+        \frac{|L \cap I_u^{\mathrm{test}}|}{|L|}
 
     In the uncommon case that ``k`` is specified and ``len(recs) < k``, this metric uses
     ``len(recs)`` as the denominator.
@@ -46,11 +46,11 @@ class Precision(ListMetric, RankingMetricBase):
 
 
 class Recall(ListMetric, RankingMetricBase):
-    """
+    r"""
     Compute recommendation recall.  This is computed as:
 
     .. math::
-        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{min}\\{|I_u^{\\mathrm{test}}|, k\\}}
+        \frac{|L \cap I_u^{\mathrm{test}}|}{\operatorname{min}\{|I_u^{\mathrm{test}}|, k\}}
     """
 
     @property

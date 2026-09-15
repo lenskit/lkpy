@@ -112,11 +112,11 @@ class PredictMetric(Metric):
 
 
 class RMSE(PredictMetric):
-    """
+    r"""
     Compute RMSE (root mean squared error).  This is computed as:
 
     .. math::
-        \\sum_{r_{ui} \\in R} \\left(r_{ui} - s(i|u)\\right)^2
+        \sum_{r_{ui} \in R} \left(r_{ui} - s(i|u)\right)^2
 
     This metric does not do any fallbacks; if you want to compute RMSE with
     fallback predictions (e.g. usign a bias model when a collaborative filter
@@ -145,11 +145,11 @@ class RMSE(PredictMetric):
 
 
 class MAE(PredictMetric):
-    """
+    r"""
     Compute MAE (mean absolute error).  This is computed as:
 
     .. math::
-        \\sum_{r_{ui} \\in R} \\left|r_{ui} - s(i|u)\\right|
+        \sum_{r_{ui} \in R} \left|r_{ui} - s(i|u)\right|
 
     This metric does not do any fallbacks; if you want to compute MAE with
     fallback predictions (e.g. usign a bias model when a collaborative filter

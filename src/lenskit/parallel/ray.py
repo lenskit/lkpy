@@ -286,7 +286,7 @@ class TaskLimiter:
         assert len(queued) == 0
         assert len(ready) == 0
 
-        return n
+        return n  # ruff: ignore[return-in-generator]
 
     def _throttle_unordered[Elt](
         self, tasks: Generator[ray.ObjectRef[Elt]]
@@ -309,7 +309,7 @@ class TaskLimiter:
             yield ray.get(res)
             n += 1
 
-        return n
+        return n  # ruff: ignore[return-in-generator]
 
     def add_task(self, task: ray.ObjectRef | ray.ObjectID):
         self._tasks.append(task)

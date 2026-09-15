@@ -32,15 +32,15 @@ class DiscountWeight(RankWeight):
 
 
 class NDCG(ListMetric, RankingMetricBase):
-    """
+    r"""
     Compute the normalized discounted cumulative gain :cite:p:`ndcg`.
 
     Discounted cumultative gain is computed as:
 
     .. math::
-        \\begin{align*}
-        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
-        \\end{align*}
+        \begin{align*}
+        \mathrm{DCG}(L,u) & = \sum_{i=1}^{|L|} \frac{r_{ui}}{d(i)}
+        \end{align*}
 
     Unrated items are assumed to have a utility of 0; if no rating values are
     provided in the truth frame, item ratings are assumed to be 1.
@@ -48,9 +48,9 @@ class NDCG(ListMetric, RankingMetricBase):
     This is then normalized as follows:
 
     .. math::
-        \\begin{align*}
-        \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
-        \\end{align*}
+        \begin{align*}
+        \mathrm{nDCG}(L, u) & = \frac{\mathrm{DCG}(L,u)}{\mathrm{DCG}(L_{\mathrm{ideal}}, u)}
+        \end{align*}
 
     .. note::
         Negative gains are clipped to zero before computing NDCG.
@@ -146,15 +146,15 @@ class NDCG(ListMetric, RankingMetricBase):
 
 
 class DCG(ListMetric, RankingMetricBase):
-    """
+    r"""
     Compute the _unnormalized_ discounted cumulative gain :cite:p:`ndcg`.
 
     Discounted cumultative gain is computed as:
 
     .. math::
-        \\begin{align*}
-        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
-        \\end{align*}
+        \begin{align*}
+        \mathrm{DCG}(L,u) & = \sum_{i=1}^{|L|} \frac{r_{ui}}{d(i)}
+        \end{align*}
 
     Unrated items are assumed to have a utility of 0; if no rating values are
     provided in the truth frame, item ratings are assumed to be 1.

@@ -211,7 +211,7 @@ class DatasetBuilder:
         if isinstance(entities, Mapping):
             e_dict = dict(entities.items())
         else:
-            e_dict = {e: None for e in entities}
+            e_dict = dict.fromkeys(entities)
         enames = list(e_dict.keys())
         if interaction and enames[-1] != "item":
             warnings.warn(

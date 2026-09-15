@@ -17,7 +17,7 @@ from typing import Any
 import structlog
 from structlog.typing import EventDict
 
-LOGGED_ERRORS = deque([], 5)
+LOGGED_ERRORS = deque(maxlen=5)
 _WARN_CODE_RE = re.compile(r"\s+\((LKW-\w+)\)$")
 
 

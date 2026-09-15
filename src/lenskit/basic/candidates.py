@@ -25,9 +25,9 @@ class TrainingItemsCandidateConfig:
     """
 
     exclude: (
-        None
-        | Literal["query", "all", "history", "session", "context"]
+        Literal["query", "all", "history", "session", "context"]
         | Sequence[Literal["history", "session", "context"]]
+        | None
     ) = "query"
     """
     Specify the items from the query to exclude from the candidates.

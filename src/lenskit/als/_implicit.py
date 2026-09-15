@@ -33,7 +33,7 @@ class ImplicitMFConfig(ALSConfig):
 
 
 class ImplicitMFScorer(ALSBase):
-    """
+    r"""
     Implicit matrix factorization trained with alternating least squares
     :cite:p:`hu:implicit-mf`.  This algorithm outputs 'predictions', but they
     are not on a meaningful scale.  If its input data contains ``rating``
@@ -41,8 +41,8 @@ class ImplicitMFScorer(ALSBase):
     will be 1 for every rated item.
 
     With weight :math:`w`, this function decomposes the matrix
-    :math:`\\mathbb{1}^* + Rw`, where :math:`\\mathbb{1}^*` is an :math:`m
-    \\times n` matrix of all 1s.
+    :math:`\mathbb{1}^* + Rw`, where :math:`\mathbb{1}^*` is an :math:`m
+    \times n` matrix of all 1s.
 
     See the base class :class:`ALSBase` for documentation on the estimated
     parameters you can extract from a trained model. See
