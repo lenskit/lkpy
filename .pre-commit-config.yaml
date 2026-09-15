@@ -23,8 +23,8 @@ repos:
       # Run the formatter.
       - id: ruff-format
         # Run the linter.
-        # - id: ruff-check
-        #   args: [--fix]
+      - id: ruff-check
+        args: [--fix]
 
   - repo: https://github.com/tombi-toml/tombi-pre-commit
     rev: v1.5.5
