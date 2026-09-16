@@ -38,4 +38,4 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           push: never
-          runCmd: mise run lint
+          runCmd: uv run prek run -a
