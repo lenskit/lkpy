@@ -22,14 +22,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🧑🏻‍💻 Set up mise
-        uses: jdx/mise-action@v4
+      - name: 😎 Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
-          cache: false
+          python-version: "3.14"
+          activate-environment: true
+
+      - name: 📦 Install development dependencies
+        run: |
+          uv sync --only-dev
 
       - name: ✅ Check that pre-commit is clean
-        run: |
-          hk check --all
+        run: prek run -a
 
   lint:
     name: Annotate with lint failures
@@ -42,7 +46,7 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           python-version: "3.14"
           activate-environment: true
