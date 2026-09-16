@@ -80,6 +80,7 @@ dev = [
   "nox>=2025.5.1",
   # stub files
   "pandas-stubs >=2.2,<4",
+  "prek>=0.5.3",
   "py-spy>=0.4.1",
   "pyarrow-stubs >=11",
   "ruff >=0.16",
