@@ -85,7 +85,7 @@ skip() {
         shift
     fi
     while (($n > 0)); do
-        tap_status ok "$* # SKIP"
+        ok "# SKIP $*"
         n=$(($n - 1))
     done
 }
