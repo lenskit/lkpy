@@ -12,7 +12,7 @@ import lazy_loader as lazy
 
 from ._version import lenskit_version
 
-__version__ = lenskit_version()
+__version__ = lenskit_version(quiet=True)
 
 
 # lazy-load LensKit internal imports (per SPEC-1)

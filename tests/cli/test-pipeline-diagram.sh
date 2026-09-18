@@ -30,7 +30,7 @@ elif [[ $MERMAID = docker ]]; then
 else
     warn "no mermaid found"
     skip 2 "mermaid not found"
-    exit 0
+    return
 fi
 run-command "${mermaid_cmd[@]}" -i als-implicit.mmd -o als-explicit.png
 require -f als-explicit.png
