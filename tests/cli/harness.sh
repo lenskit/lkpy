@@ -92,7 +92,7 @@ skip() {
 
 require() {
     if test "$@"; then
-        ok
+        ok "require $*"
     else
         not_ok "require $*"
     fi
