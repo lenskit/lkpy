@@ -33,6 +33,11 @@ repos:
       - id: tombi-format
         exclude: \.lock$
 
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.14.1-1
+    hooks:
+      - id: shfmt
+
   - repo: local
     hooks:
       - id: rustfmt
