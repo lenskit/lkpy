@@ -5,7 +5,6 @@ uv = "latest"
 jq = "latest"
 shfmt = "latest"
 tombi = "latest"
-perl = { version = "latest", os = ["linux", "macos"] }
 hk = "latest"
 pkl = "latest"
 taplo = "latest"
