@@ -31,6 +31,16 @@ _clean-rust-coverage:
 _collect-rust-coverage:
     ./scripts/collect-rust-coverage.sh
 
+# build documentation site
+[group("docs")]
+build-docs: && build-schemas
+    sphinx-build docs build/site
+
+# preview and auto-build documentation site
+[group("docs")]
+preview-docs:
+    sphinx-autobuild docs build/site
+
 # build JSON schemas
 [group("docs")]
 build-schemas:
