@@ -50,7 +50,7 @@ repos:
       - id: license-headers
         name: add license headers
         language: system
-        entry: uv run utils/update-headers.py --error-on-change
+        entry: uv run scripts/update-headers.py --error-on-change
         types_or:
           - python
           - rust
