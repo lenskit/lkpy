@@ -117,7 +117,7 @@ doc = [
   "sphinxcontrib-bibtex >=2.0",
   "sphinxcontrib-mermaid ~=2.0",
   "sphinxext-opengraph >=0.5",
-  { include-group = "package" },
+  { include-group = "scripting" },
 ]
 gpu = ["torch ~=2.4"]
 package = ["lazy-loader >=0.4", "maturin ~=1.10", "packaging >=25.0"]
