@@ -1992,11 +1992,13 @@ dev = [
     { name = "zstandard" },
 ]
 doc = [
+    { name = "docopt-ng" },
     { name = "lazy-loader" },
     { name = "maturin" },
     { name = "myst-nb" },
     { name = "packaging" },
     { name = "pydata-sphinx-theme" },
+    { name = "rust-just" },
     { name = "sphinx" },
     { name = "sphinx-autoapi" },
     { name = "sphinx-copybutton" },
@@ -2005,6 +2007,7 @@ doc = [
     { name = "sphinxcontrib-bibtex" },
     { name = "sphinxcontrib-mermaid" },
     { name = "sphinxext-opengraph" },
+    { name = "tomlkit" },
 ]
 gpu = [
     { name = "torch", version = "2.10.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128/" } },
@@ -2130,11 +2133,13 @@ dev = [
     { name = "zstandard", specifier = ">=0.23.0" },
 ]
 doc = [
+    { name = "docopt-ng", specifier = ">=0.9.0" },
     { name = "lazy-loader", specifier = ">=0.4" },
     { name = "maturin", specifier = "~=1.10" },
     { name = "myst-nb", specifier = ">=0.13" },
     { name = "packaging", specifier = ">=25.0" },
     { name = "pydata-sphinx-theme", specifier = "~=0.16.0" },
+    { name = "rust-just", specifier = ">=1.58" },
     { name = "sphinx", specifier = ">=9.0" },
     { name = "sphinx-autoapi", specifier = "~=3.8" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
@@ -2143,6 +2148,7 @@ doc = [
     { name = "sphinxcontrib-bibtex", specifier = ">=2.0" },
     { name = "sphinxcontrib-mermaid", specifier = "~=2.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
+    { name = "tomlkit", specifier = "~=0.14.0" },
 ]
 gpu = [{ name = "torch", specifier = "~=2.4", index = "https://download.pytorch.org/whl/cu128/", conflict = { package = "lenskit", group = "gpu" } }]
 package = [
