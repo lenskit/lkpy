@@ -14,7 +14,6 @@ begin-suite
 
 if [[ ! -f $ML100K ]]; then
     msg "ML-100K not available, skipping tune test"
-    tap_out "Bail out! ML-100K not installed."
     return
 fi
 
