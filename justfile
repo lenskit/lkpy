@@ -17,13 +17,16 @@ version:
 build-accel profile='dev':
     maturin develop --profile={{ profile }}
 
+# run the LensKit tests (see scripts/test.sh)
 [positional-arguments]
 test *ARGS='':
     ./scripts/test.sh "$@"
 
-clean-rust-coverage:
+# clean up Rust code coverage (used prior to tests)
+_clean-rust-coverage:
     rm -rf .coverage-prof
     mkdir .coverage-prof
 
-collect-rust-coverage:
+# collect Rust code coverage into usable output
+_collect-rust-coverage:
     ./scripts/collect-rust-coverage.sh
