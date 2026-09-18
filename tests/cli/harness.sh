@@ -3,6 +3,7 @@
 
 . "$TEST_DIR/../../mise/task-functions.sh"
 TEST="$1"
+_wrote_plan=0
 N=0
 
 if [[ -z $TEST_WORK ]]; then
@@ -17,14 +18,12 @@ fi
 
 begin-suite() {
     tap_out "TAP version 14"
-    if ! grep -q '^test-plan ' "$TEST"; then
-        perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
-    fi
 }
 
 test-plan() {
     tap_out 1..$1
     dbg "1..$1"
+    _wrote_plan=1
 }
 
 run-command() {
@@ -106,3 +105,6 @@ else
     begin-suite
 fi
 . "$TEST"
+if ((! $_wrote_plan)); then
+    test-plan "$N"
+fi
