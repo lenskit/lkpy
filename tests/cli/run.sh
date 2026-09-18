@@ -66,4 +66,4 @@ if [[ $usage_coverage = true ]]; then
     end-group
 fi
 
-exec prove "${taps[@]}"
+exec tappy "${taps[@]}"

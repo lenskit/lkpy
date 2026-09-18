@@ -1984,6 +1984,7 @@ dev = [
     { name = "sphinxcontrib-bibtex" },
     { name = "sphinxcontrib-mermaid" },
     { name = "sphinxext-opengraph" },
+    { name = "tap-py", extra = ["yaml"] },
     { name = "tomlkit" },
     { name = "ty" },
     { name = "unbeheader" },
@@ -2030,6 +2031,7 @@ test = [
     { name = "pytest-doctestplus" },
     { name = "pytest-retry" },
     { name = "pyyaml" },
+    { name = "tap-py", extra = ["yaml"] },
 ]
 
 [package.metadata]
@@ -2118,6 +2120,7 @@ dev = [
     { name = "sphinxcontrib-bibtex", specifier = ">=2.0" },
     { name = "sphinxcontrib-mermaid", specifier = "~=2.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
+    { name = "tap-py", extras = ["yaml"], specifier = "~=3.2" },
     { name = "tomlkit", specifier = "~=0.14.0" },
     { name = "ty", specifier = ">=0.0.55" },
     { name = "unbeheader", specifier = "~=1.3" },
@@ -2160,6 +2163,7 @@ test = [
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
     { name = "pytest-retry", specifier = "~=1.7" },
     { name = "pyyaml", specifier = ">=5.0" },
+    { name = "tap-py", extras = ["yaml"], specifier = "~=3.2" },
 ]
 
 [[package]]
@@ -2415,6 +2419,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7b/92/328a294a6de83bacb95bed01f04e0eaff4e3616ee359fc821a5dfc539b02/mistune-3.3.4.tar.gz", hash = "sha256:58b5c96d6fcb61190dfe5fae498d2b2065f99cf61e9649418fd54cf1ada86dfe", size = 121426, upload-time = "2026-07-22T05:22:30.89Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/77/e4/288365afae98953bc01de09f686f40d8ee84578135aa7767d5d4e60b5278/mistune-3.3.4-py3-none-any.whl", hash = "sha256:ee015381e955e370962968befe1d729ab60fafb6a715ac6751763fbce38c8d4a", size = 66862, upload-time = "2026-07-22T05:22:29.419Z" },
+]
+
+[[package]]
+name = "more-itertools"
+version = "11.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/1d/f4da6f02cdffe04d6362210b807146a26044c88d839208aec273bb0d9184/more_itertools-11.1.0.tar.gz", hash = "sha256:48e8f4d9e7e5878571ecf6f2b4e57634f93cd474cc8cfbd2376f2d11b396e30d", size = 145772, upload-time = "2026-05-22T14:14:29.909Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl", hash = "sha256:4b65538ae22f6fed0ce4874efd317463a7489796a0939fa66824dd542125a192", size = 72226, upload-time = "2026-05-22T14:14:28.824Z" },
 ]
 
 [[package]]
@@ -4606,6 +4619,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/46/58/8c37dea7bbf769b20d58e7ace7e5edfe65b849442b00ffcdd56be88697c6/tabulate-0.10.0.tar.gz", hash = "sha256:e2cfde8f79420f6deeffdeda9aaec3b6bc5abce947655d17ac662b126e48a60d", size = 91754, upload-time = "2026-03-04T18:55:34.402Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl", hash = "sha256:f0b0622e567335c8fabaaa659f1b33bcb6ddfe2e496071b743aa113f8774f2d3", size = 39814, upload-time = "2026-03-04T18:55:31.284Z" },
+]
+
+[[package]]
+name = "tap-py"
+version = "3.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/d0/28b0c6c7fe464f70664f123e9f64f36acaf92767af98c1a82df6e2b49f41/tap_py-3.2.1.tar.gz", hash = "sha256:d03c9e6af0a56fad994f1c69f14041e676811d73eeeef20bf4077c43d621d608", size = 125390, upload-time = "2025-01-26T18:35:07.88Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/9e/6445a273190f69ae06989e1675f081206dd6b20dff19e570304b94e8350a/tap_py-3.2.1-py3-none-any.whl", hash = "sha256:ae2a8a7999529ec568d03462e75968289cee5927dfd52fcc3a6381c8892d10ef", size = 19264, upload-time = "2025-01-26T18:35:04.759Z" },
+]
+
+[package.optional-dependencies]
+yaml = [
+    { name = "more-itertools" },
+    { name = "pyyaml" },
 ]
 
 [[package]]

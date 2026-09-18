@@ -10,7 +10,7 @@ if [[ -f data/australian_users_items.json.gz ]]; then
     require -d "$TEST_WORK/steam-au-data"
     require -f "$TEST_WORK/steam-au-data/schema.json"
 else
-    skip 3
+    skip 3 "Steam AU not available"
 fi
 
 if [[ -f data/anonymous-msweb.data.gz ]]; then
@@ -18,7 +18,7 @@ if [[ -f data/anonymous-msweb.data.gz ]]; then
     require -d "$TEST_WORK/msweb"
     require -f "$TEST_WORK/msweb/schema.json"
 else
-    skip 3
+    skip 3 "MSWEB not available"
 fi
 
 if [[ -f data/az23/Video_Games.csv.gz ]]; then
@@ -26,7 +26,7 @@ if [[ -f data/az23/Video_Games.csv.gz ]]; then
     require -d "$TEST_WORK/az23-games"
     require -f "$TEST_WORK/az23-games/schema.json"
 else
-    skip 3
+    skip 3 "AZ23 Games not available"
 fi
 
 if [[ -d data/ambar ]]; then
@@ -34,5 +34,5 @@ if [[ -d data/ambar ]]; then
     require -d "$TEST_WORK/ambar-data"
     require -f "$TEST_WORK/ambar-data/schema.json"
 else
-    skip 3
+    skip 3 "AMBAR not available"
 fi

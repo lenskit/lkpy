@@ -10,12 +10,20 @@ if [[ $LK_USE_RAY_TUNE ]]; then
     tune_args+=(--ray)
 fi
 
+begin-suite
+
 if [[ ! -f $ML100K ]]; then
     msg "ML-100K not available, skipping tune test"
-    exit 0
+    return
 fi
 
-begin-suite
+msg "checking for Optuna"
+if ! uv pip list | grep -qE '(optuna|ray)'; then
+    err "tuner not installed aborting"
+    tap_out "Bail out! No tuning library available."
+    return
+fi
+
 run-lenskit data convert --movielens "$ML100K" "$data"
 run-lenskit data split --fraction=0.2 --min-train-interactions=5 "$data"
 tap_comment "testing non-iterative tuning"
