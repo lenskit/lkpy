@@ -30,7 +30,7 @@ def is_git_install() -> bool:
     return git.exists()
 
 
-def lk_git_version() -> Version:
+def lk_git_version(*, quiet: bool = False) -> Version:
     from packaging.version import Version
     from packaging.version import parse as parse_version
 
@@ -73,7 +73,10 @@ def lk_git_version() -> Version:
             _log.debug("cargo requested version is newer")
             base = cv_ver.public
         else:
-            _log.warning("Cargo version %s older than Git %s", cv_ver, version)
+            if quiet:
+                _log.debug("Cargo version %s older than Git %s", cv_ver, version)
+            else:
+                _log.warning("Cargo version %s older than Git %s", cv_ver, version)
             if version.pre is not None:
                 base = version.base_version + version.pre[0] + str(version.pre[1] + 1)
             else:
@@ -87,10 +90,10 @@ def lk_git_version() -> Version:
     return version
 
 
-def lenskit_version() -> str:
+def lenskit_version(*, quiet: bool = False) -> str:
     if is_git_install():
         try:
-            return str(lk_git_version())
+            return str(lk_git_version(quiet=quiet))
         except CalledProcessError:
             pass
 
