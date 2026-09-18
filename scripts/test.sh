@@ -36,7 +36,7 @@ run-cmd -check just build-accel "${build_args[@]}"
 if (($ACCEL_COVER)); then
     build_args+=(--coverage)
     export LLVM_PROFILE_FILE="$PWD/.coverage-prof/lenskit-test-%p-%m.profraw"
-    just clean-rust-coverage || die "cannot clean coverage"
+    just _clean-rust-coverage || die "cannot clean coverage"
     msg "re-building accelerator with coverage"
     run-cmd -check maturin develop "${build_args[@]}" -- -C instrument-coverage
 fi
@@ -50,5 +50,5 @@ msg "running tests"
 run-cmd -check pytest "${test_args[@]}" "$@"
 
 if (($ACCEL_COVER)); then
-    just collect-rust-coverage || die "failed to collect coverage data"
+    just _collect-rust-coverage || die "failed to collect coverage data"
 fi
