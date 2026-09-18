@@ -16,7 +16,9 @@ eval "$(getoptions _cli_definition _cli_parse "$@") exit 1"
 _cli_parse "$@"
 eval "set -- $TESTS"
 
-. "${UV_PROJECT_ENVIRONMENT:-$PROJECT_ROOT/.venv}/bin/activate"
+if [[ -z "$VIRTUAL_ENV" ]]; then
+    . "${UV_PROJECT_ENVIRONMENT:-$PROJECT_ROOT/.venv}/bin/activate"
+fi
 
 declare -a test_args=(--durations=10)
 declare -a build_args=()
