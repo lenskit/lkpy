@@ -131,6 +131,7 @@ test = [
   "pytest-retry ~=1.7",
   "pytest >=8.2,<10",
   "pyyaml >=5.0",
+  "tap-py[yaml]~=3.2",
 ]
 
 # :tombi toml-version = "v1.0.0
