@@ -30,3 +30,11 @@ _clean-rust-coverage:
 # collect Rust code coverage into usable output
 _collect-rust-coverage:
     ./scripts/collect-rust-coverage.sh
+
+# build JSON schemas
+[group("docs")]
+build-schemas:
+    mkdir -p build/site/schemas
+    python -m lenskit.schemas -o build/site/schemas/config.json --config
+    python -m lenskit.schemas -o build/site/schemas/pipeline.json --pipeline
+    python -m lenskit.schemas -o build/site/schemas/tuner.json --tuner
