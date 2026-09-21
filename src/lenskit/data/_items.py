@@ -1139,7 +1139,10 @@ class ItemList:
         # Only subset the IDs if we don't have a vocabulary.  Otherwise, defer
         # ID subset until IDs are actually needed.
         array = self.to_arrow(
-            ids=self.vocabulary is None and self._ids is not None, numbers=True, type="array"
+            ids=self.vocabulary is None and self._ids is not None,
+            numbers=True,
+            ranks=False,
+            type="array",
         )
         array = indexer(array)
 

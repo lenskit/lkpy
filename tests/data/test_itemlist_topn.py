@@ -10,7 +10,7 @@ import torch
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import assume, given
 from pytest import mark
 
 from lenskit.data import ItemList
@@ -144,7 +144,7 @@ def test_top_n(items, n):
     assert np.all(ranks == np.arange(min(len(top), n)) + 1)
 
 
-@given(scored_lists(), st.integers(min_value=1))
+@given(scored_lists(scores="gaussian"), st.integers(min_value=1))
 def test_top_n_has_new_order(items, n):
     items = ItemList(items, ordered=True)
     top = items.top_n(n)
@@ -158,4 +158,6 @@ def test_top_n_has_new_order(items, n):
 
     ranks = top.ranks()
     assert ranks is not None
+    if len(ranks):
+        assert ranks[0] == 1
     assert np.all(ranks == np.arange(min(len(top), n)) + 1)
