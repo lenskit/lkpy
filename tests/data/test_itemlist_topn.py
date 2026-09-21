@@ -10,7 +10,7 @@ import torch
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import assume, given
 from pytest import mark
 
 from lenskit.data import ItemList
@@ -36,6 +36,10 @@ def test_top_all(items):
     diffs = np.diff(scores)
     assert np.all((diffs <= 0) | np.isnan(diffs))
 
+    ranks = top.ranks()
+    assert ranks is not None
+    assert np.all(ranks == np.arange(len(top)) + 1)
+
 
 @given(scored_lists(), st.integers(min_value=1))
 def test_top_n(items, n):
@@ -47,6 +51,10 @@ def test_top_n(items, n):
     assert scores is not None
     diffs = np.diff(scores)
     assert np.all((diffs <= 0) | np.isnan(diffs))
+
+    ranks = top.ranks()
+    assert ranks is not None
+    assert np.all(ranks == np.arange(min(len(top), n)) + 1)
 
 
 @given(scored_lists(), st.integers(min_value=1))
@@ -60,6 +68,10 @@ def test_top_n_field(items, n):
     assert rates is not None
     diffs = np.diff(rates)
     assert np.all((diffs <= 0) | np.isnan(diffs))
+
+    ranks = top.ranks()
+    assert ranks is not None
+    assert np.all(ranks == np.arange(min(len(top), n)) + 1)
 
 
 @given(scored_lists(), st.integers(min_value=1))
@@ -75,6 +87,10 @@ def test_top_n_keys(items, n):
     diffs = np.diff(keys)
     assert np.all((diffs <= 0) | np.isnan(diffs))
 
+    ranks = top.ranks()
+    assert ranks is not None
+    assert np.all(ranks == np.arange(min(len(top), n)) + 1)
+
 
 @mark.skipif(not torch.cuda.is_available(), reason="CUDA test")
 @given(scored_lists())
@@ -89,6 +105,10 @@ def test_top_all_cuda(items):
     diffs = np.diff(scores)
     assert np.all((diffs <= 0) | np.isnan(diffs))
 
+    ranks = top.ranks()
+    assert ranks is not None
+    assert np.all(ranks == np.arange(len(top)) + 1)
+
 
 @mark.skipif(not torch.cuda.is_available(), reason="CUDA test")
 @given(scored_lists(), st.integers(min_value=1))
@@ -102,3 +122,42 @@ def test_top_n_cuda(items, n):
     assert scores is not None
     diffs = np.diff(scores)
     assert np.all((diffs <= 0) | np.isnan(diffs))
+
+    ranks = top.ranks()
+    assert ranks is not None
+    assert np.all(ranks == np.arange(min(len(top), n)) + 1)
+
+
+@given(scored_lists(), st.integers(min_value=1))
+def test_top_n(items, n):
+    top = items.top_n(n)
+    assert len(top) == min(n, len(items) - np.sum(np.isnan(items.scores())))
+    assert top.ordered
+
+    scores = top.scores()
+    assert scores is not None
+    diffs = np.diff(scores)
+    assert np.all((diffs <= 0) | np.isnan(diffs))
+
+    ranks = top.ranks()
+    assert ranks is not None
+    assert np.all(ranks == np.arange(min(len(top), n)) + 1)
+
+
+@given(scored_lists(scores="gaussian"), st.integers(min_value=1))
+def test_top_n_has_new_order(items, n):
+    items = ItemList(items, ordered=True)
+    top = items.top_n(n)
+    assert len(top) == min(n, len(items) - np.sum(np.isnan(items.scores())))
+    assert top.ordered
+
+    scores = top.scores()
+    assert scores is not None
+    diffs = np.diff(scores)
+    assert np.all((diffs <= 0) | np.isnan(diffs))
+
+    ranks = top.ranks()
+    assert ranks is not None
+    if len(ranks):
+        assert ranks[0] == 1
+    assert np.all(ranks == np.arange(min(len(top), n)) + 1)
