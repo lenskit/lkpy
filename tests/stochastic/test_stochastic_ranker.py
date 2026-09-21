@@ -121,6 +121,7 @@ def test_runtime_truncation(n, items: ItemList):
     assert isinstance(ranked, ItemList)
     assert ranked.ordered
     assert len(ranked) == min(n, len(val_items))
+    assert np.all(ranked.ranks() == np.arange(min(n, len(items))) + 1)
 
     # the scores match
     rank_s = ranked.scores("pandas", index="ids")
