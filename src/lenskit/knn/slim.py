@@ -16,7 +16,7 @@ from scipy.sparse import csr_array
 from lenskit._accel import slim as _slim_accel
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
-from lenskit.logging import get_logger, item_progress
+from lenskit.logging import get_logger, item_progress, Stopwatch
 from lenskit.parallel import ensure_parallel_init, run_accel_task
 from lenskit.pipeline.components import Component
 from lenskit.training import Trainable, TrainingOptions
@@ -100,6 +100,7 @@ class SLIMScorer(Component, Trainable):
         )
         iu_matrix = ui_matrix.transpose()
 
+        timer = Stopwatch()
         with item_progress("SLIM vectors", ui_matrix.dimension) as pb:
             weights = run_accel_task(
                 _slim_accel.train_slim(
@@ -114,7 +115,7 @@ class SLIMScorer(Component, Trainable):
             )
         weights = pa.chunked_array(weights).combine_chunks()
         weights = SparseRowArray.from_array(weights)
-        _log.info("learned %d SLIM weights", weights.nnz)
+        _log.info("learned %d SLIM weights in %s", weights.nnz, timer)
         self.weights = weights = weights.to_scipy().T.tocsr()
         self.items = data.items
 
