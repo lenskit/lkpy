@@ -33,6 +33,7 @@ _ml_path = Path("data/ml-20m.zip")
 
 
 @mark.slow
+@mark.compat
 @mark.parametrize("version", LK_VERSIONS.keys())
 def test_data_backwards_compat(version, tmpdir: Path):
     "Test that we can load datasets prepared by old versions."
@@ -67,6 +68,7 @@ def test_data_backwards_compat(version, tmpdir: Path):
 
 
 @mark.realdata
+@mark.compat
 @mark.skipif(not _ml_path.exists(), reason="ml-20m not available")
 @mark.parametrize("version", LK_VERSIONS.keys())
 def test_data_backwards_ml20m(version, tmpdir: Path):

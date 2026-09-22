@@ -15,7 +15,7 @@ run-cmd -check lenskit doctor
 
 msg -step "running test suite"
 export LK_TORCH_COMPILE=0
-run-cmd python -m pytest --verbose --durations=25 --cov=src/lenskit -m 'not realdata' tests
+run-cmd python -m pytest --verbose --durations=25 --cov=src/lenskit -m 'not realdata and not compat' tests
 if (($?)); then
     die "tests failed"
 fi
