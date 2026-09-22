@@ -13,14 +13,27 @@ version:
     ./scripts/version-tool.py
 
 # Build the source code distribution
+[group("build")]
 [positional-arguments]
 build-dist *ARGS='':
     ./scripts/build-dist.sh {{ ARGS }}
 
 # Build the accelerator module
 [arg('profile', long="release", short='r', value='release')]
+[group("build")]
 build-accel profile='dev':
     maturin develop --profile={{ profile }}
+
+[group("build")]
+[script]
+build-conda: (build-dist '-dsc')
+    export LK_PACKAGE_VERSION="$(./scripts/version-tool.py -q)"
+    flags=
+    if [ -n "${CI:-}" ]; then
+        flags='--noarch-build-platform linux-64'
+    fi
+    set -x
+    rattler-build build --recipe conda --output-dir dist/conda $flags
 
 # run the LensKit tests (see scripts/test.sh)
 [positional-arguments]
