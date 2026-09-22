@@ -137,6 +137,7 @@ test = [
   "pytest >=8.2,<10",
   "pyyaml >=5.0",
   "tap-py[yaml]~=3.2",
+  { include-group = "scripting" },
 ]
 
 # :tombi toml-version = "v1.0.0

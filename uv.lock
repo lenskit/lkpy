@@ -2029,14 +2029,20 @@ scripting = [
     { name = "tomlkit" },
 ]
 test = [
+    { name = "docopt-ng" },
     { name = "hypothesis" },
+    { name = "lazy-loader" },
+    { name = "maturin" },
+    { name = "packaging" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
     { name = "pytest-doctestplus" },
     { name = "pytest-retry" },
     { name = "pyyaml" },
+    { name = "rust-just" },
     { name = "tap-py", extra = ["yaml"] },
+    { name = "tomlkit" },
 ]
 
 [package.metadata]
@@ -2166,14 +2172,20 @@ scripting = [
     { name = "tomlkit", specifier = "~=0.14.0" },
 ]
 test = [
+    { name = "docopt-ng", specifier = ">=0.9.0" },
     { name = "hypothesis", specifier = "~=6.139" },
+    { name = "lazy-loader", specifier = ">=0.4" },
+    { name = "maturin", specifier = "~=1.10" },
+    { name = "packaging", specifier = ">=25.0" },
     { name = "pytest", specifier = ">=8.2,<10" },
     { name = "pytest-benchmark", specifier = "~=5.1" },
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
     { name = "pytest-retry", specifier = "~=1.7" },
     { name = "pyyaml", specifier = ">=5.0" },
+    { name = "rust-just", specifier = ">=1.58" },
     { name = "tap-py", extras = ["yaml"], specifier = "~=3.2" },
+    { name = "tomlkit", specifier = "~=0.14.0" },
 ]
 
 [[package]]

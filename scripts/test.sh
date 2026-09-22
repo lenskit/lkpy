@@ -22,6 +22,9 @@ fi
 
 declare -a test_args=(--durations=10)
 declare -a build_args=()
+if [[ $CI ]]; then
+    test_args+=(-v)
+fi
 
 if (($COVER)); then
     msg "running tests with coverage"

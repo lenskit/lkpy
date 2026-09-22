@@ -8,7 +8,7 @@ run-cmd -check uv venv -p 3.14 --clear
 run-cmd -check uv sync
 
 msg -step "running basic tests"
-run-cmd just test -v --coverage -m realdata
+run-cmd just test --coverage -- -m realdata
 if (($?)); then
     die "tests failed"
 fi
