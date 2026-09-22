@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run a single test.
 
-. "$TEST_DIR/../../mise/task-functions.sh"
+. "$TEST_DIR/../../scripts/lib/init.sh"
 TEST="$1"
 _wrote_plan=0
 N=0
