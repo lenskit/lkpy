@@ -57,16 +57,8 @@ _zsl_want_style() {
     fi
 }
 
-sty() {
-    local esc=$'\e['
-    local x var code
-    if _zsl_want_style; then
-        while (($#)); do
-            local x="${1//-/_}"
-            local var="_sty_${x}"
-            local code="${!var}"
-            echo -n "${esc}${code}m"
-            shift
-        done
-    fi
-}
+if [[ -z "$ZSH_VERSION" ]]; then
+    . "$LK_SCRIPT_LIB/style-funcs.sh"
+else
+    . "$LK_SCRIPT_LIB/style-funcs.zsh"
+fi
