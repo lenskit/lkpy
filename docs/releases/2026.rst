@@ -18,8 +18,13 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 Third feature release in 2026, with more feature updates and bug fixes.  A full list of
 fixed issues and merged PRs is on `milestone 2026.4`_.
 
+- 🐞 Fixed bug in :meth:`lenskit.data.ItemList.top_n` that returned ordered lists with incorrect ranks (:pr:`1221`).
 - Made pipeline schemas more strict to catch misconfiguration errors (:pr:`1193`).
 - Published JSON schemas for configuration and tuning files (:pr:`1194`).
+- Added diagnostics for power measurement to ``lenskit doctor`` (:issue:`1186`, :pr:`1189`).
+- Added AMBAR dataset import (:issue:`1142`).
+- Simplified missing history warnings (:issue:`804`, :pr:`1209`, first contribution by :user:`appleweiping`).
+- Added inference-time mean pooling for new user activity to FlexMF (:issue:`934`, :pr:`1201`)
 
 .. _milestone 2026.4: https://github.com/lenskit/lkpy/milestone/29
 
