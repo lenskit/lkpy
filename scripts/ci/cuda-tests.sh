@@ -15,6 +15,7 @@ run-cmd -check uv run lenskit doctor
 
 msg -step "running test suite"
 export LK_TORCH_COMPILE=0
+python -m pytest --verbose --durations=25 --cov=src/lenskit -m 'not realdata' tests
 run-cmd just test --coverage
 if (($?)); then
     die "tests failed"
