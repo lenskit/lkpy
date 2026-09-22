@@ -11,12 +11,11 @@ run-cmd -check uv venv -p 3.14 --clear
 run-cmd -check uv sync --group=gpu
 
 msg -step "checking LensKit install"
-run-cmd -check uv run lenskit doctor
+run-cmd -check lenskit doctor
 
 msg -step "running test suite"
 export LK_TORCH_COMPILE=0
-python -m pytest --verbose --durations=25 --cov=src/lenskit -m 'not realdata' tests
-run-cmd just test --coverage
+run-cmd python -m pytest --verbose --durations=25 --cov=src/lenskit -m 'not realdata' tests
 if (($?)); then
     die "tests failed"
 fi
