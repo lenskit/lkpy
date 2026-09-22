@@ -16,7 +16,7 @@ from scipy.sparse import csr_array
 from lenskit._accel import slim as _slim_accel
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
-from lenskit.logging import get_logger, item_progress, Stopwatch
+from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import ensure_parallel_init, run_accel_task
 from lenskit.pipeline.components import Component
 from lenskit.training import Trainable, TrainingOptions
