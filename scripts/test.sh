@@ -46,7 +46,7 @@ if (($ACCEL_COVER)); then
     run-cmd -check maturin develop --profile=dev -- -C instrument-coverage
 fi
 
-if ((! $SLOW_TESTS)); then
+if [[ $SLOW_TESTS -ne 0 ]]; then
     test_args+=(-m 'not slow')
 fi
 
