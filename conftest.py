@@ -28,6 +28,11 @@ from lenskit.testing import ml_100k, ml_ds, ml_ds_unchecked, ml_ratings  # noqa:
 logging.getLogger("numba").setLevel(logging.INFO)
 
 _log = structlog.stdlib.get_logger("lenskit.tests")
+
+if "FORCE_COLOR" in os.environ:
+    del os.environ["FORCE_COLOR"]
+
+
 RNG_SEED = 42
 if "LK_TEST_FREE_RNG" in os.environ:
     warnings.warn("using nondeterministic RNG initialization")
