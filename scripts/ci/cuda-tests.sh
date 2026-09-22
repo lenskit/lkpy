@@ -14,6 +14,7 @@ msg -step "checking LensKit install"
 run-cmd -check uv run lenskit doctor
 
 msg -step "running test suite"
+export LK_TORCH_COMPILE=0
 run-cmd just test --coverage
 if (($?)); then
     die "tests failed"
