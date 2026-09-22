@@ -12,6 +12,11 @@ update-bib:
 version:
     ./scripts/version-tool.py
 
+# Build the source code distribution
+[positional-arguments]
+build-dist *ARGS='':
+    ./scripts/build-dist.sh {{ ARGS }}
+
 # Build the accelerator module
 [arg('profile', long="release", short='r', value='release')]
 build-accel profile='dev':

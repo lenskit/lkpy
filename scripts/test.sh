@@ -5,7 +5,7 @@
 _cli_definition() {
     setup TESTS help:_cli_help -- "Usage: scripts/test.sh [options] [TEST...]" ''
     msg -- "Options:"
-    flag LOG_VERBOSE init:: -v --verbose -- "verbose log output"
+    flag LOG_VERBOSE init:@export -v --verbose -- "verbose log output"
     flag TEST_RELEASE --release -- "test release build of accelerator"
     flag SLOW_TESTS --slow -- "include slow tests"
     flag COVER --coverage -- "measure test coverage"
