@@ -9,8 +9,9 @@ update-bib:
     curl -fL -o docs/lenskit.bib "{{ BBT_URL }}"
 
 # Print LensKit version information
-version:
-    ./scripts/version-tool.py
+[arg('out', long="github", value='gh')]
+version out='default':
+    ./scripts/version-tool.py {{ if out == 'gh' { "--github" } else { '' } }}
 
 # Build the source code distribution
 [group("build")]
