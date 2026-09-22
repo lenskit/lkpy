@@ -25,6 +25,7 @@ fixed issues and merged PRs is on `milestone 2026.4`_.
 - Added AMBAR dataset import (:issue:`1142`).
 - Simplified missing history warnings (:issue:`804`, :pr:`1209`, first contribution by :user:`appleweiping`).
 - Added inference-time mean pooling for new user activity to FlexMF (:issue:`934`, :pr:`1201`)
+- Several test and CI refactors, including managing code policies with ``prek``/``pre-commit`` instead of ``hk``.
 
 .. _milestone 2026.4: https://github.com/lenskit/lkpy/milestone/29
 
