@@ -39,45 +39,51 @@ from lenskit._version import lenskit_version  # noqa: PLC2701
 
 _log = logging.getLogger("lenskit.version-tool")
 
-options = docopt(__doc__ or "", options_first=True)
 
-# set up logging
-verbosity = options["--verbose"]
-if verbosity > 1:
-    level = logging.DEBUG
-elif verbosity:
-    level = logging.INFO
-else:
-    level = logging.WARNING
-logging.basicConfig(level=level, stream=sys.stderr)
+def main():
+    options = docopt(__doc__ or "", options_first=True)
 
-# get the version
-version = lenskit_version()
-
-if options["--github"]:
-    gh_file = os.environ["GITHUB_OUTPUT"]
-    with open(gh_file, "at") as ghf:
-        print(f"version={version}", file=ghf)
-
-elif options["--update"]:
-    stage_dir = Path(options["DIR"] or ".")
-
-    ppt_file = stage_dir / "pyproject.toml"
-    with ppt_file.open("rt") as tf:
-        meta = tomlkit.load(tf)
-
-    proj = meta["project"]
-    proj["dynamic"].remove("version")  # type: ignore
-    proj["version"] = str(version)  # type: ignore
-
-    _log.info("updating %s", str(ppt_file))
-    with ppt_file.open("wt") as tf:
-        _log.debug("writing updated pyproject.toml")
-        tomlkit.dump(meta, tf)
-
-else:
-    # we only want to print the version
-    if options["--quiet"]:
-        print(version)
+    # set up logging
+    verbosity = options["--verbose"]
+    if verbosity > 1:
+        level = logging.DEBUG
+    elif verbosity:
+        level = logging.INFO
     else:
-        print("LensKit version", version)
+        level = logging.WARNING
+    logging.basicConfig(level=level, stream=sys.stderr)
+
+    # get the version
+    version = lenskit_version()
+
+    if options["--github"]:
+        gh_file = os.environ["GITHUB_OUTPUT"]
+        with open(gh_file, "at") as ghf:
+            print(f"version={version}", file=ghf)
+
+    elif options["--update"]:
+        stage_dir = Path(options["DIR"] or ".")
+
+        ppt_file = stage_dir / "pyproject.toml"
+        with ppt_file.open("rt") as tf:
+            meta = tomlkit.load(tf)
+
+        proj = meta["project"]
+        proj["dynamic"].remove("version")  # type: ignore
+        proj["version"] = str(version)  # type: ignore
+
+        _log.info("updating %s", str(ppt_file))
+        with ppt_file.open("wt") as tf:
+            _log.debug("writing updated pyproject.toml")
+            tomlkit.dump(meta, tf)
+
+    else:
+        # we only want to print the version
+        if options["--quiet"]:
+            print(version)
+        else:
+            print("LensKit version", version)
+
+
+if __name__ == "__main__":
+    main()
