@@ -5,20 +5,19 @@
 
 . "$(dirname "$0")/../lib/init.sh" || exit 2
 
+msg -step "installing Python environment"
 run-cmd -check uv venv -p 3.14 --clear
 . .venv/bin/activate || die "cannot activate virtualenv"
-
-step "installing Python environment"
 run-cmd -check uv sync --group=gpu
 
-step "checking LensKit install"
+msg -step "checking LensKit install"
 run-cmd -check uv run lenskit doctor
 
-step "running test suite"
+msg -step "running test suite"
 run-cmd just test -v --coverage -m 'not slow'
 if (($?)); then
     die "tests failed"
 fi
 
-step "exporting coverage"
+msg -step "exporting coverage"
 run-cmd -check coverage xml

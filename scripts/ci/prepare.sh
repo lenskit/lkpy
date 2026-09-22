@@ -2,6 +2,8 @@
 
 . "$(dirname "$0")/../lib/init.sh" || exit 2
 
+msg -step "preparing CI environment"
+
 if [[ -z $CI ]]; then
     msg "not in CI, skipping environment setup"
 fi

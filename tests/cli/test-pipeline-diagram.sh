@@ -2,17 +2,17 @@ out="$TEST_WORK/als-implicit.mmd"
 
 MERMAID_IMG=ghcr.io/mermaid-js/mermaid-cli/mermaid-cli
 if [[ -z "$MERMAID" ]]; then
-    dbg "looking for mermaid"
+    msg -dbg "looking for mermaid"
     if [[ -n $MERMAID_DOCKER ]]; then
-        dbg "searching for docker"
+        msg -dbg "searching for docker"
         if which -s docker; then
-            dbg "docker found"
+            msg -dbg "docker found"
             MERMAID=docker
         else
             warn "MERMAID_DOCKER set but docker not found"
         fi
     elif which -s mmdc; then
-        dbg "found Mermaid CLI"
+        msg -dbg "found Mermaid CLI"
         MERMAID=cli
     fi
 fi

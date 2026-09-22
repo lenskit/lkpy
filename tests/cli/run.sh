@@ -4,10 +4,24 @@
 #USAGE flag "--cov-append" help="Append to existing test coverage."
 #USAGE arg "[test]" var=#true help="Test files to run."
 
-. "$PWD/mise/task-functions.sh" || exit 2
+. "$PWD/scripts/lib/init.sh" || exit 2
 export TEST_DIR="$(dirname "$0")"
 
 export VERBOSE
+
+start-group() {
+    if [[ $CI_SYSTEM_NAME = woodpecker ]]; then
+        step "$*"
+    elif [[ $CI ]]; then
+        echo "::group::$*"
+    fi
+}
+
+end-group() {
+    if [[ $CI ]]; then
+        echo ::endgroup::
+    fi
+}
 
 PYRUN="python"
 if [[ $usage_coverage = true ]]; then
@@ -29,10 +43,10 @@ fi
 
 declare -a test_files=()
 if [[ $usage_test ]]; then
-    dbg "using tests from CLI"
+    msg -dbg "using tests from CLI"
     test_files=($usage_test)
 else
-    dbg "scanning for tests"
+    msg -dbg "scanning for tests"
     test_files=($TEST_DIR/test-*.sh)
 fi
 
@@ -42,14 +56,14 @@ for test in "${test_files[@]}"; do
     start-group "CLI test $test"
     msg "running test $test"
     tap_file="${test%%.sh}.tap"
-    dbg "saving output to $tap_file"
+    msg -dbg "saving output to $tap_file"
     export TEST_WORK=$(mktemp -d)
-    dbg "using temporary directory $TEST_WORK"
-    dbg "invoking test"
+    msg -dbg "using temporary directory $TEST_WORK"
+    msg -dbg "invoking test"
     bash --noprofile --norc "$TEST_DIR/harness.sh" "$test" 5>"$tap_file"
     status="$?"
     if (($status)); then
-        err "test $test errored with $status"
+        msg -err "test $test errored with $status"
     else
         msg "test $test completed"
     fi
@@ -66,4 +80,6 @@ if [[ $usage_coverage = true ]]; then
     end-group
 fi
 
+start-group "CLI test summary"
 exec tappy "${taps[@]}"
+end-group

@@ -44,6 +44,10 @@ _zsl_log_trace() {
     fi
 }
 
+_zsl_log_step() {
+    echo "▶  $*"
+}
+
 _zsl_msg() {
     local lcmd=_zsl_log_info
     local _zsl_log_symbol=
@@ -81,6 +85,10 @@ _zsl_msg() {
         -symbol)
             _zsl_log_symbol="$2"
             shift 2
+            ;;
+        -step)
+            lcmd=_zsl_log_step
+            shift
             ;;
         -- | -info)
             shift
