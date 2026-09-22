@@ -43,7 +43,7 @@ if (($ACCEL_COVER)); then
     export LLVM_PROFILE_FILE="$PWD/.coverage-prof/lenskit-test-%p-%m.profraw"
     just _clean-rust-coverage || die "cannot clean coverage"
     msg "re-building accelerator with coverage"
-    run-cmd -check maturin develop "${build_args[@]}" -- -C instrument-coverage
+    run-cmd -check maturin develop --profile=dev -- -C instrument-coverage
 fi
 
 if (($SLOW_TESTS)); then
