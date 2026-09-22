@@ -39,11 +39,10 @@ msg "building accelerator"
 run-cmd -check just build-accel "${build_args[@]}"
 
 if (($ACCEL_COVER)); then
-    build_args+=(--coverage)
-    export LLVM_PROFILE_FILE="$PWD/.coverage-prof/lenskit-test-%p-%m.profraw"
-    just _clean-rust-coverage || die "cannot clean coverage"
     msg "re-building accelerator with coverage"
     run-cmd -check maturin develop --profile=dev -- -C instrument-coverage
+    export LLVM_PROFILE_FILE="$PWD/.coverage-prof/lenskit-test-%p-%m.profraw"
+    just _clean-rust-coverage || die "cannot clean coverage"
 fi
 
 if [[ $SLOW_TESTS -ne 0 ]]; then

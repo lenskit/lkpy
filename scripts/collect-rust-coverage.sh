@@ -14,6 +14,6 @@ else
 fi
 
 msg "merging coverage data"
-cargo profdata -- merge -sparse .coverage-prof/lenskit-test-*.profraw -o .coverage-prof/lenskit-test.profdata
+run-cmd -check cargo profdata -- merge -sparse .coverage-prof/lenskit-test-*.profraw -o .coverage-prof/lenskit-test.profdata
 msg "exporting lcov.info"
 cargo cov -- export --instr-profile=.coverage-prof/lenskit-test.profdata "$target" --format=lcov >lcov.info
