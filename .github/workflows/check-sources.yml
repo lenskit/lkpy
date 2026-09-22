@@ -1,10 +1,10 @@
 name: Static Checks
 on:
-  push:
-    branches:
-      - main
-      - series/*
-      - future/*
+  # push:
+  #   branches:
+  #     - main
+  #     - series/*
+  #     - future/*
   pull_request:
 
 concurrency:
