@@ -1,9 +1,6 @@
 #!/bin/zsh
-#MISE description="Prepare CI environment"
-#USAGE flag "-v --verbose" help="Enable verbose logging."
 
-. "$MISE_PROJECT_ROOT/mise/task-functions.sh"
-. "${UV_PROJECT_ENVIRONMENT:-$MISE_PROJECT_ROOT/.venv}/bin/activate"
+. "$(dirname "$0")/../lib/init.sh" || exit 2
 
 if [[ -z $CI ]]; then
     msg "not in CI, skipping environment setup"
@@ -18,6 +15,4 @@ if [[ $CI_SYSTEM_NAME = woodpecker ]]; then
     else
         msg -warn "running on Woodpecker but /datasets does not exist"
     fi
-else
-    msg "nothing to do for CI $CI_SYSTEM_NAME"
 fi

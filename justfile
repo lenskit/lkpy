@@ -41,6 +41,11 @@ build-conda: (build-dist '-dsc')
 test *ARGS='':
     ./scripts/test.sh "$@"
 
+# run the LensKit CLI tests (see tests/cli/run.sh)
+[positional-arguments]
+test-cli *ARGS='':
+    ./tests/cli/run.sh "$@"
+
 # clean up Rust code coverage (used prior to tests)
 _clean-rust-coverage:
     rm -rf .coverage-prof
@@ -67,3 +72,11 @@ build-schemas:
     python -m lenskit.schemas -o build/site/schemas/config.json --config
     python -m lenskit.schemas -o build/site/schemas/pipeline.json --pipeline
     python -m lenskit.schemas -o build/site/schemas/tuner.json --tuner
+
+[group("ci")]
+ci-prepare:
+    ./scripts/ci/prepare.sh
+
+[group("ci")]
+ci-run name: ci-prepare
+    ./scripts/ci/{{ name }}.sh

@@ -10,12 +10,11 @@ labels:
 
 steps:
   - name: build and run tests
-    image: codeberg.org/mdekstrand/woodpecker-mise:v1-f44-dev
+    image: codeberg.org/mdekstrand/woodpecker-just:v1-f44-rust
     pull: true
     settings:
-      task: "ci:cuda-tests"
-      mise-env: ci
-      mise-deps: no
+      task: ci-run cuda-tests
+      uv: no
 
   - name: upload code coverage
     image: woodpeckerci/plugin-codecov
