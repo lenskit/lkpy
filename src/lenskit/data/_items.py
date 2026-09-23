@@ -883,7 +883,7 @@ class ItemList:
             columns:
                 Fields to include in the final table.
         Returns:
-            The Arrow table or struct array containg this item list's
+            The Arrow table or struct array containing this item list's
             contents.
         """
         arrays = []
@@ -956,7 +956,10 @@ class ItemList:
         return types
 
     def top_n(
-        self, n: int | None = None, *, scores: str | NDArray[np.floating] | None = None
+        self,
+        n: int | None = None,
+        *,
+        scores: str | NDArray[np.floating] | torch.Tensor | pa.Array | None = None,
     ) -> ItemList:
         """
         Get the top _N_ items in this list, sorted in decreasing order.
