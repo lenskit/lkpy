@@ -749,6 +749,12 @@ def test_arrow_reload_drops_ranks():
     assert "rank" not in tbl2.column_names
 
 
+def test_explicit_ranks_get_dropped():
+    il = ItemList(item_ids=[10, 20, 30], rank=[1, 2, 3])
+    ordered = il.top_n(scores=np.array([1.0, 3.0, 2.0]))
+    assert np.all(ordered.ranks() == [1, 2, 3])
+
+
 def test_copy_ctor():
     data = np.random.randn(5).astype(np.float32)
     extra = np.random.randn(5).astype(np.float32)

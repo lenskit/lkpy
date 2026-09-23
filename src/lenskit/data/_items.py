@@ -276,7 +276,7 @@ class ItemList:
         self._fields = {
             f.name: MTArray(array.field(i))
             for (i, f) in enumerate(fields)
-            if f.name not in ["item_num", "item_id", "rank"]
+            if f.name not in ["item_num", "item_id"]
         }
 
     def _init_ids(
@@ -950,7 +950,8 @@ class ItemList:
             types["rank"] = pa.int32()
 
         for n, f in self._fields.items():
-            types[n] = f.arrow().type
+            if ranks or n != "rank":
+                types[n] = f.arrow().type
 
         return types
 
