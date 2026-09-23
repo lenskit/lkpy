@@ -276,7 +276,7 @@ class ItemList:
         self._fields = {
             f.name: MTArray(array.field(i))
             for (i, f) in enumerate(fields)
-            if f.name not in ["item_num", "item_id"]
+            if f.name not in ["item_num", "item_id", "rank"]
         }
 
     def _init_ids(
