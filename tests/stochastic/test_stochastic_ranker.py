@@ -136,6 +136,43 @@ def test_runtime_truncation(n, items: ItemList):
     assert np.all(rank_s == src_s)
 
 
+@given(st.integers(min_value=1, max_value=100), scored_lists(scores="gaussian"))
+def test_ignores_input_order(n, items: ItemList):
+    assert items.ranks() is None
+    items = items.top_n()
+    assert items.ranks() is not None
+    assert np.all(items.ranks() == np.arange(len(items)) + 1)
+
+    rerank = StochasticTopNRanker(n=n, transform="linear")
+    ranked = rerank(items=items)
+
+    ids = items.ids()
+    scores = items.scores("numpy")
+    assert scores is not None
+    invalid = ~np.isfinite(scores)
+    _log.info("top %d of %d items, %d invalid", n, len(ids), np.sum(invalid))
+
+    val_items = items[~invalid]
+
+    # the ranks are correct for final output
+    assert isinstance(ranked, ItemList)
+    assert ranked.ordered
+    assert len(ranked) == min(n, len(val_items))
+    assert np.all(ranked.ranks() == np.arange(min(n, len(ranked))) + 1)
+
+    # the scores match
+    rank_s = ranked.scores("pandas", index="ids")
+    assert rank_s is not None
+    src_s = items.scores("pandas", index="ids")
+    assert src_s is not None
+    src_s = src_s[src_s.notna()]
+
+    # make sure the scores were preserved properly
+    rank_s, src_s = rank_s.align(src_s, "left")
+    assert not np.any(np.isnan(src_s))
+    assert np.all(rank_s == src_s)
+
+
 @given(
     scored_lists(
         n=st.integers(100, 5000), scores=st.floats(-5, 15, width=32, allow_infinity=False)
