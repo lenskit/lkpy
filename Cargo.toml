@@ -33,8 +33,8 @@ peg = "^0.8"
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "^1.0"
 
-arrow = { version = "^59", default-features = false, features = ["pyarrow"] }
-arrow-schema = { version = "^59", features = ["serde"] }
+arrow = { version = "^60", default-features = false, features = ["pyarrow"] }
+arrow-schema = { version = "^60", features = ["serde"] }
 ndarray = { version = "^0.17", features = ["rayon"] }
 numpy = "^0.29"
 
