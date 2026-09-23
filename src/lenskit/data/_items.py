@@ -870,6 +870,21 @@ class ItemList:
     ):
         """
         Convert the item list to a Pandas table.
+
+        Args:
+            ids:
+                Whether to include item IDs in the table.
+            numbers:
+                Whether to include item numbers in the table.
+            ranks:
+                Whether to include item ranks in the table.
+            type:
+                Whether to produce an Arrow table or struct array.
+            columns:
+                Fields to include in the final table.
+        Returns:
+            The Arrow table or struct array containg this item list's
+            contents.
         """
         arrays = []
 
@@ -939,7 +954,9 @@ class ItemList:
 
         return types
 
-    def top_n(self, n: int | None = None, *, scores: str | NPVector | None = None) -> ItemList:
+    def top_n(
+        self, n: int | None = None, *, scores: str | NDArray[np.floating] | None = None
+    ) -> ItemList:
         """
         Get the top _N_ items in this list, sorted in decreasing order.
 

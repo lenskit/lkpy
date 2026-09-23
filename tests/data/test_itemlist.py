@@ -706,6 +706,49 @@ def test_from_arrow_array():
     assert not il.ordered
 
 
+@mark.skip(reason="not sure we want this behavior")
+def test_reordering_arrow_loaded_list_recomputes_ranks():
+    il = ItemList.from_arrow(ItemList(item_ids=ITEMS, ordered=True).to_arrow())
+    assert il.ordered
+    np.testing.assert_array_equal(il.ranks(), [1, 2, 3, 4, 5])
+
+    reordered = il[[3, 0, 2]]
+    assert reordered.ordered
+    np.testing.assert_array_equal(reordered.ids(), ["d", "a", "c"])
+    np.testing.assert_array_equal(reordered.ranks(), [1, 2, 3])
+
+
+def test_arrow_reloaded_reranks():
+    il = ItemList.from_arrow(ItemList(item_ids=ITEMS, ordered=True).to_arrow())
+    # il = ItemList(item_ids=ITEMS, ordered=True)
+    assert il.ordered
+    np.testing.assert_array_equal(il.ranks(), [1, 2, 3, 4, 5])
+
+    reordered = il.top_n(scores=np.linspace(0, 1, 5))
+    assert reordered.ordered
+    np.testing.assert_array_equal(reordered.ids(), list(reversed(ITEMS)))
+    np.testing.assert_array_equal(reordered.ranks(), [1, 2, 3, 4, 5])
+
+
+def test_arrow_reload_drops_ranks():
+    # to_arrow(ranks=False) should exclude ranks, even when created
+    # from an Arrow table.
+    il = ItemList(item_ids=ITEMS, ordered=True)
+    assert "rank" in il.arrow_types()
+    assert "rank" not in il.arrow_types(ranks=False)
+    tbl = il.to_arrow()
+    assert "rank" in tbl.column_names
+    ultbl = il.to_arrow(ranks=False)
+    assert "rank" not in ultbl.column_names
+
+    il2 = ItemList.from_arrow(tbl)
+    assert il2.ordered
+    assert "rank" in il2.arrow_types()
+    assert "rank" not in il2.arrow_types(ranks=False)
+    tbl2 = il2.to_arrow(ranks=False)
+    assert "rank" not in tbl2.column_names
+
+
 def test_copy_ctor():
     data = np.random.randn(5).astype(np.float32)
     extra = np.random.randn(5).astype(np.float32)
