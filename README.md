@@ -132,13 +132,20 @@ at <https://lenskit.org>.
 We use [`uv`](https://astral.sh/uv/) for developing LensKit and managing
 development environments. Our `pyproject.toml` file contains the Python
 development dependencies; you also need a working Rust compiler (typically via
-[`rustup`](https://rustup.rs/)). We provide [Mise][] configuration to
-automatically install everything needed, including `uv` and `rust`.
+[`rustup`](https://rustup.rs/)), although `uv sync` will automatically install
+enough of one to build LensKit. You will also need a working C compiler (on
+macOS, install Xcode or the Xcode command-line tools).
 
 The easiest way to work on LensKit is to **use the devcontainer** — in Visual
 Studio Code, Zed, and other editors supporting Dev Containers, just re-open the
 project in a dev container, and the necessary software will be automatically
 installed.
+
+> [!IMPORTANT]
+>
+> If you have a workspace set up with `mise`, remove the `hk` pre-commit hooks
+> by editing `.git/config` and removing the relevant hook lines.  LensKit now
+> uses `prek` (or `pre-commit`) instead of `hk`.
 
 > [!NOTE]
 >
@@ -159,17 +166,12 @@ installed.
 > making sure the development environment works on Windows without the dev
 > container.
 
-If you want to set up yourself, we recommend using [Mise][]:
+If you want to set up yourself, the `uv` dependencies have everything needed:
 
 ```console
-$ mise trust
-$ mise install
 $ uv sync
+$ uv run prek install
 ```
-
-`mise install` will automatically install `uv`, `rust`, development support tools
-and the Git pre-commit hooks (managed with [hk][]). You will also need a working
-C compiler (on macOS, install Xcode or the Xcode command-line tools).
 
 If you want to use a specific Python version, select it with `uv venv` or `uv sync`:
 
