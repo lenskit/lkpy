@@ -8,12 +8,12 @@ labels:
   backend: docker
 
 steps:
-  - name: build and run data tests
-    image: codeberg.org/mdekstrand/woodpecker-mise:v1-f44-dev
+  - name: build and run tests
+    image: codeberg.org/mdekstrand/woodpecker-just:v1-f44-rust
     pull: true
     settings:
-      task: "ci:data-tests"
-      mise-env: ci
+      task: ci-run data-tests
+      uv: no
 
   - name: upload code coverage
     image: woodpeckerci/plugin-codecov

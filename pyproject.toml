@@ -117,12 +117,17 @@ doc = [
   "sphinxcontrib-bibtex >=2.0",
   "sphinxcontrib-mermaid ~=2.0",
   "sphinxext-opengraph >=0.5",
-  { include-group = "package" },
+  { include-group = "scripting" },
 ]
 gpu = ["torch ~=2.4"]
 package = ["lazy-loader >=0.4", "maturin ~=1.10", "packaging >=25.0"]
 reporting = ["coverage >=5"]
-scripting = ["docopt-ng >=0.9.0", "tomlkit ~=0.14.0", { include-group = "package" }]
+scripting = [
+  "docopt-ng >=0.9.0",
+  "rust-just>=1.58",
+  "tomlkit ~=0.14.0",
+  { include-group = "package" },
+]
 test = [
   "hypothesis ~=6.139",
   "pytest-benchmark ~=5.1",
@@ -132,6 +137,7 @@ test = [
   "pytest >=8.2,<10",
   "pyyaml >=5.0",
   "tap-py[yaml]~=3.2",
+  { include-group = "scripting" },
 ]
 
 # :tombi toml-version = "v1.0.0

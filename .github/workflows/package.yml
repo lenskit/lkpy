@@ -25,11 +25,8 @@ jobs:
       - name: 🏷️ Fetch Git tags
         run: git fetch --tags
 
-      - name: Install mise-en-place
-        uses: jdx/mise-action@v4
-
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           python-version: "3.12.5"
           activate-environment: true
@@ -42,12 +39,12 @@ jobs:
       - name: Identify version
         id: version
         run: |
-          mise run version -- --github
+          just version --github
 
       - name: Build source distribution
         id: sdist
         run: |
-          mise run build:dist -- -ds
+          just build-dist -ds
 
       - name: Save archive
         uses: actions/upload-artifact@v4
@@ -143,15 +140,19 @@ jobs:
       - name: List packages
         run: ls dist
 
+      - name: Install rclone
+        uses: taiki-e/install-action@v2
+        with:
+          tool: rclone
+
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           python-version: "3.12.5"
           activate-environment: true
 
       - name: Set up Rclone configuration
         run: |
-          sudo apt install -y rclone
           mkdir -p ~/.config/rclone
           pass=$(rclone obscure $WEBDAV_PASSWORD)
           cat >~/.config/rclone/rclone.conf <<EOF

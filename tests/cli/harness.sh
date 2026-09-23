@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run a single test.
 
-. "$TEST_DIR/../../mise/task-functions.sh"
+. "$TEST_DIR/../../scripts/lib/init.sh"
 TEST="$1"
 _wrote_plan=0
 N=0
@@ -22,7 +22,7 @@ begin-suite() {
 
 test-plan() {
     tap_out 1..$1
-    dbg "1..$1"
+    msg -dbg "1..$1"
     _wrote_plan=1
 }
 
@@ -99,9 +99,9 @@ require() {
 }
 
 if grep -q '^begin-suite' "$TEST"; then
-    dbg "test will start itself"
+    msg -dbg "test will start itself"
 else
-    dbg "auto-starting suite"
+    msg -dbg "auto-starting suite"
     begin-suite
 fi
 . "$TEST"

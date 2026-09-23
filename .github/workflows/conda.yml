@@ -37,23 +37,27 @@ jobs:
       - name: 🏷️ Fetch Git tags
         run: git fetch --tags
 
-      - name: Install mise-en-place
-        uses: jdx/mise-action@v4
-        env:
-          MISE_DISABLE_TOOLS: hk
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.14"
+          activate-environment: true
+
+      - name: Install scripting dependencies
+        run: |
+          uv sync --only-group=scripting
 
       - name: Build LensKit source distribution
         id: source
         run: |
-          uv sync --only-group=scripting -p 3.13
-          mise run version --github
-          mise run build:dist -sd
+          just version --github
+          just build-dist -sd
         env:
           MISE_PYTHON_UV_VENV_AUTO: source
           MISE_DISABLE_TOOLS: hk
 
       - name: 🔨 Build Conda packages
-        uses: prefix-dev/rattler-build-action@v0.2.34
+        uses: prefix-dev/rattler-build-action@v0.2.39
         with:
           recipe-path: conda/recipe.yaml
           build-args: --noarch-build-platform linux-64 --output-dir dist/conda

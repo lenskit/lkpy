@@ -32,10 +32,10 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           push: never
-          runCmd: mise run test
+          runCmd: just test tests/data tests/pipeline
 
       - name: Lint source code in dev container
         uses: devcontainers/ci@v0.3
         with:
           push: never
-          runCmd: uv run prek run -a
+          runCmd: prek run -a

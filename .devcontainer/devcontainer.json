@@ -4,7 +4,6 @@
   "name": "LensKit",
   "image": "mcr.microsoft.com/devcontainers/base:trixie",
   "features": {
-    "ghcr.io/devcontainers-extra/features/mise:1": {},
     "ghcr.io/devcontainers/features/rust:1": {},
     "ghcr.io/devcontainers-extra/features/uv:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
@@ -12,7 +11,6 @@
   // put the Python environment inside the container
   "containerEnv": {
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/lenskit-venv",
-    "MISE_PYTHON_UV_VENV_AUTO": "false",
   },
   "mounts": [
     {
