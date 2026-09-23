@@ -38,4 +38,4 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           push: never
-          runCmd: prek run -a
+          runCmd: prek run -a --skip no-commit-to-branch
