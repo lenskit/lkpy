@@ -6,6 +6,7 @@
 
 import logging
 import pickle
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -23,7 +24,7 @@ from lenskit import batch
 from lenskit.als import ImplicitMFScorer
 from lenskit.basic import PopScorer
 from lenskit.basic.topn import TopNRanker
-from lenskit.data import Dataset, ItemList
+from lenskit.data import Dataset, ItemList, ItemListCollection
 from lenskit.logging import get_logger
 from lenskit.operations import recommend
 from lenskit.pipeline import topn_pipeline
@@ -134,6 +135,26 @@ def test_runtime_truncation(n, items: ItemList):
     rank_s, src_s = rank_s.align(src_s, "left")
     assert not np.any(np.isnan(src_s))
     assert np.all(rank_s == src_s)
+
+
+def test_observed_order_case(tmpdir: Path):
+    """
+    Test for new ranks with saved original observed error case.
+
+    Adapted from Aishwarya Satwani's test code.
+    """
+    file = tmpdir / "probe.parquet"
+    N = 1000
+    il = ItemList(item_ids=np.arange(N), scores=np.linspace(5, 0, N).astype("f4"), ordered=True)
+    ItemListCollection.from_dict({1: il}, "user_id").save_parquet(file)
+    reloaded = ItemListCollection.load_parquet(file)
+    _, pool = next(iter(reloaded.items()))
+    pool = pool[:100]
+
+    rk = StochasticTopNRanker(n=10, rng=("20250321", "user"), transform="linear")
+    out = rk(pool, query=1)
+
+    assert np.all(out.ranks() == np.arange(1, 11))
 
 
 @given(st.integers(min_value=1, max_value=100), scored_lists(scores="gaussian"))
