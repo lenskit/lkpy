@@ -128,3 +128,50 @@ def test_rank_biased_precision():
     weights = np.array([1.0, 0.8, 0.6, 0.4, 0.2])
     result = rank_biased_precision(good, weights, normalization=3.0)
     assert result == approx(1.2 / 3.0)
+
+
+# test for graded rbp
+
+
+def test_rbp_empty_graded():
+    recs = ItemList([], ordered=True)
+    truth = ItemList(item_ids=[1, 2, 3], grade=[1.0, 1.0, 1.0])
+
+    metric = RBP(grade_field="grade")
+    assert metric.measure_list(recs, truth) == approx(0.0)
+
+
+def test_rbp_unknown_grade_default():
+    recs = ItemList([1, 2], ordered=True)
+    truth = ItemList(item_ids=[1], grade=[1.0])
+
+    p = 0.5
+    metric = RBP(patience=p, grade_field="grade", unknown_grade=0.25)
+
+    # RBP = (1-p)*(relevance[0] + relevance[1]*p)
+    expected = (1 - p) * (1 + 0.25 * p)
+    assert metric.measure_list(recs, truth) == approx(expected)
+
+
+def test_rbp_unknown_grade():
+    recs = ItemList([1, 2], ordered=True)
+    truth = ItemList(item_ids=[1], grade=[1.0])
+
+    p = 0.5
+    metric = RBP(patience=p, grade_field="grade", unknown_grade=0.30)
+
+    # RBP = (1-p)*(relevance[0] + relevance[1]*p)
+    expected = (1 - p) * (1 + 0.30 * p)
+    assert metric.measure_list(recs, truth) == approx(expected)
+
+
+def test_rbp_binary_vs_graded_equivalent():
+    recs = ItemList([1, 3], ordered=True)
+
+    graded_truth = ItemList(item_ids=[1, 3], grade=[1.0, 1.0])
+    binary_truth = ItemList([1, 3])  # no grade field
+
+    grbp = RBP(grade_field="grade")
+    rbp = RBP()  # binary
+
+    assert grbp.measure_list(recs, graded_truth) == approx(rbp.measure_list(recs, binary_truth))
