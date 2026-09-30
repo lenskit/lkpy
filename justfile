@@ -58,12 +58,12 @@ _collect-rust-coverage:
 # build documentation site
 [group("docs")]
 build-docs: && build-schemas
-    sphinx-build docs build/site
+    sphinx-build docs build/doc
 
 # preview and auto-build documentation site
 [group("docs")]
 preview-docs:
-    sphinx-autobuild docs build/site
+    sphinx-autobuild docs build/doc
 
 # build JSON schemas
 [group("docs")]
