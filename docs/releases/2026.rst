@@ -12,8 +12,8 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 
 .. _2026.4.0:
 
-2026.4.0 (in progress)
-~~~~~~~~~~~~~~~~~~~~~~
+2026.4.0
+~~~~~~~~
 
 Third feature release in 2026, with more feature updates and bug fixes.  A full list of
 fixed issues and merged PRs is on `milestone 2026.4`_.
@@ -24,6 +24,7 @@ fixed issues and merged PRs is on `milestone 2026.4`_.
 - Added diagnostics for power measurement to ``lenskit doctor`` (:issue:`1186`, :pr:`1189`).
 - Added AMBAR dataset import (:issue:`1142`).
 - Simplified missing history warnings (:issue:`804`, :pr:`1209`, first contribution by :user:`appleweiping`).
+- Automatically convert timestamps from numeric to timestamp types when importing interactions (:issue:`1183`, :pr:`1210`).
 - Added inference-time mean pooling for new user activity to FlexMF (:issue:`934`, :pr:`1201`)
 - Several test and CI refactors, including managing code policies with ``prek``/``pre-commit`` instead of ``hk``.
 - Update Rust and Python dependencies
