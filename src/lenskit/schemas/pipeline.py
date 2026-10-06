@@ -99,6 +99,12 @@ class PipelineOptions(BaseModel, extra="allow"):
     predictor.
     """
 
+    history_lookup: bool = True
+    """
+    For standard recommendation pipelines, look up user history from the
+    training data.  Set to ``False`` when queries supply their own history.
+    """
+
 
 class PipelineConfigFragment(BaseModel, extra="allow"):
     """

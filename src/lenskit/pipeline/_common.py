@@ -30,6 +30,11 @@ class RecPipelineBuilder:
 
     Stability:
         Caller
+
+    Args:
+        history_lookup:
+            Look up user history from training data. Set to ``False`` to pass
+            the supplied query directly to the scorer and candidate selector.
     """
 
     _selector: CompRec
@@ -40,12 +45,13 @@ class RecPipelineBuilder:
     _fallback: Component | None = None
     _reranker: CompRec | None = None
 
-    def __init__(self):
+    def __init__(self, *, history_lookup: bool = True):
         from lenskit.basic.candidates import TrainingItemsCandidateSelector
         from lenskit.basic.topn import TopNRanker
 
         self._selector = CompRec(TrainingItemsCandidateSelector)
         self._ranker = CompRec(TopNRanker)
+        self.history_lookup = history_lookup
 
     def scorer(self, score: Component | ComponentConstructor, config: object | None = None):
         """
@@ -115,7 +121,9 @@ class RecPipelineBuilder:
         items = pipe.create_input("items", ItemList)
         n_n = pipe.create_input("n", int, None)
 
-        lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup(), query=query)
+        lookup = query
+        if self.history_lookup:
+            lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup(), query=query)
         cand_sel = pipe.add_component(
             "candidate-selector", self._selector.component, self._selector.config, query=lookup
         )
@@ -200,13 +208,12 @@ def topn_builder(
     items = pipe.create_input("items", ItemList)
     n_n = pipe.create_input("n", int, None)
 
-    lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
-    cand_sel = pipe.add_component(
-        "candidate-selector", TrainingItemsCandidateSelector, query=lookup
-    )
+    if options.history_lookup:
+        query = pipe.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
+    cand_sel = pipe.add_component("candidate-selector", TrainingItemsCandidateSelector, query=query)
     candidates = pipe.use_first_of("candidates", items, cand_sel)
 
-    n_score = pipe.add_component("scorer", Placeholder, query=lookup, items=candidates)
+    n_score = pipe.add_component("scorer", Placeholder, query=query, items=candidates)
 
     rank = pipe.add_component(
         "ranker", TopNRanker, {"n": options.default_length}, items=n_score, n=n_n
@@ -237,14 +244,14 @@ def topn_predict_builder(
     options = PipelineOptions.model_validate(options or {})
 
     pipe = topn_builder(name, options)
-    lookup = pipe.node("history-lookup")
+    query = pipe.node("history-lookup" if options.history_lookup else "query")
     candidates = pipe.node("candidates")
     scorer = pipe.node("scorer")
 
     if options.fallback_predictor is False:
         pipe.alias("rating-predictor", scorer)
     else:
-        fb = pipe.add_component("fallback-predictor", BiasScorer, query=lookup, items=candidates)
+        fb = pipe.add_component("fallback-predictor", BiasScorer, query=query, items=candidates)
         rater = pipe.add_component("rating-merger", FallbackScorer, primary=scorer, backup=fb)
         pipe.alias("rating-predictor", rater)
 
@@ -256,6 +263,7 @@ def topn_pipeline(
     config: object | None = None,
     *,
     predicts_ratings: bool | Literal["raw"] = False,
+    history_lookup: bool = True,
     n: int | None = None,
     name: str | None = None,
 ) -> Pipeline:
@@ -273,6 +281,9 @@ def topn_pipeline(
             If ``True``, make set up to predict ratings (``rating-predictor``),
             using ``scorer`` with a fallback of :class:`BiasScorer`; if
             ``"raw"``, use ``scorer`` directly with no fallback.
+        history_lookup:
+            Look up user history from training data. Set to ``False`` when
+            queries supply their own history.
         n:
             The recommendation list length to configure in the pipeline.
         name:
@@ -280,7 +291,7 @@ def topn_pipeline(
     """
     from lenskit.basic.bias import BiasScorer
 
-    builder = RecPipelineBuilder()
+    builder = RecPipelineBuilder(history_lookup=history_lookup)
     builder.scorer(scorer, config)
     builder.ranker(n=n)
     if predicts_ratings == "raw":
@@ -295,6 +306,7 @@ def predict_pipeline(
     scorer: Component,
     *,
     fallback: bool | Component = True,
+    history_lookup: bool = True,
     name: str | None = None,
 ) -> Pipeline:
     """
@@ -313,6 +325,9 @@ def predict_pipeline(
             Whether to use a fallback predictor when the scorer cannot score.
             When configured, the `scorer` node is the scorer, and the
             `rating-predictor` node applies the fallback.
+        history_lookup:
+            Look up user history from training data. Set to ``False`` when
+            queries supply their own history.
         name:
             The pipeline name.
     """
@@ -325,9 +340,10 @@ def predict_pipeline(
     query = pipe.create_input("query", RecQuery, ID, ItemList)
     items = pipe.create_input("items", ItemList)
 
-    lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup(), query=query)
+    if history_lookup:
+        query = pipe.add_component("history-lookup", UserTrainingHistoryLookup(), query=query)
 
-    score = pipe.add_component("scorer", scorer, query=lookup, items=items)
+    score = pipe.add_component("scorer", scorer, query=query, items=items)
 
     if fallback is True:
         fallback = BiasScorer()
@@ -335,7 +351,7 @@ def predict_pipeline(
     if fallback is False:
         pipe.alias("rating-predictor", score)
     else:
-        backup = pipe.add_component("fallback-predictor", fallback, query=lookup, items=items)
+        backup = pipe.add_component("fallback-predictor", fallback, query=query, items=items)
         pipe.add_component("rating-predictor", FallbackScorer(), primary=score, backup=backup)
 
     pipe.default_component("rating-predictor")
