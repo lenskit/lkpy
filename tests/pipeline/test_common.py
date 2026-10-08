@@ -7,39 +7,12 @@
 import numpy as np
 import pandas as pd
 
-from pytest import fixture, mark
+from pytest import fixture
 
+from lenskit.basic import BiasScorer
 from lenskit.basic.history import UserTrainingHistoryLookup
-from lenskit.data import ItemList, QueryInput, RecQuery, from_interactions_df
+from lenskit.data import ItemList, RecQuery, from_interactions_df
 from lenskit.pipeline import Pipeline, RecPipelineBuilder, predict_pipeline, topn_pipeline
-
-
-def history_scorer(query: QueryInput, items: ItemList) -> ItemList:
-    query = RecQuery.create(query)
-    count = len(query.history_items) if query.history_items is not None else 0
-    return ItemList(items, scores=items.ids() + count)
-
-
-def common_pipeline(kind, **options):
-    if kind == "rec-builder":
-        builder = RecPipelineBuilder(**options)
-        builder.scorer(history_scorer)
-        return builder.build()
-    if kind == "topn":
-        return topn_pipeline(history_scorer, **options)
-    if kind == "topn-predict":
-        return topn_pipeline(history_scorer, predicts_ratings=True, **options)
-    if kind == "predict":
-        return predict_pipeline(history_scorer, **options)
-    return Pipeline.from_config(
-        {
-            "options": {"base": kind, **options},
-            "components": {"scorer": {"code": "tests.pipeline.test_common:history_scorer"}},
-        }
-    )
-
-
-PIPELINES = ["rec-builder", "topn", "topn-predict", "predict", "std:topn", "std:topn-predict"]
 
 
 @fixture
@@ -51,18 +24,18 @@ def small_data():
     )
 
 
-@mark.parametrize("kind", PIPELINES)
-def test_common_pipeline_history_lookup_default(kind, small_data):
-    pipe = common_pipeline(kind)
+def check_history_lookup_default(pipe, small_data):
     assert isinstance(pipe.component("history-lookup"), UserTrainingHistoryLookup)
     pipe.train(small_data)
-    scored = pipe.run("scorer", query=1, items=ItemList(item_ids=[12, 14]))
-    np.testing.assert_array_equal(scored.scores(), [14, 16])
+    query = RecQuery(user_id=1)
+    scored = pipe.run("scorer", query=query, items=ItemList(item_ids=[12, 14]))
+    np.testing.assert_array_equal(scored.scores(), [4.0, 5.0])
+    assert query.history_items is not None
+    np.testing.assert_array_equal(query.history_items.ids(), [11, 12])
+    np.testing.assert_array_equal(query.history_items.field("rating"), [3.0, 4.0])
 
 
-@mark.parametrize("kind", PIPELINES)
-def test_common_pipeline_without_history_lookup(kind, monkeypatch, small_data):
-    pipe = common_pipeline(kind, history_lookup=False)
+def check_history_lookup_disabled(pipe, monkeypatch, small_data):
     assert pipe.node("history-lookup", missing="none") is None
 
     def unexpected_lookup(*args, **kwargs):
@@ -71,29 +44,141 @@ def test_common_pipeline_without_history_lookup(kind, monkeypatch, small_data):
     monkeypatch.setattr(UserTrainingHistoryLookup, "train", unexpected_lookup)
     pipe.train(small_data)
 
-    history = ItemList(item_ids=[13])
+    # The supplied rating is two points above item 13's training rating.
+    history = ItemList(item_ids=[13], rating=[4.0])
     query = RecQuery(user_id=1, history_items=history)
     items = ItemList(item_ids=[12, 14])
     scored = pipe.run("scorer", query=query, items=items)
-    np.testing.assert_array_equal(scored.scores(), [13, 15])
+    np.testing.assert_array_equal(scored.scores(), [6.0, 7.0])
     assert query.history_items is history
 
     # Reconstructing the concrete configuration must keep lookup disabled.
     restored = Pipeline.from_config(pipe.config.model_dump())
     assert restored.node("history-lookup", missing="none") is None
-
-    if kind != "predict":
-        recs = pipe.run("recommender", query=query, n=2)
-        np.testing.assert_array_equal(recs.ids(), [14, 12])
-        np.testing.assert_array_equal(recs.scores(), [15, 13])
-    if kind in ("predict", "topn-predict", "std:topn-predict"):
-        preds = pipe.run("rating-predictor", query=query, items=items)
-        np.testing.assert_array_equal(preds.scores(), [13, 15])
+    return query
 
 
-@mark.parametrize("query", [1, ItemList(item_ids=[13])])
-def test_common_pipeline_without_lookup_accepts_query_inputs(query):
-    pipe = topn_pipeline(history_scorer, history_lookup=False)
+def check_recommendations(pipe, query):
+    candidates = pipe.run("candidate-selector", query=query)
+    np.testing.assert_array_equal(candidates.ids(), [11, 12, 14])
+    recs = pipe.run("recommender", query=query, n=2)
+    np.testing.assert_array_equal(recs.ids(), [14, 12])
+    np.testing.assert_array_equal(recs.scores(), [7.0, 6.0])
+
+
+def check_rating_predictions(pipe, query):
+    items = ItemList(item_ids=[12, 14])
+    preds = pipe.run("rating-predictor", query=query, items=items)
+    np.testing.assert_array_equal(preds.scores(), [6.0, 7.0])
+    fallback = pipe.run("fallback-predictor", query=query, items=items)
+    np.testing.assert_array_equal(fallback.scores(), [6.0, 7.0])
+
+
+def test_rec_builder_history_lookup_default(small_data):
+    builder = RecPipelineBuilder()
+    builder.scorer(BiasScorer())
+    check_history_lookup_default(builder.build(), small_data)
+
+
+def test_topn_pipeline_history_lookup_default(small_data):
+    pipe = topn_pipeline(BiasScorer())
+    check_history_lookup_default(pipe, small_data)
+
+
+def test_topn_predict_pipeline_history_lookup_default(small_data):
+    pipe = topn_pipeline(BiasScorer(), predicts_ratings=True)
+    check_history_lookup_default(pipe, small_data)
+
+
+def test_predict_pipeline_history_lookup_default(small_data):
+    pipe = predict_pipeline(BiasScorer())
+    check_history_lookup_default(pipe, small_data)
+
+
+def test_topn_config_history_lookup_default(small_data):
+    pipe = Pipeline.from_config(
+        {
+            "options": {"base": "std:topn"},
+            "components": {"scorer": {"class": "lenskit.basic.BiasScorer"}},
+        }
+    )
+    check_history_lookup_default(pipe, small_data)
+
+
+def test_topn_predict_config_history_lookup_default(small_data):
+    pipe = Pipeline.from_config(
+        {
+            "options": {"base": "std:topn-predict"},
+            "components": {"scorer": {"class": "lenskit.basic.BiasScorer"}},
+        }
+    )
+    check_history_lookup_default(pipe, small_data)
+
+
+def test_rec_builder_without_history_lookup(monkeypatch, small_data):
+    builder = RecPipelineBuilder(history_lookup=False)
+    builder.scorer(BiasScorer())
+    pipe = builder.build()
+    query = check_history_lookup_disabled(pipe, monkeypatch, small_data)
+    check_recommendations(pipe, query)
+
+
+def test_topn_pipeline_without_history_lookup(monkeypatch, small_data):
+    pipe = topn_pipeline(BiasScorer(), history_lookup=False)
+    query = check_history_lookup_disabled(pipe, monkeypatch, small_data)
+    check_recommendations(pipe, query)
+
+
+def test_topn_predict_pipeline_without_history_lookup(monkeypatch, small_data):
+    pipe = topn_pipeline(BiasScorer(), predicts_ratings=True, history_lookup=False)
+    query = check_history_lookup_disabled(pipe, monkeypatch, small_data)
+    check_recommendations(pipe, query)
+    check_rating_predictions(pipe, query)
+
+
+def test_predict_pipeline_without_history_lookup(monkeypatch, small_data):
+    pipe = predict_pipeline(BiasScorer(), history_lookup=False)
+    query = check_history_lookup_disabled(pipe, monkeypatch, small_data)
+    check_rating_predictions(pipe, query)
+
+
+def test_topn_config_without_history_lookup(monkeypatch, small_data):
+    pipe = Pipeline.from_config(
+        {
+            "options": {"base": "std:topn", "history_lookup": False},
+            "components": {"scorer": {"class": "lenskit.basic.BiasScorer"}},
+        }
+    )
+    query = check_history_lookup_disabled(pipe, monkeypatch, small_data)
+    check_recommendations(pipe, query)
+
+
+def test_topn_predict_config_without_history_lookup(monkeypatch, small_data):
+    pipe = Pipeline.from_config(
+        {
+            "options": {"base": "std:topn-predict", "history_lookup": False},
+            "components": {"scorer": {"class": "lenskit.basic.BiasScorer"}},
+        }
+    )
+    query = check_history_lookup_disabled(pipe, monkeypatch, small_data)
+    check_recommendations(pipe, query)
+    check_rating_predictions(pipe, query)
+
+
+def test_topn_without_history_lookup_accepts_user_id(small_data):
+    pipe = topn_pipeline(BiasScorer(), history_lookup=False)
+    pipe.train(small_data)
+    scored = pipe.run("scorer", query=1, items=ItemList(item_ids=[12, 14]))
+    np.testing.assert_array_equal(scored.scores(), [4.0, 5.0])
+    candidates = pipe.run("candidate-selector", query=1)
+    np.testing.assert_array_equal(candidates.ids(), [11, 12, 13, 14])
+
+
+def test_topn_without_history_lookup_accepts_item_list(small_data):
+    pipe = topn_pipeline(BiasScorer(), history_lookup=False)
+    pipe.train(small_data)
+    query = ItemList(item_ids=[13], rating=[4.0])
     scored = pipe.run("scorer", query=query, items=ItemList(item_ids=[12, 14]))
-    count = 1 if isinstance(query, ItemList) else 0
-    np.testing.assert_array_equal(scored.scores(), [12 + count, 14 + count])
+    np.testing.assert_array_equal(scored.scores(), [6.0, 7.0])
+    candidates = pipe.run("candidate-selector", query=query)
+    np.testing.assert_array_equal(candidates.ids(), [11, 12, 14])
