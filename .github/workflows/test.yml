@@ -23,8 +23,10 @@ jobs:
         python:
           - "3.12.5"
           - "3.13"
-          - "3.14"
-          - "3.14t"
+          - "3.14+gil"
+          - "3.14+freethreaded"
+          - "3.15+gil"
+          - "3.15+freethreaded"
         platform:
           - ubuntu-latest
           - ubuntu-24.04-arm
