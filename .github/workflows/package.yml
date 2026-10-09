@@ -108,11 +108,19 @@ jobs:
           target: ${{ matrix.plat.target }}
           manylinux: ${{ matrix.plat.manylinux }}
 
-      - name: Build free-threaded wheels
+      - name: Build free-threaded 3.14 wheels
         uses: PyO3/maturin-action@v1
         if: matrix.plat.host != 'windows-latest'
         with:
           args: --release --out dist -i 3.14t
+          target: ${{ matrix.plat.target }}
+          manylinux: ${{ matrix.plat.manylinux }}
+
+      - name: Build free-threaded 3.15 wheels
+        uses: PyO3/maturin-action@v1
+        if: matrix.plat.host != 'windows-latest'
+        with:
+          args: --release --out dist -i 3.15t
           target: ${{ matrix.plat.target }}
           manylinux: ${{ matrix.plat.manylinux }}
 
