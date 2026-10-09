@@ -61,7 +61,7 @@ lenskit-recommend = "lenskit.cli.recommend:recommend"
 lenskit-profile = "lenskit.cli.profile:profile"
 
 [project.optional-dependencies]
-cli-extra = ["termaid ~= 0.6.1"]
+cli-extra = ["termaid ~= 0.9.0"]
 funksvd = []
 gnn = ["torch_geometric ~=2.6"]
 hpf = ["hpfrec~=0.2.12"]
@@ -73,7 +73,7 @@ tune = ["optuna ~=4.8"]
 
 [dependency-groups]
 dev = [
-  "cibuildwheel ~=2.23",
+  "cibuildwheel ~=4.3",
   "esbonio>=2.0.0",
   "ipython >=7",
   "line_profiler",
@@ -108,7 +108,7 @@ demo = [
 doc = [
   "myst-nb >=0.13",
   "packaging >=25.0",
-  "pydata-sphinx-theme ~=0.16.0",
+  "pydata-sphinx-theme ~=0.23.0",
   "sphinx-autoapi ~=3.8",
   "sphinx-copybutton>=0.5.2",
   "sphinx-new-tab-link>=0.8.0",
@@ -125,7 +125,7 @@ reporting = ["coverage >=5"]
 scripting = [
   "docopt-ng >=0.9.0",
   "rust-just>=1.58",
-  "tomlkit ~=0.14.0",
+  "tomlkit ~=0.15.0",
   { include-group = "package" },
 ]
 test = [
