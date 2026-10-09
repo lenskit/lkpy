@@ -69,7 +69,7 @@ implicit = ["implicit >=0.7.2"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
 sklearn = ["scikit-learn ~=1.5"]
-tune = ["optuna ~=4.8"]
+tune = ["optuna >=4.8,<6"]
 
 [dependency-groups]
 dev = [
