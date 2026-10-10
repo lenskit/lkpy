@@ -75,6 +75,7 @@ or graded relevance scores).
 
     lenskit.metrics.RecipRank
     lenskit.metrics.RBP
+    lenskit.metrics.LogRBP
     lenskit.metrics.NDCG
     lenskit.metrics.DCG
 
