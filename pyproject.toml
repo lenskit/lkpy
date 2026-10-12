@@ -38,7 +38,6 @@ dependencies = [
   "threadpoolctl >=3.0",
   "torch ~=2.4",
   "typing-extensions ~=4.15",
-  "xopen ~=2.0",
 ]
 dynamic = ["version"]
 
