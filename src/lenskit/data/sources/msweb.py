@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Literal, overload
 
 import pyarrow as pa
-from xopen import xopen
 
+from lenskit.data import xopen
 from lenskit.logging import get_logger
 
 from .._builder import DatasetBuilder

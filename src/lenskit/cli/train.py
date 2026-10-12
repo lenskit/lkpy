@@ -9,9 +9,8 @@ from pathlib import Path
 
 import click
 import torch
-from xopen import xopen
 
-from lenskit.data import Dataset
+from lenskit.data import Dataset, xopen
 from lenskit.logging import get_logger
 from lenskit.training import TrainingOptions
 
@@ -63,5 +62,5 @@ def train(
         pipe.train(data)
 
     _log.info("saving trained model", file=out_file)
-    with xopen(out_file, "wb", threads=0) as pf:
+    with xopen(out_file, "wb") as pf:
         pickle.dump(pipe, pf)
