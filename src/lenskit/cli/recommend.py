@@ -11,11 +11,10 @@ from pathlib import Path
 
 import click
 from rich import print, print_json
-from xopen import xopen
 
 import lenskit.operations as ops
 from lenskit import batch
-from lenskit.data import ID, Dataset, ItemList, ListILC, RecQuery, UserIDKey
+from lenskit.data import ID, Dataset, ItemList, ListILC, RecQuery, UserIDKey, xopen
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.pipeline import PipelineProfiler
 from lenskit.random import random_generator
@@ -68,7 +67,7 @@ def recommend(
     _log.warning("the recommend CLI is experimental and may change without notice")
 
     _log.info("loading pipeline", file=str(pipe_file))
-    with xopen(pipe_file, "rb", threads=0) as pf:
+    with xopen(pipe_file, "rb") as pf:
         pipe = pickle.load(pf)
     log = _log.bind(name=pipe.name)
 

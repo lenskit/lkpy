@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pyarrow as pa
 from pyarrow.csv import ConvertOptions, open_csv
-from xopen import xopen
 
+from lenskit.data import xopen
 from lenskit.logging import get_logger
 
 from .._builder import DatasetBuilder

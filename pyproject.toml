@@ -15,6 +15,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "backports.zstd ~=1.8; python_version<'3.14'",
   "click ~=8.1",
   "humanize ~=4.2",
   "lazy-loader >=0.4",
@@ -37,7 +38,6 @@ dependencies = [
   "threadpoolctl >=3.0",
   "torch ~=2.4",
   "typing-extensions ~=4.15",
-  "xopen ~=2.0",
 ]
 dynamic = ["version"]
 

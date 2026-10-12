@@ -34,6 +34,7 @@ from ._items import ItemList
 from ._query import QueryInput, QueryItemSource, RecQuery
 from ._relationships import MatrixRelationshipSet, RelationshipSet
 from ._vocab import Vocabulary
+from ._xopen import xopen
 from .msweb import load_ms_web
 from .sources.amazon import load_amazon_ratings
 from .sources.movielens import load_movielens, load_movielens_df
@@ -74,4 +75,5 @@ __all__ = [
     "load_ms_web",
     "load_steam",
     "unflatten_dict",
+    "xopen",
 ]
