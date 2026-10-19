@@ -74,7 +74,7 @@ Key schemas can be defined in two ways:
    type is created for each schema).
 
 Pass the key schema to the :class:`ItemListCollection` constructor or to other
-methods such as :meth:`ItemListCollection.emtpy` to create a list collection
+methods such as :meth:`ItemListCollection.empty` to create a list collection
 with the specified schema::
 
     >>> ilc = ItemListCollection.empty(['user_id'])
