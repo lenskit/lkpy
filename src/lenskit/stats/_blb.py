@@ -53,7 +53,7 @@ def blb_summary[F_co: np.floating](
     ci_width: float = 0.95,
     b_factor: float = 0.7,
     rel_tol: float = 0.05,
-    s_window: int = 10,
+    s_window: int = 5,
     r_window: int = 50,
     r_min: int = 0,
     rng: RNGInput = None,
