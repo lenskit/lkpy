@@ -149,6 +149,31 @@ class _BootResult:
 
 
 @dataclass
+class _SubsetResult:
+    r"""
+    Results from the bootstrap replicates of a single BLB subset.
+
+    The CI information is stored as quantiles of the *deviations*
+    :math:`\theta^*_{jk} - \hat\theta_j` of the replicate statistics from the
+    subset's own estimate, so that it describes the shape of the sampling
+    distribution independent of where the subset happens to be located.
+    """
+
+    center: float
+    "Statistic computed on the subset with uniform weights summing to :math:`n`."
+    rep_mean: float
+    "Mean of the statistic computed on the replicates."
+    rep_var: float
+    "Variance of the statistic computed on the replicates."
+    dev_lower: float
+    "Lower CI quantile of the replicate deviations from :attr:`center`."
+    dev_upper: float
+    "Upper CI quantile of the replicate deviations from :attr:`center`."
+    samples: pd.DataFrame
+    "Raw sample data."
+
+
+@dataclass
 class _BLBConfig:
     statistic: WeightedStatistic
     ci_width: float
@@ -203,23 +228,27 @@ class _BLBootstrapper:
         for i, ss in enumerate(self.blb_subsets(n, b)):
             self._tracer.add_bindings(subset=i)
             self._tracer.trace("starting subset")
-            res = self.measure_subset(xs, ss, estimate)
+            res = self.measure_subset(xs, ss)
             ss_frames[i] = res.samples
             means.record(res.rep_mean)
             vars.record(res.rep_var)
-            lbs.record(res.ci_lower)
-            ubs.record(res.ci_upper)
+            lbs.record(res.dev_lower)
+            ubs.record(res.dev_upper)
             if self._check_convergence(
                 means, vars, lbs, ubs, tol=self.config.rel_tol, w=self.config.s_window
             ):
                 break
 
+        # recenter the confidence interval around the full-data estimate
+        ci_lower = estimate + lbs.statistic
+        ci_upper = estimate + ubs.statistic
+
         return _BootResult(
             estimate,
             means.statistic,
             vars.statistic,
-            lbs.statistic,
-            ubs.statistic,
+            ci_lower,
+            ci_upper,
             pd.concat(ss_frames, names=["subset"]),
         )
 
@@ -227,10 +256,14 @@ class _BLBootstrapper:
         while True:
             yield self.rng.choice(n, b, replace=False)
 
-    def measure_subset(self, xs: NDArray[F], ss: NDArray[np.int64], estimate: float) -> _BootResult:
+    def measure_subset(self, xs: NDArray[F], ss: NDArray[np.int64]) -> _SubsetResult:
         b = len(ss)
         n = len(xs)
         xss = xs[ss]
+        # the subset's empirical distribution is the resampling "population";
+        # use uniform weights summing to n so the center is computed at the
+        # same effective sample size as the replicates
+        center = float(self.config.statistic(xss, weights=np.full(b, n / b)))
 
         means = StatAccum(np.mean)
         vars = StatAccum(np.var)
@@ -246,15 +279,14 @@ class _BLBootstrapper:
             means.record(stat)
             vars.record(stat)
 
-            stats = means.values
-            # ql, qh = _bca_range(estimate, stats, self.config.ci_margin, accel)
-            # self._tracer.trace("bias-corrected quantiles: [%.4f, %.4f]", ql, qh, accel=accel)
-            lb, ub = np.quantile(stats, [self._ci_qmin, self._ci_qmax])
-            # lb, ub = np.quantile(stats, [ql, qh])
-            self._tracer.trace("CI bounds: %f < s < %f", lb, ub)
-            lbs.record(stat, lb)
-            ubs.record(stat, ub)
-            del stats
+            devs = means.values - center
+            # median-unbiased quantiles avoid the inward bias of the default
+            # (linear) estimator in the tails when the replicate count is small
+            dlo, dhi = np.quantile(devs, [self._ci_qmin, self._ci_qmax], method="median_unbiased")
+            self._tracer.trace("deviation quantiles: %f < d < %f", dlo, dhi)
+            lbs.record(devs[-1], dlo)
+            ubs.record(devs[-1], dhi)
+            del devs
 
             if i >= self.config.r_min and self._check_convergence(
                 means, vars, lbs, ubs, tol=self.config.rel_tol, w=self.config.r_window
@@ -264,8 +296,8 @@ class _BLBootstrapper:
         df = pd.DataFrame({"statistic": means.values})
         df.index.name = "iter"
         self._tracer.remove_bindings("rep")
-        return _BootResult(
-            estimate, means.statistic, vars.statistic, lbs.statistic, ubs.statistic, df
+        return _SubsetResult(
+            center, means.statistic, vars.statistic, lbs.statistic, ubs.statistic, df
         )
 
     def miniboot_weights(self, n: int, b: int):
@@ -274,19 +306,53 @@ class _BLBootstrapper:
         while True:
             yield self.rng.multinomial(n, flat)
 
-    def _check_convergence(self, *arrays: StatAccum, tol: float, w: int) -> bool:
+    def _check_convergence(
+        self,
+        means: StatAccum,
+        vars: StatAccum,
+        lbs: StatAccum,
+        ubs: StatAccum,
+        *,
+        tol: float,
+        w: int,
+    ) -> bool:
+        """
+        Check whether the running statistics have stabilized over the last
+        ``w`` steps.
+
+        Changes in location-like quantities (the mean and the deviation
+        quantiles) are measured relative to the current CI width, and changes
+        in the variance relative to the variance itself, so the check does not
+        depend on the location or scale of the data.
+        """
+        accums = (means, vars, lbs, ubs)
+        if any(len(a) < w + 1 for a in accums):
+            return False
+
+        width = ubs.statistic - lbs.statistic
         gaps = np.zeros(w)
-        for arr in arrays:
-            if len(arr) < w + 1:
-                return False
+        for arr in (means, lbs, ubs):
+            gaps += _rel_gaps(arr, w, width)
+        gaps += _rel_gaps(vars, w, vars.statistic)
 
-            stats = arr.stat_history
-            cur = arr.statistic
-            gaps += np.abs(stats[-(w + 1) : -1] - cur) / np.abs(cur)
-
-        gaps /= len(arrays)
+        gaps /= len(accums)
         self._tracer.trace("max gap: %.3f", np.max(gaps))
         return np.all(gaps < tol).item()
+
+
+def _rel_gaps(arr: StatAccum, w: int, scale: float) -> NDArray[np.float64]:
+    """
+    Compute the differences between the last ``w`` historical values of a
+    statistic and its current value, relative to ``scale``.  If the scale is
+    zero (degenerate data), identical values have zero gap and differing
+    values have infinite gap.
+    """
+    diffs = np.abs(arr.stat_history[-(w + 1) : -1] - arr.statistic)
+    scale = abs(scale)
+    if scale > 0:
+        return diffs / scale
+    else:
+        return np.where(diffs > 0, np.inf, 0.0)
 
 
 class StatAccum:
