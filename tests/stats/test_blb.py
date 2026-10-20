@@ -90,7 +90,7 @@ class CITester:
         f_good = n_good / n_trials
         bt = binomtest(n_good, n_trials, 0.95)
         _log.info(
-            "binomal test for CI hit rate: stat=%.3f, p=%.3g", bt.statistic, bt.pvalue, test=bt
+            "binomial test for CI hit rate: stat=%.3f, p=%.3g", bt.statistic, bt.pvalue, test=bt
         )
 
         smeans = np.array([r["estimate"] for r in results])
@@ -207,6 +207,4 @@ class TestSimpleNormal(CITester):
         return rng.normal(self.parameter, self.true_sd, size=size)
 
     def compute_stats(self, xs, rng: np.random.Generator):
-        return blb_summary(
-            xs, "mean", rng=rng, b_factor=0.8, s_window=20, r_window=25, r_min=100, rel_tol=0.01
-        )
+        return blb_summary(xs, "mean", rng=rng)
