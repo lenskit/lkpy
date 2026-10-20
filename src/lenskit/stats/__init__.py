@@ -8,6 +8,6 @@ from ._blb import blb_summary
 from ._gini import gini
 
 __all__ = [
-    "gini",
     "blb_summary",
+    "gini",
 ]
