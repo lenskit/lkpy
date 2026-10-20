@@ -59,7 +59,7 @@ class CITester:
         return None
 
     @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
-    @mark.parametrize("size", [1000])
+    @mark.parametrize("size", [1000, 10000, 50000])
     def test_compute(self, size: int, rng: np.random.Generator):
         import ray
 
@@ -205,6 +205,21 @@ class TestSimpleNormal(CITester):
 
     def generate_sample(self, size: int, rng):
         return rng.normal(self.parameter, self.true_sd, size=size)
+
+    def compute_stats(self, xs, rng: np.random.Generator):
+        return blb_summary(xs, "mean", rng=rng)
+
+
+class TestSmallBeta(CITester):
+    parameter = 2 / 9
+    true_sd = np.sqrt(2 * 7 / (9**2 * 10))
+
+    def expected_width(self, size: int):
+        se = self.true_sd / np.sqrt(size)
+        return 2 * 1.96 * se
+
+    def generate_sample(self, size: int, rng):
+        return rng.beta(2, 7, size=size)
 
     def compute_stats(self, xs, rng: np.random.Generator):
         return blb_summary(xs, "mean", rng=rng)
