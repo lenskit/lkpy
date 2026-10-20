@@ -9,7 +9,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ClassVar, Literal, Protocol, TypeAlias, TypeVar
+from typing import Any, ClassVar, Literal, Protocol
 
 import numpy as np
 import pandas as pd
@@ -22,9 +22,7 @@ from lenskit.random import RNGInput, random_generator
 
 from ._distributions import ci_quantiles
 
-F = TypeVar("F", bound=np.floating, covariant=True)
-
-SummaryStat: TypeAlias = Literal["mean"]
+type SummaryStat = Literal["mean"]
 
 _log = get_logger(__name__)
 STD_NORM = scipy.stats.norm()
@@ -48,8 +46,8 @@ class WeightedStatistic(Protocol):
     ) -> np.floating[Any]: ...
 
 
-def blb_summary(
-    xs: NDArray[F],
+def blb_summary[F_co: np.floating](
+    xs: NDArray[F_co],
     stat: SummaryStat,
     *,
     ci_width: float = 0.95,
@@ -207,7 +205,7 @@ class _BLBootstrapper:
 
         self._tracer = get_tracer(_log, stat=config.statistic.__name__)  # type: ignore
 
-    def run_bootstraps(self, xs: NDArray[F]) -> _BootResult:
+    def run_bootstraps[F_co: np.floating](self, xs: NDArray[F_co]) -> _BootResult:
         n = len(xs)
         self._ci_qmin, self._ci_qmax = ci_quantiles(self.config.ci_width, expand=n)
         b = int(n**self.config.b_factor)
@@ -256,7 +254,9 @@ class _BLBootstrapper:
         while True:
             yield self.rng.choice(n, b, replace=False)
 
-    def measure_subset(self, xs: NDArray[F], ss: NDArray[np.int64]) -> _SubsetResult:
+    def measure_subset[F_co: np.floating](
+        self, xs: NDArray[F_co], ss: NDArray[np.int64]
+    ) -> _SubsetResult:
         b = len(ss)
         n = len(xs)
         xss = xs[ss]
@@ -402,8 +402,8 @@ class StatAccum:
     def _expand_if_needed(self):
         cap = len(self._values)
         if cap == self._len:
-            self._values.resize(cap * 2)
-            self._cum_stat.resize(cap * 2)
+            self._values = np.resize(self._values, cap * 2)
+            self._cum_stat = np.resize(self._cum_stat, cap * 2)
 
     def __len__(self):
         return self._len
