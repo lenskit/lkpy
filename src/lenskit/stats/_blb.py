@@ -52,7 +52,7 @@ def blb_summary(
     stat: SummaryStat,
     *,
     ci_width: float = 0.95,
-    b_factor: float = 0.8,
+    b_factor: float = 0.7,
     rel_tol: float = 0.05,
     s_window: int = 3,
     r_window: int = 20,
