@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 from math import sqrt
 from typing import ClassVar
 
@@ -20,7 +21,7 @@ from pytest import approx, mark, warns
 from lenskit.data.types import NPVector
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger
-from lenskit.parallel.ray import ensure_cluster, ray_available
+from lenskit.parallel import is_free_threaded
 from lenskit.random import random_generator
 from lenskit.stats import blb_summary
 
@@ -45,8 +46,7 @@ def test_blb_single_array(rng: np.random.Generator):
 
 
 class CITester:
-    NBATCHES: ClassVar[int] = 20
-    PERBATCH: ClassVar[int] = int(os.environ.get("BLB_TRIALS_PER_BATCH", 50))
+    N_TRIALS: ClassVar[int] = 1000
 
     parameter: float
 
@@ -60,21 +60,14 @@ class CITester:
 
     @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
     @mark.parametrize("size", [1000, 10000, 50000])
+    @mark.skipif(not is_free_threaded(require_active=True), reason="requires free-threading")
     def test_compute(self, size: int, rng: np.random.Generator):
-        import ray
-
-        ensure_cluster()
-
         results = []
         times = []
-        n_trials = self.NBATCHES * self.PERBATCH
 
-        worker = ray.remote(num_cpus=2)(_blb_worker)
-        rngs = rng.spawn(self.NBATCHES)
-        tasks = [worker.remote(self.PERBATCH, size, self, t) for t in rngs]
-        for task in tasks:
-            bres = ray.get(task)
-            for mean, summary, time in bres:
+        rngs = rng.spawn(self.N_TRIALS)
+        with ThreadPoolExecutor() as pool:
+            for mean, summary, time in pool.map(lambda t: _blb_worker(size, self, t), rngs):
                 assert isinstance(summary, dict)
                 assert summary["estimate"] == approx(mean)
 
@@ -83,12 +76,12 @@ class CITester:
 
         _log.info("completed %d trials (avg %.2fms / trial)", len(results), np.mean(times) * 1000)
         n_lb_good = len([r for r in results if r["ci_lower"] <= self.parameter])
-        f_lb_good = n_lb_good / n_trials
+        f_lb_good = n_lb_good / self.N_TRIALS
         n_ub_good = len([r for r in results if self.parameter <= r["ci_upper"]])
-        f_ub_good = n_ub_good / n_trials
+        f_ub_good = n_ub_good / self.N_TRIALS
         n_good = len([r for r in results if r["ci_lower"] <= self.parameter <= r["ci_upper"]])
-        f_good = n_good / n_trials
-        bt = binomtest(n_good, n_trials, 0.95)
+        f_good = n_good / self.N_TRIALS
+        bt = binomtest(n_good, self.N_TRIALS, 0.95)
         _log.info(
             "binomial test for CI hit rate: stat=%.3f, p=%.3g", bt.statistic, bt.pvalue, test=bt
         )
@@ -121,7 +114,7 @@ class CITester:
 
         widths = np.array([r["ci_upper"] - r["ci_lower"] for r in results])
         ew = self.expected_width(size)
-        _log.info("bootstrap CI widths (expected: {:.4f}): {}".format(ew, describe(widths)))
+        _log.info(f"bootstrap CI widths (expected: {ew:.4f}): {describe(widths)}")
         if ew is not None:
             wt = ttest_1samp(widths, ew)
             if wt.pvalue >= 0.05:
@@ -135,15 +128,11 @@ class CITester:
 
             if bt.pvalue >= 0.05:
                 _log.info(
-                    "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
-                        f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
-                    ),
+                    f"{f_good:.1%} CIs good ({1 - f_lb_good:1%} LB fail, {1 - f_ub_good:.1%} UB fail), p={bt.pvalue:.3g}",
                 )
             else:
                 _log.error(
-                    "{:.1%} CIs good ({:1%} LB fail, {:.1%} UB fail), p={:.3g}".format(
-                        f_good, 1 - f_lb_good, 1 - f_ub_good, bt.pvalue
-                    ),
+                    f"{f_good:.1%} CIs good ({1 - f_lb_good:1%} LB fail, {1 - f_ub_good:.1%} UB fail), p={bt.pvalue:.3g}",
                 )
 
         # leave some wiggle room
@@ -151,20 +140,15 @@ class CITester:
 
 
 def _blb_worker(
-    nreps: int, size: int, test: CITester, rng: np.random.Generator
-) -> list[tuple[float, dict[str, float], float]]:
-    results = []
+    size: int, test: CITester, rng: np.random.Generator
+) -> tuple[float, dict[str, float], float]:
+    xs = test.generate_sample(size, rng)
+    mean = np.mean(xs).item()
 
-    for _i in range(nreps):
-        xs = test.generate_sample(size, rng)
-        mean = np.mean(xs).item()
+    timer = Stopwatch()
+    s = test.compute_stats(xs, rng)
 
-        timer = Stopwatch()
-        s = test.compute_stats(xs, rng)
-
-        results.append((mean, s, timer.elapsed()))
-
-    return results
+    return mean, s, timer.elapsed()
 
 
 class TestParamNormal(CITester):
