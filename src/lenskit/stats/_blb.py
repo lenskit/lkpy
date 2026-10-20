@@ -16,11 +16,14 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import Tracer, get_logger, get_tracer
 from lenskit.random import RNGInput, random_generator
 
 F = TypeVar("F", bound=np.floating, covariant=True)
 
 SummaryStat: TypeAlias = Literal["mean"]
+
+_log = get_logger(__name__)
 
 # dummy assignment to typecheck that we have correctly typed weighted average
 __dummy_avg: WeightedStatistic = np.average
@@ -102,7 +105,7 @@ def blb_summary(
 
     result = {
         "estimate": est,
-        "rep_mean": result.mean,
+        "rep_mean": result.rep_mean,
         "rep_var": result.rep_var,
         "ci_lower": result.ci_lower,
         "ci_upper": result.ci_upper,
@@ -113,7 +116,7 @@ def blb_summary(
 
 @dataclass
 class _BootResult:
-    mean: float
+    rep_mean: float
     rep_var: float
     ci_lower: float
     ci_upper: float
@@ -125,6 +128,7 @@ class _BLBootstrapper:
     Implementation of BLB computation.
     """
 
+    _tracer: Tracer
     statistic: WeightedStatistic
     ci_width: float
     _ci_qmin: float
@@ -158,8 +162,11 @@ class _BLBootstrapper:
         alpha = 1 - ci_width
         self._ci_qmin = 0.5 * alpha
         self._ci_qmax = 1 - 0.5 * alpha
+        self._tracer = get_tracer(_log, stat=stat.__name__)  # type: ignore
 
     def run_bootstraps(self, xs: NDArray[F]) -> _BootResult:
+        self._tracer.add_bindings(n=len(xs))
+        _log.debug("starting bootstrap", stat=self.statistic.__name__, n=len(xs))  # type: ignore
         ss_frames = {}
 
         means = StatAccum(np.mean)
@@ -168,12 +175,15 @@ class _BLBootstrapper:
         ubs = StatAccum(np.mean)
 
         for i, ss in enumerate(self.blb_subsets(xs)):
+            self._tracer.add_bindings(subset=i)
+            self._tracer.trace("starting subset")
             res = self.measure_subset(xs, ss)
             ss_frames[i] = res.samples
-            means.record(res.mean)
+            means.record(res.rep_mean)
+            vars.record(res.rep_var)
             lbs.record(res.ci_lower)
             ubs.record(res.ci_upper)
-            if _check_convergence(means, vars, lbs, ubs, tol=self.tolerance, w=self.s_window):
+            if self._check_convergence(means, vars, lbs, ubs, tol=self.tolerance, w=self.s_window):
                 break
 
         return _BootResult(
@@ -186,6 +196,7 @@ class _BLBootstrapper:
 
     def blb_subsets(self, xs: NDArray[F]):
         b = int(len(xs) ** self.b_factor)
+        self._tracer.add_bindings(b=b)
 
         while True:
             yield self.rng.choice(len(xs), b, replace=False)
@@ -195,27 +206,29 @@ class _BLBootstrapper:
         n = len(xs)
         xss = xs[ss]
 
-        values = []
         means = StatAccum(np.mean)
-        svs = StatAccum(np.var)
+        vars = StatAccum(np.var)
         lbs = StatAccum(lambda a: np.quantile(a, self._ci_qmin))
         ubs = StatAccum(lambda a: np.quantile(a, self._ci_qmax))
 
-        for weights in self.miniboot_weights(n, b):
+        for i, weights in enumerate(self.miniboot_weights(n, b)):
+            self._tracer.add_bindings(rep=i)
+            self._tracer.trace("starting replicate")
             assert weights.shape == (b,)
             assert np.sum(weights) == n
             stat = self.statistic(xss, weights=weights)
-            values.append(stat)
             means.record(stat)
+            vars.record(stat)
             lbs.record(stat)
             ubs.record(stat)
 
-            if _check_convergence(means, svs, lbs, ubs, tol=self.tolerance, w=self.r_window):
+            if self._check_convergence(means, vars, lbs, ubs, tol=self.tolerance, w=self.r_window):
                 break
 
-        df = pd.DataFrame({"statistic": values})
+        df = pd.DataFrame({"statistic": means.values})
         df.index.name = "iter"
-        return _BootResult(means.statistic, svs.statistic, lbs.statistic, ubs.statistic, df)
+        self._tracer.remove_bindings("rep")
+        return _BootResult(means.statistic, vars.statistic, lbs.statistic, ubs.statistic, df)
 
     def miniboot_weights(self, n: int, b: int):
         flat = np.full(b, 1.0 / b)
@@ -223,18 +236,19 @@ class _BLBootstrapper:
         while True:
             yield self.rng.multinomial(n, flat)
 
+    def _check_convergence(self, *arrays: StatAccum, tol: float, w: int) -> bool:
+        gaps = np.zeros(w)
+        for arr in arrays:
+            if len(arr) < w + 1:
+                return False
 
-def _check_convergence(*arrays: StatAccum, tol: float, w: int) -> bool:
-    gaps = np.zeros(w)
-    for arr in arrays:
-        if len(arr) < w + 1:
-            return False
-        stats = arr.stat_history
-        cur = stats[-1]
-        gaps += np.abs(stats[-(w + 1) : -1] - cur) / np.abs(cur)
+            stats = arr.stat_history
+            cur = arr.statistic
+            gaps += np.abs(stats[-(w + 1) : -1] - cur) / np.abs(cur)
 
-    gaps /= len(arrays)
-    return np.all(gaps < tol).item()
+        gaps /= len(arrays)
+        self._tracer.trace("max gap: %.3f", np.max(gaps))
+        return np.all(gaps < tol).item()
 
 
 class StatAccum:
@@ -259,7 +273,7 @@ class StatAccum:
     @property
     def statistic(self) -> float:
         if self._len:
-            return self._cum_stat[-1]
+            return self._cum_stat[self._len - 1]
         else:
             return np.nan
 
