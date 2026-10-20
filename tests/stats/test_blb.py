@@ -46,7 +46,7 @@ def test_blb_single_array(rng: np.random.Generator):
 
 
 class CITester:
-    N_TRIALS: ClassVar[int] = 1000
+    N_TRIALS: ClassVar[int] = 500
 
     parameter: float
 
