@@ -80,9 +80,9 @@ class LogRBP(RankingMetricBase):
     underflows to exactly ``0.0`` in normal space (its log is :math:`\approx -814.5`)
     and is therefore still finite here.
 
-    Only the geometric rank weighting used by RBP is supported, with the same
-    normalization semantics.  Custom :class:`~lenskit.metrics.RankWeight` objects and
-    ``weight_field`` are deliberately **not** accepted: the base
+    Only the geometric rank weighting used by RBP is supported.  Custom
+    :class:`~lenskit.metrics.RankWeight` objects and ``weight_field`` are
+    deliberately **not** accepted: the base
     :meth:`~lenskit.metrics.RankWeight.log_weight` falls back to
     :math:`\ln w = \ln(e^{\ln w})`, which exponentiates the very discounts this metric
     exists to avoid.
@@ -106,23 +106,9 @@ class LogRBP(RankingMetricBase):
         results as ``LogRBP.logmean``.  The name is not settled upstream; see
         :issue:`1159`.
 
-    .. note::
-
-        **Degenerate case, deliberate divergence from** :class:`~lenskit.metrics.RBP`.
-        With ``normalize=True`` and an *empty recommendation list*, the normalizing
-        sum is empty, so :class:`~lenskit.metrics.RBP` divides by zero and raises
-        :exc:`ZeroDivisionError`.  This metric instead returns ``NaN``, treating the
-        score as undefined rather than raising.  Every other path matches
-        :class:`~lenskit.metrics.RBP` exactly: with ``normalize=False`` an empty list
-        scores :math:`0` and is therefore reported here as :math:`-\infty` and
-        retained, just as :class:`~lenskit.metrics.RBP` reports ``0.0``.  Both
-        behaviors are pinned by tests
-        (``test_logrbp_empty_recs_normalize_returns_nan`` asserts each side).
-
     .. warning::
 
-        Experimental prototype.  The ``normalize`` option inherits RBP's
-        experimental normalization.
+        Experimental prototype.
 
     Args:
         n:
@@ -130,9 +116,6 @@ class LogRBP(RankingMetricBase):
         patience:
             The patience parameter :math:`p`, the probability that the user
             continues browsing at each point.  The default is 0.85.
-        normalize:
-            Whether to normalize by the maximum achievable with the test data, as
-            :class:`~lenskit.metrics.RBP` does.
         k:
             Deprecated alias for ``n``.
 
@@ -142,7 +125,6 @@ class LogRBP(RankingMetricBase):
 
     weight: GeometricRankWeight
     patience: float
-    normalize: bool
 
     def __init__(
         self,
@@ -150,17 +132,14 @@ class LogRBP(RankingMetricBase):
         *,
         k: int | None = None,
         patience: float = 0.85,
-        normalize: bool = False,
     ):
         super().__init__(n, k=k)
         self.patience = patience
         self.weight = GeometricRankWeight(patience)
-        self.normalize = normalize
 
     @override
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
-        k = len(recs)
 
         nrel = len(test)
         if nrel == 0:
@@ -176,17 +155,8 @@ class LogRBP(RankingMetricBase):
 
         wmax = self.weight.series_sum()
         assert wmax is not None
-        if self.normalize:
-            # normalize by the log of the maximum achievable RBP
-            max_slice = log_weights[: min(nrel, k)]
-            if max_slice.size == 0:
-                # the normalizing sum is empty; RBP divides by zero here and raises
-                # ZeroDivisionError.  We report an undefined measurement instead.
-                return np.nan
-            log_normalization = float(logsumexp(max_slice))
-        else:
-            # normalization defined by the metric: the infinite series sum
-            log_normalization = math.log(wmax)
+        # normalize by the infinite geometric series sum
+        log_normalization = math.log(wmax)
 
         return log_rank_biased_precision(good, log_weights, log_normalization)
 

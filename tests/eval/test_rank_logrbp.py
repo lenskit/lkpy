@@ -87,6 +87,8 @@ def test_logrbp_no_weight_arguments():
         measure_list(LogRBP, recs, truth, weight=LogRankWeight())
     with raises(TypeError):
         measure_list(LogRBP, recs, truth, weight_field="weight")
+    with raises(TypeError):
+        measure_list(LogRBP, recs, truth, normalize=True)
 
 
 @given(
@@ -101,17 +103,6 @@ def test_logrbp_perfect(items, p):
     assert measure_list(LogRBP, recs, truth, patience=p) == approx(
         math.log((1 - p) * sum(p**i for i in range(n)))
     )
-
-
-@given(
-    st.lists(integer_ids(), min_size=1, max_size=100, unique=True),
-    st.floats(0.05, 0.95),
-)
-def test_logrbp_perfect_norm(items, p):
-    recs = ItemList(items, ordered=True)
-    truth = ItemList(items)
-    # a perfect list normalizes to RBP 1, whose log is exactly 0
-    assert measure_list(LogRBP, recs, truth, patience=p, normalize=True) == approx(0.0)
 
 
 @given(
@@ -135,18 +126,6 @@ def test_logrbp_matches_rbp(items, n, p):
     else:
         assert log_rbp == approx(math.log(rbp), rel=1e-9)
         assert math.exp(log_rbp) == approx(rbp, rel=1e-9)
-
-
-@given(
-    st.lists(integer_ids(), min_size=1, max_size=60, unique=True),
-    st.floats(0.05, 0.95),
-)
-def test_logrbp_matches_rbp_normalized(items, p):
-    recs = ItemList(items, ordered=True)
-    truth = ItemList(items[::3])
-    rbp = measure_list(RBP, recs, truth, patience=p, normalize=True)
-    log_rbp = measure_list(LogRBP, recs, truth, patience=p, normalize=True)
-    assert log_rbp == approx(math.log(rbp), rel=1e-9)
 
 
 # --- the deep-rank case that motivates log space ------------------------------
@@ -269,7 +248,7 @@ def test_logrbp_matches_rbp_across_patience(p):
 
 
 def test_logrbp_extreme_patience_values():
-    """Hand-checked values at both patience ends, with normalize on and off."""
+    """Hand-checked values at both patience ends."""
     recs = ItemList([1, 2, 3], ordered=True)
     truth = ItemList([1])
     # p -> small: only the first position matters, RBP = (1-p) * 1
@@ -278,7 +257,6 @@ def test_logrbp_extreme_patience_values():
     # p -> 1: the series sum blows up while the per-list log stays finite
     p = 0.999
     assert measure_list(LogRBP, recs, truth, patience=p) == approx(math.log(1 - p), rel=1e-9)
-    assert measure_list(LogRBP, recs, truth, patience=p, normalize=True) == approx(0.0)
 
 
 def test_accumulator_mixed_zero_and_nonzero():
@@ -375,18 +353,6 @@ def test_logrbp_missing_truth_excluded(two_users):
     assert summ["LogRBP.n"] == 1
     # user A is perfect: RBP normalizes by the infinite series, so log is not 0
     assert summ["LogRBP.logmean"] == approx(math.log(summ["RBP.mean"]), rel=1e-9)
-
-
-def test_logrbp_empty_recs_normalize_returns_nan():
-    """
-    RBP raises ZeroDivisionError for this degenerate combination; LogRBP reports an
-    undefined measurement instead.  Documented divergence pending #1159.
-    """
-    recs = ItemList([], ordered=True)
-    truth = ItemList([1, 2, 3])
-    assert np.isnan(measure_list(LogRBP, recs, truth, normalize=True))
-    with raises(ZeroDivisionError):
-        measure_list(RBP, recs, truth, normalize=True)
 
 
 def test_logrbp_truncation_matches_rbp():
