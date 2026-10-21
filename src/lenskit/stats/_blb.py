@@ -91,6 +91,9 @@ def blb_summary[F_co: np.floating](
 
     Returns:
         A dictionary of statistical results of the statistic.
+
+    Stability:
+        Experimental
     """
     if stat != "mean":
         raise ValueError(f"unsupported statistic {stat}")
