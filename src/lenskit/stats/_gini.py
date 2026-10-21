@@ -4,10 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-"""
-LensKit statistical computations.
-"""
-
 from __future__ import annotations
 
 import warnings
@@ -58,4 +54,4 @@ def gini(xs: ArrayLike) -> float:
         warnings.warn(
             "Gini coefficient is not defined for non-positive totals", DataWarning, stacklevel=2
         )
-    return max(num / denom, 0)
+    return max(num / denom, 0.0)

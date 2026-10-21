@@ -18,8 +18,8 @@ from typing import BinaryIO
 import pyarrow as pa
 import pyarrow.compute as pc
 from pyarrow.csv import ConvertOptions, ReadOptions, open_csv
-from xopen import xopen
 
+from lenskit.data import xopen
 from lenskit.logging import get_logger
 
 from .._builder import DatasetBuilder
@@ -53,7 +53,7 @@ def load_amazon_ratings(*files: Path | str | PathLike[str]) -> Dataset:
         log = _log.bind(file=str(file))
         log.debug("opening file")
 
-        with xopen(file, "rb", threads=1) as xf, BufferedReader(xf) as bf:  # type: ignore
+        with xopen(file, "rb") as xf, BufferedReader(xf) as bf:  # type: ignore
             block = bf.peek(4096)
             log.debug("file header: %r", block[:20])
             if block.startswith(b"user_id,parent_asin,"):

@@ -13,8 +13,7 @@ from time import perf_counter_ns
 from typing import TYPE_CHECKING, Protocol, TextIO
 from uuid import UUID, uuid4
 
-from xopen import xopen
-
+from lenskit.data import xopen
 from lenskit.logging import get_logger
 from lenskit.logging.multiprocess import Monitor, RecordSink, WorkerContext, get_monitor
 

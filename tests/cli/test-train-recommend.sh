@@ -8,8 +8,7 @@ cat >>"$TEST_WORK/verify.py" <<EOF
 import pickle
 import sys
 
-from xopen import xopen
-
+from lenskit.data import xopen
 from lenskit.als import BiasedMFScorer
 from lenskit.pipeline.nodes import ComponentInstanceNode
 

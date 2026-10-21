@@ -19,10 +19,9 @@ from typing import Any
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
-from xopen import xopen
 
 from lenskit._accel import data as _accel_data
-from lenskit.data import Dataset, DatasetBuilder
+from lenskit.data import Dataset, DatasetBuilder, xopen
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
 
