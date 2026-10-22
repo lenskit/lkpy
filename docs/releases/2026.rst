@@ -10,12 +10,27 @@ There are no new major paradigm shifts, though — pipelines, datasets, and
 components work as they do in the 2025 series, but with more features, some
 rough corners polished off the interfaces, and hopefully fewer bugs.
 
+.. _2026.5.0:
+
+2026.5.0 (in progress)
+~~~~~~~~~~~~~~~~~~~~~~
+
+Ffith feature release in 2026, with more feature updates and bug fixes.  A full list of
+fixed issues and merged PRs is on `milestone 2026.5`_.
+
+- Removed dependency on the ``xopen`` crate, introducing :func:`lenskit.data.xopen` with comparable functionality and no external dependencies on Python 3.15 (:issue:`1238`, :pr:`1239`).
+- Added support for Optuna 5 (:pr:`1234`)
+- Added :class:`~lenskit.metrics.LogRBP` metric to compute and average RBP in log-space for greater stability (:issue:`1159`, :pr:`1236`, first contribution by :user:`GBX-Max1220`).
+- Internal refactorings and dependency updates.
+
+.. _milestone 2026.5: https://github.com/lenskit/lkpy/milestone/30
+
 .. _2026.4.0:
 
 2026.4.0
 ~~~~~~~~
 
-Third feature release in 2026, with more feature updates and bug fixes.  A full list of
+Fourth feature release in 2026, with more feature updates and bug fixes.  A full list of
 fixed issues and merged PRs is on `milestone 2026.4`_.
 
 - 🐞 Fixed bug in :meth:`lenskit.data.ItemList.top_n` that returned ordered lists with incorrect ranks (:issue:`1224`, :pr:`1221`, :pr:`1226`).
