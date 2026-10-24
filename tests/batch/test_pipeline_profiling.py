@@ -20,12 +20,12 @@ from .test_batch_pipeline import MLB, ml_split, mlb
 
 @mark.parametrize(("ncpus"), [1, 2])
 @mark.eval
-def test_bias_batch(tmpdir: Path, ml_split: TTSplit, ncpus: int | None):
+def test_bias_batch(tmp_path: Path, ml_split: TTSplit, ncpus: int | None):
     algo = BiasScorer(damping=5)
     pipeline = topn_pipeline(algo, predicts_ratings=True, n=20)
     pipeline.train(ml_split.train)
 
-    file = tmpdir / "profile.csv"
+    file = tmp_path / "profile.csv"
 
     with PipelineProfiler(pipeline, file) as profiler:
         runner = BatchPipelineRunner(n_jobs=ncpus, profiler=profiler)

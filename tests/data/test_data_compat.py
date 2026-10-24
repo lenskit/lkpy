@@ -35,7 +35,7 @@ _ml_path = Path("data/ml-20m.zip")
 @mark.slow
 @mark.compat
 @mark.parametrize("version", LK_VERSIONS.keys())
-def test_data_backwards_compat(version, tmpdir: Path):
+def test_data_backwards_compat(version, tmp_path: Path):
     "Test that we can load datasets prepared by old versions."
     _log.info("processing ML file", version=version)
 
@@ -44,7 +44,7 @@ def test_data_backwards_compat(version, tmpdir: Path):
     except FileNotFoundError:
         skip("uvx not installed")
 
-    out_path = tmpdir / "ml-small.lk"
+    out_path = tmp_path / "ml-small.lk"
     pkg = f"lenskit=={version}"
 
     sp.check_call(
@@ -71,7 +71,7 @@ def test_data_backwards_compat(version, tmpdir: Path):
 @mark.compat
 @mark.skipif(not _ml_path.exists(), reason="ml-20m not available")
 @mark.parametrize("version", LK_VERSIONS.keys())
-def test_data_backwards_ml20m(version, tmpdir: Path):
+def test_data_backwards_ml20m(version, tmp_path: Path):
     "Test that we can load datasets prepared by old versions (ML20M)."
     try:
         sp.call(["uvx", "--version"])
@@ -80,7 +80,7 @@ def test_data_backwards_ml20m(version, tmpdir: Path):
 
     _log.info("processing ML file", version=version)
 
-    out_path = tmpdir / "ml-20m"
+    out_path = tmp_path / "ml-20m"
     pkg = f"lenskit=={version}"
 
     sp.check_call(

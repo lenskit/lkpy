@@ -37,7 +37,7 @@ def tuner_class(request):
 @mark.slow
 @mark.realdata
 @mark.parametrize("version", ["implicit", "explicit"])
-def test_tune_als(ml_100k, tmpdir, tuner_class, version: str):
+def test_tune_als(ml_100k, tmp_path, tuner_class, version: str):
     "test optimizing an iterative model"
     spec = TuningSpec.load(Path(f"pipelines/als-{version}-search.toml"))
     spec.search.method = "random"
@@ -47,7 +47,7 @@ def test_tune_als(ml_100k, tmpdir, tuner_class, version: str):
     spec.search.plateau_min_rel_improvement = 0.05
     spec.search.median_min_trials = 3
 
-    tpath = Path(tmpdir)
+    tpath = Path(tmp_path)
 
     tuner = tuner_class(spec, tpath)
     assert tuner.iterative

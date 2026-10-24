@@ -63,8 +63,8 @@ def test_latest_small_dir():
     assert set(ds.schema.relationships["rating"].attributes.keys()) == {"rating", "timestamp"}
 
 
-def test_ml_modern(tmpdir: Path):
-    tgt = tmpdir / "ml-football"
+def test_ml_modern(tmp_path: Path):
+    tgt = tmp_path / "ml-football"
     copytree(ml_test_dir, tgt)
 
     ds = load_movielens(tgt)
@@ -209,10 +209,10 @@ def test_20m_zip():
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
 @mark.slow
 @mark.realdata
-def test_ml20m_save(tmpdir: Path):
+def test_ml20m_save(tmp_path: Path):
     ds = load_movielens(ML_20M_ZIP)
 
-    path = tmpdir / "ml-20m"
+    path = tmp_path / "ml-20m"
     ds.save(path)
 
     assert path.exists()

@@ -137,13 +137,13 @@ def test_runtime_truncation(n, items: ItemList):
     assert np.all(rank_s == src_s)
 
 
-def test_observed_order_case(tmpdir: Path):
+def test_observed_order_case(tmp_path: Path):
     """
     Test for new ranks with saved original observed error case.
 
     Adapted from Aishwarya Satwani's test code.
     """
-    file = tmpdir / "probe.parquet"
+    file = tmp_path / "probe.parquet"
     N = 1000
     il = ItemList(item_ids=np.arange(N), scores=np.linspace(5, 0, N).astype("f4"), ordered=True)
     ItemListCollection.from_dict({1: il}, "user_id").save_parquet(file)
