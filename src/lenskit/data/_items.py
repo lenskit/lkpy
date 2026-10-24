@@ -960,6 +960,7 @@ class ItemList:
         n: int | None = None,
         *,
         scores: str | NDArray[np.floating] | torch.Tensor | pa.Array | None = None,
+        save_ranks: bool = False,
     ) -> ItemList:
         """
         Get the top _N_ items in this list, sorted in decreasing order.
@@ -974,6 +975,9 @@ class ItemList:
                 The name of a field containing the scores, or a NumPy vector of
                 scores, for selecting the top _N_.  If ``None``, the item list's
                 scores are used.
+            save_ranks:
+                Save the input ranks in ``prev_rank`` before reordering. See
+                :meth:`take` for rank-preservation behavior.
         Returns:
             An ordered item list containing the top ``n`` items.
         """
@@ -1016,7 +1020,7 @@ class ItemList:
                 assert n is not None
                 picked = _data_accel.argtopn(scores, min(n, len(self)))
 
-        return self._take(picked, ordered=True)
+        return self._take(picked, ordered=True, save_ranks=save_ranks)
 
     def concat(self, other: ItemList) -> ItemList:
         """
@@ -1094,18 +1098,21 @@ class ItemList:
         self,
         *,
         ids: IDSequence | None = None,
+        save_ranks: bool = False,
     ) -> ItemList: ...
     @overload
     def remove(
         self,
         *,
         numbers: pa.Int32Array | NPVector[np.integer] | pd.Series[int] | None = None,
+        save_ranks: bool = False,
     ) -> ItemList: ...
     def remove(
         self,
         *,
         ids: IDSequence | None = None,
         numbers: pa.Int32Array | NPVector[np.integer] | pd.Series[int] | None = None,
+        save_ranks: bool = False,
     ) -> ItemList:
         """
         Return an item list with the specified items removed.
@@ -1117,6 +1124,9 @@ class ItemList:
                 The item IDs to remove.
             numbers:
                 The item numbers to remove.
+            save_ranks:
+                Save the input ranks in ``prev_rank`` before removal. See
+                :meth:`take` for rank-preservation behavior.
         """
         if ids is None and numbers is None:
             raise ValueError("must specify one of ids= or numbers=")
@@ -1141,14 +1151,39 @@ class ItemList:
             mask = np.isin(self.numbers(), numbers, invert=True, kind="table")
 
         # fast case — we have a vocabulary and no fields
-        if self._vocab is not None and not self._fields:
+        if self._vocab is not None and not self._fields and not (save_ranks and self.ordered):
             return ItemList(
                 item_nums=self.numbers()[mask], vocabulary=self.vocabulary, ordered=self.ordered
             )
 
-        return self._take(mask)
+        return self._take(mask, save_ranks=save_ranks)
 
-    def _take(self, sel: ILIndexer, *, ordered: bool | None = None) -> ItemList:
+    def take(self, sel: ILIndexer, *, save_ranks: bool = False) -> ItemList:
+        """
+        Select items, optionally preserving their ranks before selection.
+
+        With the default options, this is equivalent to ``items[sel]``.
+
+        Args:
+            sel:
+                An integer, slice, sequence of positions, or Boolean mask, as
+                accepted by :meth:`__getitem__`.
+            save_ranks:
+                If ``True`` and the input list is ordered, store its ranks in
+                ``prev_rank``. This replaces any existing ``prev_rank`` field
+                with ranks from the immediate input list. Unordered inputs have
+                no ranks to save, so their fields are retained unchanged.
+
+        Returns:
+            A new item list with the selected items and the input ordering flag.
+            Its ranks are recomputed from the new order, independently of
+            ``prev_rank``. The input list is not modified.
+        """
+        return self._take(sel, save_ranks=save_ranks)
+
+    def _take(
+        self, sel: ILIndexer, *, ordered: bool | None = None, save_ranks: bool = False
+    ) -> ItemList:
         """
         Implementation helper for indexing.
         """
@@ -1167,7 +1202,10 @@ class ItemList:
         )
         array = indexer(array)
 
-        return ItemList(_init_array=array, vocabulary=self.vocabulary, ordered=ordered)  # type: ignore
+        result = ItemList(_init_array=array, vocabulary=self.vocabulary, ordered=ordered)  # type: ignore
+        if save_ranks and self.ordered:
+            result = ItemList(result, prev_rank=indexer(self.ranks("arrow")))
+        return result
 
     def __len__(self):
         return self._len
