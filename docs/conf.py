@@ -50,6 +50,7 @@ extensions = [
     "sphinx_new_tab_link",
     "autoapi.extension",
     "lk_stability",
+    # "pytest_doctestplus.sphinx.doctestplus",
 ]
 
 # set up our filenames
