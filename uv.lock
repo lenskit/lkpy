@@ -2158,7 +2158,6 @@ dev = [
     { name = "hypothesis" },
     { name = "ipython" },
     { name = "lazy-loader" },
-    { name = "line-profiler" },
     { name = "matplotlib" },
     { name = "maturin" },
     { name = "myst-nb" },
@@ -2306,7 +2305,6 @@ dev = [
     { name = "hypothesis", specifier = "~=6.139" },
     { name = "ipython", specifier = ">=7" },
     { name = "lazy-loader", specifier = ">=0.4" },
-    { name = "line-profiler" },
     { name = "matplotlib", specifier = "~=3.4" },
     { name = "maturin", specifier = "~=1.10" },
     { name = "myst-nb", specifier = ">=0.13" },
@@ -2393,37 +2391,6 @@ test = [
     { name = "rust-just", specifier = ">=1.58" },
     { name = "tap-py", extras = ["yaml"], specifier = "~=3.2" },
     { name = "tomlkit", specifier = "~=0.15.0" },
-]
-
-[[package]]
-name = "line-profiler"
-version = "5.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/21/2e/468665e93bda3124667f284bb71a5074769647bf264fb7b9114995753067/line_profiler-5.1.0.tar.gz", hash = "sha256:5717a2dccf0ced65fd19ba5e479581c47412831fe768bc211c6d0f5ba1ad9b47", size = 197869, upload-time = "2026-10-18T22:40:34.074Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/d0/b43ed562eb8c9139e42066cf13ce36ba0cfa306d7ccad5c4b9afd2c6a92f/line_profiler-5.1.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:554fa6e29ec244a98ac33735ebafafbcbab3d7e7043eb16ef1a23123fcd73d9c", size = 299307, upload-time = "2026-10-18T22:40:02.256Z" },
-    { url = "https://files.pythonhosted.org/packages/b5/19/84abf48c9f50da103119c98600e6bd239e024e74eb37e7ae1e1c50bf29ac/line_profiler-5.1.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:15fedd306b922eb41e959a8813af30368e4cc052ce284e04b8e60ac3823fec75", size = 287186, upload-time = "2026-10-18T22:40:03.686Z" },
-    { url = "https://files.pythonhosted.org/packages/be/fb/271cfc1babec9b7f47b1690a8a6fa664c0fc7670b755eda235c5e3a90b07/line_profiler-5.1.0-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:db3c2a062032ad80291a6c0abeed1b22f0c23c81ebef51adf2fa989bd1c6754e", size = 1328254, upload-time = "2026-10-18T22:40:05.307Z" },
-    { url = "https://files.pythonhosted.org/packages/3f/46/2a931690d0d0923874e4f711d2e20b3e19bd6c37e4511f3e87f74a5b180a/line_profiler-5.1.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:38603a36a0b381f8455b854c36a9ea8d7269bbc187f1546e50ef16b2e5b7c1ff", size = 1352814, upload-time = "2026-10-18T22:40:07.014Z" },
-    { url = "https://files.pythonhosted.org/packages/6a/ee/6d3bfc2abef7de6d4a982ff05b911fa1dc1e0188229db676683d7f7889fe/line_profiler-5.1.0-cp312-cp312-win_amd64.whl", hash = "sha256:75ea9c2bcfc9e716d06cc2e9b2c3a9c0918cfd24d5de60c27c2a8caa6aacfa02", size = 471953, upload-time = "2026-10-18T22:40:08.841Z" },
-    { url = "https://files.pythonhosted.org/packages/81/de/06fc186234321f97b56721ea6b3f27f8876db727f10fae29298f3ec2631b/line_profiler-5.1.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:c32116f57f2bfa5259673e3105bfb8686f81ee002cdc7c17b43fd46f41a74fdc", size = 301166, upload-time = "2026-10-18T22:40:10.253Z" },
-    { url = "https://files.pythonhosted.org/packages/33/74/f4b7eae0b8eaae393443902e881d844f58351cfa92766c668a5966ba3d0e/line_profiler-5.1.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:d5cb6571bd1ead4a41b4fbe981800dc9065e3b13a919b906ec4123036f26ba54", size = 288016, upload-time = "2026-10-18T22:40:11.799Z" },
-    { url = "https://files.pythonhosted.org/packages/5c/7e/75facb6b91345d3a8fe9ac735c65533907808ff9bea1d18af72d3f7880ac/line_profiler-5.1.0-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:56c24d69c319fde6358d4a3bccc19cb71fce8dfae6a8ae34a3a795fc51f077fc", size = 1326120, upload-time = "2026-10-18T22:40:13.498Z" },
-    { url = "https://files.pythonhosted.org/packages/48/af/245563d7b245402e17e549e2414bcab02c90c690ddc9a18ea019a9b2a12d/line_profiler-5.1.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7d2ca22ebbe2aa579509799ba9af83ab913b6aba858be02ce70e6ebbca1bea75", size = 1348688, upload-time = "2026-10-18T22:40:15.233Z" },
-    { url = "https://files.pythonhosted.org/packages/db/7e/dfaf4e71cef94c957a6c3183d5d84946074ccd1b44df1b6f9fb90c85d86d/line_profiler-5.1.0-cp313-cp313-win_amd64.whl", hash = "sha256:1656ea47d76336c2b74fab68ae5e7158bd65db526243fcdf1e2f20a6b95d567f", size = 471925, upload-time = "2026-10-18T22:40:17.091Z" },
-    { url = "https://files.pythonhosted.org/packages/bb/f1/66130ca1d6cdd169fbb1d98e6dbd1c5a680d72edba22e2bb7d80a1b45419/line_profiler-5.1.0-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:08044ef82bebb9a441da238aaab38add8963a8fd968c9dde759fc6dfa5ba9e7e", size = 301316, upload-time = "2026-10-18T22:40:18.713Z" },
-    { url = "https://files.pythonhosted.org/packages/7b/c3/bd6517d73b0da149db2d4ec7b37707d0d07b18c67603af30479a6a5fe3a8/line_profiler-5.1.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:cc2676cab5895426d79590812d7748d79f9ede422d625e0b3920957811b677a0", size = 289854, upload-time = "2026-10-18T22:40:20.114Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/90/1037bad7b8c158bf865d0902a260bcb51945d4f58442eca9aff7c5b2caca/line_profiler-5.1.0-cp314-cp314-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ff79bb0a3bd39c7fbc91be87599ff42333eb66ddc3cfe3916ce97139d6cd7902", size = 1326733, upload-time = "2026-10-18T22:40:21.668Z" },
-    { url = "https://files.pythonhosted.org/packages/b5/1b/6da88fec582f28d3986043bfc4ad6fa2a84b7d245d84ad34721db27d0838/line_profiler-5.1.0-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4a8bfb18bcc70279e1b89ac3742b2ece3f2fd961fa9724cbd1365383ce41795c", size = 1339861, upload-time = "2026-10-18T22:40:23.296Z" },
-    { url = "https://files.pythonhosted.org/packages/29/77/29001c1f3a8f682ffc20a1b3ea406bda401349cc030a7c47a29a6831ff15/line_profiler-5.1.0-cp314-cp314-win_amd64.whl", hash = "sha256:833812db87113bf824bd1125a6d71d2e50419467b4d57f8f3ba2968c15c6317c", size = 482133, upload-time = "2026-10-18T22:40:24.795Z" },
-    { url = "https://files.pythonhosted.org/packages/2c/30/00759338dfccf4e85e93cdfb3a3264757d55244f3bc3fd50c62b8b11308e/line_profiler-5.1.0-cp315-cp315-macosx_10_15_x86_64.whl", hash = "sha256:180adb2f3ebdcc4cd35146845262aec0675d58ce13b17a896a3f54a42a49d7d3", size = 301270, upload-time = "2026-10-18T22:40:26.474Z" },
-    { url = "https://files.pythonhosted.org/packages/7d/a9/93cda6d24cfafe73c4c43e488c9c80e6ff8b05b6178f0c4f332749df9be7/line_profiler-5.1.0-cp315-cp315-macosx_11_0_arm64.whl", hash = "sha256:fc86134c31ca70b848b2e34b7a8e18c38152ab29c005f931f387b42687e34108", size = 289716, upload-time = "2026-10-18T22:40:27.966Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/d9/d9474ad940f0506613c6781daef818e70de3eeb0f229b028bb9b66bce212/line_profiler-5.1.0-cp315-cp315-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f153204f02da9100c420dd75b3740bf6e240ef7119dbc13289c0f8bdcf28fd3d", size = 1326939, upload-time = "2026-10-18T22:40:29.535Z" },
-    { url = "https://files.pythonhosted.org/packages/e3/e8/46d2bf0a5ce343a565678ed3a2e1420a7ec75d5a38e1471af398cfba2d1d/line_profiler-5.1.0-cp315-cp315-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4cf2fc84404db7f580c4fcd92a3cb0c3bd6cba968e3d432b2fd9faffc21699fc", size = 1343158, upload-time = "2026-10-18T22:40:31.185Z" },
-    { url = "https://files.pythonhosted.org/packages/0d/f6/f6ab63fed5cf5e91473ec212b30848a16d08e9e9cdca1d5df497513d2628/line_profiler-5.1.0-cp315-cp315-win_amd64.whl", hash = "sha256:4990a2f1a38ae92e060d6e8ff28b823ed7cd35ec5655c239f5e1671cc6867e58", size = 482162, upload-time = "2026-10-18T22:40:32.705Z" },
 ]
 
 [[package]]

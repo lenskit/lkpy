@@ -76,7 +76,6 @@ dev = [
   "cibuildwheel ~=4.3",
   "esbonio>=2.0.0",
   "ipython >=7",
-  "line_profiler",
   "nox>=2025.5.1",
   # stub files
   "pandas-stubs >=2.2,<4",
