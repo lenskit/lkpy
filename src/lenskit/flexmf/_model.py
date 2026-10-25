@@ -42,8 +42,10 @@ class FlexMFModel(nn.Module):
     layers: int
     _layer_scale: float
 
-    u_bias: nn.Embedding | None = None
-    i_bias: nn.Embedding | None = None
+    # no class-level defaults for submodules: they would shadow the modules
+    # that nn.Module registers, so attribute lookup would always return None.
+    u_bias: nn.Embedding | None
+    i_bias: nn.Embedding | None
     u_embed: nn.Embedding
     i_embed: nn.Embedding
 
@@ -73,8 +75,12 @@ class FlexMFModel(nn.Module):
         # user and item bias terms
         if user_bias:
             self.u_bias = nn.Embedding(n_users, 1, sparse=sparse)
+        else:
+            self.u_bias = None
         if item_bias:
             self.i_bias = nn.Embedding(n_items, 1, sparse=sparse)
+        else:
+            self.i_bias = None
 
         # user and item embeddings
         self.u_embed = nn.Embedding(n_users, e_size, sparse=sparse)
