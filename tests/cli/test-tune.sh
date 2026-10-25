@@ -7,15 +7,23 @@ out="$TEST_WORK/bias-tune"
 declare -a tune_args=()
 if [[ $LK_USE_RAY_TUNE ]]; then
     msg "using ray tune"
-    args+=(--use-ray)
-fi
-
-if [[ ! -f $ML100K ]]; then
-    msg "ML-100K not available, skipping tune test"
-    exit 0
+    tune_args+=(--ray)
 fi
 
 begin-suite
+
+if [[ ! -f $ML100K ]]; then
+    msg "ML-100K not available, skipping tune test"
+    return
+fi
+
+msg "checking for Optuna"
+if ! uv pip list | grep -qE '(optuna|ray)'; then
+    err "tuner not installed aborting"
+    tap_out "Bail out! No tuning library available."
+    return
+fi
+
 run-lenskit data convert --movielens "$ML100K" "$data"
 run-lenskit data split --fraction=0.2 --min-train-interactions=5 "$data"
 tap_comment "testing non-iterative tuning"
@@ -24,13 +32,20 @@ run-lenskit tune "${tune_args[@]}" -T "$train" -V "$test" --save-pipeline "$TEST
 
 require -d "$out"
 require -f "$out/best-result.json"
+require -f "$out/best-config.json"
+require -f "$out/best-pipeline.json"
+require -f "$out/trials.ndjson"
 require -f "$TEST_WORK/pipeline.json"
 
 out="$TEST_WORK/als-tune"
 tap_comment "testing iterative tuning"
-run-lenskit tune -T "$train" -V "$test" --save-pipeline "$TEST_WORK/pipeline.json" \
-    --max-points=10 pipelines/als-implicit-search.toml "$out"
+run-lenskit tune "${tune_args[@]}" -T "$train" -V "$test" --save-pipeline "$TEST_WORK/pipeline.json" \
+    --max-points=5 pipelines/als-implicit-search.toml "$out"
 
 require -d "$out"
 require -f "$out/best-result.json"
+require -f "$out/best-config.json"
+require -f "$out/best-pipeline.json"
+require -f "$out/trials.ndjson"
+require -f "$out/epochs.ndjson"
 require -f "$TEST_WORK/pipeline.json"

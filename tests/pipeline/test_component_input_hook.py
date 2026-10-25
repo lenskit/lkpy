@@ -16,7 +16,9 @@ from lenskit.pipeline.components import ComponentInput
 from lenskit.pipeline.nodes import ComponentInstanceNode
 
 _log = get_logger(__name__)
-hook_calls = ContextVar(f"lk-{__name__}-hook-calls", default=[])
+hook_calls: ContextVar[list[tuple[str, str]] | None] = ContextVar(
+    f"lk-{__name__}-hook-calls", default=None
+)
 
 
 def proc_hello(msg: str) -> str:
@@ -35,6 +37,10 @@ def _input_hook(
     node: ComponentInstanceNode[Any], input: ComponentInput, value: Any, **context
 ) -> Any:
     cs = hook_calls.get()
+    if cs is None:
+        cs = []
+        hook_calls.set(cs)
+
     _log.debug("input hook called", n=len(cs), msg=value)
     cs.append((node.name, input.name))
     return value

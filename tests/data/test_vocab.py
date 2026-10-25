@@ -12,6 +12,7 @@ import pickle
 from uuid import UUID, uuid4
 
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 
 import hypothesis.strategies as st
@@ -122,10 +123,10 @@ def test_lookup_id_index(keys: set[int | str]):
     assert len(vocab) == len(klist)
 
     # make sure the numbers are right
-    assert all([vocab.number(k) == i for (i, k) in enumerate(klist)])
+    assert all(vocab.number(k) == i for (i, k) in enumerate(klist))
 
     # make sure the IDs are right
-    assert all([vocab.term(i) == k for (i, k) in enumerate(klist)])
+    assert all(vocab.term(i) == k for (i, k) in enumerate(klist))
 
 
 @given(
@@ -185,7 +186,27 @@ def test_lookup_many_nums(terms: set[int], lookup: list[int]):
     st.sets(id_ints()),
     st.lists(id_ints()),
 )
-def test_lookup_many_nums_null(terms: set[int], lookup: list[int]):
+def test_lookup_many_nums_pandas(terms: set[int], lookup: list[int]):
+    klist = sorted(terms)
+    kpos = dict(zip(klist, range(len(klist))))
+
+    vocab = Vocabulary(terms)
+
+    ls = pd.Series(lookup)
+    nums = vocab.numbers(ls, missing="negative")
+    assert len(nums) == len(lookup)
+    for n, k in zip(nums, lookup):
+        if n < 0:
+            assert k not in terms
+        else:
+            assert n == kpos[k]
+
+
+@given(
+    st.sets(id_ints()),
+    st.lists(id_ints()),
+)
+def test_lookup_many_nums_null_int(terms: set[int], lookup: list[int]):
     klist = sorted(terms)
     kpos = dict(zip(klist, range(len(klist))))
 
@@ -205,7 +226,7 @@ def test_lookup_many_nums_null(terms: set[int], lookup: list[int]):
     st.sets(st.emails()),
     st.lists(st.emails()),
 )
-def test_lookup_many_nums_null(terms: set[str], lookup: list[str]):
+def test_lookup_many_nums_null_str(terms: set[str], lookup: list[str]):
     klist = sorted(terms)
     kpos = dict(zip(klist, range(len(klist))))
 

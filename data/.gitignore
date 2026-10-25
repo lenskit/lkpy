@@ -6,5 +6,7 @@
 *.zst
 ml-*/
 ms-web/
+steam
 !ml-latest-small/
 *.parquet
+ambar/

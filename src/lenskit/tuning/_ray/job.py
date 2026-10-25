@@ -10,9 +10,8 @@ import numpy as np
 import ray
 
 from lenskit.pipeline import PipelineConfig
+from lenskit.schemas.tuning import TuningSpec
 from lenskit.splitting import TTSplit
-
-from ..spec import TuningSpec
 
 
 @dataclass

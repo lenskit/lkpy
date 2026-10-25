@@ -10,8 +10,8 @@ from ._handles import item_progress_handle, pbh_update
 
 __all__ = [
     "Progress",
-    "set_progress_impl",
     "item_progress",
     "item_progress_handle",
     "pbh_update",
+    "set_progress_impl",
 ]

@@ -63,6 +63,30 @@ that class, do:
     builder.scorer(als)
     pipe = builder.build('ALS')
 
+If queries provide user history at inference time, disable the training-history
+lookup with ``history_lookup=False``:
+
+.. code:: python
+
+    pipe = topn_pipeline(als, history_lookup=False)
+
+The same option is available on :class:`RecPipelineBuilder` and
+:func:`predict_pipeline`. The pipeline then passes the supplied query directly
+to its scorers and candidate selector, without training or running a history
+lookup component. Supply a :class:`~lenskit.data.RecQuery` with
+``history_items`` to use that history for scoring and candidate exclusion.
+
+For a pipeline configured with a standard base, set the corresponding option:
+
+.. code:: yaml
+
+    options:
+      base: std:topn
+      history_lookup: false
+
+This also works with ``std:topn-predict``. History lookup remains enabled by
+default.
+
 For maximum flexibility, you can directly construct and wire the pipeline
 yourself; this is described in :ref:`standard-pipelines`.  Pipelines are built
 with a :class:`PipelineBuilder`, which sets up the nodes and connections, checks

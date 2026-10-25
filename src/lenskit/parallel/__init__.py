@@ -10,6 +10,8 @@ LensKit parallel computation support.
 
 from __future__ import annotations
 
+from ._pool import NestedPool
+from ._task import AccelTask, run_accel_task
 from .config import (
     effective_cpu_count,
     ensure_parallel_init,
@@ -19,9 +21,12 @@ from .config import (
 )
 
 __all__ = [
-    "init_threading",
-    "get_parallel_config",
+    "AccelTask",
+    "NestedPool",
     "effective_cpu_count",
     "ensure_parallel_init",
+    "get_parallel_config",
+    "init_threading",
     "is_free_threaded",
+    "run_accel_task",
 ]

@@ -11,7 +11,7 @@ from lenskit.basic.candidates import (
     TrainingItemsCandidateSelector,
 )
 from lenskit.data import Dataset, ItemList, RecQuery
-from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings
 
 
 def test_training_selector_history(ml_ds: Dataset):

@@ -6,7 +6,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import override
 
 import ray
 import ray.tune
@@ -21,9 +23,9 @@ from lenskit.logging import Task
 from lenskit.parallel import get_parallel_config
 from lenskit.parallel.ray import ensure_cluster
 from lenskit.random import int_seed
+from lenskit.schemas.tuning import SearchSpace
 
 from .._base import BasePipelineTuner, TuneResults
-from ..spec import SearchSpace
 from .iterative import IterativeEval
 from .job import TuningJobData
 from .reporting import ProgressReport, StatusCallback
@@ -150,20 +152,19 @@ class RayPipelineTuner(BasePipelineTuner):
         stopper = None
         cp_config = None
         if self.iterative:
-            # FIXME: make this configurable
             min_iter = self.spec.search.min_epochs
             scheduler = ray.tune.schedulers.MedianStoppingRule(
                 time_attr="training_iteration",
                 grace_period=min_iter,
-                min_time_slice=3,
-                min_samples_required=3,
+                min_time_slice=min_iter,
+                min_samples_required=self.spec.search.median_min_trials,
             )
             stopper = RelativePlateauStopper(
                 metric=self.metric,
                 mode=self.mode,
                 grace_period=min_iter,
-                check_iters=min(min_iter, 3),
-                min_improvement=0.005,
+                check_iters=min(min_iter, self.spec.search.plateau_check_iters),
+                min_improvement=self.spec.search.plateau_min_rel_improvement,
             )
 
             cp_freq = self.spec.search.checkpoint_iters
@@ -209,6 +210,19 @@ class RayTuneResults(TuneResults):
 
     def num_trials(self):
         return len(self.results)
+
+    @override
+    def trials(self) -> Iterable[dict[str, JsonValue]]:
+        for n, result in enumerate(self.results):
+            yield {"trial": n} | result.metrics
+
+    @override
+    def epochs(self) -> Iterable[dict[str, JsonValue]]:
+        for n, result in enumerate(self.results):
+            for i, row in result.metrics_dataframe.to_dict("index").items():
+                out_row = {"trial": n, "epoch": i}
+                out_row.update({k: v for (k, v) in row.items() if not k.startswith("config/")})
+                yield out_row
 
     def best_config(self, *, scope: str = "all") -> dict[str, JsonValue]:
         """
@@ -268,9 +282,20 @@ def _make_space(space: SearchSpace):
             assert isinstance(spec.min, int)
             assert isinstance(spec.max, int)
             out[name] = ray.tune.lograndint(spec.min, spec.max, base=spec.base)
+        elif spec.type == "int" and spec.scale == "pow2":
+            powers = []
+            cur = spec.min
+            while cur <= spec.max:
+                powers.append(cur)
+                cur = cur * 2
+            out[name] = ray.tune.choice(powers)
         elif spec.type == "float" and spec.scale == "uniform":
             out[name] = ray.tune.uniform(spec.min, spec.max)
         elif spec.type == "float" and spec.scale == "log":
             out[name] = ray.tune.loguniform(spec.min, spec.max, base=spec.base)
+        elif spec.type == "bool":
+            out[name] = ray.tune.choice([False, True])
+        elif spec.type == "choice":
+            out[name] = ray.tune.choice(spec.choices)
 
     return out

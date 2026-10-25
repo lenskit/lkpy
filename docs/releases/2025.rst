@@ -9,12 +9,20 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.8.1:
+
+2025.8.1
+~~~~~~~~
+
+- Improve SLIM recommendation performance (:pr:`1140`, backported in :pr:`1141`)
+- Backport type-checker fixes for NumPy 2.5
+
 .. _2025.8.0:
 
 2025.8.0
 ~~~~~~~~
 
-- Add SLIM (:class:`~lenskit.knn.SLIMScorer`).
+- Add SLIM (:class:`~lenskit.knn.SLIM`) (:pr:`896`, backported in :pr:`1058`).
 
 .. _2025.7.0:
 
@@ -22,6 +30,7 @@ information on how to upgrade your code.
 ~~~~~~~~
 
 - Add EASE (:class:`~lenskit.knn.EASEScorer`) (:issue:`942`, :pr:`1011`, backported in :pr:`1015`).
+- Added LightGCN support to FlexMF (:issue:`1019`, :pr:`1033`).
 - Fix hyperparameter tuning for non-iterative scorers, and simplify configuration (:pr:`1014`, backported in :pr:`1015`).
 - Improve performance of :meth:`~lenskit.data.RelationshipSet.co_occurrences` (:issue:`970`, :pr:`1008`, :pr:`1010`).
 
@@ -89,14 +98,14 @@ New Features
 Deprecations
 ------------
 
-- ``UnratedTrainingItemsCandidateSelector`` is deprecated in favor of
-  :class:`~lenskit.basic.TrainingItemCandidateSelector` with default
+- :class:`~lenskit.basic.UnratedTrainingItemsCandidateSelector` is deprecated in
+  favor of :class:`~lenskit.basic.TrainingItemCandidateSelector` with default
   configuration.
-- ``AllTrainingItemsCandidateSelector`` is deprecated in favor of
-  :class:`~lenskit.basic.TrainingItemCandidateSelector` with suitable
+- :class:`~lenskit.basic.AllTrainingItemsCandidateSelector` is deprecated in
+  favor of :class:`~lenskit.basic.TrainingItemCandidateSelector` with suitable
   configuration.
-- ``RecQuery.user_items`` is deprecated in favor of
-  :attr:`~lenskit.data.RecQuery.history_items`.
+- :attr:`lenskit.data.RecQuery.user_items` is deprecated in favor of
+  :class:`~lenskit.data.RecQuery.history_items`.
 - Removed fixed defaults for ``row_entity`` and ``col_entity`` on
   :meth:`~lenskit.dataset.RelationshipSet.matrix`, now defaulting to the first
   and last entities involved in the relationship.  This does not change anything
@@ -225,7 +234,7 @@ Component Changes
 -   The :mod:`lenskit.als` scorers have been similarly refactored, and had their
     learned parameters renamed for better consistency.
 
--   Replaced the broken ``lenskit.basic.SoftmaxRanker`` with a proper
+-   Replaced the broken :class:`~lenskit.basic.SoftmaxRanker` with a proper
     stochastic sampler (:pr:`667`,
     :class:`~lenskit.stochastic.StochasticTopNRanker`).  The old ranker will be
     removed in LensKit 2026.

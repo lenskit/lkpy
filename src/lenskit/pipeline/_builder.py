@@ -17,15 +17,15 @@ from copy import deepcopy
 from graphlib import CycleError, TopologicalSorter
 from os import PathLike
 from pathlib import Path
-from types import UnionType
-from typing import TypeAliasType, Union
+from types import GenericAlias, UnionType
+from typing import Any, Literal, TypeAliasType, Union, cast, get_origin, overload
 from uuid import NAMESPACE_URL, uuid5
 
-from typing_extensions import Any, Literal, TypeForm, cast, overload
+from typing_extensions import TypeForm
 
-from lenskit.config import load_config_data
 from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
+from lenskit.schemas import load_model_data
 
 from . import config
 from ._cache import PipelineCache
@@ -39,7 +39,7 @@ from .components import (
     fallback_on_none,
     is_component_class,
 )
-from .config import PipelineConfig, PipelineHook, check_name
+from .config import UNSET_CODE, PipelineConfig, check_name
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
@@ -227,6 +227,8 @@ class PipelineBuilder:
                 tys |= set(typing.get_args(t))
             elif isinstance(t, type):
                 tys.add(t)
+            elif isinstance(t, GenericAlias):
+                tys.add(get_origin(t))
             else:
                 raise TypeError(f"unsupported type form: {t}")
 
@@ -379,12 +381,11 @@ class PipelineBuilder:
         check_name(name, what="component")
         self._check_available_name(name)
 
-        if hasattr(comp, "train"):
-            if not is_instance_or_subclass(comp, Trainable):
-                warnings.warn(
-                    f"{comp} has “train” method but does not fully implement Trainable",
-                    PipelineWarning,
-                )
+        if hasattr(comp, "train") and not is_instance_or_subclass(comp, Trainable):
+            warnings.warn(
+                f"{comp} has “train” method but does not fully implement Trainable",
+                PipelineWarning,
+            )
 
         node = ComponentNode[T].create(name, comp, config)
         self._nodes[name] = node
@@ -595,7 +596,7 @@ class PipelineBuilder:
                 c_ins = edges.get(node.name, None)
                 if c_ins is None:
                     edges[node.name] = c_ins = {}
-                for iname in node.inputs.keys():
+                for iname in node.inputs:
                     if iname not in c_ins and iname in self._default_connections:
                         c_ins[iname] = self._default_connections[iname]
 
@@ -603,11 +604,11 @@ class PipelineBuilder:
         for node in self.nodes():
             match node:
                 case InputNode():
-                    cfg.inputs.append(config.PipelineInput.from_node(node))
+                    cfg.inputs.append(node.to_config())
                 case LiteralNode(name, value):
                     cfg.literals[name] = config.PipelineLiteral.represent(value)
                 case ComponentNode(name):
-                    c_cfg = config.PipelineComponent.from_node(node)
+                    c_cfg = node.to_config()
                     c_cfg.inputs = dict(sorted(edges.get(name, {}).items(), key=lambda kv: kv[0]))
                     cfg.components[name] = c_cfg
                 case _:  # pragma: nocover
@@ -620,7 +621,7 @@ class PipelineBuilder:
 
         cfg.hooks.run = {}
         for name, hooks in self._run_hooks.items():
-            cfg.hooks.run[name] = [PipelineHook.from_entry(e) for e in hooks]
+            cfg.hooks.run[name] = [e.to_config() for e in hooks]
 
         if include_hash:
             cfg.meta.hash = config.hash_config(cfg)
@@ -665,7 +666,7 @@ class PipelineBuilder:
             :meth:`from_config` for the actual pipeline instantiation logic.
         """
         cfg_file = Path(cfg_file)
-        data = load_config_data(cfg_file, PipelineConfig)
+        data = load_model_data(cfg_file, PipelineConfig)
         return cls.from_config(data, file_path=cfg_file)
 
     @classmethod
@@ -724,6 +725,8 @@ class PipelineBuilder:
             extend:
                 Whether the configuration should extend the current pipeline, or
                 fail when there are conflicting definitions.
+        Stability:
+            Internal
         """
         self.name = config.meta.name
         self.version = config.meta.version
@@ -749,7 +752,23 @@ class PipelineBuilder:
                 # ignore special nodes in first pass
                 continue
 
-            ctor: Any = import_path_string(comp.code)
+            ctor: Any
+            if comp.code == UNSET_CODE:
+                if extend:
+                    match self.node(name, missing="none"):
+                        case None:
+                            raise PipelineError(
+                                f"component “{name}” does not exist in base configuration"
+                            )
+                        case ComponentConstructorNode(_, ctor, _ccfg):
+                            pass
+                else:
+                    raise PipelineError(
+                        "unset component implementations only supported in derived configurations"
+                    )
+            else:
+                ctor = import_path_string(comp.code)
+
             if is_component_class(ctor):
                 cfg = ctor.validate_config(comp.config)
             else:

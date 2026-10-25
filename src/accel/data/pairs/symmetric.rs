@@ -4,8 +4,8 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::sync::atomic::{AtomicI32, AtomicUsize};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI32, AtomicUsize};
 use std::{mem::transmute, sync::atomic::Ordering};
 
 use arrow::array::Int32Array;
@@ -26,6 +26,7 @@ pub struct SymmetricPairCounter {
 }
 
 impl SymmetricPairCounter {
+    #[allow(clippy::missing_transmute_annotations)]
     pub fn with_diagonal(n: usize, diagonal: bool) -> Self {
         let cap = arith_tot(n);
         SymmetricPairCounter {
@@ -149,11 +150,7 @@ impl SymmetricPairCounter {
             self.n_items
         );
 
-        if row <= col {
-            (row, col)
-        } else {
-            (col, row)
-        }
+        if row <= col { (row, col) } else { (col, row) }
     }
 }
 

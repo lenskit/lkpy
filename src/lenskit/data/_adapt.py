@@ -13,12 +13,10 @@ from __future__ import annotations
 
 import logging
 import warnings
+from collections.abc import Collection, Iterable
 from typing import (
     Any,
-    Collection,
-    Iterable,
     Literal,
-    Optional,
 )
 
 import numpy as np
@@ -113,6 +111,7 @@ def from_interactions_df(
     users: IDSequence | pd.Index | Iterable[ID] | Vocabulary | None = None,
     items: IDSequence | pd.Index | Iterable[ID] | Vocabulary | None = None,
     class_name: str = "rating",
+    timestamp_unit: Literal["s", "ms", "us", "ns"] | None = None,
 ) -> Dataset:
     """
     Create a dataset from a data frame of ratings or other user-item
@@ -134,6 +133,9 @@ def from_interactions_df(
             The name of the rating column.
         timestamp_col:
             The name of the timestamp column.
+        timestamp_unit:
+            The unit of numeric timestamp values. If omitted, integer units are
+            inferred and floating-point values are assumed to be seconds.
         user_ids:
             A vocabulary of user IDs.  The data frame is subset to this set of IDs.
         item_ids:
@@ -178,6 +180,7 @@ def from_interactions_df(
         missing=missing,
         allow_repeats=False,
         default=True,
+        timestamp_unit=timestamp_unit,
     )
 
     return dsb.build()
@@ -186,10 +189,10 @@ def from_interactions_df(
 def normalize_interactions_df(
     df: pd.DataFrame,
     *,
-    user_col: Optional[str] = None,
-    item_col: Optional[str] = None,
-    rating_col: Optional[str] = None,
-    timestamp_col: Optional[str] = None,
+    user_col: str | None = None,
+    item_col: str | None = None,
+    rating_col: str | None = None,
+    timestamp_col: str | None = None,
 ) -> pd.DataFrame:
     """
     Normalize the column names and layout for an interaction data frame.

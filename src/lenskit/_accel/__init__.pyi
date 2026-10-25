@@ -2,8 +2,6 @@
 Rust acceleration code.
 """
 
-from __future__ import annotations
-
 from typing import TypedDict
 
 import pyarrow as pa
@@ -14,13 +12,13 @@ from lenskit.funksvd import FunkSVDTrainingData, FunkSVDTrainingParams
 from . import als, data, knn, slim
 
 __all__ = [
+    "FunkSVDTrainer",
     "als",
     "data",
+    "init_accel_pool",
     "knn",
     "slim",
-    "init_accel_pool",
     "thread_count",
-    "FunkSVDTrainer",
 ]
 
 def init_accel_pool(n_threads: int): ...
@@ -62,3 +60,11 @@ class AtomicInt:
     def load(self) -> int: ...
     def store(self, x: int) -> None: ...
     def fetch_add(self, incr: int = 1) -> int: ...
+
+class NestedAccelPool:
+    """
+    Nested accelerator pools.  Don't use this directly, use
+    :class:`lenskit.parallel.NestedPool` instead.
+    """
+    def __init__(self, n_threads: int): ...
+    def shutdown(self) -> None: ...

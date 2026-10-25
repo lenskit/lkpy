@@ -4,16 +4,23 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+# ruff: noqa: B008
+import os
+import warnings
+from collections.abc import Callable
+from typing import override
+
 import numpy as np
 from numpy.typing import NDArray
-from typing_extensions import Callable, TypeAlias, override
 
 from lenskit.data import ItemList
+from lenskit.diagnostics import DataWarning
 
 from ._base import ListMetric, RankingMetricBase
 from ._weighting import LogRankWeight, RankWeight
 
-Discount: TypeAlias = Callable[[NDArray[np.number]], NDArray[np.float64]]
+type Discount = Callable[[NDArray[np.number]], NDArray[np.float64]]
+_warn_skips = (os.path.dirname(os.path.dirname(__file__)),)
 
 
 class DiscountWeight(RankWeight):
@@ -25,15 +32,15 @@ class DiscountWeight(RankWeight):
 
 
 class NDCG(ListMetric, RankingMetricBase):
-    """
+    r"""
     Compute the normalized discounted cumulative gain :cite:p:`ndcg`.
 
     Discounted cumultative gain is computed as:
 
     .. math::
-        \\begin{align*}
-        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
-        \\end{align*}
+        \begin{align*}
+        \mathrm{DCG}(L,u) & = \sum_{i=1}^{|L|} \frac{r_{ui}}{d(i)}
+        \end{align*}
 
     Unrated items are assumed to have a utility of 0; if no rating values are
     provided in the truth frame, item ratings are assumed to be 1.
@@ -41,9 +48,9 @@ class NDCG(ListMetric, RankingMetricBase):
     This is then normalized as follows:
 
     .. math::
-        \\begin{align*}
-        \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
-        \\end{align*}
+        \begin{align*}
+        \mathrm{nDCG}(L, u) & = \frac{\mathrm{DCG}(L,u)}{\mathrm{DCG}(L_{\mathrm{ideal}}, u)}
+        \end{align*}
 
     .. note::
         Negative gains are clipped to zero before computing NDCG.
@@ -102,7 +109,8 @@ class NDCG(ListMetric, RankingMetricBase):
         recs = self.truncate(recs)
 
         if len(test) == 0:
-            return float("nan")
+            warnings.warn("test item list is empty", DataWarning, skip_file_prefixes=_warn_skips)
+            return np.nan
 
         if self.gain:
             realized = _graded_dcg(recs, test, self.gain, self.weight)
@@ -110,13 +118,19 @@ class NDCG(ListMetric, RankingMetricBase):
             gains = test.field(self.gain, "pandas", index="ids")
             if gains is None:
                 raise KeyError(f"test items have no field {self.gain}")
+
+            gains = gains.dropna()
+
+            if len(gains) == 0:
+                return np.nan
+
             gains = gains.clip(lower=0)
             if self.n:
                 gains = gains.nlargest(n=self.n)
             else:
                 gains = gains.sort_values(ascending=False)
             iweight = self.weight.weight(np.arange(1, len(gains) + 1))
-            ideal = np.dot(gains.values, iweight).item()  # type: ignore
+            ideal = np.dot(gains.values, iweight)  # type: ignore
 
             if ideal == 0:
                 return 0.0
@@ -132,15 +146,15 @@ class NDCG(ListMetric, RankingMetricBase):
 
 
 class DCG(ListMetric, RankingMetricBase):
-    """
+    r"""
     Compute the _unnormalized_ discounted cumulative gain :cite:p:`ndcg`.
 
     Discounted cumultative gain is computed as:
 
     .. math::
-        \\begin{align*}
-        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
-        \\end{align*}
+        \begin{align*}
+        \mathrm{DCG}(L,u) & = \sum_{i=1}^{|L|} \frac{r_{ui}}{d(i)}
+        \end{align*}
 
     Unrated items are assumed to have a utility of 0; if no rating values are
     provided in the truth frame, item ratings are assumed to be 1.
@@ -197,6 +211,10 @@ class DCG(ListMetric, RankingMetricBase):
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
+        if len(test) == 0:
+            warnings.warn("test item list is empty", DataWarning, skip_file_prefixes=_warn_skips)
+            return np.nan
+
         if self.gain:
             return _graded_dcg(recs, test, self.gain, self.weight)
         else:
@@ -209,6 +227,11 @@ def _graded_dcg(
     gains = test.field(field, "pandas", index="ids")
     if gains is None:
         raise KeyError(f"test items have no field {field}")
+
+    gains = gains.dropna()
+
+    if len(gains) == 0:
+        return np.nan
 
     gains = gains.clip(lower=0)
 
@@ -251,15 +274,19 @@ def array_dcg(
     Returns:
         double: the DCG of the scored items.
     """
+    if len(scores) == 0:
+        return np.nan
+
     ids = np.arange(1, len(scores) + 1)
+
     recs = ItemList(item_ids=ids, ordered=True)
 
-    mask = scores > 0
-    test = ItemList(item_ids=ids[mask], rating=scores[mask])
-
     if graded:
+        test = ItemList(item_ids=ids, rating=scores)
         return _graded_dcg(recs, test, "rating")
     else:
+        mask = scores > 0
+        test = ItemList(item_ids=ids[mask])
         return _binary_dcg(recs, test)
 
 

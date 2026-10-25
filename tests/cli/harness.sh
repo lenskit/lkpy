@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Run a single test.
 
-. "$TEST_DIR/../../mise/task-functions.sh"
+. "$TEST_DIR/../../scripts/lib/init.sh"
 TEST="$1"
+_wrote_plan=0
 N=0
 
 if [[ -z $TEST_WORK ]]; then
@@ -16,21 +17,33 @@ if [[ -z $ML_TEST_DIR ]]; then
 fi
 
 begin-suite() {
-    perl "$TEST_DIR/count-tests.pl" "$TEST" >&5
+    tap_out "TAP version 14"
+}
+
+test-plan() {
+    tap_out 1..$1
+    msg -dbg "1..$1"
+    _wrote_plan=1
+}
+
+run-command() {
+    local status
+    local ctext="$(echo "$*" | sed -e "s@$TEST_WORK@\$TEST_WORK@g" -e "s@$TEST_DIR@\$TEST_DIR@g")"
+    echo "+ $ctext"
+    "$@"
+    status="$?"
+    if (($status)); then
+        not_ok "exit($status): $ctext"
+        echo "# command failed: $ctext" >&5
+    else
+        ok "$ctext"
+    fi
+    return $status
 }
 
 run-python() {
-    local status
-    echo "+ python $*"
-    $PYRUN "$@"
-    status="$?"
-    if (($status)); then
-        not_ok "failed: python $@"
-        echo "# command failed: $PYRUN $0" >&5
-    else
-        ok "python $@"
-    fi
-    return $status
+    run-command $PYRUN "$@"
+    return "$?"
 }
 
 run-lenskit() {
@@ -47,7 +60,7 @@ tap_status() {
     shift
     N=$(($N + 1))
     if [[ $1 ]]; then
-        tap_out "$status $N $*"
+        tap_out "$status $N - $*"
     else
         tap_out "$status $N"
     fi
@@ -65,18 +78,33 @@ not_ok() {
     tap_status "not ok" "$@"
 }
 
+skip() {
+    local n=1
+    if [[ $1 =~ ^[[:digit:]]+$ ]]; then
+        n="$1"
+        shift
+    fi
+    while (($n > 0)); do
+        ok "# SKIP $*"
+        n=$(($n - 1))
+    done
+}
+
 require() {
     if test "$@"; then
-        ok
+        ok "require $*"
     else
         not_ok "require $*"
     fi
 }
 
 if grep -q '^begin-suite' "$TEST"; then
-    dbg "test will start itself"
+    msg -dbg "test will start itself"
 else
-    dbg "auto-starting suite"
+    msg -dbg "auto-starting suite"
     begin-suite
 fi
 . "$TEST"
+if ((! $_wrote_plan)); then
+    test-plan "$N"
+fi

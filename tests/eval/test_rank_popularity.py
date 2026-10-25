@@ -11,7 +11,7 @@ from pytest import approx
 
 from lenskit.data import Dataset, ItemList
 from lenskit.metrics.ranking import MeanPopRank
-from lenskit.testing import DemoRecs, demo_recs  # noqa: F401
+from lenskit.testing import DemoRecs, demo_recs
 
 
 def _test_mpr(ml_ds, items, rel, **k):

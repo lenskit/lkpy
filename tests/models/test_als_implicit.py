@@ -15,6 +15,7 @@ from pytest import approx, mark
 from lenskit.als import ImplicitMFScorer
 from lenskit.als._implicit import ImplicitMFConfig
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
+from lenskit.parallel._pool import NestedPool
 from lenskit.pipeline import Pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
 
@@ -68,6 +69,15 @@ def test_config_exp_json():
     assert cfg.embedding_size == 4
 
 
+def test_nested_pool(ml_ds: Dataset):
+    "smoke-test training in a nested accelerator pool"
+    als = ImplicitMFScorer(epochs=5)
+    with NestedPool():
+        als.train(ml_ds)
+
+    assert als.trained_epochs == 5
+
+
 def test_reconfigure_pipeline():
     algo = ImplicitMFScorer()
     pipe = topn_pipeline(algo)
@@ -90,8 +100,8 @@ def test_als_basic_build():
     assert algo.users is not None
     assert algo.user_embeddings is not None
 
-    assert set(algo.users.ids()) == set([10, 12, 13])
-    assert set(algo.items.ids()) == set([1, 2, 3])
+    assert set(algo.users.ids()) == {10, 12, 13}
+    assert set(algo.items.ids()) == {1, 2, 3}
     assert algo.user_embeddings.shape == (3, 20)
     assert algo.item_embeddings.shape == (3, 20)
 
@@ -216,7 +226,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
     is the same as a user in ml-latest-small dataset.
     The test is run for more than one user.
     """
-    import scipy.stats as stats
+    from scipy import stats
 
     n_users = 10
 
@@ -260,7 +270,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
 
     _log.debug("correlations: %s", correlations)
 
-    assert not (any(correlations.isnull()))
+    assert not (any(correlations.isna()))
     assert all(correlations >= 0.5)
 
 

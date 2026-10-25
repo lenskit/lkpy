@@ -121,7 +121,6 @@ class Tracer:
             updates the tracer in-place instead of returning a new tracer.  If you
             need a new, disconnected tracer, use :meth:`split`.
         """
-        pass
 
     def remove_bindings(self, *keys: str) -> None:
         """
@@ -133,19 +132,16 @@ class Tracer:
             updates the tracer in-place instead of returning a new tracer.  If you
             need a new, disconnected tracer, use :meth:`split`.
         """
-        pass
 
     def reset(self) -> None:
         """
         Reset this tracer's underlying logger to the original logger.
         """
-        pass
 
     def trace(self, event: str, *args: Any, **bindings: Any) -> None:
         """
         Emit a TRACE-level event.
         """
-        pass
 
 
 class ActiveTracer(Tracer):
@@ -216,7 +212,7 @@ class TracingLogger(structlog.stdlib.BoundLogger):
         try:
             args, kwargs = self._process_event("trace", event, kw)  # type: ignore
         except structlog.DropEvent:
-            return None
+            return
         self._logger.debug(*args, **kwargs)
 
 

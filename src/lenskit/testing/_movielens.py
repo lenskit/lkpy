@@ -9,8 +9,9 @@ MovieLens test fixtures and data marks.
 """
 
 import os
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator, NamedTuple
+from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -19,8 +20,7 @@ import pytest
 
 from lenskit.basic import PopScorer
 from lenskit.batch import recommend
-from lenskit.data import Dataset, ItemListCollection, UserIDKey
-from lenskit.data.movielens import load_movielens, load_movielens_df
+from lenskit.data import Dataset, ItemListCollection, UserIDKey, load_movielens, load_movielens_df
 from lenskit.logging import get_logger
 from lenskit.pipeline import RecPipelineBuilder
 from lenskit.splitting import TTSplit, simple_test_pair
@@ -97,7 +97,10 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
 
     for col in old_ustats.columns:
         log.info("checking user stats column", column=col)
-        assert ustats[col].values == pytest.approx(old_ustats[col].values)
+        if isinstance(ustats[col].values.dtype, np.floating):
+            assert ustats[col].values == pytest.approx(old_ustats[col].values)
+        else:
+            assert np.all(ustats[col].values == old_ustats[col].values)
 
 
 @pytest.fixture

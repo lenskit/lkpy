@@ -18,13 +18,13 @@ from lenskit.data.schema import AllowableTroolean, DataSchema
 from lenskit.diagnostics import DataError, DataWarning
 
 
-def test_save_load_ml(ml_ratings: pd.DataFrame, tmpdir: Path):
+def test_save_load_ml(ml_ratings: pd.DataFrame, tmp_path: Path):
     dsb = DatasetBuilder()
     dsb.add_interactions("rating", ml_ratings, entities=["user", "item"], missing="insert")
 
     ds = dsb.build()
 
-    ds_path = tmpdir / "dataset"
+    ds_path = tmp_path / "dataset"
     dsb.save(ds_path)
 
     assert ds_path.exists()

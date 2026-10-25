@@ -5,16 +5,17 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
+from typing import assert_type
 from uuid import UUID
 
 import numpy as np
-from typing_extensions import assert_type
 
-from pytest import mark, raises, warns
+from pytest import mark, raises
 
 from lenskit.pipeline import PipelineBuilder, PipelineError
-from lenskit.pipeline._types import TypecheckWarning
 from lenskit.pipeline.nodes import InputNode, Node
+
+pytestmark = mark.filterwarnings("ignore:component.*is local:lenskit.diagnostics.PipelineWarning")
 
 type TK = int | str
 
@@ -52,6 +53,26 @@ def test_create_input_type_alias():
     pipe = pipe.build()
     assert len(pipe.nodes()) == 1
     assert pipe.node("user") == src
+
+    cfg = pipe.config
+    assert cfg.inputs[0].types == {"int", "str"}
+
+
+def test_create_input_list():
+    "create an input node"
+    pipe = PipelineBuilder()
+    src = pipe.create_input("features", list[str])
+    assert_type(src, Node[list[str]])
+    assert isinstance(src, InputNode)
+    assert src.name == "features"
+    assert src.type == list
+    # assert src.type == list[str]
+
+    assert len(pipe.nodes()) == 1
+    assert pipe.node("features") is src
+
+    cfg = pipe.build_config()
+    assert cfg.inputs[0].types == {"list"}
 
 
 def test_lookup_optional():

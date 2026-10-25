@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import pandas as pd
 
-from lenskit import Pipeline, predict, recommend
+from lenskit import Pipeline
+from lenskit.batch import BatchPipelineRunner
 from lenskit.data import GenericKey, ItemList, ItemListCollection, key_dict
-from lenskit.logging import Task, get_logger, item_progress
+from lenskit.logging import Task, get_logger
 from lenskit.metrics import (
     DCG,
+    MAE,
     NDCG,
     RBP,
     RMSE,
@@ -21,8 +23,7 @@ from lenskit.metrics import (
     RecipRank,
     measure_list,
 )
-
-from .spec import TuningSpec
+from lenskit.schemas.tuning import TuningSpec
 
 _log = get_logger(__name__)
 
@@ -34,12 +35,20 @@ def measure_pipeline(
     train_task: Task | None = None,
     test_task: Task | None = None,
 ):
-    # TODO: integrate this with metric collectors
+    # TODO integrate this with metric collectors
     metrics = []
-    with item_progress("Measuring for users", total=len(test_users)) as pb:
-        for key, test in test_users.items():
-            metrics.append(measure_request(spec, pipe, key, test))
-            pb.update()
+
+    runner = BatchPipelineRunner()
+    runner.recommend(n=spec.search.list_length)
+    if pipe.node("rating-predictor", missing=None) is not None:
+        runner.predict()
+
+    for result in runner.run_iter(pipe, test_users):
+        recs = result.outputs["recommendations"]
+        preds = result.outputs.get("predictions", None)
+        test = test_users.lookup(result.key)
+        assert test is not None
+        metrics.append(measure_recs(spec, result.key, recs, preds, test))
 
     metric_df = pd.DataFrame.from_records(metrics)
     metric_df = metric_df.drop(columns=["user_id"])
@@ -57,15 +66,6 @@ def measure_pipeline(
     return agg_metrics
 
 
-def measure_request(spec: TuningSpec, pipe: Pipeline, key: GenericKey, test: ItemList):
-    recs = recommend(pipe, query=key.user_id, n=spec.search.list_length)  # type: ignore
-    if pipe.node("rating-predictor", missing=None) is not None:
-        preds = predict(pipe, query=key.user_id, items=test)  # type: ignore
-    else:
-        preds = None
-    return measure_recs(spec, key, recs, preds, test)
-
-
 def measure_recs(
     spec: TuningSpec,
     key: GenericKey,
@@ -80,11 +80,14 @@ def measure_recs(
     metrics["RBP"] = measure_list(RBP, recs, test)
     metrics["DCG"] = measure_list(DCG, recs, test)
     metrics["NDCG"] = measure_list(NDCG, recs, test)
+    metrics["NDCG@10"] = measure_list(NDCG, recs, test, n=10)
     metrics["RecipRank"] = measure_list(RecipRank, recs, test)
-    metrics["Hit10"] = measure_list(Hit, recs, test, n=10)
+    metrics["Hit"] = measure_list(Hit, recs, test)
+    metrics["Hit@10"] = measure_list(Hit, recs, test, n=10)
 
     if preds is not None:
         log.debug("measuring rating predictions")
         metrics["RMSE"] = measure_list(RMSE, preds, test)
+        metrics["MAE"] = measure_list(MAE, preds, test)
 
     return metrics

@@ -10,6 +10,95 @@ There are no new major paradigm shifts, though — pipelines, datasets, and
 components work as they do in the 2025 series, but with more features, some
 rough corners polished off the interfaces, and hopefully fewer bugs.
 
+.. _2026.5.0:
+
+2026.5.0 (in progress)
+~~~~~~~~~~~~~~~~~~~~~~
+
+Ffith feature release in 2026, with more feature updates and bug fixes.  A full list of
+fixed issues and merged PRs is on `milestone 2026.5`_.
+
+- Removed dependency on the ``xopen`` crate, introducing :func:`lenskit.data.xopen` with comparable functionality and no external dependencies on Python 3.15 (:issue:`1238`, :pr:`1239`).
+- Added support for Optuna 5 (:pr:`1234`)
+- Added :class:`~lenskit.metrics.LogRBP` metric to compute and average RBP in log-space for greater stability (:issue:`1159`, :pr:`1236`, first contribution by :user:`GBX-Max1220`).
+- Internal refactorings and dependency updates.
+
+.. _milestone 2026.5: https://github.com/lenskit/lkpy/milestone/30
+
+.. _2026.4.0:
+
+2026.4.0
+~~~~~~~~
+
+Fourth feature release in 2026, with more feature updates and bug fixes.  A full list of
+fixed issues and merged PRs is on `milestone 2026.4`_.
+
+- 🐞 Fixed bug in :meth:`lenskit.data.ItemList.top_n` that returned ordered lists with incorrect ranks (:issue:`1224`, :pr:`1221`, :pr:`1226`).
+- Made pipeline schemas more strict to catch misconfiguration errors (:pr:`1193`).
+- Published JSON schemas for configuration and tuning files (:pr:`1194`).
+- Added diagnostics for power measurement to ``lenskit doctor`` (:issue:`1186`, :pr:`1189`).
+- Added AMBAR dataset import (:issue:`1142`).
+- Simplified missing history warnings (:issue:`804`, :pr:`1209`, first contribution by :user:`appleweiping`).
+- Automatically convert timestamps from numeric to timestamp types when importing interactions (:issue:`1183`, :pr:`1210`).
+- Added inference-time mean pooling for new user activity to FlexMF (:issue:`934`, :pr:`1201`)
+- Several test and CI refactors, including managing code policies with ``prek``/``pre-commit`` instead of ``hk``.
+- Update Rust and Python dependencies
+
+.. _milestone 2026.4: https://github.com/lenskit/lkpy/milestone/29
+
+.. _2026.3.0:
+
+2026.3.0
+~~~~~~~~
+
+Third release in 2026, with more feature updates and bug fixes.  A full list of
+fixed issues and merged PRs is on `milestone 2026.3`_.
+
+.. important::
+
+    This release updates :meth:`lenskit.data.DatasetBuilder.filter_interactions` to
+    explicitly and consistently handle time zones, independent of the local time zone.
+    In some cases, such as filtering by a numeric timestamp, the previous code was
+    (incorrectly) time-zone-dependent.
+
+- Fixed bug in FlexMF's ``"misranked"`` sampler (for WARP), where it did
+  not correctly continue sampling (:pr:`1121`).
+- Fixed a bug in :class:`~lenskit.data.ItemListCollection` where item lists missing
+  fields would fail to convert to Arrow (:issue:`1164`, :pr:`1165`).
+- Made time zone handling in :meth:`lenskit.data.DatasetBuilder.filter_interactions` explicit (:pr:`1162`).  This may affect
+  filter results by a few hours, because previous behavior was unspecified and time-zone-dependent.
+- Upgraded to Ruff 0.16 and fixed new default lints, including upgrade lints (:pr:`1161`). This also improves the handling modern type aliases in a few places.
+- Reworked type checking logic in the pipeline to fix type bugs with NumPy 2.5, and hopefully reduce brittleness (:pr:`1120`).
+- Added initial support for importing Steam user/item data
+  (:py:mod:`lenskit.data.sources.steam`, :pr:`1111`, :pr:`1178`).
+- Support simultaneous multithreaded running in accelerator tasks (:issue:`1124`, :pr:`1125`).
+- Fix Torch compilation support bugs (:pr:`1113`).
+- Optuna fixes for random seeds, continuing when a trial fails, collecting results (:pr:`1132`, :pr:`1134`).
+- Added support for boolean and categorical hyperparameters to the tuner (:pr:`1139`).
+- Added ``"pow2"`` scale for integer hyperparameters to select powers of 2 (:pr:`1144`).
+- Optuna now includes the default hyperparameters as the first ones tested (:pr:`1145`).
+- Moved configuration file schemas to :mod:`lenskit.schemas` (:pr:`1148`).
+- Expose batch inference results as a row-by-row iterator (:pr:`1128`).
+- Certain per-request warnings in batch inference are now aggregated (:issue:`1113`, :pr:`1168`).
+- Added :class:`lenskit.metrics.UniqueItemCount` (:issue:`1005`, :pr:`1169`).
+- Added support for ``interaction="default"`` to :meth:`~lenskit.data.DatasetBuilder.add_relationship_class` (:pr:`1174`).
+- Fix Steam dataset import to properly import interactions (previously was incomplete and broken, :issue:`1176`, :pr:`1179`).
+
+.. _milestone 2026.3: https://github.com/lenskit/lkpy/milestone/28?closed=1
+
+.. _2026.2.1:
+
+2026.2.1
+~~~~~~~~
+
+Bug-fix release (with one very small feature).
+
+- Fixed correct running of CLI when CLI plugins cannot be imported.
+- Fixed graded NDCG when input item lists are empty and do not have the grade
+  field (:issue:`1095`, :pr:`1096`).
+- Added support for PyArrow tables to
+  :meth:`lenksit.data.DatsetBuilder.add_scalar_attribute` (:pr:`1109`).
+
 .. _2026.2.0:
 
 2026.2.0
@@ -27,6 +116,20 @@ Second release in the 2026 series, bringing a few smaller feature updates:
 - Added a new scorer, :class:`lenskit.knn.AssociationScorer`, implementing
   conditional probability and lift-based association rule recommendations for
   both personalized and related-item recommendations (:issue:`930`, :pr:`1086`).
+- Fixed a bug in pipeline merging that required derived pipelines to specify
+  component classes in order to configure component options (:issue:`1097`,
+  :pr:`1099`).
+- Added a ``lenskit pipeline expand`` command to render a pipeline configuration
+  to complete JSON for debugging / inspection (:issue:`1098`, :pr:`1099`).
+- Added a new ``lenskit pipeline diagram`` command to render a pipeline configuration
+  to a Mermaid diagram for visualization (:pr:`1100`).
+- Re-add support for Pandas 2.2 to improve Google Colab support (:issue:`1103`,
+  :pr:`1104`).
+- Handle parameterized types for component inputs (:issue:`1101`, :pr:`1102`).
+
+PRs and issues are listed in `milestone 2026.2`_.
+
+.. _milestone 2026.2: https://github.com/lenskit/lkpy/issues?q=is%3Aclosed%20milestone%3A%222026.2%22
 
 .. _2026.1.0:
 

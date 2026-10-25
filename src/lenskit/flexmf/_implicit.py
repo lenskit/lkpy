@@ -8,39 +8,48 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
-from typing import Literal, TypeAlias
+from typing import Literal, override
 
 import numpy as np
 import torch
 from pydantic import NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 from torch.nn import functional as F
 
-from lenskit.data import Dataset
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.logging import get_logger
+from lenskit.torch import inference_mode
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
 from ._model import FlexMFModel
 from ._training import FlexMFTrainerBase, FlexMFTrainingBatch, FlexMFTrainingData
 
+WARP_CAND_BATCH_SIZE = 10
 MAX_TRIES = 200
-ImplicitLoss: TypeAlias = Literal["logistic", "pairwise", "warp"]
-NegativeStrategy: TypeAlias = Literal["uniform", "popular", "misranked"]
+type ImplicitLoss = Literal["logistic", "pairwise", "warp"]
+type NegativeStrategy = Literal["uniform", "popular", "misranked"]
 
 _log = get_logger(__name__)
 
 PRESETS = {
-    "bpr": {"loss": "pairwise", "user_bias": False, "item_bias": False},
+    "bpr": {
+        "loss": "pairwise",
+        "user_bias": False,
+        "item_bias": False,
+        "user_embeddings": "prefer",
+    },
     "warp": {
         "loss": "warp",
         "negative_strategy": "misranked",
         "user_bias": False,
         "item_bias": False,
+        "user_embeddings": "prefer",
     },
     "lightgcn": {
         "loss": "pairwise",
         "user_bias": False,
         "item_bias": False,
         "convolution_layers": 3,
+        "user_embeddings": "prefer",
     },
 }
 
@@ -103,6 +112,15 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
     configures for standard matrix factorization.
     """
 
+    user_embeddings: bool | Literal["prefer"] = True
+    """
+    Whether to use trained user embeddings for scoring.  If ``True``, trained
+    embeddings are used when the query does not provide usable query items. If
+    ``False``, trained user embeddings are not used for scoring. If set to
+    ``"prefer"``, the trained embedding is used for known users even when the
+    query provides items.
+    """
+
     def selected_negative_strategy(self) -> NegativeStrategy:
         if self.negative_strategy is not None:
             return self.negative_strategy
@@ -158,6 +176,56 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
     """
 
     config: FlexMFImplicitConfig
+
+    @inference_mode
+    def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
+        query = RecQuery.create(query)
+
+        u_row = None
+        if query.user_id is not None:
+            u_row = self.users.number(query.user_id, missing=None)
+
+        # if we prefer the trained embedding for a known user, use the normal FlexMF scoring path
+        if u_row is not None and self.config.user_embeddings == "prefer":
+            return super().__call__(query, items)
+
+        query_items = query.query_items
+        if query_items is not None and len(query_items) > 0:
+            device = self.model.device
+
+            q_cols = query_items.numbers(vocabulary=self.items, missing="negative", format="torch")
+            q_cols = q_cols.to(device, non_blocking=True)
+            # ignore query items that were not known during model training
+            q_cols = q_cols.masked_select(q_cols.ge(0))
+
+            if len(q_cols) > 0:
+                # mean-pool the item embeddings to obtain a query-time representation of the user
+                user_vector = self.model.i_embed(q_cols).mean(dim=0)
+
+                # resolve candidate items against the model's item vocabulary
+                i_cols = items.numbers(vocabulary=self.items, missing="negative", format="torch")
+                i_cols = i_cols.to(device, non_blocking=True)
+
+                # ignore candidate items that were not known during model training
+                scorable_mask = i_cols.ge(0)
+                i_cols = i_cols.masked_select(scorable_mask)
+
+                scores = self.model.score_user_vector(user_vector, i_cols)
+
+                full_scores = torch.full(
+                    (len(items),), np.nan, dtype=torch.float32, device=scores.device
+                )
+                full_scores.masked_scatter_(scorable_mask, scores)
+
+                return ItemList(items, scores=full_scores)
+
+        # no usable query-time embedding.
+        # if trained embeddings are disabled, we cannot score
+        if not self.config.user_embeddings:
+            return ItemList(items, scores=np.nan)
+
+        # otherwise fall back to the original FlexMF behavior
+        return super().__call__(query, items)
 
     def create_trainer(self, data, options):
         if self.config.selected_negative_strategy() == "misranked":
@@ -259,7 +327,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
         pos_pred, pos_norm = self.score(users, positives)
 
-        neg_items, neg_pred, neg_norm, weights = self.scored_negatives(batch, users, pos_pred)
+        _neg_items, neg_pred, neg_norm, weights = self.scored_negatives(batch, users, pos_pred)
 
         loss = self._loss(pos_pred, neg_pred, self.config.positive_weight, weights)
 
@@ -289,60 +357,98 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
 
 class FlexMFWARPTrainer(FlexMFImplicitTrainer):
-    def scored_negatives(self, batch, users, pos_scores):
+    @override
+    def scored_negatives(
+        self, batch: FlexMFTrainingBatch, users: torch.Tensor, pos_scores: torch.Tensor
+    ):
         assert batch.data.interactions is not None
         assert isinstance(batch.users, np.ndarray)
+        bsize = len(users)
+        assert pos_scores.shape == (bsize, 1)
+        device = users.device
 
-        # start looking for misranked models
-        idx_range = torch.arange(len(users), device=users.device)
-        neg_scores = torch.full((len(users),), -math.inf, device=users.device)
-        neg_norms = torch.zeros(len(users), device=users.device)
+        # Pre-allocate an array of batch row indices to speed computation.
+        idx_range = torch.arange(len(users))
+        idx_dev = idx_range.to(device=users.device, non_blocking=True)
+
+        # Allocate tensors to store the final sampled negatives and their
+        # scores, and the number of tries we needed to find them.
+        neg_scores = torch.full((len(users),), -math.inf, device=device)
+        neg_norms = torch.zeros(len(users), device=device)
         neg_counts = torch.zeros(len(users))
-        neg_items = torch.empty(len(users), dtype=torch.int32, device=users.device)
-        needed = neg_counts <= 0
-        tries = 0
-        while torch.any(needed):
-            bi = tries % 10
-            tries += 1
-            if tries > MAX_TRIES:
-                self.log.debug("exceed MAX_TRIES for %d items", np.sum(needed.numpy()))
-                continue
+        neg_items = torch.empty(len(users), dtype=torch.int32, device=device)
 
-            n_dev = needed.to(users.device)
-            n_users = batch.users[needed]
+        # The main logic is to loop, sampling candidate negatives and testing
+        # them for misranks. MAX_TRIES is the maximum number of candidate
+        # negaties we will consider before giving up. We sample and score
+        # candidate negatives in batches, of size WARP_CAND_BATCH_SIZE, to
+        # reduce the CPU/GPU communication overhead.
+
+        # Data structures to track the *candidate* batch - the set of items
+        # we've found based on the users who needed negatives at the start of
+        # the candidate batch. These will not be assigned until the first time
+        # in the loop.
+        cand_mask: torch.Tensor  # training batch mask for rows w/ candidates
+        cand_range: torch.Tensor  # index range of candidate rows
+        cand_items: torch.Tensor  # candidate item numbers
+        cand_scores: torch.Tensor  # candidate item scores
+        cand_norms: torch.Tensor  # candidate item norms
+
+        # Count the number of attempted negatives.
+        tries = 0
+        # Track which training batch rows we still need negatives for.
+        needed = torch.full((bsize,), True, dtype=torch.bool)
+        n_dev = needed.to(device, non_blocking=True)
+
+        # We will keep looping as long as some rows need negatives, and we
+        # haven't exceeded the attempt budget.
+        while tries < MAX_TRIES and torch.any(needed):
+            # Compute the index within the current batch.
+            bi = tries % WARP_CAND_BATCH_SIZE
+            tries += 1
+
             if bi == 0:
-                neg_cand = torch.as_tensor(
+                # Set up candidates based on rows that need items at the start of the batch.
+                cand_mask = needed
+                cand_size = torch.sum(needed).item()
+                cand_range = torch.arange(cand_size).to(device=device, non_blocking=True)
+                cand_items = torch.as_tensor(
                     batch.data.interactions.sample_negatives(
-                        n_users,
-                        n=10,
+                        batch.users[needed],
+                        n=WARP_CAND_BATCH_SIZE,
                         weighting="uniform",
                         rng=self.rng,
                     )
-                ).to(users.device)
-                nc_scores, nc_norms = self.score(users[n_dev], neg_cand)
+                ).to(device, non_blocking=True)
+                cand_scores, cand_norms = self.score(users[n_dev], cand_items)
 
-            found = nc_scores[:, bi] > pos_scores[n_dev, 0]
-            f_idx = idx_range[n_dev][found]
-            neg_items[f_idx] = neg_cand[found, bi]
-            neg_scores[f_idx] = nc_scores[found, bi]
-            if nc_norms.shape:
-                neg_norms[f_idx] = nc_norms[found, bi]
+            # Which of the *candidate* rows represent needed negatives?
+            cand_needed = needed[cand_mask]
+            cn_dev = cand_needed.to(device=device, non_blocking=True)
 
-            nf = ~found
-            nf_idx = idx_range[n_dev][nf]
-            nf_big = nc_scores[nf, bi] > neg_scores[nf_idx]
-            nf_upd = nf_idx[nf_big]
-            # assert nf_big.shape == neg_cand.shape[:1], f"{nf_big.shape} != {neg_cand.shape}"
-            neg_items[nf_upd] = neg_cand[nf, bi][nf_big]
-            neg_scores[nf_upd] = nc_scores[nf, bi][nf_big]
-            if nc_norms.shape:
-                neg_norms[nf_upd] = nc_norms[nf, bi][nf_big]
+            # For any batch row still needing a negative, if we have a higher score,
+            # we've either found that negative, or we've found a better negative for
+            # when we give up. So update all the rows in ‘needed’ for which the candidate
+            # item score is higher.
+            act_better = cand_scores[cn_dev, bi] > neg_scores[n_dev]
+            act_cidx = cand_range[cn_dev][act_better]
+            # Compute the indices in the batch for these improvements.
+            upd_idx = idx_dev[n_dev][act_better]
+            # Apply the updates to the training batch working storage.
+            neg_counts[upd_idx] = tries
+            neg_items[upd_idx] = cand_items[act_cidx, bi]
+            neg_scores[upd_idx] = cand_scores[act_cidx, bi]
+            if cand_norms.shape:
+                neg_norms[upd_idx] = cand_norms[act_cidx, bi]
 
-            neg_counts[needed] += 1
+            # Now that we have the best negative so far, find the winners and
+            # remove don't update them in the next batch.
+            n_dev = neg_scores < pos_scores[:, 0]
+            needed = n_dev.cpu()
 
-            needed = neg_counts <= 0
-
+        # Compute estimated ranks from the negative counts
         ranks = ((self.data.n_items - 1) / (neg_counts + 1)).to(torch.float64).detach()
+        # Used estimated ranks to compute sample weights for the minibatch
         # L(k) = sum i=1..k 1/i = harmonic k
         # approximate harmonic k with log
         weights = (
@@ -352,7 +458,8 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             - 1 / (12 * ranks**2)
             + 1 / (120 * ranks**4)
         )
-        return neg_items, neg_scores.reshape(-1, 1), neg_norms, weights.to(pos_scores.device)
+        weights = weights.to(pos_scores.device, non_blocking=True)
+        return neg_items, neg_scores.reshape(-1, 1), neg_norms, weights
 
 
 def _loss_logistic(pos_pred, neg_pred, pos_weight, weights):

@@ -6,15 +6,17 @@
 
 from __future__ import annotations
 
+from typing import override
+
 import numpy as np
 from scipy.sparse import coo_array
-from typing_extensions import override
 
 from lenskit._accel import als
 from lenskit.data import Dataset, ItemList
 from lenskit.data.types import NPMatrix, NPVector
 from lenskit.logging import item_progress
 from lenskit.math.solve import solve_cholesky
+from lenskit.parallel import run_accel_task
 
 from ._common import ALSBase, ALSConfig, ALSTrainerBase, TrainContext
 
@@ -31,7 +33,7 @@ class ImplicitMFConfig(ALSConfig):
 
 
 class ImplicitMFScorer(ALSBase):
-    """
+    r"""
     Implicit matrix factorization trained with alternating least squares
     :cite:p:`hu:implicit-mf`.  This algorithm outputs 'predictions', but they
     are not on a meaningful scale.  If its input data contains ``rating``
@@ -39,8 +41,8 @@ class ImplicitMFScorer(ALSBase):
     will be 1 for every rated item.
 
     With weight :math:`w`, this function decomposes the matrix
-    :math:`\\mathbb{1}^* + Rw`, where :math:`\\mathbb{1}^*` is an :math:`m
-    \\times n` matrix of all 1s.
+    :math:`\mathbb{1}^* + Rw`, where :math:`\mathbb{1}^*` is an :math:`m
+    \times n` matrix of all 1s.
 
     See the base class :class:`ALSBase` for documentation on the estimated
     parameters you can extract from a trained model. See
@@ -155,8 +157,11 @@ class ImplicitMFTrainer(ALSTrainerBase[ImplicitMFScorer, ImplicitMFConfig]):
     @override
     def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
         OtOr = _implicit_otor(context.right, context.reg)
-        with item_progress(f"Epoch {epoch} {context.label}", context.nrows) as pb:
-            return als.train_implicit_matrix(context.matrix, context.left, context.right, OtOr, pb)
+        with item_progress(f"Epoch {epoch} {context.label} rows", context.nrows) as pb:
+            return run_accel_task(
+                als.train_implicit_matrix(context.matrix, context.left, context.right, OtOr),
+                progress=pb,
+            )
 
     @override
     def finalize(self):

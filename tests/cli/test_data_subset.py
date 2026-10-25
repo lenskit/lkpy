@@ -14,11 +14,11 @@ from lenskit.cli import lenskit
 from lenskit.data import Dataset, ItemListCollection
 
 
-def test_data_subset(tmpdir: Path, ml_ds: Dataset):
-    ds_path = tmpdir / "ml-data"
+def test_data_subset(tmp_path: Path, ml_ds: Dataset):
+    ds_path = tmp_path / "ml-data"
     ml_ds.save(ds_path)
 
-    out_path = tmpdir / "ml.subset.parquet"
+    out_path = tmp_path / "ml.subset.parquet"
 
     runner = CliRunner()
     result = runner.invoke(

@@ -14,12 +14,12 @@ from lenskit.cli import lenskit
 from lenskit.data import Dataset, ItemListCollection
 
 
-def test_data_split(tmpdir: Path, ml_ds: Dataset):
-    ds_path = tmpdir / "ml-data"
+def test_data_split(tmp_path: Path, ml_ds: Dataset):
+    ds_path = tmp_path / "ml-data"
     ml_ds.save(ds_path)
 
-    train_path = tmpdir / "ml-data.train"
-    test_path = tmpdir / "ml-data.test.parquet"
+    train_path = tmp_path / "ml-data.train"
+    test_path = tmp_path / "ml-data.test.parquet"
 
     runner = CliRunner()
     result = runner.invoke(
@@ -41,12 +41,12 @@ def test_data_split(tmpdir: Path, ml_ds: Dataset):
     assert trds.interaction_count + test_n == ml_ds.interaction_count
 
 
-def test_data_split_time(tmpdir: Path, ml_ds: Dataset):
-    ds_path = tmpdir / "ml-data"
+def test_data_split_time(tmp_path: Path, ml_ds: Dataset):
+    ds_path = tmp_path / "ml-data"
     ml_ds.save(ds_path)
 
-    train_path = tmpdir / "ml-data.train"
-    test_path = tmpdir / "ml-data.test.parquet"
+    train_path = tmp_path / "ml-data.train"
+    test_path = tmp_path / "ml-data.test.parquet"
 
     runner = CliRunner()
     result = runner.invoke(
@@ -66,11 +66,11 @@ def test_data_split_time(tmpdir: Path, ml_ds: Dataset):
     assert trds.interaction_count + test_n == ml_ds.interaction_count
 
 
-def test_data_out_dir(tmpdir: Path, ml_ds: Dataset):
-    ds_path = tmpdir / "ml-data"
+def test_data_out_dir(tmp_path: Path, ml_ds: Dataset):
+    ds_path = tmp_path / "ml-data"
     ml_ds.save(ds_path)
 
-    out_dir = tmpdir / "split"
+    out_dir = tmp_path / "split"
     train_path = out_dir / "train"
     test_path = out_dir / "test.parquet"
 

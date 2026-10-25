@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use arrow::{
     array::{
-        make_array, Array, ArrayData, ArrayRef, ArrowPrimitiveType, OffsetSizeTrait, PrimitiveArray,
+        Array, ArrayData, ArrayRef, ArrowPrimitiveType, OffsetSizeTrait, PrimitiveArray, make_array,
     },
     compute::kernels::cast,
     datatypes::ArrowNativeType,
@@ -86,8 +86,8 @@ fn scatter_empty_stype<T: ArrowPrimitiveType>(
 }
 
 fn scatter_impl<Ix, T>(
-    dst: &mut Vec<T::Native>,
-    dst_valid: &mut Vec<bool>,
+    dst: &mut [T::Native],
+    dst_valid: &mut [bool],
     idx: &PrimitiveArray<Ix>,
     src: &PrimitiveArray<T>,
 ) where

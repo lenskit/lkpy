@@ -23,7 +23,7 @@ class Progress:
     total: int | float | None
 
     def __init__(
-        self, *args: Any, uuid: UUID | None = None, total: int | float | None = None, **kwargs: Any
+        self, *args: Any, uuid: UUID | None = None, total: float | None = None, **kwargs: Any
     ):
         self.uuid = uuid if uuid is not None else uuid4()
         self.total = total
@@ -37,7 +37,7 @@ class Progress:
         advance: int = 1,
         completed: int | None = None,
         total: int | None = None,
-        **kwargs: float | int | str,
+        **kwargs: float | str,
     ):
         """
         Update the progress bar.
@@ -50,17 +50,15 @@ class Progress:
             total:
                 A new total, to update the progress bar total.
         """
-        pass
 
     def finish(self):
         """
         Finish and clean up this progress bar.  If the progresss bar is used as
         a context manager, this is automatically called on context exit.
         """
-        pass
 
     def __enter__(self):
         return self
 
-    def __exit__(self, *args: Any):
+    def __exit__(self, *args: object):
         self.finish()

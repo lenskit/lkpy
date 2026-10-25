@@ -13,6 +13,7 @@ import pandas as pd
 import torch
 from numpy.typing import NDArray
 from scipy import linalg as la
+from structlog.testing import capture_logs
 
 import pytest
 from pytest import approx, fixture, mark
@@ -20,6 +21,7 @@ from pytest import approx, fixture, mark
 from lenskit.basic.history import UserTrainingHistoryLookup
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
 from lenskit.diagnostics import DataWarning
+from lenskit.knn import ItemKNNConfig
 from lenskit.knn.item import ItemKNNScorer
 from lenskit.pipeline import predict_pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
@@ -85,6 +87,13 @@ class TestItemKNN(BasicComponentTests, ScorerTests):
         assert r_mat.data == approx(o_mat.data)
 
         assert all(r_mat.indptr == o_mat.indptr)
+
+
+class TestImplicitItemKNN(BasicComponentTests, ScorerTests):
+    can_score = "some"
+    component = ItemKNNScorer
+    config = ItemKNNConfig(feedback="implicit")
+    expected_ndcg = 0.10
 
 
 def test_ii_config():
@@ -406,7 +415,7 @@ def test_ii_known_preds(ml_ds):
     from lenskit import batch
 
     iknn = ItemKNNScorer(k=20, min_sim=1.0e-6)
-    pipe = predict_pipeline(iknn, fallback=False)  # noqa: F821
+    pipe = predict_pipeline(iknn, fallback=False)
     _log.info("training %s on ml data", iknn)
     pipe.train(ml_ds)
     _log.info("model means: %s", iknn.item_means)
@@ -443,3 +452,33 @@ def test_ii_known_preds(ml_ds):
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
         _log.error("erroneous predictions:\n%s", bad)
         raise e
+
+
+def test_ii_warns_about_missing_history_component_only_for_a_bare_id():
+    """The missing-history warning should diagnose a pipeline gap, not an unknown user.
+
+    A caller that passes a bare user ID has no history-bearing component in front of
+    the scorer, so an absent history means the pipeline is misconfigured. A caller
+    that passes a query has already run one; an absent history there just means the
+    lookup found nothing, which is the normal result for a user who is not in the
+    training data.
+    """
+    lookup = UserTrainingHistoryLookup()
+    lookup.train(simple_ds)
+    scorer = ItemKNNScorer(k=5)
+    scorer.train(simple_ds)
+    unknown_user = 999
+    assert simple_ds.users.number(unknown_user, missing=None) is None
+
+    query = lookup(unknown_user)
+    assert query.query_items is None
+
+    with capture_logs() as entries:
+        scorer(query, ItemList([6, 7, 8]))
+    assert [e for e in entries if e.get("log_level") == "warning"] == []
+
+    with capture_logs() as entries:
+        scorer(unknown_user, ItemList([6, 7, 8]))
+    assert [e["event"] for e in entries if e.get("log_level") == "warning"] == [
+        "no query items, did you omit a history component?"
+    ]

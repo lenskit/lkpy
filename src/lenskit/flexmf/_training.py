@@ -7,17 +7,16 @@
 from __future__ import annotations
 
 import math
-import platform
 from abc import abstractmethod
-from collections.abc import Callable, Generator, Sequence
+from collections.abc import Callable, Generator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Mapping
+from typing import TYPE_CHECKING, Generic, Self
 
 import numpy as np
 import structlog
 import torch
 from torch import Tensor
-from typing_extensions import TYPE_CHECKING, Generic, Self, TypeVar
+from typing_extensions import TypeVar
 
 from lenskit.data import Dataset, MatrixRelationshipSet
 from lenskit.logging import get_logger, item_progress
@@ -25,11 +24,6 @@ from lenskit.parallel.config import ensure_parallel_init
 from lenskit.training import ModelTrainer, TrainingOptions
 
 from ._model import FlexMFModel
-
-try:
-    from torch._dynamo.exc import TorchDynamoException
-except ImportError:
-    TorchDynamoException = None
 
 # hide base import to avoid circular imports
 if TYPE_CHECKING:
@@ -121,31 +115,27 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.component.model = self.model.to(self.device)
         self.model.train(True)
 
-        if options.env_flag("LK_TORCH_COMPILE", default=True):
-            if platform.system() not in ("Linux", "Darwin"):
+        if options.torch_compilation_enabled():
+            from torch._inductor.exc import InductorError  # ruff: ignore[import-private-name]
+
+            try:
+                self._compiled_model = torch.compile(self.model)
+            except RuntimeError as e:
+                (msg,) = e.args
+                if msg.startswith("torch.compile"):
+                    _log.warn(
+                        "Torch compilation failed, using uncompiled model",
+                        exc_info=e,
+                        err_code="LKW-TCOMP",
+                    )
+                else:
+                    raise e
+            except InductorError as e:
                 _log.warn(
-                    "compiled models are only usable on Linux and macOS, using uncompiled model",
+                    "Torch compilation failed, using uncompiled model",
+                    exc_info=e,
                     err_code="LKW-TCOMP",
                 )
-            elif torch.__version__ < "2.8":
-                _log.warn(
-                    "compiled models require Torch >=2.8, using uncompiled model",
-                    err_code="LKW-TCOMP",
-                )
-            else:
-                _log.debug("compiling FlexMF model")
-                try:
-                    self._compiled_model = torch.compile(self.model)
-                except RuntimeError as e:
-                    (msg,) = e.args
-                    if msg.startswith("torch.compile"):
-                        _log.warn(
-                            "Torch compilation failed, using uncompiled model",
-                            exc_info=e,
-                            err_code="LKW-TCOMP",
-                        )
-                    else:
-                        raise e
 
         self.setup_optimizer()
 
@@ -168,13 +158,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         Invoke the model, using the compiled version if available.
         """
         if self._compiled_model is not None:
-            assert TorchDynamoException is not None
-            try:
-                return self._compiled_model(*args, **kwargs)
-            except TorchDynamoException as e:
-                self.log.warning("calling compiled model failed, falling back: %s", e)
-                self._compiled_model = None
-                return self.call_model(*args, **kwargs)
+            return self._compiled_model(*args, **kwargs)
         else:
             return self.model(*args, **kwargs)
 

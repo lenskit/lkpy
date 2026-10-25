@@ -11,11 +11,10 @@ from pathlib import Path
 
 import click
 from rich import print, print_json
-from xopen import xopen
 
 import lenskit.operations as ops
 from lenskit import batch
-from lenskit.data import ID, Dataset, ItemList, ListILC, RecQuery, UserIDKey
+from lenskit.data import ID, Dataset, ItemList, ListILC, RecQuery, UserIDKey, xopen
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.pipeline import PipelineProfiler
 from lenskit.random import random_generator
@@ -68,7 +67,7 @@ def recommend(
     _log.warning("the recommend CLI is experimental and may change without notice")
 
     _log.info("loading pipeline", file=str(pipe_file))
-    with xopen(pipe_file, "rb", threads=0) as pf:
+    with xopen(pipe_file, "rb") as pf:
         pipe = pickle.load(pf)
     log = _log.bind(name=pipe.name)
 
@@ -120,7 +119,7 @@ def recommend(
                 ulog.info(
                     "generated recommendation list",
                     length=len(recs),
-                    time="{:.1f}ms".format(timer.elapsed(accumulated=False) * 1000),
+                    time=f"{timer.elapsed(accumulated=False) * 1000:.1f}ms",
                 )
 
                 if all_recs is not None:
@@ -151,7 +150,7 @@ def recommend(
 
     if out_file is not None:
         assert all_recs is not None
-        log.info("saving recommendations to %s", str(out_file), count=len(all_recs))
+        log.info("saving recommendations to %s", out_file, count=len(all_recs))
         if json:
             with open(out_file, "w") as jsf:
                 dump_json(all_recs.to_json_data(object=True), jsf)
@@ -177,15 +176,15 @@ def print_recommendation_list(
                 ref_title = items.select(ids=[ref_item]).attribute("title").value()
 
     if user is not None:
-        print("recommendations for user {}:".format(user))
+        print(f"recommendations for user {user}:")
     elif ref_item is not None:
         if ref_title is not None:
-            print("related items for item {} ([italic]{}[/italic]):".format(ref_item, ref_title))
+            print(f"related items for item {ref_item} ([italic]{ref_title}[/italic]):")
         else:
-            print("related items for item {}:".format(ref_item))
+            print(f"related items for item {ref_item}:")
 
     for item in recs.ids():
         if titles is not None:
-            print("  [bold]item {}[/bold]: [italic]{}[/italic]".format(item, titles.loc[item]))
+            print(f"  [bold]item {item}[/bold]: [italic]{titles.loc[item]}[/italic]")
         else:
-            print("  [bold]item {}[/bold]".format(item))
+            print(f"  [bold]item {item}[/bold]")

@@ -1,0 +1,274 @@
+# This file is part of LensKit.
+# Copyright (C) 2018-2023 Boise State University.
+# Copyright (C) 2023-2026 Drexel University.
+# Licensed under the MIT license, see LICENSE.md for details.
+# SPDX-License-Identifier: MIT
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, Field, model_validator
+
+from ._load import load_model_data
+from .pipeline import PipelineConfig
+
+type ErrorAction = Literal["abort", "continue"]
+"""
+Action to take when a trial fails.
+"""
+
+
+class IterativeConfig(BaseModel):
+    """
+    Options for iterative search.
+    """
+
+
+class SearchConfig(BaseModel):
+    """
+    Configuration options for the hyperparameter search.
+    """
+
+    method: Literal["tpe", "random", "hyperopt"] | None = None
+    """
+    The search method to use.
+    """
+
+    max_points: int | None = None
+    """
+    The maximum number of points to try.
+    """
+    default_points: int = 60
+    """
+    The default number of search points, if not limited by a maximum configuration.
+    """
+    error_action: ErrorAction = "continue"
+    """
+    What to do when one of the search trials fails.
+    """
+
+    metric: str | None = None
+    """
+    The metric to use.
+    """
+
+    list_length: int | None = None
+    """
+    The length of recommendation lists to use.
+    """
+
+    num_cpus: int | Literal["threads", "backend-threads", "all-threads"] = "threads"
+    """
+    The number of CPUs to request from Ray Tune.
+    """
+    num_gpus: int | float = 0
+    """
+    The number of GPUs to request from Ray Tune.
+    """
+
+    max_epochs: int = 100
+    """
+    The maximum number of epochs to use in iterative training.
+    """
+
+    min_epochs: int = 3
+    """
+    The minimum number of epochs for iterative training.
+    """
+
+    median_min_trials: int = 5
+    """
+    The minimum number of trials at an epoch for the median pruner to
+    consider pruning.
+    """
+
+    plateau_check_iters: int = 3
+    """
+    The number of iterations to check for the plateau stopper.
+    """
+
+    plateau_min_rel_improvement: float = 0.01
+    """
+    The minimum relative improvement to continue the trial.
+    """
+
+    checkpoint_iters: int = 2
+    """
+    The frequency for saving checkpoints (only supported by Ray).
+    """
+
+    def resolved_direction(self) -> Literal["min", "max"]:
+        """
+        Get the metric optimization direction.
+        """
+        if self.metric in ("RMSE", "MAE"):
+            return "min"
+        else:
+            return "max"
+
+    def update_max_points(self, n: int | None):
+        """
+        Limit the search points to a new maximum, if it exceeds the current maximum.
+        """
+        if n is not None and (self.max_points is None or self.max_points > n):
+            self.max_points = n
+
+    def num_search_points(self) -> int:
+        """
+        Get the number of search points to use.
+        """
+        points = self.default_points
+
+        if self.max_points is not None and points > self.max_points:
+            points = self.max_points
+
+        return points
+
+    def merge(self, other: SearchConfig) -> SearchConfig:
+        """
+        Produce a new configuration by merging another configuration into this one.
+
+        Args:
+            other:
+                The other configuration to merge.
+        Returns:
+            The combination of ``self`` and ``other``, where values from ``other``
+            are preferred in case of conflict.
+        """
+        ours = self.model_dump()
+        theirs = other.model_dump(
+            exclude_unset=True, exclude_defaults=True, exclude_computed_fields=True
+        )
+        combined = ours | theirs
+        return self.model_validate(combined)
+
+
+class TuningSpec(BaseModel, extra="forbid"):
+    """
+    Data model for hyperparameter tuning specifications.
+    """
+
+    @classmethod
+    def load(cls, path: Path) -> TuningSpec:
+        """
+        Load the tuning specification from the file.
+
+        .. note::
+
+            This load does **not** merge the global defaults.
+        """
+        cfg = load_model_data(path, cls)
+        cfg.file_path = path
+        return cfg
+
+    file_path: Annotated[Path | None, Field(exclude=True)] = None
+    """
+    The path to the spec file.
+    """
+
+    search: SearchConfig = SearchConfig()
+    """
+    Options for the hyperparameter search.
+    """
+    space: dict[str, SearchSpace]
+    """
+    The search space for tuning.
+    """
+
+    pipeline: PipelineFile | PipelineConfig
+    """
+    The pipeline to tune.
+    """
+
+    @property
+    def component_name(self) -> str | None:
+        """
+        Get the name of the tuned component, if the search specifies
+        parameters for a single component.
+        """
+        if len(self.space) == 1:
+            for name in self.space:
+                return name
+        else:
+            return None
+
+    def resolve_path(self, path: Path | str) -> Path:
+        """
+        Resolve a path relative to this specification's file.
+        """
+        if self.file_path is None:
+            return Path(path)
+        else:
+            return self.file_path.parent / path
+
+
+class PipelineFile(BaseModel, extra="forbid"):
+    """
+    Load a pipeline from a file.
+    """
+
+    file: Path
+    """
+    The file from which to load the pipeline.
+    """
+
+
+class SearchParam(BaseModel):
+    type: Literal["int", "float", "bool", "choice"]
+    """
+    The type of this parameter.
+    """
+    min: int | float | None = None
+    """
+    Minimum parameter value.
+    """
+    max: int | float | None = None
+    """
+    Maximum parameter value.
+    """
+    scale: Literal["uniform", "log", "pow2"] = "uniform"
+    """
+    Search scale for parameter values.
+
+    The value ``"pow2"`` only applies to integer parameters, and
+    constrains them to be integer powers of 2.
+    """
+    choices: list[str | int | float | bool] = []
+    """
+    Choices for a ``"choice"`` search parameter.
+    """
+    base: float | None = None
+    """
+    Base for logarithmic search scales.
+    """
+
+    @model_validator(mode="after")
+    def _check_min_max(self):
+        if self.type in ["int", "float"]:
+            if self.min is None:
+                raise TypeError("min must be provided for numeric parameter")
+            if self.max is None:
+                raise TypeError("max must be provided for numeric parameter")
+        return self
+
+    @model_validator(mode="after")
+    def _check_choices(self):
+        if self.type == "choice" and not self.choices:
+            raise ValueError("choice parameter must specify non-empty choices")
+        return self
+
+    @model_validator(mode="after")
+    def _check_pow2_int(self):
+        if self.scale == "pow2" and self.type != "int":
+            raise ValueError("pow2 is only valid for integer parameters")
+        return self
+
+
+type SearchSpace = Mapping[str, SearchParam | SearchSpace]
+"""
+Specification of the (possibly nested) hyperparameter search space for a
+component.
+"""

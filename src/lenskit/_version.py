@@ -30,7 +30,7 @@ def is_git_install() -> bool:
     return git.exists()
 
 
-def lk_git_version() -> Version:
+def lk_git_version(*, quiet: bool = False) -> Version:
     from packaging.version import Version
     from packaging.version import parse as parse_version
 
@@ -49,6 +49,8 @@ def lk_git_version() -> Version:
     _log.debug("parsing transformed Git %s", pvs)
     version = parse_version(pvs)
     _log.info("Git version: %s", version)
+    # git_pub_ver = Version(version.public)
+    git_base_ver = Version(version.base_version)
 
     with open(_lk_root / "Cargo.toml", "rb") as tf:
         cargo = tomllib.load(tf)
@@ -67,16 +69,18 @@ def lk_git_version() -> Version:
     _log.info("Cargo version: %s", cv_ver)
 
     if version.is_devrelease:
-        if cv_ver > version:
+        if cv_ver > git_base_ver:
             _log.debug("cargo requested version is newer")
             base = cv_ver.public
         else:
-            _log.warning("Cargo version %s older than Git %s", cv_ver, version)
-            if version.is_prerelease:
-                assert version.pre is not None
+            if quiet:
+                _log.debug("Cargo version %s older than Git %s", cv_ver, version)
+            else:
+                _log.warning("Cargo version %s older than Git %s", cv_ver, version)
+            if version.pre is not None:
                 base = version.base_version + version.pre[0] + str(version.pre[1] + 1)
             else:
-                base = f"{version.major}.{version.minor}.{version.micro}"
+                base = f"{version.major}.{version.minor}.{version.micro + 1}"
 
         version = Version(f"{base}.dev{version.dev}+{version.local}")
     else:
@@ -86,10 +90,10 @@ def lk_git_version() -> Version:
     return version
 
 
-def lenskit_version() -> str:
+def lenskit_version(*, quiet: bool = False) -> str:
     if is_git_install():
         try:
-            return str(lk_git_version())
+            return str(lk_git_version(quiet=quiet))
         except CalledProcessError:
             pass
 

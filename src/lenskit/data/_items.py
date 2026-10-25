@@ -13,6 +13,7 @@ from __future__ import annotations
 import io
 import warnings
 from collections.abc import Sequence
+from typing import Any, Literal, LiteralString, overload
 
 import numpy as np
 import pandas as pd
@@ -20,12 +21,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import torch
 from numpy.typing import ArrayLike, NDArray
-from typing_extensions import (
-    Any,
-    Literal,
-    LiteralString,
-    overload,
-)
 
 from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataWarning
@@ -390,7 +385,7 @@ class ItemList:
                 raise AssertionError("unreachable")
 
     def _init_fields(self, *, scores=None, score=None, rank=None, **other):
-        if any(k[0] == "_" for k in other.keys()):  # pragma: nocover
+        if any(k[0] == "_" for k in other):  # pragma: nocover
             raise ValueError("item list fields cannot start with _")
 
         fields = getattr(self, "_fields", {}).copy()
@@ -875,6 +870,21 @@ class ItemList:
     ):
         """
         Convert the item list to a Pandas table.
+
+        Args:
+            ids:
+                Whether to include item IDs in the table.
+            numbers:
+                Whether to include item numbers in the table.
+            ranks:
+                Whether to include item ranks in the table.
+            type:
+                Whether to produce an Arrow table or struct array.
+            columns:
+                Fields to include in the final table.
+        Returns:
+            The Arrow table or struct array containing this item list's
+            contents.
         """
         arrays = []
 
@@ -940,11 +950,17 @@ class ItemList:
             types["rank"] = pa.int32()
 
         for n, f in self._fields.items():
-            types[n] = f.arrow().type
+            if ranks or n != "rank":
+                types[n] = f.arrow().type
 
         return types
 
-    def top_n(self, n: int | None = None, *, scores: str | NPVector | None = None) -> ItemList:
+    def top_n(
+        self,
+        n: int | None = None,
+        *,
+        scores: str | NDArray[np.floating] | torch.Tensor | pa.Array | None = None,
+    ) -> ItemList:
         """
         Get the top _N_ items in this list, sorted in decreasing order.
 
@@ -1144,7 +1160,10 @@ class ItemList:
         # Only subset the IDs if we don't have a vocabulary.  Otherwise, defer
         # ID subset until IDs are actually needed.
         array = self.to_arrow(
-            ids=self.vocabulary is None and self._ids is not None, numbers=True, type="array"
+            ids=self.vocabulary is None and self._ids is not None,
+            numbers=True,
+            ranks=False,
+            type="array",
         )
         array = indexer(array)
 

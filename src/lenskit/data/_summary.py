@@ -41,7 +41,7 @@ def save_stats(data: Dataset | DataContainer, out: str | Path | PathLike[str] | 
         _write_stats(data, out, log)  # type: ignore
     else:
         log = log.bind(file=str(out))
-        with open(out, "wt") as stats:  # type: ignore
+        with open(out, "wt") as stats:
             _write_stats(data, stats, log)
 
 
@@ -64,14 +64,12 @@ def _write_entities(data: DataContainer, out: TextIO, log: BoundLogger):
     log.debug("summarizing entities")
     for name, schema in data.schema.entities.items():
         print(
-            "- {} ({}, {} attributes)".format(
-                name, metric(data.tables[name].num_rows), len(schema.attributes)
-            ),
+            f"- {name} ({metric(data.tables[name].num_rows)}, {len(schema.attributes)} attributes)",
             file=out,
         )
     print(file=out)
 
-    for name in data.schema.entities.keys():
+    for name in data.schema.entities:
         _write_entity_info(data, name, out, log)
 
 
@@ -80,7 +78,7 @@ def _write_entity_info(data: DataContainer, name: str, out: TextIO, log: BoundLo
     log = log.bind(entity=name)
     log.debug("describing entity")
     print(f"### Entity `{name}`\n", file=out)
-    print("- {:,d} instances\n".format(tbl.num_rows), file=out)
+    print(f"- {tbl.num_rows:,d} instances\n", file=out)
 
     attributes = data.schema.entities[name].attributes
     if attributes:
@@ -109,7 +107,7 @@ def _write_relationships(data: DataContainer, out: TextIO, log: BoundLogger):
         )
     print(file=out)
 
-    for name in data.schema.relationships.keys():
+    for name in data.schema.relationships:
         _write_relationship_info(data, name, out, log)
 
 
@@ -118,7 +116,7 @@ def _write_relationship_info(data: DataContainer, name: str, out: TextIO, log: B
     log = log.bind(relationship=name)
     log.debug("describing relationship")
     print(f"### Relationship `{name}`\n", file=out)
-    print("- {:,d} records\n".format(tbl.num_rows), file=out)
+    print(f"- {tbl.num_rows:,d} records\n", file=out)
 
     print("#### Entities\n", file=out)
     pt = PrettyTable()
@@ -126,7 +124,7 @@ def _write_relationship_info(data: DataContainer, name: str, out: TextIO, log: B
     pt.field_names = ["Name", "Class", "Unique Count"]
     pt.align["Name"] = "l"
     pt.align["Unique Count"] = "r"
-    pt.custom_format["Unique Count"] = lambda _, v: "{:,d}".format(v)
+    pt.custom_format["Unique Count"] = lambda _, v: f"{v:,d}"
     for e_name, e_cls in data.schema.relationships[name].entities.items():
         e_cls = e_cls or e_name
         e_col = tbl.column(e_name + "_num")
@@ -148,29 +146,36 @@ def _attr_table(tbl: pa.Table, attributes: dict[str, ColumnSpec]):
     pt.align["Name"] = "l"
     pt.align["Dimension"] = "r"
     pt.align["Count"] = "r"
-    pt.custom_format["Count"] = lambda _, v: "{:,d}".format(v)
+    pt.custom_format["Count"] = lambda _, v: f"{v:,d}"
     pt.align["Size"] = "r"
     pt.custom_format["Size"] = lambda _, v: naturalsize(v, binary=True)
     for a_name, a_schema in attributes.items():
         field = tbl.field(a_name)
         col = tbl.column(a_name)
-        vtype = field.type
+        vec_type = field.type
         dim = "-"
         match a_schema.layout:
             case AttrLayout.LIST:
-                assert isinstance(vtype, pa.ListType)
-                vtype = vtype.value_type
+                assert isinstance(vec_type, pa.ListType)
+                vec_type = vec_type.value_type
             case AttrLayout.VECTOR:
-                assert isinstance(vtype, (pa.ListType, pa.FixedSizeListType))
-                vtype = vtype.value_type
-                dim = "{:,d}".format(a_schema.vector_size)
+                assert isinstance(vec_type, (pa.ListType, pa.FixedSizeListType))
+                vec_type = vec_type.value_type
+                dim = f"{a_schema.vector_size:,d}"
             case AttrLayout.SPARSE:
-                assert isinstance(vtype, SparseRowType)
-                vtype = vtype.value_type
-                dim = "{:,d}".format(a_schema.vector_size)
+                assert isinstance(vec_type, SparseRowType)
+                vec_type = vec_type.value_type
+                dim = f"{a_schema.vector_size:,d}"
 
         pt.add_row(
-            [a_name, a_schema.layout.value, vtype, dim, tbl.num_rows - col.null_count, col.nbytes]
+            [
+                a_name,
+                a_schema.layout.value,
+                vec_type,
+                dim,
+                tbl.num_rows - col.null_count,
+                col.nbytes,
+            ]
         )
 
     return pt
@@ -182,7 +187,7 @@ def table_stats(data: DataContainer) -> PrettyTable:
     tbl.field_names = ["Name", "Rows", "Bytes"]
     tbl.align["Name"] = "l"
     tbl.align["Rows"] = "r"
-    tbl.custom_format["Rows"] = lambda _, v: "{:,d}".format(v)
+    tbl.custom_format["Rows"] = lambda _, v: f"{v:,d}"
     tbl.align["Bytes"] = "r"
     tbl.custom_format["Bytes"] = lambda _, v: naturalsize(v, binary=True)
 

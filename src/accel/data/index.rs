@@ -17,7 +17,7 @@ use pyo3::{
 };
 
 use arrow::{
-    array::{make_array, Array, ArrayData, ArrowPrimitiveType, AsArray, Int32Builder},
+    array::{Array, ArrayData, ArrowPrimitiveType, AsArray, Int32Builder, make_array},
     datatypes::{Int16Type, Int32Type, Int64Type, UInt16Type, UInt32Type, UInt64Type},
     pyarrow::PyArrowType,
 };
@@ -62,7 +62,7 @@ impl IDIndex {
     fn from_data(data: PyArrowType<ArrayData>) -> PyResult<Self> {
         let ids = make_array(data.0);
         let index: Box<dyn PositionLookup + Sync + Send> = match ids.data_type() {
-            DataType::Null if ids.len() == 0 => return Ok(Self::empty()),
+            DataType::Null if ids.is_empty() => return Ok(Self::empty()),
             DataType::Int16 => prim_tbl::<Int16Type>(&ids)?,
             DataType::UInt16 => prim_tbl::<UInt16Type>(&ids)?,
             DataType::Int32 => prim_tbl::<Int32Type>(&ids)?,
@@ -80,7 +80,7 @@ impl IDIndex {
                 return Err(PyTypeError::new_err(format!(
                     "unsupported ID type {}",
                     ids.data_type()
-                )))
+                )));
             }
         };
 

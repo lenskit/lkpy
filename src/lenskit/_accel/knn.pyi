@@ -3,7 +3,7 @@ from collections.abc import Sequence
 import pyarrow as pa
 
 from lenskit.data.matrix import SparseRowArray
-from lenskit.logging import Progress
+from lenskit.parallel import AccelTask
 
 def compute_similarities(
     ui_ratings: SparseRowArray,
@@ -11,8 +11,7 @@ def compute_similarities(
     shape: tuple[int, int],
     min_sim: float,
     save_nbrs: int | None,
-    progress: Progress | None,
-) -> Sequence[SparseRowArray]: ...
+) -> AccelTask[Sequence[SparseRowArray]]: ...
 def score_explicit(
     sims: SparseRowArray,
     ref_items: pa.Int32Array,

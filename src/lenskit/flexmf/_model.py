@@ -125,6 +125,31 @@ class FlexMFModel(nn.Module):
 
         self.i_embed.weight.data[items, :] = 0
 
+    def item_vectors(self, items: Tensor) -> Tensor:
+        """
+        Get the item vectors used for scoring.
+        """
+        if self.i_layers is not None:
+            return self.i_layers[:, items, :].sum(0) * self._layer_scale
+        else:
+            return self.i_embed(items)
+
+    def score_user_vector(self, user_vector: Tensor, items: Tensor) -> Tensor:
+        """
+        Score items against a supplied user vector.
+        """
+        zero = torch.tensor(0.0, device=self.device)
+
+        if self.i_bias is not None:
+            ib = self.i_bias(items).reshape(items.shape)
+        else:
+            ib = zero
+
+        ivec = self.item_vectors(items)
+        ips = vecdot(user_vector, ivec)
+
+        return ib + ips
+
     def update_convolution(self, ui_mat: Tensor, iu_mat: Tensor):
         """
         Update the convolution layers.
@@ -149,7 +174,7 @@ class FlexMFModel(nn.Module):
         self.i_layers = torch.stack(i_layers)
 
     def forward(self, user: Tensor, item: Tensor, *, return_norm: bool = False):
-        """
+        r"""
         Matrix factorization forward pass.
 
         This can be applied to batches of size :math:`B` or to a set of items
@@ -159,7 +184,7 @@ class FlexMFModel(nn.Module):
             user:
                 The user number(s), typically of size :math:`1` or :math:`B`.
             item:
-                The items, typically of size :math:`B` or :math:`B \\times k`
+                The items, typically of size :math:`B` or :math:`B \times k`
                 (to score :math:`k` items for each user).
             return_norm:
                 If ``True``, return the L2 norms of the parameters affecting

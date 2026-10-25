@@ -6,9 +6,7 @@
 
 import warnings
 from dataclasses import dataclass
-from typing import Any, final
-
-from typing_extensions import override
+from typing import Any, final, override
 
 from pytest import warns
 

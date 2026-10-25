@@ -14,16 +14,16 @@ from __future__ import annotations
 import socket
 import threading
 from contextlib import contextmanager
-from enum import Enum
+from enum import StrEnum
 from os import PathLike
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 
 import requests
 from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, SerializeAsAny
-from typing_extensions import Literal
 
+from lenskit.schemas.settings import LenskitSettings
 from lenskit.util import Latch
 
 from ._formats import friendly_duration
@@ -77,7 +77,7 @@ def adopt_parent_task(task: Task):
         stack.remove(task)
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """
     Statuses for task records.
     """
@@ -313,7 +313,7 @@ class Task(BaseModel, extra="allow"):
                 if cur.task_id == self.parent_id:
                     cur.add_subtask(self)
                 else:
-                    log.warn("active task is not parent")
+                    log.warning("active task is not parent")
             else:
                 log.debug("have a task but no parent")
 
@@ -331,7 +331,7 @@ class Task(BaseModel, extra="allow"):
         log = _log.bind(task_id=str(self.task_id), label=self.label)
         tasks = _task_stack()
         if tasks[-1] is not self:
-            log.warn("attempted to finish non-active task")
+            log.warning("attempted to finish non-active task")
             tasks.remove(self)
         else:
             tasks.pop()
@@ -408,7 +408,10 @@ class Task(BaseModel, extra="allow"):
         return self
 
     def __exit__(
-        self, exc_type: type[Exception] | None, exc_value: Exception | None, traceback: Any
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: object,
     ):
         log = _log.bind(task_id=str(self.task_id), label=self.label)
         if exc_type is None:
@@ -429,12 +432,19 @@ class Task(BaseModel, extra="allow"):
         return f"<Task {self.task_id}: {self.label}>"
 
 
-def measure_power(scope: Literal["system", "cpu", "gpu"], duration: float):
-    from lenskit.config import lenskit_config
+def measure_power(
+    scope: Literal["system", "cpu", "gpu"],
+    duration: float,
+    *,
+    config: LenskitSettings | None = None,
+):
+    if config is None:
+        from lenskit.config import lenskit_config
+
+        config = lenskit_config()
 
     time_ms = int(duration * 1000)
 
-    config = lenskit_config()
     prom = config.prometheus.url
     if not prom:
         return None

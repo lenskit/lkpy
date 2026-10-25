@@ -6,7 +6,10 @@
 
 from __future__ import annotations
 
+import json
+import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -21,10 +24,9 @@ from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.config import PipelineConfig
 from lenskit.pipeline.nodes import ComponentConstructorNode
 from lenskit.random import RNGInput, spawn_seed
+from lenskit.schemas.tuning import PipelineFile, TuningSpec
 from lenskit.splitting import TTSplit
 from lenskit.training import UsesTrainer
-
-from .spec import PipelineFile, TuningSpec
 
 _log = get_logger(__name__)
 
@@ -63,6 +65,8 @@ class BasePipelineTuner(ABC):
 
         self.spec = spec.model_copy(deep=True)
         self.spec.pipeline = pb.build_config()
+        if self.settings.defaults is not None:
+            self.spec.search = self.settings.defaults.merge(self.spec.search)
         self.random_seed = spawn_seed(rng)
 
         self.log = _log.bind(model=pb.name)
@@ -105,10 +109,7 @@ class BasePipelineTuner(ABC):
 
     @property
     def mode(self) -> Literal["min", "max"]:
-        if self.spec.search.metric == "RMSE":
-            return "min"
-        else:
-            return "max"
+        return self.spec.search.resolved_direction()
 
     @property
     def pipeline(self) -> PipelineConfig:
@@ -126,11 +127,60 @@ class BasePipelineTuner(ABC):
 class TuneResults(ABC):
     spec: TuningSpec
     task: Task = field(kw_only=True)
+    iterative: bool
+
+    def save_results(self, dir: Path):
+        """
+        Save the tuning results to a directory.
+        """
+        self.task.save_to_file(dir / "task.json")
+
+        best = self.best_result()
+        result_file = dir / "best-result.json"
+        result_json = json.dumps(best, indent=2, default=_np_json_default)
+        result_file.write_text(result_json + "\n")
+
+        best_cfg = self.best_config()
+        cfg_file = dir / "best-config.json"
+        cfg_json = json.dumps(best_cfg, indent=2, default=_np_json_default)
+        cfg_file.write_text(cfg_json + "\n")
+
+        pipe_json = self.best_pipeline().model_dump_json(indent=2)
+        (dir / "best-pipeline.json").write_text(pipe_json + "\n")
+
+        with open(dir / "trials.ndjson", "wt") as jsf:
+            for result in self.trials():
+                print(json.dumps(result, default=_np_json_default), file=jsf)
+
+        if self.iterative:
+            with open(dir / "epochs.ndjson", "wt") as jsf:
+                for result in self.epochs():
+                    print(json.dumps(result, default=_np_json_default), file=jsf)
 
     @abstractmethod
     def num_trials(self) -> int:
         """
         Get the number of completed trials in this search.
+        """
+
+    def num_failed(self) -> int:
+        """
+        Get the number of failed trials in this search.
+        """
+        return 0
+
+    @abstractmethod
+    def trials(self) -> Iterable[dict[str, JsonValue]]:
+        """
+        Iterate over individual trials in this search.  Each dictionary contains
+        metric(s), the configuration (as ``"config"``), and other tuner-specific fields.
+        """
+
+    @abstractmethod
+    def epochs(self) -> Iterable[dict[str, JsonValue]]:
+        """
+        Iterate over individual iterations within trials.  The dictionary contains
+        columns identifying both the iteration and the trial.
         """
 
     @abstractmethod
@@ -161,3 +211,12 @@ class TuneResults(ABC):
         name = self.spec.component_name
         assert name is not None
         return cfg.merge_component_configs({name: best})
+
+
+def _np_json_default(x):
+    if isinstance(x, np.generic):
+        return x.item()
+    elif isinstance(x, uuid.UUID):
+        return str(x)
+    else:
+        raise TypeError(f"non-serializable type {type(x)}")

@@ -10,18 +10,17 @@ Hyperparameter search.
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Literal
 
 import click
-import numpy as np
 from humanize import metric as human_metric
 from humanize import precisedelta
 
 from lenskit.logging import get_logger, stdout_console
-from lenskit.tuning import PipelineTuner, TuningSpec
+from lenskit.schemas.tuning import ErrorAction
+from lenskit.tuning import TuningSpec
 
 _log = get_logger(__name__)
 
@@ -44,10 +43,10 @@ _log = get_logger(__name__)
     "--hyperopt", "method", flag_value="hyperopt", help="use HyperOpt search (requires Ray)"
 )
 @click.option(
-    "--optuna",
+    "--tpe",
     "method",
-    flag_value="optuna",
-    default="optuna",
+    flag_value="tpe",
+    default="tpe",
     help="use Optuna TPE search (default)",
 )
 @click.option(
@@ -67,6 +66,11 @@ _log = get_logger(__name__)
 @click.option(
     "--save-pipeline", type=Path, metavar="FILE", help="Save best pipeline configuration to FILE"
 )
+@click.option(
+    "--on-error",
+    type=click.Choice(["abort", "continue"], case_sensitive=False),
+    help="What to do when a trial fails.",
+)
 @click.argument("SEARCH_SPEC", type=Path)
 @click.argument("OUT", type=Path)
 def tune(
@@ -74,6 +78,7 @@ def tune(
     search_spec: Path,
     out: Path,
     method: Literal["random", "hyperopt", "tpe"] | None,
+    on_error: ErrorAction | None,
     use_ray: bool,
     max_points: int | None,
     job_limit: int | None,
@@ -83,10 +88,14 @@ def tune(
     save_pipeline: Path | None,
 ):
     """
-    Tune pipeline hyperparameters with Ray Tune.
+    Tune pipeline hyperparameters.
     """
     console = stdout_console()
     os.environ["RAY_AIR_NEW_OUTPUT"] = "0"
+
+    if method != "tpe" and not use_ray:  # pragma: nocover
+        _log.error("search method %s only supported with Ray", method)
+        raise click.UsageError("unsupported method")
 
     spec = TuningSpec.load(search_spec)
     # override settings from command line
@@ -95,12 +104,15 @@ def tune(
         spec.search.metric = metric
     if method is not None:
         spec.search.method = method
+    if on_error is not None:
+        spec.search.error_action = on_error
 
     out.mkdir(exist_ok=True, parents=True)
 
     # set up the tuning controller
     if use_ray:
         import ray
+        import ray.tune.utils.log
 
         from lenskit.parallel.ray import init_cluster
         from lenskit.tuning import RayPipelineTuner
@@ -116,6 +128,8 @@ def tune(
 
         controller = RayPipelineTuner(spec, out)
     else:
+        from lenskit.tuning import PipelineTuner
+
         controller = PipelineTuner(spec, out)
 
     if job_limit is not None:
@@ -130,26 +144,16 @@ def tune(
     _log.info("finished hyperparameter search")
 
     best = results.best_result()
-    result_file = out / "best-result.json"
-    result_json = json.dumps(best, indent=2, default=_json_default)
-    result_file.write_text(result_json + "\n")
-
-    best_cfg = results.best_config()
-    cfg_file = out / "best-result.json"
-    cfg_json = json.dumps(best_cfg, indent=2, default=_json_default)
-    cfg_file.write_text(cfg_json + "\n")
 
     if save_pipeline is not None:
+        _log.info("saving pipeline to %s", save_pipeline)
         pipe_json = results.best_pipeline().model_dump_json(indent=2)
         save_pipeline.write_text(pipe_json + "\n")
 
     console.print("[bold yellow]Hyperparameter search completed![/bold yellow]")
-    console.print("Best {} is [bold red]{:.3f}[/bold red]".format(metric, best[metric]))
+    console.print(f"Best {metric} is [bold red]{best[metric]:.3f}[/bold red]")
     assert results.task.duration is not None
-    line = "[bold magenta]{}[/bold magenta] trials took [bold cyan]{}[/bold cyan]".format(
-        results.num_trials(),
-        precisedelta(results.task.duration),  # type: ignore
-    )
+    line = f"[bold magenta]{results.num_trials()}[/bold magenta] trials took [bold cyan]{precisedelta(results.task.duration)}[/bold cyan]"
     if results.task.system_power:
         line += " and consumed [bold green]{}[/bold green]".format(
             human_metric(results.task.system_power / 3600, unit="Wh")
@@ -157,9 +161,4 @@ def tune(
     console.print(line)
     console.print("Trial result:", best)
 
-
-def _json_default(x):
-    if isinstance(x, np.generic):
-        return x.item()
-    else:
-        raise TypeError(f"non-serializable type {type(x)}")
+    results.save_results(out)

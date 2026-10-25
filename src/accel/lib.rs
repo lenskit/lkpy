@@ -4,6 +4,7 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
 mod als;
@@ -16,9 +17,9 @@ mod indirect;
 mod knn;
 mod logging;
 mod parallel;
-mod progress;
 mod slim;
 mod sparse;
+mod tasks;
 mod util;
 
 /// Entry point for LensKit accelerator module.
@@ -35,10 +36,12 @@ fn _accel<'py>(py: Python<'py>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<logging::AccelLogListener>()?;
     m.add_class::<funksvd::FunkSVDTrainer>()?;
     m.add_class::<util::atomic::AtomicInt>()?;
+    m.add_class::<parallel::NestedAccelPool>()?;
     m.add_function(wrap_pyfunction!(parallel::init_accel_pool, m)?)?;
     m.add_function(wrap_pyfunction!(parallel::thread_count, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_row_debug_type, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_structure_debug_large, m)?)?;
+    m.add_function(wrap_pyfunction!(arrow::arrow_type, m)?)?;
 
     let helper = py.import("lenskit.logging._accel")?;
     helper.call_method("ensure_accel_logging", (), None)?;

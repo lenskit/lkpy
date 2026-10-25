@@ -9,7 +9,7 @@ import pandas as pd
 
 import hypothesis.strategies as st
 from hypothesis import given
-from pytest import approx, mark, warns
+from pytest import approx, mark, raises, warns
 
 from lenskit.data import ItemList
 from lenskit.metrics import call_metric
@@ -24,10 +24,13 @@ def test_ndcg_empty():
     assert call_metric(NDCG, recs, truth) == approx(0.0)
 
 
-def test_ndcg_empty_truth_returns_nan():
+def test_ndcg_empty_truth_warns_and_returns_nan():
     recs = ItemList([1, 2, 3], ordered=True)
     truth = ItemList(ordered=True)
-    val = call_metric(NDCG, recs, truth)
+
+    with warns(UserWarning):
+        val = call_metric(NDCG, recs, truth, gain="rating")
+
     assert np.isnan(val)
 
 
@@ -124,3 +127,29 @@ def test_ndcg_negative_gains(ratings, expected_ndcg):
     truth = ItemList([1, 2, 3, 4, 5], rating=ratings)
     val = call_metric(NDCG, recs, truth, gain="rating")
     assert val == approx(expected_ndcg, rel=1e-3)
+
+
+def test_ndcg_missing_gain_raises():
+    recs = ItemList([1, 2, 3], ordered=True)
+    truth = ItemList([1, 3])
+
+    with raises(KeyError, match="test items have no field rating"):
+        call_metric(NDCG, recs, truth, gain="rating")
+
+
+def test_ndcg_null_gains_ignored():
+    recs = ItemList([1, 2, 3], ordered=True)
+    truth = ItemList([1, 2, 3], rating=[0.5, None, 3])
+
+    val = call_metric(NDCG, recs, truth, gain="rating")
+    expected = array_dcg(np.array([0.5, 0, 3])) / array_dcg(np.array([3, 0.5, 0]))
+    assert val == approx(expected)
+
+
+def test_ndcg_all_null_gains_returns_nan():
+    recs = ItemList([1, 2, 3], ordered=True)
+    truth = ItemList([1, 2, 3], rating=[None, None, None])
+
+    val = call_metric(NDCG, recs, truth, gain="rating")
+
+    assert np.isnan(val)

@@ -9,6 +9,7 @@ Bridges to recommendation models from :mod:`implicit`.
 """
 
 import logging
+from typing import override
 
 import numpy as np
 from implicit.als import AlternatingLeastSquares
@@ -17,7 +18,6 @@ from implicit.recommender_base import RecommenderBase
 from numpy.typing import NDArray
 from pydantic import BaseModel, JsonValue
 from scipy.sparse import csr_matrix
-from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.parallel.config import ensure_parallel_init, get_parallel_config
@@ -27,9 +27,9 @@ from lenskit.training import Trainable, TrainingOptions
 _logger = logging.getLogger(__name__)
 
 __all__ = [
-    "BaseRec",
     "ALS",
     "BPR",
+    "BaseRec",
 ]
 
 

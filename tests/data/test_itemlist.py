@@ -676,8 +676,8 @@ def test_from_arrow_table_nullable():
     assert np.all(il.ids() == np.arange(1, 100))
     scores = il.scores()
     assert scores is not None
-    assert np.all(np.isfinite(scores) == df["score"].notnull())
-    assert np.all(scores[df["score"].notnull()] == df.loc[df["score"].notnull(), "score"])
+    assert np.all(np.isfinite(scores) == df["score"].notna())
+    assert np.all(scores[df["score"].notna()] == df.loc[df["score"].notna(), "score"])
     assert not il.ordered
 
 
@@ -704,6 +704,55 @@ def test_from_arrow_array():
     assert np.all(il.numbers() == np.arange(5))
     assert np.all(il.scores() == df["score"].values)
     assert not il.ordered
+
+
+@mark.skip(reason="not sure we want this behavior")
+def test_reordering_arrow_loaded_list_recomputes_ranks():
+    il = ItemList.from_arrow(ItemList(item_ids=ITEMS, ordered=True).to_arrow())
+    assert il.ordered
+    np.testing.assert_array_equal(il.ranks(), [1, 2, 3, 4, 5])
+
+    reordered = il[[3, 0, 2]]
+    assert reordered.ordered
+    np.testing.assert_array_equal(reordered.ids(), ["d", "a", "c"])
+    np.testing.assert_array_equal(reordered.ranks(), [1, 2, 3])
+
+
+def test_arrow_reloaded_reranks():
+    il = ItemList.from_arrow(ItemList(item_ids=ITEMS, ordered=True).to_arrow())
+    # il = ItemList(item_ids=ITEMS, ordered=True)
+    assert il.ordered
+    np.testing.assert_array_equal(il.ranks(), [1, 2, 3, 4, 5])
+
+    reordered = il.top_n(scores=np.linspace(0, 1, 5))
+    assert reordered.ordered
+    np.testing.assert_array_equal(reordered.ids(), list(reversed(ITEMS)))
+    np.testing.assert_array_equal(reordered.ranks(), [1, 2, 3, 4, 5])
+
+
+def test_arrow_reload_drops_ranks():
+    # to_arrow(ranks=False) should exclude ranks, even when created
+    # from an Arrow table.
+    il = ItemList(item_ids=ITEMS, ordered=True)
+    assert "rank" in il.arrow_types()
+    assert "rank" not in il.arrow_types(ranks=False)
+    tbl = il.to_arrow()
+    assert "rank" in tbl.column_names
+    ultbl = il.to_arrow(ranks=False)
+    assert "rank" not in ultbl.column_names
+
+    il2 = ItemList.from_arrow(tbl)
+    assert il2.ordered
+    assert "rank" in il2.arrow_types()
+    assert "rank" not in il2.arrow_types(ranks=False)
+    tbl2 = il2.to_arrow(ranks=False)
+    assert "rank" not in tbl2.column_names
+
+
+def test_explicit_ranks_get_dropped():
+    il = ItemList(item_ids=[10, 20, 30], rank=[1, 2, 3])
+    ordered = il.top_n(scores=np.array([1.0, 3.0, 2.0]))
+    assert np.all(ordered.ranks() == [1, 2, 3])
 
 
 def test_copy_ctor():
@@ -911,7 +960,7 @@ def test_repr_ids():
     ilr = repr(il)
     print(ilr)
     assert re.search(r"ids: \['a'.*\]", ilr)
-    assert re.search(r"numbers: <lazy>", ilr)
+    assert r"numbers: <lazy>" in ilr
 
 
 def test_repr_numbers():
@@ -919,7 +968,7 @@ def test_repr_numbers():
     ilr = repr(il)
     print(ilr)
     assert re.search(r"numbers: \[0.*\]", ilr)
-    assert re.search(r"ids: <lazy>", ilr)
+    assert r"ids: <lazy>" in ilr
 
 
 @mark.skip("ranks are not stable")
@@ -928,15 +977,15 @@ def test_repr_lazy_rank():
     ilr = repr(il)
     print(ilr)
     assert re.search(r"numbers: \[0 .*\]", ilr)
-    assert re.search(r"ids: <lazy>", ilr)
-    assert re.search(r"rank: <lazy>", ilr)
+    assert r"ids: <lazy>" in ilr
+    assert r"rank: <lazy>" in ilr
 
     _rank = il.ranks()
 
     ilr = repr(il)
     print(ilr)
     assert re.search(r"numbers: \[0 .*\]", ilr)
-    assert re.search(r"ids: <lazy>", ilr)
+    assert r"ids: <lazy>" in ilr
     assert re.search(r"rank: \[0 .*\]", ilr)
 
 

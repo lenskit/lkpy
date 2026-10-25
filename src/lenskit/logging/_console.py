@@ -35,7 +35,7 @@ class ConsoleHandler(Handler):
         try:
             fmt = self.format(record)
             console.print(self._decoder.decode_line(fmt))
-        except Exception:
+        except Exception:  # ruff: ignore[blind-except]
             self.handleError(record)
 
 

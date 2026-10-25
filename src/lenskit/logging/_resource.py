@@ -92,7 +92,7 @@ def reset_linux_hwm():
     if reset_file.exists():
         try:
             reset_file.write_text("5")
-        except IOError:
+        except OSError:
             _log.warn("cannot clear refs", pid=pid)
 
     if torch.cuda.is_available():
@@ -107,7 +107,8 @@ def max_memory():
         return "unknown"
     else:
         res = resource.getrusage(resource.RUSAGE_SELF)
-        return "%.1f MiB" % (res.ru_maxrss / 1024,)
+        rss_mib = res.ru_maxrss / 1024
+        return f"{rss_mib:.1f} MiB"
 
 
 def cur_memory():
@@ -118,4 +119,5 @@ def cur_memory():
         return "unknown"
     else:
         res = resource.getrusage(resource.RUSAGE_SELF)
-        return "%.1f MiB" % (res.ru_idrss / 1024,)
+        rss_mib = res.ru_idrss / 1024
+        return f"{rss_mib:.1f} MiB"

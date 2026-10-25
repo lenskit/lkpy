@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
+from typing import Literal, override
+
 import torch
 from torch.nn import functional as F
-from typing_extensions import Literal, override
 
 from lenskit.data import Dataset
 from lenskit.flexmf._model import FlexMFModel

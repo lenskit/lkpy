@@ -88,7 +88,7 @@ class AssociationScorer(Component[ItemList], Trainable):
     def is_trained(self):
         return hasattr(self, "assoc_scores")
 
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         timer = Stopwatch()
 
         # the core computation is to extract a *co-occurrance* matrix, which we will

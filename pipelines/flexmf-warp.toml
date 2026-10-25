@@ -8,4 +8,4 @@ base = "std:topn"
 class = "lenskit.flexmf.FlexMFImplicitScorer"
 
 [components.scorer.config]
-loss = "warp"
+preset = "warp"

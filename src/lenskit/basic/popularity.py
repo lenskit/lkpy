@@ -7,12 +7,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, override
 
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel
-from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, Vocabulary
 from lenskit.logging import get_logger

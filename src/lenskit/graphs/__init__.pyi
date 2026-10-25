@@ -7,4 +7,4 @@ Stability:
 
 from .lightgcn import LightGCNConfig, LightGCNScorer
 
-__all__ = ["LightGCNScorer", "LightGCNConfig"]
+__all__ = ["LightGCNConfig", "LightGCNScorer"]

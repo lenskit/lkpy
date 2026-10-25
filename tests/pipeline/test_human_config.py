@@ -6,18 +6,24 @@
 
 from pathlib import Path
 
+from pytest import raises
+
 from lenskit.als import BiasedMFScorer, ImplicitMFScorer
 from lenskit.basic import BiasScorer, FallbackScorer, TopNRanker
-from lenskit.config import load_config_data
+from lenskit.basic.candidates import TrainingItemsCandidateSelector
+from lenskit.diagnostics import PipelineError
+from lenskit.knn.slim import SLIMScorer
 from lenskit.pipeline import Pipeline, PipelineConfig
 from lenskit.pipeline.nodes import ComponentInstanceNode
+from lenskit.schemas import load_model_data
 
 config_dir = Path("pipelines")
+test_dir = Path(__file__).parent
 
 
 def test_load_config():
     als_file = config_dir / "als-implicit.toml"
-    als_cfg = load_config_data(als_file, PipelineConfig)
+    als_cfg = load_model_data(als_file, PipelineConfig)
     assert isinstance(als_cfg, PipelineConfig)
     assert als_cfg.meta.name == "als-implicit"
 
@@ -99,3 +105,19 @@ def test_apply_config():
     assert isinstance(node, ComponentInstanceNode)
     assert isinstance(node.component, TopNRanker)
     assert node.component.config.n == 100
+
+
+def test_configure_bad_scorer():
+    with raises(PipelineError, match="component “missing”"):
+        Pipeline.from_config(
+            {"options": {"base": "std:topn"}, "components": {"missing": {"config": {"wombat": 42}}}}
+        )
+
+
+def test_load_override():
+    pipe = Pipeline.load_config(test_dir / "candidate-override.json")
+    assert isinstance(pipe.component("scorer"), SLIMScorer)
+
+    cs = pipe.component("candidate-selector")
+    assert isinstance(cs, TrainingItemsCandidateSelector)
+    assert cs.config.exclude is None

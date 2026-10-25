@@ -7,8 +7,8 @@
 use std::hash::{Hash, Hasher};
 
 use arrow::array::{
-    make_array, Array, ArrayData, AsArray, GenericStringArray, OffsetSizeTrait, StringBuilder,
-    StringViewArray,
+    Array, ArrayData, AsArray, GenericStringArray, OffsetSizeTrait, StringBuilder, StringViewArray,
+    make_array,
 };
 use arrow::compute::cast;
 use arrow::pyarrow::PyArrowType;

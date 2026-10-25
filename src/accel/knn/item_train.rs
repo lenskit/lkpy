@@ -7,31 +7,37 @@
 use std::cmp::Reverse;
 
 use arrow::{
-    array::{make_array, Array, ArrayData},
+    array::{Array, ArrayData, make_array},
     pyarrow::PyArrowType,
 };
 use log::*;
 use ordered_float::NotNan;
-use pyo3::prelude::*;
+use pyo3::{IntoPyObjectExt, prelude::*};
 use rayon::prelude::*;
+use rayon_cancel::CancelAdapter;
 
 use crate::{
-    progress::ProgressHandle,
-    sparse::{ArrowCSRConsumer, CSRMatrix, CSR},
+    sparse::{ArrowCSRConsumer, CSR, CSRMatrix},
+    tasks::{AccelTask, AccelTaskImpl, IterCancel},
 };
 
+struct ItemSimTask {
+    ui_ratings: CSRMatrix,
+    iu_ratings: CSRMatrix,
+    n_items: usize,
+    min_sim: f32,
+    save_nbrs: Option<i64>,
+}
+
 #[pyfunction]
-pub fn compute_similarities<'py>(
-    py: Python<'py>,
+pub fn compute_similarities(
     ui_ratings: PyArrowType<ArrayData>,
     iu_ratings: PyArrowType<ArrayData>,
     shape: (usize, usize),
     min_sim: f32,
     save_nbrs: Option<i64>,
-    progress: Bound<'py, PyAny>,
-) -> PyResult<Vec<PyArrowType<ArrayData>>> {
+) -> PyResult<AccelTask> {
     let (nu, ni) = shape;
-    let progress = ProgressHandle::from_input(progress);
 
     // extract the data
     debug!("preparing {}x{} training", nu, ni);
@@ -47,17 +53,43 @@ pub fn compute_similarities<'py>(
     assert_eq!(iu_mat.len(), ni);
     assert_eq!(iu_mat.n_cols, nu);
 
-    // let's compute!
-    let range = 0..ni;
-    debug!("computing similarity rows");
-    let collector = ArrowCSRConsumer::new(ni);
-    let chunks = progress.process_iter(py, range.into_par_iter(), |iter| {
-        Ok(iter
-            .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim, save_nbrs))
-            .drive_unindexed(collector))
-    })?;
+    Ok(AccelTask::wrap(ItemSimTask {
+        ui_ratings: ui_mat,
+        iu_ratings: iu_mat,
+        n_items: ni,
+        min_sim,
+        save_nbrs,
+    }))
+}
 
-    Ok(chunks.iter().map(|a| a.into_data().into()).collect())
+impl AccelTaskImpl for ItemSimTask {
+    fn invoke<'py>(&self, py: Python<'py>, task: &AccelTask) -> PyResult<Bound<'py, PyAny>> {
+        // let's compute!
+        debug!("computing similarity rows");
+        let collector = ArrowCSRConsumer::new(self.n_items);
+
+        let iter = (0..self.n_items).into_par_iter();
+        let adapter = CancelAdapter::new(iter);
+        task.set_cancel(IterCancel::from_adapter(&adapter));
+
+        let chunks = py.detach(move || {
+            adapter
+                .map(|row| {
+                    sim_row(
+                        row,
+                        &self.ui_ratings,
+                        &self.iu_ratings,
+                        self.min_sim,
+                        self.save_nbrs,
+                    )
+                })
+                .drive_unindexed(collector)
+        });
+
+        let chunks: Vec<PyArrowType<ArrayData>> =
+            chunks.iter().map(|a| a.into_data().into()).collect();
+        chunks.into_bound_py_any(py)
+    }
 }
 
 fn sim_row(
@@ -78,13 +110,12 @@ fn sim_row(
 
     // loop over the users
     for i in r_start..r_end {
-        let u = iu_mat.col_inds.value(i as usize);
-        let r = iu_mat.values.value(i as usize);
+        let u = iu_mat.col_inds.value(i);
+        let r = iu_mat.values.value(i);
 
         let (u_start, u_end) = ui_mat.extent(u as usize);
         // loop over the users' items
         for j in u_start..u_end {
-            let j = j as usize;
             let other = ui_mat.col_inds.value(j) as usize;
             if other == row {
                 continue;
@@ -106,13 +137,13 @@ fn sim_row(
         .collect();
 
     // truncate if needed
-    if let Some(limit) = save_nbrs {
-        if limit > 0 {
-            // sort by value number
-            sims.sort_by_key(|(_i, s)| Reverse(NotNan::new(*s).unwrap()));
-            sims.truncate(limit as usize);
-            sims.shrink_to_fit();
-        }
+    if let Some(limit) = save_nbrs
+        && limit > 0
+    {
+        // sort by value number
+        sims.sort_by_key(|(_i, s)| Reverse(NotNan::new(*s).unwrap()));
+        sims.truncate(limit as usize);
+        sims.shrink_to_fit();
     }
     // sort by column number
     sims.sort_by_key(|(i, _s)| *i);

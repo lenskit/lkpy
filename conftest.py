@@ -16,17 +16,23 @@ from numpy.random import Generator, default_rng
 from hypothesis import settings
 from pytest import fixture, register_assert_rewrite, skip
 
+from lenskit.logging._accel import update_log_level  # ruff: ignore[import-private-name]
 from lenskit.parallel import ensure_parallel_init
 from lenskit.random import init_global_rng
 
 register_assert_rewrite("lenskit.testing")
 
 # bring common fixtures into scope
-from lenskit.testing import ml_100k, ml_ds, ml_ds_unchecked, ml_ratings  # noqa: E402, F401
+from lenskit.testing import ml_100k, ml_ds, ml_ds_unchecked, ml_ratings  # noqa: F401
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
 _log = structlog.stdlib.get_logger("lenskit.tests")
+
+if "FORCE_COLOR" in os.environ:
+    del os.environ["FORCE_COLOR"]
+
+
 RNG_SEED = 42
 if "LK_TEST_FREE_RNG" in os.environ:
     warnings.warn("using nondeterministic RNG initialization")
@@ -86,7 +92,7 @@ def torch_device(request):
 def log_test(request):
     try:
         modname = request.module.__name__ if request.module else "<unknown>"
-    except Exception:
+    except AttributeError:
         modname = "<unknown>"
     funcname = request.function.__name__ if request.function else "<unknown>"
     _log.info("running test %s:%s", modname, funcname)
@@ -105,3 +111,4 @@ def pytest_collection_modifyitems(items):
 
 settings.register_profile("default", deadline=1000)
 ensure_parallel_init()
+update_log_level()

@@ -8,9 +8,9 @@ import logging
 import re
 from dataclasses import dataclass
 from types import NoneType
+from typing import assert_type
 
 import numpy as np
-from typing_extensions import assert_type
 
 from pytest import fail, mark, warns
 

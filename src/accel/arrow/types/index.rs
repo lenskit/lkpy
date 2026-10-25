@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::datatypes::DataType;
-use arrow_schema::extension::ExtensionType;
 use arrow_schema::ArrowError;
+use arrow_schema::extension::ExtensionType;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, to_string};
 

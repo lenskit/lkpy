@@ -8,13 +8,10 @@ from __future__ import annotations
 
 from collections import namedtuple
 from collections.abc import Sequence
+from typing import Any, NamedTuple, TypeAlias, overload
 
 from typing_extensions import (
-    Any,
-    NamedTuple,
-    TypeAlias,
     TypeVar,
-    overload,
 )
 
 from ..types import ID
@@ -34,7 +31,7 @@ Ko = TypeVar("Ko", bound=tuple, default=GenericKey)
 """
 Fixed key type for an "other" collection.
 """
-KL = TypeVar("KL", covariant=True, bound=tuple, default=GenericKey)
+KL_co = TypeVar("KL_co", covariant=True, bound=tuple, default=GenericKey)
 """
 Covariant key type for key lookup.
 """

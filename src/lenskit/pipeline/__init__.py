@@ -16,6 +16,7 @@ from lenskit.lazy import Lazy
 from ._builder import PipelineBuilder
 from ._cache import PipelineCache
 from ._common import RecPipelineBuilder, predict_pipeline, topn_pipeline
+from ._diagram import MermaidDiagrammer
 from ._hooks import ComponentInputHook
 from ._impl import CloneMethod, Pipeline
 from ._profiling import PipelineProfiler, ProfileSink
@@ -29,23 +30,24 @@ from .config import PipelineConfig
 from .nodes import Node
 
 __all__ = [
-    "Pipeline",
-    "PipelineBuilder",
-    "PipelineProfiler",
-    "ProfileSink",
     "CloneMethod",
-    "PipelineError",
-    "PipelineWarning",
-    "PipelineState",
-    "Node",
-    "PipelineFunction",
-    "PipelineConfig",
-    "Lazy",
     "Component",
     "ComponentConstructor",
-    "PipelineCache",
-    "RecPipelineBuilder",
-    "topn_pipeline",
-    "predict_pipeline",
     "ComponentInputHook",
+    "Lazy",
+    "MermaidDiagrammer",
+    "Node",
+    "Pipeline",
+    "PipelineBuilder",
+    "PipelineCache",
+    "PipelineConfig",
+    "PipelineError",
+    "PipelineFunction",
+    "PipelineProfiler",
+    "PipelineState",
+    "PipelineWarning",
+    "ProfileSink",
+    "RecPipelineBuilder",
+    "predict_pipeline",
+    "topn_pipeline",
 ]

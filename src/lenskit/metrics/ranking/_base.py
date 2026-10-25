@@ -10,7 +10,7 @@ from lenskit.data import ItemList
 
 from .._base import ListMetric, Metric
 
-__all__ = ["Metric", "ListMetric", "RankingMetricBase"]
+__all__ = ["ListMetric", "Metric", "RankingMetricBase"]
 
 
 class RankingMetricBase(Metric):
@@ -33,10 +33,9 @@ class RankingMetricBase(Metric):
     "The maximum length of rankings to consider."
 
     def __init__(self, n: int | None = None, *, k: int | None = None):
-        if n is None:
-            if k is not None:
-                warnings.warn("k= is deprecated, use n=", DeprecationWarning)
-                n = k
+        if n is None and k is not None:
+            warnings.warn("k= is deprecated, use n=", DeprecationWarning)
+            n = k
 
         if n is not None and n < 0:
             raise ValueError("n must be positive or None")

@@ -12,22 +12,27 @@ Interfaces and support for model training.
 from __future__ import annotations
 
 import os
+import platform
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from time import perf_counter
-from typing import TYPE_CHECKING, Literal, Protocol, overload, override, runtime_checkable
+from typing import TYPE_CHECKING, Generic, Literal, Protocol, overload, override, runtime_checkable
 
 import numpy as np
+from typing_extensions import TypeVar
 
-from lenskit.data import Dataset
+from lenskit.data import Dataset, ItemList
 from lenskit.logging import get_logger, item_progress
+from lenskit.parallel import is_free_threaded
+from lenskit.pipeline._types import make_importable_path
 from lenskit.pipeline.components import Component
 from lenskit.random import RNGInput, random_generator
 
 if TYPE_CHECKING:
     import torch
 
+TCOut = TypeVar("TCOut", default=ItemList)
 _log = get_logger(__name__)
 
 
@@ -79,7 +84,7 @@ class TrainingOptions:
     that into a NumPy :class:`~numpy.random.Generator`.
     """
 
-    environment: dict[str, str] = field(default_factory=lambda: {})
+    environment: dict[str, str] = field(default_factory=dict)
     """
     Additional training environment variables to control training behavior.
     Variables and their meanings are defined by individual components.
@@ -188,6 +193,40 @@ class TrainingOptions:
         else:
             raise ValueError(f"unrecognized boolean value {name}={val}")
 
+    def torch_compilation_enabled(self) -> bool:
+        """
+        Query whether models should attempt to use :func:`torch.compile`.
+        """
+        import torch
+
+        ft = is_free_threaded(require_active=True)
+        if ft:
+            # FIXME: re-enable when Triton supports free-threading.
+            _log.info("Disabling Torch compilation by default on free-threaded Python")
+
+        if not self.env_flag("LK_TORCH_COMPILE", default=not ft):
+            _log.debug("Torch compilation not enabled")
+            return False
+
+        if platform.system() not in ("Linux", "Darwin"):
+            _log.warn(
+                "compiled models are only usable on Linux and macOS, using uncompiled model",
+                err_code="LKW-TCOMP",
+            )
+            return False
+
+        if torch.__version__ < "2.8":
+            _log.warn(
+                "compiled models require Torch >=2.8, using uncompiled model",
+                err_code="LKW-TCOMP",
+            )
+            return False
+
+        if ft:
+            _log.warn("Torch compilation currently disables free-threading")
+
+        return True
+
 
 @runtime_checkable
 class Trainable(Protocol):  # pragma: nocover
@@ -229,7 +268,7 @@ class Trainable(Protocol):  # pragma: nocover
         raise NotImplementedError()
 
 
-class UsesTrainer(Component, ABC, Trainable):
+class UsesTrainer(Component[TCOut], ABC, Trainable, Generic[TCOut]):
     """
     Base class for models that implement :class:`Trainable` via a
     :class:`ModelTrainer`.
@@ -268,14 +307,15 @@ class UsesTrainer(Component, ABC, Trainable):
 
         self.trained_epochs = 0
 
-        log = _log.bind(model=f"{self.__class__.__module__}.{self.__class__.__qualname__}")
+        mod_path = make_importable_path(self.__class__, final_sep=".")
+        log = _log.bind(model=mod_path)
         log.info("training model")
         n = self.expected_training_epochs
         assert n is not None, "no training epochs configured"
         log.debug("creating model trainer")
         trainer = self.create_trainer(data, options)
 
-        log.debug("beginning training epochs")
+        log.info("trainer initialized, beginning epochs")
         with item_progress("Training epochs", total=n) as pb:
             start = perf_counter()
             for i in range(1, n + 1):
@@ -283,12 +323,12 @@ class UsesTrainer(Component, ABC, Trainable):
                 metrics = metrics or {}
                 now = perf_counter()
                 elapsed = now - start
-                log.info("finished epoch", time="{:.1f}s".format(elapsed), epoch=i, **metrics)
+                log.info("finished epoch", time=elapsed, epoch=i, **metrics)
                 self.trained_epochs += 1
                 start = now
                 pb.update()
 
-        log.debug("finalizing model")
+        log.info("finalizing model training")
         trainer.finalize()
 
         log.info("model training finished", epochs=self.trained_epochs)
@@ -329,11 +369,10 @@ class ModelTrainer(ABC):
         must be usable.
         """
 
-    def finalize(self) -> None:
+    def finalize(self) -> None:  # ruff: ignore[empty-method-without-abstract-decorator]
         """
         Finish the training process, cleaning up any unneeded data structures
         and doing any finalization steps to the model.
 
         The default implementation does nothing.
         """
-        pass

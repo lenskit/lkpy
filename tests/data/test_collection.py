@@ -170,7 +170,7 @@ def test_from_df(rng, ml_ratings: pd.DataFrame):
     ml_ratings = ml_ratings.rename(columns={"user": "user_id", "item": "item_id"})
     ilc = ItemListCollection.from_df(ml_ratings, UserIDKey)
     assert len(ilc) == ml_ratings["user_id"].nunique()
-    assert set(k.user_id for k in ilc.keys()) == set(ml_ratings["user_id"])
+    assert {k.user_id for k in ilc.keys()} == set(ml_ratings["user_id"])
 
     for uid in rng.choice(ml_ratings["user_id"].unique(), 25):
         items = ilc.lookup(user_id=uid)
@@ -190,7 +190,7 @@ def test_from_df_auto(rng, ml_ratings: pd.DataFrame):
         ilc = ItemListCollection.from_df(ml_ratings)
 
     assert len(ilc) == ml_ratings["user_id"].nunique()
-    assert set(k.user_id for k in ilc.keys()) == set(ml_ratings["user_id"])
+    assert {k.user_id for k in ilc.keys()} == set(ml_ratings["user_id"])
 
     for uid in rng.choice(ml_ratings["user_id"].unique(), 25):
         items = ilc.lookup(user_id=uid)
@@ -266,13 +266,13 @@ def test_empty_lists(rng):
     assert tbl.num_rows == 1000
 
 
-def test_save_empty_lists(rng, tmpdir: Path):
+def test_save_empty_lists(rng, tmp_path: Path):
     users = rng.choice(100_000, size=1000, replace=False)
     ilc = ItemListCollection.from_dict({u: ItemList() for u in users})
     assert len(ilc) == 1000
     assert sum(len(il) for il in ilc.lists()) == 0
 
-    out_file = tmpdir / "empty.parquet"
+    out_file = tmp_path / "empty.parquet"
     ilc.save_parquet(out_file)
 
     ilc2 = ItemListCollection.load_parquet(out_file)
@@ -299,6 +299,21 @@ def test_to_arrow():
     assert names == ["item_id", "score"]
 
 
+def test_to_arrow_with_null():
+    ilc = ItemListCollection.from_dict(
+        {
+            72: ItemList(["a"], scores=[1], widgets=[3]),
+            82: ItemList(["a", "b", "c"], scores=[3, 4, 10], widgets=[2, 2, 2]),
+            85: ItemList(ItemList(["a"], scores=[1]), widgets=None),
+        },
+        key="user_id",
+    )
+    tbl = ilc.to_arrow()
+    ic = tbl.column("items")
+    assert "widgets" in ic.type.value_type.names
+    assert pa.types.is_integer(ic.type.value_type.field("widgets").type)
+
+
 def test_to_arrow_flat():
     ilc = ItemListCollection.from_dict(
         {72: ItemList(["a"], scores=[1]), 82: ItemList(["a", "b", "c"], scores=[3, 4, 10])},
@@ -314,14 +329,14 @@ def test_to_arrow_flat():
 
 
 @mark.parametrize("layout", ["native", "flat"])
-def test_save_parquet(ml_ds: Dataset, tmpdir: Path, layout):
+def test_save_parquet(ml_ds: Dataset, tmp_path: Path, layout):
     ilc = ItemListCollection.empty(["user_id"])
     for user in ml_ds.users.ids():
         ilc.add(ml_ds.user_row(user), user_id=user)
 
     _log.info("initial list:\n%s", ilc.to_df())
 
-    f = tmpdir / "items.parquet"
+    f = tmp_path / "items.parquet"
     ilc.save_parquet(f, layout=layout)
 
     assert f.exists()
@@ -341,7 +356,7 @@ def test_save_parquet(ml_ds: Dataset, tmpdir: Path, layout):
 
 
 @mark.filterwarnings("ignore:.*dropped.*:lenskit.diagnostics.DataWarning")
-def test_save_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
+def test_save_parquet_with_empty(ml_ds: Dataset, tmp_path: Path):
     ilc = ItemListCollection.empty(["user_id"])
     ilc.add(ItemList(), user_id=-1)
     for user in ml_ds.users.ids():
@@ -352,7 +367,7 @@ def test_save_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
 
     _log.info("initial list:\n%s", ilc.to_df())
 
-    f = tmpdir / "items.parquet"
+    f = tmp_path / "items.parquet"
     with warns(DataWarning, match="unknown field"):
         ilc.save_parquet(f)
 
@@ -372,23 +387,23 @@ def test_save_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
     assert sum(len(l1) for l1 in ilc2.lists()) == sum(len(l2) for l2 in ilc.lists())
 
 
-def test_save_parquet_with_mkdir(tmpdir: Path):
+def test_save_parquet_with_mkdir(tmp_path: Path):
     ilc = ItemListCollection.empty(["user_id"])
 
-    f = tmpdir / "subdir" / "items.parquet"
+    f = tmp_path / "subdir" / "items.parquet"
     ilc.save_parquet(f, mkdir=True)
-    assert (tmpdir / "subdir").exists()
+    assert (tmp_path / "subdir").exists()
 
-    f_no_mkdir = tmpdir / "no_mkdir" / "items.parquet"
+    f_no_mkdir = tmp_path / "no_mkdir" / "items.parquet"
     ilc.save_parquet(f_no_mkdir, mkdir=False)
-    assert not (tmpdir / "no_mkdir").exists()
+    assert not (tmp_path / "no_mkdir").exists()
 
 
-def test_write_recs_parquet(demo_recs, tmpdir: Path):
+def test_write_recs_parquet(demo_recs, tmp_path: Path):
     split, recs = demo_recs
 
-    test_f = tmpdir / "test.parquet"
-    rec_f = tmpdir / "recs.parquet"
+    test_f = tmp_path / "test.parquet"
+    rec_f = tmp_path / "recs.parquet"
 
     split.test.save_parquet(test_f)
     print(pq.read_metadata(test_f))
@@ -416,7 +431,7 @@ def test_to_dataset(demo_recs: DemoRecs):
     test = demo_recs.split.test
     test_ds = test.to_dataset()
     assert test_ds.user_count == len(test)
-    assert set(test_ds.users.ids()) == set(k.user_id for k in test.keys())
+    assert set(test_ds.users.ids()) == {k.user_id for k in test.keys()}
 
     test_df = test.to_df()
     assert test_ds.interaction_count == len(test_df)

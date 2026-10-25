@@ -25,6 +25,7 @@ from scipy.sparse import csr_array
 
 from lenskit._accel import data as _data_accel
 from lenskit.logging import Progress
+from lenskit.parallel import run_accel_task
 
 from .types import NPVector
 
@@ -415,7 +416,7 @@ class SparseRowArray(pa.ExtensionArray):
         elif matrix.nnz < smax:
             offsets = np.require(offsets, dtype=np.int32)
         elif large is False:
-            raise ValueError("sparse matrix size {:,d} too large for list".format(matrix.nnz))
+            raise ValueError(f"sparse matrix size {matrix.nnz:,d} too large for list")
         cols = pa.array(matrix.indices, SparseIndexType(dim))
 
         vals = pa.array(matrix.data) if values else None
@@ -452,7 +453,7 @@ class SparseRowArray(pa.ExtensionArray):
         """
         Convert this array to table representing the array in COO format.
         """
-        nr, nc = self.shape
+        nr, _nc = self.shape
         lengths = self.storage.value_lengths()
         assert len(lengths) == nr
         rowinds = np.repeat(np.arange(nr, dtype=np.int32), lengths)
@@ -615,12 +616,14 @@ def fast_col_cooc(
     if dense:
         if ordered:
             raise NotImplementedError("dense ordered co-occurrences not supported")
-        return _data_accel.dense_cooc(
-            m, n, rows, cols, progress=progress, diagonal=include_diagonal
+        return run_accel_task(
+            _data_accel.dense_cooc(m, n, rows, cols, diagonal=include_diagonal),
+            progress=progress,
         )
     else:
-        batches = _data_accel.count_cooc(
-            m, n, rows, cols, progress=progress, diagonal=include_diagonal, ordered=ordered
+        batches = run_accel_task(
+            _data_accel.count_cooc(m, n, rows, cols, diagonal=include_diagonal, ordered=ordered),
+            progress=progress,
         )
         tbl = pa.Table.from_batches(batches)
         indices = np.stack(

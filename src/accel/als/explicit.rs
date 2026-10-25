@@ -5,62 +5,76 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::{
-    array::{make_array, ArrayData},
+    array::{ArrayData, make_array},
     pyarrow::PyArrowType,
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
-use pyo3::prelude::*;
+use pyo3::{IntoPyObjectExt, exceptions::PyRuntimeError, prelude::*};
 use rayon::prelude::*;
 
-use log::*;
+use rayon_cancel::CancelAdapter;
 
 use crate::{
-    als::solve::POSV,
+    als::solve::{POSV, SolveError},
     parallel::maybe_fuse,
-    progress::ProgressHandle,
-    sparse::{CSRMatrix, CSR},
+    sparse::{CSR, CSRMatrix},
+    tasks::{AccelTask, AccelTaskImpl, IterCancel},
 };
+
+struct ExplicitTrainTask {
+    solver: POSV,
+    matrix: CSRMatrix<i32>,
+    this: Py<PyArray2<f32>>,
+    other: Py<PyArray2<f32>>,
+    reg: f32,
+}
 
 #[pyfunction]
 pub(super) fn train_explicit_matrix<'py>(
     py: Python<'py>,
     matrix: PyArrowType<ArrayData>,
-    this: Bound<'py, PyArray2<f32>>,
-    other: Bound<'py, PyArray2<f32>>,
+    this: Py<PyArray2<f32>>,
+    other: Py<PyArray2<f32>>,
     reg: f32,
-    progress: Bound<'py, PyAny>,
-) -> PyResult<f32> {
+) -> PyResult<AccelTask> {
     let solver = POSV::load(py)?;
     let matrix_ref = make_array(matrix.0);
     let matrix: CSRMatrix<i32> = CSRMatrix::from_arrow(matrix_ref)?;
 
-    let mut this_py = this.readwrite();
-    let mut this = this_py.as_array_mut();
+    Ok(AccelTask::wrap(ExplicitTrainTask {
+        solver,
+        matrix,
+        this,
+        other,
+        reg,
+    }))
+}
 
-    let other_py = other.readonly();
-    let other = other_py.as_array();
+impl AccelTaskImpl for ExplicitTrainTask {
+    fn invoke<'py>(&self, py: Python<'py>, task: &AccelTask) -> PyResult<Bound<'py, PyAny>> {
+        let mut this_py = self.this.bind(py).readwrite();
+        let mut this = this_py.as_array_mut();
 
-    let progress = ProgressHandle::from_input(progress);
-    debug!(
-        "beginning explicit ALS training half with {} rows",
-        other.nrows()
-    );
+        let other_py = self.other.bind(py).readonly();
+        let other = other_py.as_array();
 
-    let frob: f32 = progress.process_iter(
-        py,
-        maybe_fuse(this.outer_iter_mut().into_par_iter()).enumerate(),
-        |iter| {
-            Ok(iter
+        let iter = maybe_fuse(this.outer_iter_mut().into_par_iter()).enumerate();
+        let adapter = CancelAdapter::new(iter);
+        task.set_cancel(IterCancel::from_adapter(&adapter));
+
+        let frob: PyResult<f32> = py.detach(move || {
+            Ok(adapter
                 .map(|(i, row)| {
-                    let f = train_row_solve(&solver, &matrix, i, row, &other, reg);
-                    f
+                    train_row_solve(&self.solver, &self.matrix, i, row, &other, self.reg)
                 })
-                .sum())
-        },
-    )?;
+                .try_reduce(|| 0.0f32, |v1, v2| Ok(v1 + v2))
+                .map_err(|e| PyRuntimeError::new_err(format!("ALS solve error: {}", e)))?
+                .sqrt())
+        });
 
-    Ok(frob.sqrt())
+        frob?.into_bound_py_any(py)
+    }
 }
 
 fn train_row_solve(
@@ -70,17 +84,17 @@ fn train_row_solve(
     mut row_data: ArrayBase<ViewRepr<&mut f32>, Ix1>,
     other: &ArrayView2<f32>,
     reg: f32,
-) -> f32 {
+) -> Result<f32, SolveError> {
     let cols = matrix.row_cols(row_num);
     let vals = matrix.row_vals(row_num);
 
-    if cols.len() == 0 {
+    if cols.is_empty() {
         row_data.fill(0.0);
-        return 0.0;
+        return Ok(0.0);
     }
 
     let cols: Vec<_> = cols.iter().map(|c| *c as usize).collect();
-    let vals: Array1<_> = vals.iter().map(|f| *f).collect();
+    let vals: Array1<_> = vals.iter().copied().collect();
 
     let nd = row_data.len();
 
@@ -96,10 +110,10 @@ fn train_row_solve(
     let v = mt.dot(&vals);
     assert_eq!(v.shape(), &[nd]);
 
-    let soln = solver.solve(&mut mtm, &v).expect("LAPACK error");
+    let soln = solver.solve(&mut mtm, &v)?;
 
     let deltas = &soln - &row_data;
     row_data.assign(&soln);
 
-    deltas.dot(&deltas)
+    Ok(deltas.dot(&deltas))
 }

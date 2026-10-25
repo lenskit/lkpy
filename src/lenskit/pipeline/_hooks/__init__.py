@@ -10,16 +10,19 @@ Definition of pipeline hook protocols.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable
+from types import FunctionType
+from typing import Any, NamedTuple, Protocol
 
 from typing_extensions import (
-    Any,
-    NamedTuple,
-    Protocol,
     TypedDict,
 )
 
+from lenskit.diagnostics import PipelineWarning
+
 from ..components import Component, ComponentInput, PipelineFunction
+from ..config import PipelineHook
 from ..nodes import ComponentInstanceNode
 
 type GenericHook = Callable[..., Any]
@@ -39,6 +42,12 @@ class HookEntry[Hook: GenericHook](NamedTuple):
 
     function: Hook
     priority: int = 1
+
+    def to_config(self) -> PipelineHook:
+        if not isinstance(self.function, FunctionType):
+            warnings.warn(f"hook {self.function} is not a function", PipelineWarning)
+        function = f"{self.function.__module__}:{self.function.__qualname__}"  # type: ignore
+        return PipelineHook(function=function, priority=self.priority)
 
 
 class ComponentInputHook(Protocol):
@@ -67,11 +76,8 @@ class ComponentInputHook(Protocol):
         Args:
             node:
                 The component node being invoked.
-            input_name:
-                The name of the component's input that will receive the data.
-            input_type:
-                The type of data the component expects for this input, if one
-                was specified in the component definition.
+            input:
+                The component input that will receive the data.
             value:
                 The data value to be supplied.  This is declared
                 :class:`object`, because its type is not known or guaranteed in
@@ -84,7 +90,6 @@ class ComponentInputHook(Protocol):
             will just be ``value``; hooks can also substitute alternative
             values depending on application needs.
         """
-        pass
 
 
 RunHooks = TypedDict(

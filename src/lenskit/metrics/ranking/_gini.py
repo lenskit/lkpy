@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
+from typing import override
+
 import numpy as np
 from numpy.typing import NDArray
-from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, Vocabulary
 from lenskit.logging import get_logger
@@ -102,7 +103,7 @@ class ExposureGini(GiniBase):
         *,
         k: int | None = None,
         items: Vocabulary | Dataset,
-        weight: RankWeight = GeometricRankWeight(),
+        weight: RankWeight = GeometricRankWeight(),  # ruff: ignore[function-call-in-default-argument]
     ):
         super().__init__(n=n, k=k, items=items)
         self.weight = weight

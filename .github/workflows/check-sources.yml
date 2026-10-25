@@ -1,10 +1,10 @@
 name: Static Checks
 on:
-  push:
-    branches:
-      - main
-      - series/*
-      - future/*
+  # push:
+  #   branches:
+  #     - main
+  #     - series/*
+  #     - future/*
   pull_request:
 
 concurrency:
@@ -22,27 +22,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🧑🏻‍💻 Set up mise
-        uses: jdx/mise-action@v3
+      - name: 🦀 Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
-          cache: false
+          components: rustfmt
 
-      - name: 🪝 Install pre-commit hooks
-        run: pre-commit install-hooks
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.14"
 
-      # switch git branches so we don't trip the branch pre-commit check
-      - name: Switch branches
-        run: git checkout -b check-source HEAD
-
-      - name: ✅ Check that pre-commit is clean
-        run: |
-          if pre-commit run --all-files; then
-            echo "::debug title=pre-commit::pre-commit checks passed"
-          else
-            git diff
-            git status -s |sed -Ee 's/^...(.*)/::error file=\1,title=pre-commit::pre-commit would modify this file/'
-            exit 1
-          fi
+      - name: Check that commit is clean
+        uses: j178/prek-action@5337cb91e0fa35a7ff31b9ca345126d8bbbcdf16 # v2.0.6
 
   lint:
     name: Annotate with lint failures
@@ -55,7 +46,7 @@ jobs:
           fetch-depth: 0
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           python-version: "3.14"
           activate-environment: true

@@ -4,11 +4,11 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
-use std::cmp::{min, Reverse};
+use std::cmp::{Reverse, min};
 
 use arrow::{
     array::{
-        make_array, Array, ArrayData, ArrowPrimitiveType, Int32Array, PrimitiveArray, RecordBatch,
+        Array, ArrayData, ArrowPrimitiveType, Int32Array, PrimitiveArray, RecordBatch, make_array,
     },
     pyarrow::PyArrowType,
 };
@@ -51,11 +51,11 @@ pub(super) fn is_sorted_coo<'py>(
             let v1 = col1.value(i);
             let v2 = col2.value(i);
             let k = (v1, v2);
-            if let Some(lk) = last {
-                if k <= lk {
-                    // found a key out-of-order, we're done
-                    return Ok(false);
-                }
+            if let Some(lk) = last
+                && k <= lk
+            {
+                // found a key out-of-order, we're done
+                return Ok(false);
             }
             last = Some(k);
         }
@@ -90,10 +90,10 @@ where
 
     let mut indices = Vec::with_capacity(scores.len());
     for (i, v) in scores.iter().enumerate() {
-        if let Some(v) = v {
-            if !v.is_nan() {
-                indices.push(i as i32);
-            }
+        if let Some(v) = v
+            && !v.is_nan()
+        {
+            indices.push(i as i32);
         }
     }
 

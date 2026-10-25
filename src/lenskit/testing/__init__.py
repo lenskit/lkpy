@@ -18,7 +18,7 @@ import numpy as np
 
 import hypothesis.strategies as st
 
-from ._arrays import coo_arrays, scored_lists, sparse_arrays, sparse_tensors
+from ._arrays import coo_arrays, scored_lists, sparse_arrays
 from ._components import BasicComponentTests, ScorerTests
 from ._movielens import (
     DemoRecs,
@@ -35,24 +35,23 @@ from ._movielens import (
 from ._msweb import msweb
 
 __all__ = [
+    "BasicComponentTests",
+    "DemoRecs",
+    "ScorerTests",
     "coo_arrays",
-    "scored_lists",
-    "sparse_arrays",
-    "sparse_tensors",
+    "demo_recs",
+    "ml_20m",
     "ml_100k",
     "ml_100k_zip",
-    "ml_20m",
     "ml_ds",
     "ml_ds_unchecked",
     "ml_ratings",
     "ml_test_dir",
     "msweb",
-    "demo_recs",
     "pop_recs",
+    "scored_lists",
     "set_env_var",
-    "DemoRecs",
-    "BasicComponentTests",
-    "ScorerTests",
+    "sparse_arrays",
 ]
 
 
@@ -74,7 +73,7 @@ def set_env_var(var, val):
             del os.environ[var]
 
 
-def have_memory(gb: int | float) -> bool:
+def have_memory(gb: float) -> bool:
     "Check if we have at least gb gigs of memory."
     if not hasattr(os, "sysconf"):
         return False

@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from docutils import nodes
 from docutils.parsers.rst.directives.admonitions import Admonition

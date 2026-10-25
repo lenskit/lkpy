@@ -18,38 +18,39 @@ repos:
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.14.10
+    rev: v0.16.10
     hooks:
       # Run the formatter.
       - id: ruff-format
-      # Run the linter.
+        # Run the linter.
       - id: ruff-check
         args: [--fix]
+
+  - repo: https://github.com/tombi-toml/tombi-pre-commit
+    rev: v1.7.3
+    hooks:
+      - id: tombi-lint
+      - id: tombi-format
+        exclude: \.lock$
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.14.1-1
+    hooks:
+      - id: shfmt
 
   - repo: local
     hooks:
       - id: rustfmt
         name: format rust
-        entry: rustfmt --edition 2021
+        entry: rustfmt --edition 2024
         language: system
         types_or:
           - rust
 
-      - id: dprint
-        name: format configuration files
-        entry: dprint fmt --allow-no-files
-        language: node
-        types_or:
-          - yaml
-          - toml
-          - json
-        additional_dependencies:
-          - dprint
-
       - id: license-headers
         name: add license headers
         language: system
-        entry: ./utils/update-headers.py --error-on-change
+        entry: uv run scripts/update-headers.py --error-on-change
         types_or:
           - python
           - rust

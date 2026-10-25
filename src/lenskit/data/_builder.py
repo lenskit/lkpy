@@ -93,7 +93,7 @@ class DatasetBuilder:
             self._tables = {n: t for (n, t) in name.tables.items()}
             self._vocabularies = {
                 n: Vocabulary(name.tables[n].column(id_col_name(n)), name=n)
-                for n in name.schema.entities.keys()
+                for n in name.schema.entities
             }
             # reuse _rel_coords if we have them
             if name._rel_coords is not None:
@@ -169,7 +169,7 @@ class DatasetBuilder:
         name: str,
         entities: RelationshipEntities,
         allow_repeats: bool = True,
-        interaction: bool = False,
+        interaction: bool | Literal["default"] = False,
     ) -> None:
         """
         Add a relationship class to the dataset.  This usually doesn't need to
@@ -198,7 +198,8 @@ class DatasetBuilder:
                 Whether repeated records for the same combination of entities
                 are allowed.
             interaction:
-                Whether this is an interaction relationship.
+                Whether this is an interaction relationship.  The string ``"default"``
+                marks this as the default interaction relationship.
         """
         if name in self._tables:
             raise ValueError(f"relationship class name “{name}” already defined")
@@ -210,22 +211,23 @@ class DatasetBuilder:
         if isinstance(entities, Mapping):
             e_dict = dict(entities.items())
         else:
-            e_dict = {e: None for e in entities}
+            e_dict = dict.fromkeys(entities)
         enames = list(e_dict.keys())
         if interaction and enames[-1] != "item":
             warnings.warn(
-                "the last entity class for relationship class {} is {}, exepected item".format(
-                    name, enames[-1]
-                ),
+                f"the last entity class for relationship class {name} is {enames[-1]}, exepected item",
                 DataWarning,
                 stacklevel=2,
             )
 
         self.schema.relationships[name] = RelationshipSchema(
             entities=e_dict,
-            interaction=interaction,
+            interaction=bool(interaction),
             repeats=AllowableTroolean.ALLOWED if allow_repeats else AllowableTroolean.FORBIDDEN,
         )
+        if interaction == "default":
+            self.schema.default_interaction = name
+
         self._tables[name] = _empty_rel_table(enames)
 
     @overload
@@ -389,6 +391,7 @@ class DatasetBuilder:
         interaction: bool | Literal["default"] = False,
         _warning_parent: int = 0,
         remove_repeats: bool | Literal["exact"] = False,
+        timestamp_unit: Literal["s", "ms", "us", "ns"] | None = None,
     ) -> None:
         """
         Add relationship records to the data set.
@@ -421,6 +424,10 @@ class DatasetBuilder:
             remove_repeats:
                 If ``True``, repeated interactions will be removed. If ``"exact"``,
                 duplicated interactions will be removed.
+            timestamp_unit:
+                The unit of numeric values in the ``timestamp`` column. If omitted,
+                integer units are inferred and floating-point values are assumed to
+                be seconds. Numeric timestamps are converted to Arrow timestamps.
         """
         if isinstance(data, pd.DataFrame):
             table = pa.Table.from_pandas(data, preserve_index=False)
@@ -428,6 +435,8 @@ class DatasetBuilder:
             table = pa.table(data)  # type: ignore
         else:
             table = data
+
+        table = _convert_relationship_timestamps(table, timestamp_unit)
 
         log = self._log.bind(class_name=cls, count=table.num_rows)
 
@@ -445,10 +454,8 @@ class DatasetBuilder:
                 cls,
                 entities,
                 allow_repeats=allow_repeats,
-                interaction=bool(interaction),
+                interaction=interaction,
             )
-            if interaction == "default":
-                self.schema.default_interaction = cls
             rc_def = self.schema.relationships[cls]
 
         # FIXME: remove this segment when we can make it work
@@ -570,6 +577,7 @@ class DatasetBuilder:
         allow_repeats: bool = True,
         default: bool = False,
         remove_repeats: bool | Literal["exact"] = False,
+        timestamp_unit: Literal["s", "ms", "us", "ns"] | None = None,
     ) -> None:
         """
         Add a interaction records to the data set.
@@ -607,6 +615,10 @@ class DatasetBuilder:
             remove_repeats:
                 If ``True``, repeated interactions will be removed. If ``"exact"``,
                 duplicated interactions will be removed.
+            timestamp_unit:
+                The unit of numeric values in the ``timestamp`` column. If omitted,
+                integer units are inferred and floating-point values are assumed to
+                be seconds. Numeric timestamps are converted to Arrow timestamps.
         """
         self.add_relationships(
             cls,
@@ -617,17 +629,23 @@ class DatasetBuilder:
             interaction="default" if default else True,
             _warning_parent=1,
             remove_repeats=remove_repeats,
+            timestamp_unit=timestamp_unit,
         )
 
     def filter_interactions(
         self,
         cls: str,
-        min_time: int | float | dt.datetime | None = None,
-        max_time: int | float | dt.datetime | None = None,
+        min_time: float | dt.datetime | None = None,
+        max_time: float | dt.datetime | None = None,
         remove: pa.Table | dict[str, ArrayLike] | pd.DataFrame | None = None,
     ):
         """
         Filter interactions based on timestamp or to remove particular entities.
+
+        .. versionchanged:: 2026.3
+
+            Time stamp filtering is now consistent and independent of the local
+            time zone (unless naïve date/times are passed).
 
         Args:
             cls:
@@ -645,6 +663,19 @@ class DatasetBuilder:
         tbl = self._tables[cls]
         if tbl is None:  # pragma: nocover
             raise ValueError(f"interaction class {cls} is empty")
+
+        if isinstance(min_time, dt.datetime) and min_time.tzinfo is None:  # pragma: nocover
+            warnings.warn(
+                "minimum time is naïve, result may be time-zone-dependent",
+                DataWarning,
+                stacklevel=2,
+            )
+        if isinstance(max_time, dt.datetime) and max_time.tzinfo is None:  # pragma: nocover
+            warnings.warn(
+                "maximum time is naïve, result may be time-zone-dependent",
+                DataWarning,
+                stacklevel=2,
+            )
 
         if min_time is not None or max_time is not None:
             if "timestamp" not in tbl.column_names:
@@ -817,14 +848,18 @@ class DatasetBuilder:
                     entities = entities[id_col].values
                 else:
                     entities = entities.index.values
+            elif isinstance(entities, pa.Table):
+                values = entities.column(name)
+                entities = entities.column(id_col)
+            else:  # pragma: nocover
+                raise TypeError(f"cannot extract values from {type(entities)}")
 
         e_tbl = self._tables[cls]
         if e_tbl is None:  # pragma: nocover
             raise DataError(f"no entities of class {cls}")
 
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):  # pragma: nocover
-            n_bad = nums.is_valid().sum().as_py()
+        if n_bad := nums.null_count:  # pragma: nocover
             raise DataError(f"{n_bad} unknown entity IDs")
 
         val_array: pa.Array = pa.array(values)  # type: ignore
@@ -910,8 +945,7 @@ class DatasetBuilder:
         if e_tbl is None:  # pragma: nocover
             raise DataError(f"no entities of class {cls}")
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):  # pragma: nocover
-            n_bad = nums.is_valid().sum().as_py()
+        if n_bad := nums.null_count:  # pragma: nocover
             raise DataError(f"{n_bad} unknown entity IDs")
 
         val_array: pa.Array = pa.array(values)  # type: ignore
@@ -975,8 +1009,7 @@ class DatasetBuilder:
         if e_tbl is None:  # pragma: nocover
             raise DataError(f"no entities of class {cls}")
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):  # pragma: nocover
-            n_bad = nums.is_valid().sum().as_py()
+        if n_bad := nums.null_count:  # pragma: nocover
             raise DataError(f"{n_bad} unknown entity IDs")
 
         tbl_valid = np.zeros(e_tbl.num_rows, dtype=np.bool_)
@@ -1086,7 +1119,7 @@ class DatasetBuilder:
     ):
         if len(values.shape) != 2:
             raise TypeError("values must be 2D array")
-        nrow, ncol = values.shape
+        _nrow, ncol = values.shape
         arr = pa.FixedSizeListArray.from_arrays(values.ravel(), ncol)
         return self._add_dense_vector_attribute(cls, name, arr, rows, table, valid)
 
@@ -1109,11 +1142,11 @@ class DatasetBuilder:
                 tables[n] = pa.table({id_col_name(n): pa.array([], type=pa.int64())})
             else:
                 rel = self.schema.relationships.get(n, None)
-                if rel is not None:
+                if rel is not None:  # ruff: ignore[collapsible-if]
                     # currently not used due to coordinate table
                     # self._check_repeat_interactions(t, rel)
                     if rel.repeats.is_forbidden and len(rel.entities) == 2:
-                        e_cols = [e + "_num" for e in rel.entities.keys()]
+                        e_cols = [e + "_num" for e in rel.entities]
                         if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
                             log.debug("sorting non-repeating relationship %s", n)
                             t = t.sort_by([(c, "ascending") for c in e_cols])
@@ -1208,13 +1241,97 @@ def _empty_rel_table(types: list[str]) -> pa.Table:
     return pa.table({num_col_name(t): pa.array([], pa.int32()) for t in types})
 
 
-def _conform_time(time: int | float | str | dt.datetime, col_type: pa.DataType):
+_TIMESTAMP_UNITS: tuple[Literal["s", "ms", "us", "ns"], ...] = (
+    "s",
+    "ms",
+    "us",
+    "ns",
+)
+_TIMESTAMP_UNIT_FACTORS: dict[Literal["s", "ms", "us", "ns"], int] = {
+    "s": 1,
+    "ms": 1_000,
+    "us": 1_000_000,
+    "ns": 1_000_000_000,
+}
+_TIMESTAMP_MIN_SECONDS = int(dt.datetime.fromisoformat("1900-01-01T00:00:00+00:00").timestamp())
+_TIMESTAMP_MAX_SECONDS = int(dt.datetime.fromisoformat("2100-01-01T00:00:00+00:00").timestamp())
+
+
+def _convert_relationship_timestamps(
+    table: pa.Table,
+    timestamp_unit: Literal["s", "ms", "us", "ns"] | None,
+) -> pa.Table:
+    if timestamp_unit is not None and timestamp_unit not in _TIMESTAMP_UNITS:
+        raise ValueError(f"invalid timestamp unit {timestamp_unit!r}")
+
+    column_idx = table.schema.get_field_index("timestamp")
+    if column_idx < 0:
+        return table
+
+    timestamps = table.column(column_idx)
+    column_type = timestamps.type
+    if pa.types.is_timestamp(column_type):
+        return table
+
+    if pa.types.is_null(column_type):
+        converted = pa.nulls(len(timestamps), pa.timestamp(timestamp_unit or "s"))
+    elif pa.types.is_floating(column_type):
+        values = pc.if_else(
+            pc.is_nan(timestamps),
+            pa.scalar(None, column_type),
+            timestamps,
+        )
+        if timestamp_unit is None:
+            values = pc.multiply(values, 1_000)
+            timestamp_unit = "ms"
+        values = pc.cast(pc.round(values), pa.int64())
+        converted = pc.cast(values, pa.timestamp(timestamp_unit))
+    elif pa.types.is_integer(column_type):
+        timestamp_unit = timestamp_unit or _infer_timestamp_unit(timestamps)
+        converted = pc.cast(timestamps, pa.timestamp(timestamp_unit))
+    else:
+        return table
+
+    return table.set_column(column_idx, "timestamp", converted)
+
+
+def _infer_timestamp_unit(
+    timestamps: pa.ChunkedArray,
+) -> Literal["s", "ms", "us", "ns"]:
+    valid_count = len(timestamps) - timestamps.null_count
+    if valid_count == 0:
+        return "s"
+
+    # Loss of integer precision is harmless for this coarse range check, and
+    # permitting it lets us inspect microsecond and nanosecond epoch values.
+    values = pc.cast(timestamps, pa.float64(), safe=False)
+    for unit in _TIMESTAMP_UNITS:
+        factor = _TIMESTAMP_UNIT_FACTORS[unit]
+        in_range = pc.and_(
+            pc.greater_equal(values, float(_TIMESTAMP_MIN_SECONDS * factor)),
+            pc.less(values, float(_TIMESTAMP_MAX_SECONDS * factor)),
+        )
+        in_range_count = pc.sum(pc.fill_null(in_range, False)).as_py() or 0
+        if in_range_count / valid_count >= 0.95:
+            return unit
+
+    raise ValueError(
+        "could not infer timestamp unit because fewer than 95% of values fall between 1900 and 2099"
+    )
+
+
+def _conform_time(time: float | str | dt.datetime, col_type: pa.DataType):
     if isinstance(time, str):
         time = dt.datetime.fromisoformat(time)
+    elif not isinstance(time, dt.datetime):
+        time = dt.datetime.fromtimestamp(time, tz=dt.UTC)
 
     if pa.types.is_timestamp(col_type):
-        if not isinstance(time, dt.datetime):
-            return dt.datetime.fromtimestamp(time)
+        if col_type.tz is None:
+            # we assume time-zone-free data is UTC
+            return time.replace(tzinfo=None)
+        else:
+            return time
     elif isinstance(time, dt.datetime):
         return time.timestamp()
 

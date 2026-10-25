@@ -6,6 +6,12 @@ Datasets
 
 .. py:currentmodule:: lenskit.data
 
+.. testsetup::
+
+    import pandas as pd
+    pd.options.display.max_columns = 4
+    pd.options.display.expand_frame_repr = False
+
 LensKit provides a unified data model for recommender systems data along with
 classes and utility functions for working with it, described in this section of
 the manual.
@@ -38,13 +44,13 @@ For example, if you want to get the ratings as a data frame:
 Or obtain item statistics:
 
     >>> mlds.item_stats()
-             record_count  user_count  ...           first_time            last_time
+             record_count  user_count  ...            last_time
     item_id                           ...
-    1                 247         247  ...  1996-03-30 19:00:13  2016-10-06 19:55:11
-    2                 107         107  ...  1996-03-30 19:12:30  2016-08-01 17:42:33
-    3                  59          59  ...  1996-06-05 06:19:04  2016-08-16 22:07:21
-    4                  13          13  ...  1996-06-10 16:45:35  2004-07-27 06:14:12
-    5                  56          56  ...  1996-04-14 14:23:59  2016-08-16 22:15:47
+    1                 247         247  ...  2016-10-06 19:55:11
+    2                 107         107  ...  2016-08-01 17:42:33
+    3                  59          59  ...  2016-08-16 22:07:21
+    4                  13          13  ...  2004-07-27 06:14:12
+    5                  56          56  ...  2016-08-16 22:15:47
     ...
     [9125 rows x 7 columns]
 

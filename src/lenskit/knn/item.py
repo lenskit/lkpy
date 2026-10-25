@@ -13,13 +13,13 @@ from __future__ import annotations
 
 import gc
 import warnings
+from typing import override
 
 import numpy as np
 import pyarrow as pa
 import scipy.sparse.linalg as spla
 from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import coo_array, sparray
-from typing_extensions import override
 
 from lenskit import _accel
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
@@ -27,7 +27,7 @@ from lenskit.data.matrix import SparseRowArray
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger, item_progress, trace
 from lenskit.logging._resource import cur_memory, max_memory
-from lenskit.parallel import ensure_parallel_init
+from lenskit.parallel import ensure_parallel_init, run_accel_task
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
@@ -35,6 +35,7 @@ __all__ = ["ItemKNNConfig", "ItemKNNScorer"]
 
 _log = get_logger(__name__)
 MAX_BLOCKS = 1024
+MISSING_HISTORY_KEY = "lenskit.knn.item.NO_HISTORY"
 
 
 class ItemKNNConfig(BaseModel, extra="forbid"):
@@ -158,8 +159,15 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
         log.info("[%s] computing similarity matrix", timer)
         with item_progress("Neighborhoods", total=n_items) as pb:
-            smat = _accel.knn.compute_similarities(
-                ui_mat, iu_mat, (n_rows, n_items), self.config.min_sim, self.config.save_nbrs, pb
+            smat = run_accel_task(
+                _accel.knn.compute_similarities(
+                    ui_mat,
+                    iu_mat,
+                    (n_rows, n_items),
+                    self.config.min_sim,
+                    self.config.save_nbrs,
+                ),
+                progress=pb,
             )
         log.debug("[%s] computed, memory use %s", timer, max_memory())
         assert isinstance(smat, list)
@@ -217,20 +225,27 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         cmat = rmat / np.maximum(norms, np.finfo("f4").smallest_normal)
         assert cmat.shape == rmat.shape
         log.debug("[%s] normalized, memory use %s", timer, max_memory())
-        return cmat
+        return cmat.astype(np.float32)
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         ensure_parallel_init()
 
+        # A caller that hands us a bare user ID has no history-bearing component in
+        # front of us, so an absent history is a pipeline configuration problem. A
+        # caller that hands us a query has already run one, and an absent history
+        # there just means it found nothing for this user — usually an unknown user.
+        query_supplied = isinstance(query, RecQuery)
         query = RecQuery.create(query)
         log = _log.bind(user_id=query.user_id, n_items=len(items))
         trace(log, "beginning prediction")
 
         ratings = query.query_items
         if ratings is None or len(ratings) == 0:
-            if ratings is None:
-                warnings.warn("no query items, did you omit a history component?", DataWarning)
+            if ratings is None and not query_supplied:
+                log.warning(
+                    "no query items, did you omit a history component?", _batch=MISSING_HISTORY_KEY
+                )
             log.debug("user has no history, returning")
             return ItemList(items, scores=np.nan)
 

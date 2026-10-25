@@ -6,6 +6,7 @@
 
 import logging
 import pickle
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -23,7 +24,7 @@ from lenskit import batch
 from lenskit.als import ImplicitMFScorer
 from lenskit.basic import PopScorer
 from lenskit.basic.topn import TopNRanker
-from lenskit.data import Dataset, ItemList
+from lenskit.data import Dataset, ItemList, ItemListCollection
 from lenskit.logging import get_logger
 from lenskit.operations import recommend
 from lenskit.pipeline import topn_pipeline
@@ -71,7 +72,7 @@ def test_unlimited_ranking(items: ItemList, transform):
         assert not np.any(np.isnan(src_s))
         assert np.all(rank_s == src_s)
     except AssertionError as e:
-        e.add_note("ranked {} items ({} invalid)".format(len(ids), np.sum(invalid)))
+        e.add_note(f"ranked {len(ids)} items ({np.sum(invalid)} invalid)")
         raise e
 
 
@@ -121,6 +122,64 @@ def test_runtime_truncation(n, items: ItemList):
     assert isinstance(ranked, ItemList)
     assert ranked.ordered
     assert len(ranked) == min(n, len(val_items))
+    assert np.all(ranked.ranks() == np.arange(min(n, len(ranked))) + 1)
+
+    # the scores match
+    rank_s = ranked.scores("pandas", index="ids")
+    assert rank_s is not None
+    src_s = items.scores("pandas", index="ids")
+    assert src_s is not None
+    src_s = src_s[src_s.notna()]
+
+    # make sure the scores were preserved properly
+    rank_s, src_s = rank_s.align(src_s, "left")
+    assert not np.any(np.isnan(src_s))
+    assert np.all(rank_s == src_s)
+
+
+def test_observed_order_case(tmp_path: Path):
+    """
+    Test for new ranks with saved original observed error case.
+
+    Adapted from Aishwarya Satwani's test code.
+    """
+    file = tmp_path / "probe.parquet"
+    N = 1000
+    il = ItemList(item_ids=np.arange(N), scores=np.linspace(5, 0, N).astype("f4"), ordered=True)
+    ItemListCollection.from_dict({1: il}, "user_id").save_parquet(file)
+    reloaded = ItemListCollection.load_parquet(file)
+    _, pool = next(iter(reloaded.items()))
+    pool = pool[:100]
+
+    rk = StochasticTopNRanker(n=10, rng=("20250321", "user"), transform="linear")
+    out = rk(pool, query=1)
+
+    assert np.all(out.ranks() == np.arange(1, 11))
+
+
+@given(st.integers(min_value=1, max_value=100), scored_lists(scores="gaussian"))
+def test_ignores_input_order(n, items: ItemList):
+    assert items.ranks() is None
+    items = items.top_n()
+    assert items.ranks() is not None
+    assert np.all(items.ranks() == np.arange(len(items)) + 1)
+
+    rerank = StochasticTopNRanker(n=n, transform="linear")
+    ranked = rerank(items=items)
+
+    ids = items.ids()
+    scores = items.scores("numpy")
+    assert scores is not None
+    invalid = ~np.isfinite(scores)
+    _log.info("top %d of %d items, %d invalid", n, len(ids), np.sum(invalid))
+
+    val_items = items[~invalid]
+
+    # the ranks are correct for final output
+    assert isinstance(ranked, ItemList)
+    assert ranked.ordered
+    assert len(ranked) == min(n, len(val_items))
+    assert np.all(ranked.ranks() == np.arange(min(n, len(ranked))) + 1)
 
     # the scores match
     rank_s = ranked.scores("pandas", index="ids")
@@ -178,7 +237,7 @@ def test_overflow(items: ItemList, scale: float):
         assert not np.any(np.isnan(src_s))
         assert np.all(rank_s == src_s)
     except AssertionError as e:
-        e.add_note("ranked {} items".format(len(ids)))
+        e.add_note(f"ranked {len(ids)} items")
         raise e
 
 

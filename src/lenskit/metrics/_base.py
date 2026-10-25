@@ -6,7 +6,8 @@
 
 # pyright: strict
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Mapping, Protocol, override
+from collections.abc import Mapping
+from typing import Any, ClassVar, Protocol, override
 
 from lenskit.data import ItemList
 from lenskit.data.accum import (

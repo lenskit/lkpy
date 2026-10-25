@@ -7,6 +7,7 @@
 """
 Hypothesis strategies that generate arrays and lists.
 """
+# ruff: noqa: B008
 
 from typing import Literal
 
@@ -18,7 +19,6 @@ import hypothesis.strategies as st
 from hypothesis import assume
 
 from lenskit.data import ItemList
-from lenskit.math.sparse import torch_sparse_from_scipy
 
 
 @st.composite
@@ -74,17 +74,6 @@ def sparse_arrays(draw, *, layout="csr", **kwargs):
             return M
         case _:
             raise ValueError(f"invalid layout {layout}")
-
-
-@st.composite
-def sparse_tensors(draw, *, layout="csr", **kwargs):
-    if isinstance(layout, list):
-        layout = st.sampled_from(layout)
-    if isinstance(layout, st.SearchStrategy):
-        layout = draw(layout)
-
-    M: sps.coo_array = draw(coo_arrays(**kwargs))
-    return torch_sparse_from_scipy(M, layout)  # type: ignore
 
 
 @st.composite

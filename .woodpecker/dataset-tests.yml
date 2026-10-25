@@ -1,0 +1,24 @@
+when:
+  - event: push
+    branch: main
+  - event: pull_request
+  - event: manual
+
+labels:
+  backend: docker
+
+steps:
+  - name: build and run tests
+    image: codeberg.org/mdekstrand/woodpecker-just:v1-f44-rust
+    pull: true
+    settings:
+      task: ci-run data-tests
+      uv: no
+
+  - name: upload code coverage
+    image: woodpeckerci/plugin-codecov
+    settings:
+      files:
+        - coverage.xml
+      token:
+        from_secret: codecov-token

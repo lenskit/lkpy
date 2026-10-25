@@ -11,7 +11,7 @@ from lenskit.data import Dataset
 from lenskit.data.matrix import SparseRowArray
 from lenskit.knn.slim import SLIMConfig, SLIMScorer
 from lenskit.logging import get_logger
-from lenskit.parallel.config import ensure_parallel_init
+from lenskit.parallel import ensure_parallel_init, run_accel_task
 from lenskit.testing import ScorerTests
 
 _log = get_logger(__name__)
@@ -23,7 +23,7 @@ def test_slim_trainer(ml_ds: Dataset):
     ui_matrix = ml_ds.interactions().matrix().csr_structure(format="arrow")
     iu_matrix = ui_matrix.transpose()
 
-    result = _slim_accel.train_slim(ui_matrix, iu_matrix, 0.005, 0.01, 10, 100, None)
+    result = run_accel_task(_slim_accel.train_slim(ui_matrix, iu_matrix, 0.005, 0.01, 10, 100))
     result = pa.chunked_array(result).combine_chunks()
     result = SparseRowArray.from_array(result)
     assert isinstance(result, SparseRowArray)

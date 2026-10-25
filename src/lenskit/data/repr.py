@@ -71,14 +71,14 @@ class ReprIndenter:
         self.writer.current_indent += self.size
         return self
 
-    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: TracebackType):
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: TracebackType | None):
         self.writer.current_indent -= self.size
 
 
 @dataclass
 class ObjectRepr:
     tag: str
-    words: Sequence[str] = tuple()
+    words: Sequence[str] = ()
     comment: str | None = None
     attrs: Mapping[str, Any] | None = None
     _string: None = None
@@ -101,7 +101,7 @@ class ObjectRepr:
                         vor.write(writer)
                         writer.writeln()
                     else:
-                        writer.writeln(f"{k}: {repr(v)}")
+                        writer.writeln(f"{k}: {v!r}")
             writer.write("}")
 
         writer.write(">")

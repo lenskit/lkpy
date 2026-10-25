@@ -4,10 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from pytest import fail, raises
+from pytest import fail, mark, raises
 
 from lenskit.diagnostics import PipelineError
 from lenskit.pipeline import PipelineBuilder
+
+pytestmark = mark.filterwarnings("ignore:component.*is local:lenskit.diagnostics.PipelineWarning")
 
 
 def test_fallback_input():

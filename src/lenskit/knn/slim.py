@@ -8,8 +8,6 @@
 Sparse LInear Methods for Recommendation :cite:p:`ningSLIMSparseLinear2011`.
 """
 
-import warnings
-
 import numpy as np
 import pyarrow as pa
 from pydantic import BaseModel, PositiveFloat, PositiveInt
@@ -18,14 +16,14 @@ from scipy.sparse import csr_array
 from lenskit._accel import slim as _slim_accel
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
-from lenskit.diagnostics import DataWarning
-from lenskit.logging import get_logger, item_progress
-from lenskit.parallel.config import ensure_parallel_init
+from lenskit.logging import Stopwatch, get_logger, item_progress
+from lenskit.parallel import ensure_parallel_init, run_accel_task
 from lenskit.pipeline.components import Component
 from lenskit.training import Trainable, TrainingOptions
 
 __all__ = ["SLIMConfig", "SLIMScorer"]
 _log = get_logger(__name__)
+MISSING_HISTORY_KEY = "lenskit.knn.slim.NO_HISTORY"
 
 
 class SLIMConfig(BaseModel):
@@ -83,12 +81,16 @@ class SLIMScorer(Component, Trainable):
     config: SLIMConfig
 
     weights: csr_array
+    """
+    The *transposed* SLIM weight matrix.  That is, :math:`w_{ij}` is the weight
+    to predict item :math:`j` using :math:`w_i`, not the other way around.
+    """
     items: Vocabulary
 
     def is_trained(self) -> bool:
         return hasattr(self, "weights")
 
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         ensure_parallel_init()
         ui_matrix = data.interactions().matrix().csr_structure(format="arrow")
         _log.info(
@@ -98,26 +100,30 @@ class SLIMScorer(Component, Trainable):
         )
         iu_matrix = ui_matrix.transpose()
 
+        timer = Stopwatch()
         with item_progress("SLIM vectors", ui_matrix.dimension) as pb:
-            weights = _slim_accel.train_slim(
-                ui_matrix,
-                iu_matrix,
-                self.config.l1_reg,
-                self.config.l2_reg,
-                self.config.max_iters,
-                self.config.max_nbrs,
-                pb,
+            weights = run_accel_task(
+                _slim_accel.train_slim(
+                    ui_matrix,
+                    iu_matrix,
+                    self.config.l1_reg,
+                    self.config.l2_reg,
+                    self.config.max_iters,
+                    self.config.max_nbrs,
+                ),
+                progress=pb,
             )
         weights = pa.chunked_array(weights).combine_chunks()
         weights = SparseRowArray.from_array(weights)
-        _log.info("learned %d SLIM weights", weights.nnz)
+        _log.info("learned %d SLIM weights in %s", weights.nnz, timer)
         self.weights = weights = weights.to_scipy().T.tocsr()
         self.items = data.items
 
     def __call__(self, query: RecQuery, items: ItemList) -> ItemList:
         u_items = query.query_items
+        log = _log.bind(user_id=query.user_id)
         if u_items is None:
-            warnings.warn("no user history available", DataWarning)
+            log.warning("no user history available", _batch=MISSING_HISTORY_KEY)
             return ItemList(items, scores=np.nan)
 
         if len(u_items) == 0:
@@ -127,13 +133,16 @@ class SLIMScorer(Component, Trainable):
         # get user item numbers
         u_inos = u_items.numbers(vocabulary=self.items, missing="negative")
         u_inos = u_inos[u_inos >= 0]
+        u_n = len(u_inos)
+        tot_n = len(self.items)
 
         # prepare our initial matrix
-        x = np.zeros(len(self.items))
-        x[u_inos] = 1
+        x = csr_array((np.ones(u_n, dtype=np.float32), u_inos, [0, u_n]), shape=(1, tot_n))
 
         # compute the scores
         all_scores = x @ self.weights
+        assert all_scores.shape == (1, tot_n)
+        all_scores = all_scores.toarray()[0, :]
 
         # finalize result
         scores = np.full(len(items), np.nan, np.float32)

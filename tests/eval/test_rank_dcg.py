@@ -15,15 +15,22 @@ from lenskit.metrics.ranking import DCG
 from lenskit.metrics.ranking._dcg import array_dcg, fixed_dcg
 
 
-@mark.parametrize("method", ["graded", "binary"])
-def test_array_dcg_empty(method):
-    "empty should be zero"
-    assert array_dcg(np.array([]), graded=method == "graded") == approx(0)
+@mark.parametrize(
+    "scores, graded, expected",
+    [
+        (np.array([]), False, np.nan),
+        (np.array([]), True, np.nan),
+        (np.zeros(10), False, 0),
+        (np.zeros(10), True, 0),
+    ],
+)
+def test_array_dcg_edge_cases(scores, graded, expected):
+    val = array_dcg(scores, graded=graded)
 
-
-@mark.parametrize("method", ["graded", "binary"])
-def test_array_dcg_zeros(method):
-    assert array_dcg(np.zeros(10), graded=method == "graded") == approx(0)
+    if np.isnan(expected):
+        assert np.isnan(val)
+    else:
+        assert val == approx(expected)
 
 
 @mark.parametrize("method", ["graded", "binary"])
@@ -42,17 +49,6 @@ def test_array_dcg_mult():
     "multiple elements should score correctly"
     assert array_dcg(np.array([np.e, np.pi])) == approx(np.e + np.pi)
     assert array_dcg(np.array([np.e, 0, 0, np.pi])) == approx(np.e + np.pi / np.log2(4))
-
-
-@mark.parametrize("method", ["graded", "binary"])
-def test_array_dcg_empty2(method):
-    "empty should be zero"
-    assert array_dcg(np.array([]), graded=method == "graded") == approx(0)
-
-
-@mark.parametrize("method", ["graded", "binary"])
-def test_array_dcg_zeros2(method):
-    assert array_dcg(np.zeros(10), graded=method == "graded") == approx(0)
 
 
 def test_array_dcg_nan():

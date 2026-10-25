@@ -16,7 +16,7 @@ pub struct IndirectMinHeap<K: Copy, V: PartialOrd + Copy, F: Fn(K) -> V> {
     lookup: F,
 }
 
-impl<'f, K: Copy, V: PartialOrd + Copy, F: Fn(K) -> V> IndirectMinHeap<K, V, F> {
+impl<K: Copy, V: PartialOrd + Copy, F: Fn(K) -> V> IndirectMinHeap<K, V, F> {
     /// Create a new min heap with the specified size and value lookup function.
     pub fn create(size: usize, lookup: F) -> Self {
         IndirectMinHeap {
@@ -45,12 +45,9 @@ impl<'f, K: Copy, V: PartialOrd + Copy, F: Fn(K) -> V> IndirectMinHeap<K, V, F> 
         } else {
             // heap is full, new value belongs — replace + adjust
             let kv = (self.lookup)(key);
-            match kv.partial_cmp(&self.value_for_position(0)) {
-                Some(Ordering::Greater) => {
-                    self.keys[0] = key;
-                    self.downheap(0, self.size);
-                }
-                _ => (),
+            if let Some(Ordering::Greater) = kv.partial_cmp(&self.value_for_position(0)) {
+                self.keys[0] = key;
+                self.downheap(0, self.size);
             }
         }
     }
@@ -74,21 +71,15 @@ impl<'f, K: Copy, V: PartialOrd + Copy, F: Fn(K) -> V> IndirectMinHeap<K, V, F> 
 
         if left < lim {
             let lv = self.value_for_position(left);
-            match lv.partial_cmp(&mv) {
-                Some(Ordering::Less) => {
-                    min = left;
-                    mv = lv;
-                }
-                _ => (),
+            if let Some(Ordering::Less) = lv.partial_cmp(&mv) {
+                min = left;
+                mv = lv;
             }
         }
         if right < lim {
             let rv = self.value_for_position(right);
-            match rv.partial_cmp(&mv) {
-                Some(Ordering::Less) => {
-                    min = right;
-                }
-                _ => (),
+            if let Some(Ordering::Less) = rv.partial_cmp(&mv) {
+                min = right;
             }
         }
 
@@ -103,12 +94,9 @@ impl<'f, K: Copy, V: PartialOrd + Copy, F: Fn(K) -> V> IndirectMinHeap<K, V, F> 
             let parent = (pos - 1) / 2;
             let pv = self.value_for_position(parent);
             let mv = self.value_for_position(pos);
-            match pv.partial_cmp(&mv) {
-                Some(Ordering::Greater) => {
-                    self.keys.swap(pos, parent);
-                    self.upheap(parent);
-                }
-                _ => (),
+            if let Some(Ordering::Greater) = pv.partial_cmp(&mv) {
+                self.keys.swap(pos, parent);
+                self.upheap(parent);
             }
         }
     }

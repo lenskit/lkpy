@@ -4,7 +4,6 @@
     "ms-python.python",
     "charliermarsh.ruff",
     "redhat.vscode-yaml",
-    "tamasfe.even-better-toml",
     "ms-toolsai.jupyter",
     "trond-snekvik.simple-rst",
     "rust-lang.rust-analyzer",

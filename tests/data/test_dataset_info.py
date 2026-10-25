@@ -23,7 +23,7 @@ from lenskit.data._attributes import (
     EntitySparseAttribute,
     EntityVectorAttribute,
 )
-from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings
 
 from ..movielens.test_ml20m import ml20m
 

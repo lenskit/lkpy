@@ -8,7 +8,7 @@
 use std::cmp::min;
 
 use arrow::{
-    array::{make_array, ArrayData},
+    array::{ArrayData, make_array},
     pyarrow::PyArrowType,
     row::{RowConverter, SortField},
 };
@@ -20,6 +20,7 @@ mod cooc;
 mod coordinates;
 mod index;
 mod pairs;
+mod pyon;
 mod sampling;
 mod scatter;
 mod selection;
@@ -48,6 +49,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     data.add_function(wrap_pyfunction!(cooc::count_cooc, &data)?)?;
     data.add_function(wrap_pyfunction!(cooc::dense_cooc, &data)?)?;
     data.add_function(wrap_pyfunction!(hash_array, &data)?)?;
+    data.add_function(wrap_pyfunction!(pyon::pyon_loads, &data)?)?;
 
     Ok(())
 }
@@ -72,5 +74,5 @@ fn hash_array(arr: PyArrowType<ArrayData>) -> PyResult<String> {
         start += bsize;
     }
 
-    Ok(hex::encode(&hash.finalize()))
+    Ok(hex::encode(hash.finalize()))
 }

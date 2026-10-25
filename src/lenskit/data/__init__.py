@@ -34,42 +34,46 @@ from ._items import ItemList
 from ._query import QueryInput, QueryItemSource, RecQuery
 from ._relationships import MatrixRelationshipSet, RelationshipSet
 from ._vocab import Vocabulary
-from .amazon import load_amazon_ratings
-from .movielens import load_movielens, load_movielens_df
+from ._xopen import xopen
 from .msweb import load_ms_web
+from .sources.amazon import load_amazon_ratings
+from .sources.movielens import load_movielens, load_movielens_df
+from .sources.steam import load_steam
 from .types import ID, NPID, FeedbackType
 
 __all__ = [
-    "Dataset",
-    "DatasetBuilder",
-    "DataContainer",
-    "EntitySet",
-    "RelationshipSet",
-    "MatrixRelationshipSet",
-    "EntityAttribute",
-    "FieldError",
-    "from_interactions_df",
     "ID",
     "NPID",
+    "BatchedRange",
+    "DataContainer",
+    "Dataset",
+    "DatasetBuilder",
+    "EntityAttribute",
+    "EntitySet",
     "FeedbackType",
+    "FieldError",
+    "GenericKey",
     "ItemList",
     "ItemListCollection",
     "ItemListCollector",
-    "MutableItemListCollection",
     "ListILC",
-    "UserIDKey",
+    "MatrixRelationshipSet",
+    "MutableItemListCollection",
     "QueryIDKey",
-    "GenericKey",
-    "key_dict",
-    "load_movielens",
-    "load_movielens_df",
-    "load_amazon_ratings",
-    "load_ms_web",
-    "flatten_dict",
-    "unflatten_dict",
-    "Vocabulary",
-    "RecQuery",
     "QueryInput",
     "QueryItemSource",
-    "BatchedRange",
+    "RecQuery",
+    "RelationshipSet",
+    "UserIDKey",
+    "Vocabulary",
+    "flatten_dict",
+    "from_interactions_df",
+    "key_dict",
+    "load_amazon_ratings",
+    "load_movielens",
+    "load_movielens_df",
+    "load_ms_web",
+    "load_steam",
+    "unflatten_dict",
+    "xopen",
 ]

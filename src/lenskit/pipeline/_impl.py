@@ -7,22 +7,15 @@
 # pyright: strict
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import replace
 from graphlib import TopologicalSorter
 from os import PathLike
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal, overload
 from uuid import NAMESPACE_URL, uuid5
 
 from numpy.random import BitGenerator, Generator, SeedSequence
-from typing_extensions import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    Mapping,
-    TypeAlias,
-    overload,
-)
 
 from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError
@@ -48,20 +41,20 @@ _log = get_logger(__name__)
 
 
 NAMESPACE_LITERAL_DATA = uuid5(NAMESPACE_URL, "https://ns.lenskit.org/literal-data/")
-CloneMethod: TypeAlias = Literal["config", "pipeline-config"]
+type CloneMethod = Literal["config", "pipeline-config"]
 
 
 class Pipeline:
     """
     LensKit recommendation pipeline.  This is the core abstraction for using
     LensKit models and other components to produce recommendations in a useful
-    way.  It allows you to wire together components in (mostly) abitrary graphs,
+    way.  It allows you to wire together components in (mostly) arbitrary graphs,
     train them on data, and serialize pipelines to disk for use elsewhere.
 
     Pipelines should not be directly instantiated; they must be built with a
     :class:`~lenskit.pipeline.PipelineBuilder` class, or loaded from a
     configuration with :meth:`from_config`. If you have a scoring model and just
-    want to generate recommenations with a default setup and minimal
+    want to generate recommendations with a default setup and minimal
     configuration, see :func:`~lenskit.pipeline.topn_pipeline` or
     :class:`~lenskit.pipeline.RecPipelineBuilder`.
 
@@ -72,7 +65,7 @@ class Pipeline:
         Caller
     """
 
-    _config: config.PipelineConfig
+    _config: PipelineConfig
     _nodes: dict[str, Node[Any]]
     _edges: dict[str, dict[str, str]]
     _aliases: dict[str, Node[Any]]
@@ -82,7 +75,7 @@ class Pipeline:
 
     def __init__(
         self,
-        config: config.PipelineConfig,
+        config: PipelineConfig,
         nodes: Iterable[Node[Any]],
         *,
         run_hooks: RunHooks,
@@ -90,7 +83,7 @@ class Pipeline:
         self._nodes = {}
         for node in nodes:
             if isinstance(node, ComponentConstructorNode):
-                raise RuntimeError("pipeline is not fully instantiated")
+                raise RuntimeError("pipeline is not fully instantiated")  # ruff: ignore[type-check-without-type-error]
             self._nodes[node.name] = node
         self._edges = {name: cc.inputs for (name, cc) in config.components.items()}
 
@@ -292,15 +285,15 @@ class Pipeline:
                 configuration.
 
         Returns:
-            The consructed pipeline.
+            The constructed pipeline.
 
         See Also:
             :meth:`from_config` for the actual pipeline instantiation logic.
         """
         from ._builder import PipelineBuilder
 
-        bld = PipelineBuilder.load_config(cfg_file)
-        return bld.build()
+        builder = PipelineBuilder.load_config(cfg_file)
+        return builder.build()
 
     def modify(self) -> PipelineBuilder:
         """
@@ -364,7 +357,7 @@ class Pipeline:
                     clog = log.bind(name=name, component=comp)
                     if isinstance(comp, Trainable):
                         if comp.is_trained() and not options.retrain:
-                            clog.debug("component is already, traine3d skipping")
+                            clog.debug("component is already trained, skipping")
                         else:
                             # spawn new seed if needed
                             c_opts = (
@@ -421,7 +414,7 @@ class Pipeline:
             kwargs:
                 The pipeline's inputs, as defined with :meth:`create_input`.
                 These are passed as-is to :meth:`run_all`, so they can also
-                contain auxillary options like `_profile`.
+                contain auxiliary options like `_profile`.
 
         Returns:
             The pipeline result.  If no nodes are supplied, this is the result
@@ -444,7 +437,7 @@ class Pipeline:
                 node_list = [self._default]
             else:
                 raise RuntimeError("no node specified and pipeline has no default")
-        elif isinstance(nodes, str) or isinstance(nodes, Node):
+        elif isinstance(nodes, (str, Node)):
             node_list = [nodes]
         else:
             node_list = nodes

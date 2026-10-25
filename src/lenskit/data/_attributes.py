@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,6 @@ import pyarrow.compute as pc
 import torch
 from numpy.typing import NDArray
 from scipy.sparse import csr_array
-from typing_extensions import Any
 
 from lenskit.torch import safe_tensor
 

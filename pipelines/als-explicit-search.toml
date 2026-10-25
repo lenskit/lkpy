@@ -1,0 +1,11 @@
+[search]
+max_points = 30
+metric = "RMSE"
+
+[space.scorer]
+embedding_size_exp = { type = "int", min = 3, max = 8 }
+regularization.user = { type = "float", min = 1e-4, max = 1, scale = "log" }
+regularization.item = { type = "float", min = 1e-4, max = 1, scale = "log" }
+
+[pipeline]
+file = "als-explicit.toml"

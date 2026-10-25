@@ -11,7 +11,8 @@ Vocabularies of IDs, tags, etc.
 # pyright: basic
 from __future__ import annotations
 
-from typing import Hashable, Iterable, Iterator, Literal, Sequence, overload
+from collections.abc import Hashable, Iterable, Iterator, Sequence, Sized
+from typing import Any, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -85,7 +86,7 @@ class Vocabulary:
         elif isinstance(keys, pd.Index):
             self._pd_index = keys
             key_arr = pa.array(keys.values)
-        elif isinstance(keys, np.ndarray) or isinstance(keys, list) or isinstance(keys, pd.Series):
+        elif isinstance(keys, (np.ndarray, list, pd.Series)):
             key_arr = pa.array(keys)  # type: ignore
         elif isinstance(keys, pa.ChunkedArray):
             key_arr = keys.combine_chunks()
@@ -165,12 +166,15 @@ class Vocabulary:
     ) -> np.ndarray[tuple[int], np.dtype[np.int32]] | pa.Int32Array:
         "Look up the numbers for an array of terms or IDs."
         if pa.types.is_null(self._array.type):
-            nums = pa.nulls(len(terms), type=pa.int32())
+            nums = pa.nulls(len(cast(Sized, terms)), type=pa.int32())
         else:
-            term_arr = pa.array(terms)  # type: ignore
-            nums = self._index.get_indexes(term_arr)  # type: ignore
+            term_arr = pa.array(cast(Any, terms))
+            if isinstance(term_arr, pa.ChunkedArray):
+                term_arr = term_arr.combine_chunks()
 
-        trace(self._log, "resolved %d IDs, %d invalid", len(terms), nums.null_count)
+            nums = self._index.get_indexes(term_arr)
+
+        trace(self._log, "resolved %d IDs, %d invalid", len(cast(Sized, terms)), nums.null_count)
         if missing == "error" and nums.null_count:
             raise KeyError(f"{nums.null_count} invalid keys")
         elif missing == "negative":
@@ -267,7 +271,7 @@ class Vocabulary:
     def id_array(self) -> pa.Array:
         return self._array
 
-    def __eq__(self, other: Vocabulary) -> bool:  # noqa: F821
+    def __eq__(self, other: Vocabulary) -> bool:
         if self is other:
             return True
         elif not isinstance(other, Vocabulary):

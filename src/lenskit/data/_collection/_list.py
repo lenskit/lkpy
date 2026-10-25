@@ -11,6 +11,7 @@ from typing import Any, Generic, overload
 import pandas as pd
 import pyarrow as pa
 
+from lenskit.data.types import AliasedColumn
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
 
@@ -23,7 +24,7 @@ from ._keys import ID, GenericKey, K, Ko, create_key_type, key_dict, key_fields
 _log = get_logger(__name__)
 
 
-class ListILC(MutableItemListCollection[K], Generic[K]):
+class ListILC(MutableItemListCollection[K], Generic[K]):  # ruff: ignore[non-pep695-generic-class]
     """
     Mutable item list collection backed by a Python list.
     """
@@ -71,7 +72,7 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
             ilc = ListILC(key)
         else:
             k = next(iter(data.keys()))
-            if isinstance(k, tuple) and getattr(k, "_fields"):
+            if isinstance(k, tuple) and k._fields:
                 ilc = ListILC(type(k))
             else:
                 warnings.warn(
@@ -122,7 +123,7 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
                     "no key specified, inferring from _id columns", DataWarning, stacklevel=2
                 )
                 key = [n for n in df.columns if n.endswith("_id") and n != "item_id"]
-            elif isinstance(key, Column):
+            elif isinstance(key, (str, AliasedColumn)):
                 key = [key]
             columns = tuple(key) + others
             fields = [column_name(c) for c in key]

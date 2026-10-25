@@ -11,13 +11,13 @@ LensKit logging processors and converters.
 import multiprocessing as mp
 import re
 from collections import deque
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
 from structlog.typing import EventDict
 
-LOGGED_ERRORS = deque([], 5)
+LOGGED_ERRORS = deque(maxlen=5)
 _WARN_CODE_RE = re.compile(r"\s+\((LKW-\w+)\)$")
 
 
@@ -37,7 +37,7 @@ def remove_internal(logger: Any, method: str, event_dict: EventDict) -> EventDic
     Filter out “internal” attrs (beginning with ``_``) for console logging.
     """
 
-    to_del = [k for k in event_dict.keys() if k.startswith("_")]
+    to_del = [k for k in event_dict if k.startswith("_")]
     for k in to_del:
         del event_dict[k]
 
@@ -50,7 +50,7 @@ def format_timestamp(logger: Any, method: str, event_dict: EventDict) -> EventDi
     """
 
     if "timestamp" in event_dict:
-        stamp = datetime.fromtimestamp(event_dict["timestamp"])
+        stamp = datetime.fromtimestamp(event_dict["timestamp"], tz=UTC)
         event_dict = dict(event_dict)
         event_dict["timestamp"] = stamp.isoformat(timespec="seconds")
         return event_dict

@@ -38,14 +38,19 @@ pub enum SolveError {
 
 /// Wrapper for LAPACK solver functions.
 #[derive(Clone, Copy)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct POSV {
     lapack_fn: LapackSPOSV,
 }
 
 impl POSV {
     pub fn load<'py>(py: Python<'py>) -> PyResult<POSV> {
-        let ptr = resolve_ffi_funptr(py, "scipy.linalg.cython_lapack", "sposv",
-         "void (char *, int *, int *, __pyx_t_5scipy_6linalg_13cython_lapack_s *, int *, __pyx_t_5scipy_6linalg_13cython_lapack_s *, int *, int *)")?;
+        let ptr = resolve_ffi_funptr(
+            py,
+            "scipy.linalg.cython_lapack",
+            "sposv",
+            "void (char *, int *, int *, __pyx_t_5scipy_6linalg_13cython_lapack_s *, int *, __pyx_t_5scipy_6linalg_13cython_lapack_s *, int *, int *)",
+        )?;
         Ok(POSV {
             // ugly but it's how we translate void* to a function pointer
             lapack_fn: unsafe { transmute_copy(&ptr) },
@@ -101,8 +106,8 @@ impl POSV {
     }
 }
 
-impl Into<PyErr> for SolveError {
-    fn into(self) -> PyErr {
-        PyRuntimeError::new_err(format!("LAPACK error: {}", self))
+impl From<SolveError> for PyErr {
+    fn from(val: SolveError) -> Self {
+        PyRuntimeError::new_err(format!("LAPACK error: {}", val))
     }
 }

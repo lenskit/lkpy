@@ -294,7 +294,7 @@ class MonitorThread(threading.Thread):
                     with self.msg_condition:
                         self.last_msg = now_ns
                         self.msg_condition.notify_all()
-                except Exception as e:
+                except Exception as e:  # ruff: ignore[blind-except]
                     _log.error("error handling message", exc_info=e)
 
             if not ready:
@@ -381,5 +381,5 @@ class MonitorThread(threading.Thread):
         for obj in objs:
             try:
                 obj.monitor_refresh()
-            except Exception as e:
+            except Exception as e:  # ruff: ignore[blind-except]
                 _log.warning("failed to refresh %s: %s", obj, e)

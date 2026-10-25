@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: MIT
 
 use arrow::datatypes::DataType;
-use arrow_schema::extension::ExtensionType;
 use arrow_schema::ArrowError;
+use arrow_schema::extension::ExtensionType;
 
 use super::SparseIndexType;
 
@@ -49,7 +49,7 @@ impl TryFrom<&DataType> for SparseIndexListType {
     type Error = ArrowError;
 
     fn try_from(value: &DataType) -> Result<Self, Self::Error> {
-        Self::try_new(&value, ())
+        Self::try_new(value, ())
     }
 }
 
@@ -97,7 +97,7 @@ impl ExtensionType for SparseIndexListType {
                 return Err(ArrowError::InvalidArgumentError(format!(
                     "unsupported data type {}",
                     data_type
-                )))
+                )));
             }
         };
 

@@ -1,14 +1,13 @@
-from __future__ import annotations
-
 import numpy as np
 import pyarrow as pa
+from pydantic import JsonValue
 from typing_extensions import TypeVar
 
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import ID
-from lenskit.logging import Progress
+from lenskit.parallel import AccelTask
 
-A = TypeVar("A", bound=pa.Array, default=pa.Array)
+_A = TypeVar("_A", bound=pa.Array, default=pa.Array)
 
 def transpose_csr(
     matrix: SparseRowArray, permute: bool
@@ -20,7 +19,6 @@ def negative_mask(n: int, indices: pa.Int32Array) -> pa.BooleanArray:
     """
     Efficiently create a boolean array that is true everywhere except ``indices``.
     """
-    ...
 
 def count_cooc(
     n_groups: int,
@@ -30,8 +28,7 @@ def count_cooc(
     *,
     ordered: bool = False,
     diagonal: bool = True,
-    progress: Progress | None,
-) -> list[pa.RecordBatch]: ...
+) -> AccelTask[list[pa.RecordBatch]]: ...
 def dense_cooc(
     n_groups: int,
     n_items: int,
@@ -39,10 +36,17 @@ def dense_cooc(
     cols: pa.Int32Array,
     *,
     diagonal: bool = True,
-    progress: Progress | None,
-) -> np.ndarray[tuple[int, int], np.dtype[np.float32]]: ...
-def scatter_array(dst: A, idx: pa.Array, src: A) -> A: ...
-def scatter_array_empty(dst_size: int, idx: pa.Array, src: A) -> A: ...
+) -> AccelTask[np.ndarray[tuple[int, int], np.dtype[np.float32]]]: ...
+def scatter_array(dst: _A, idx: pa.Array, src: _A) -> _A:
+    """
+    Create a new array merging a base array with the scattered content of a second array.
+    """
+
+def scatter_array_empty(dst_size: int, idx: pa.Array, src: _A) -> _A:
+    """
+    Scatter array elements into a new, otherwise-empty array.
+    """
+
 def sample_negatives(
     coords: CoordinateTable,
     rows: np.ndarray[tuple[int], np.dtype[np.int32]],
@@ -54,6 +58,7 @@ def sample_negatives(
     seed: int,
 ) -> np.ndarray[tuple[int, int], np.dtype[np.int32]]: ...
 def hash_array(arr: pa.Array, /) -> str: ...
+def pyon_loads(data: str) -> JsonValue: ...
 
 class IDIndex:
     """

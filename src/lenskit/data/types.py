@@ -11,52 +11,52 @@ Basic data types used in data representations.
 # pyright: strict
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Generic, NamedTuple
+from typing import Any, Literal, NamedTuple, TypeAlias
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from typing_extensions import Any, Literal, Sequence, TypeAlias, TypeVar
+from typing_extensions import TypeVar
 
 __all__ = [
-    "FeedbackType",
+    "DF_FORMAT",
     "ID",
+    "LAYOUT",
+    "MAT_FORMAT",
     "NPID",
+    "AliasedColumn",
+    "Extent",
+    "FeedbackType",
     "IDArray",
     "IDSequence",
     "NPMatrix",
     "NPVector",
-    "DF_FORMAT",
-    "MAT_FORMAT",
-    "LAYOUT",
-    "AliasedColumn",
     "UIPair",
-    "Extent",
 ]
 
-FeedbackType: TypeAlias = Literal["explicit", "implicit"]
+type FeedbackType = Literal["explicit", "implicit"]
 "Types of feedback supported."
 
-CoreID: TypeAlias = int | str | bytes
+type CoreID = int | str | bytes
 "Core (non-NumPy) identifier types."
-NPID: TypeAlias = np.integer[Any] | np.str_ | np.bytes_ | np.object_
+type NPID = np.integer[Any] | np.str_ | np.bytes_ | np.object_
 "NumPy entity identifier types."
-ID: TypeAlias = CoreID | NPID
+type ID = CoreID | NPID
 "Allowable identifier types."
-IDArray: TypeAlias = np.ndarray[tuple[int], np.dtype[NPID]]
+type IDArray = np.ndarray[tuple[int], np.dtype[NPID]]
 "NumPy arrays of identifiers."
-IDSequence: TypeAlias = """
+type IDSequence = (
     Sequence[ID]
     | IDArray
     | pa.StringArray
     | pa.IntegerArray[Any]
     | pa.ChunkedArray[Any]
     | pd.Series[CoreID]
-    """
+)
 "Sequences of identifiers."
 
-_UIPT = TypeVar("_UIPT")
 V = TypeVar("V", bound=np.number[Any], default=np.float32)
 NPMatrix: TypeAlias = np.ndarray[tuple[int, int], np.dtype[V]]
 NPVector: TypeAlias = np.ndarray[tuple[int], np.dtype[V]]
@@ -83,17 +83,17 @@ class AliasedColumn:
     "Whether to warn when using an alias."
 
 
-Column: TypeAlias = str | AliasedColumn
+type Column = str | AliasedColumn
 
 
 @dataclass(frozen=True)
-class UIPair(Generic[_UIPT]):
+class UIPair[T]:
     """
     A user-item pair of values.
     """
 
-    user: _UIPT
-    item: _UIPT
+    user: T
+    item: T
 
 
 class Extent(NamedTuple):

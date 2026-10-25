@@ -11,15 +11,15 @@ use log::*;
 
 use arrow::{
     array::{
-        downcast_array, Array, ArrowPrimitiveType, GenericListArray, Int32Array, OffsetSizeTrait,
-        PrimitiveArray, StructArray,
+        Array, ArrowPrimitiveType, GenericListArray, Int32Array, OffsetSizeTrait, PrimitiveArray,
+        StructArray, downcast_array,
     },
     datatypes::{DataType, Float32Type},
 };
-use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
+use pyo3::exceptions::PyTypeError;
 
-use crate::arrow::{lists::ExtractListArray, SparseIndexListType, SparseRowType};
+use crate::arrow::{SparseIndexListType, SparseRowType, lists::ExtractListArray};
 use crate::ok_or_pyerr;
 
 use super::SparseIndexType;
@@ -32,6 +32,7 @@ pub enum IxVar<T32, T64> {
 }
 
 /// A compressed sparse row matrix with only structure, not values.
+#[derive(Clone)]
 pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
     pub n_rows: usize,
     pub n_cols: usize,
@@ -49,6 +50,7 @@ pub struct CSRMatrix<Ix: OffsetSizeTrait = i32, V: ArrowPrimitiveType = Float32T
 }
 
 /// Common methods for compressed sparse row matrices.
+#[allow(clippy::upper_case_acronyms)]
 pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
     /// Get the underlying Arrow array of rows.
     fn array(&self) -> &GenericListArray<Ix>;

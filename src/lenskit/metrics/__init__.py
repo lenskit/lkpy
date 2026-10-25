@@ -9,14 +9,14 @@ Metrics for evaluating recommender outputs.
 """
 
 import warnings
-from typing import Callable
+from collections.abc import Callable
 
 from lenskit.data import ItemList
 
 from ._base import ListMetric, Metric, MetricFunction, MetricResult, MetricVal
 from ._collect import MeasurementCollector, RunMetrics
 from ._quick import quick_measure_model
-from .basic import ListLength, TestItemCount
+from .basic import ListLength, TestItemCount, UniqueItemCount
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
 from .ranking import (
@@ -30,6 +30,7 @@ from .ranking import (
     Hit,
     ListGini,
     LogRankWeight,
+    LogRBP,
     MeanPopRank,
     Precision,
     RankBiasedEntropy,
@@ -41,39 +42,41 @@ from .ranking import (
 from .reranking import least_item_promoted, rank_biased_overlap
 
 __all__ = [
+    "DCG",
+    "ILS",
+    "MAE",
+    "NDCG",
+    "RBP",
+    "RMSE",
+    "Entropy",
+    "ExposureGini",
+    "GeometricRankWeight",
+    "Hit",
+    "ListGini",
+    "ListLength",
+    "ListMetric",
+    "LogRBP",
+    "LogRankWeight",
+    "MeanPopRank",
+    "MeasurementCollector",
     "Metric",
     "MetricFunction",
     "MetricResult",
     "MetricVal",
-    "MeasurementCollector",
-    "RunMetrics",
-    "ListMetric",
-    "RankingMetricBase",
-    "RunAnalysis",
-    "RunAnalysisResult",
-    "ListLength",
-    "TestItemCount",
-    "RankWeight",
-    "GeometricRankWeight",
-    "LogRankWeight",
-    "RMSE",
-    "MAE",
-    "NDCG",
-    "DCG",
-    "RBP",
-    "Hit",
     "Precision",
+    "RankBiasedEntropy",
+    "RankWeight",
+    "RankingMetricBase",
     "Recall",
     "RecipRank",
-    "MeanPopRank",
-    "ListGini",
-    "ExposureGini",
-    "quick_measure_model",
+    "RunAnalysis",
+    "RunAnalysisResult",
+    "RunMetrics",
+    "TestItemCount",
+    "UniqueItemCount",
     "least_item_promoted",
+    "quick_measure_model",
     "rank_biased_overlap",
-    "ILS",
-    "Entropy",
-    "RankBiasedEntropy",
 ]
 
 

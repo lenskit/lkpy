@@ -66,7 +66,7 @@ def init_cluster(
     *,
     num_cpus: int | None = None,
     resources: dict[str, float] | None = None,
-    global_logging: bool = False,
+    global_logging: bool = True,
     **kwargs,
 ):
     """
@@ -115,7 +115,7 @@ def init_cluster(
     setup = _worker_setup if global_logging else None
     runtime = ray.runtime_env.RuntimeEnv(env_vars=env, worker_process_setup_hook=setup)
 
-    _log.info("starting Ray cluster")
+    _log.info("starting Ray cluster", logging=global_logging)
     ray.init(num_cpus=num_cpus, resources=resources, runtime_env=runtime, **kwargs)
 
 
@@ -286,7 +286,7 @@ class TaskLimiter:
         assert len(queued) == 0
         assert len(ready) == 0
 
-        return n
+        return n  # ruff: ignore[return-in-generator]
 
     def _throttle_unordered[Elt](
         self, tasks: Generator[ray.ObjectRef[Elt]]
@@ -309,7 +309,7 @@ class TaskLimiter:
             yield ray.get(res)
             n += 1
 
-        return n
+        return n  # ruff: ignore[return-in-generator]
 
     def add_task(self, task: ray.ObjectRef | ray.ObjectID):
         self._tasks.append(task)
@@ -390,6 +390,8 @@ def init_worker(*, autostart: bool = True) -> WorkerContext:
         context = WorkerContext(log_cfg)
         if autostart:
             context.start()
+
+        _log.debug("worker context initialized")
 
     ensure_parallel_init()
     return context

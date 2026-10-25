@@ -14,6 +14,7 @@ from ._entropy import Entropy, RankBiasedEntropy
 from ._gini import ExposureGini, ListGini
 from ._hit import Hit
 from ._ils import ILS
+from ._logrbp import LogRBP, log_rank_biased_precision
 from ._map import AveragePrecision
 from ._pop import MeanPopRank
 from ._pr import Precision, Recall
@@ -22,23 +23,25 @@ from ._recip import RecipRank
 from ._weighting import GeometricRankWeight, LogRankWeight, RankWeight
 
 __all__ = [
-    "RankingMetricBase",
-    "RankWeight",
+    "DCG",
+    "ILS",
+    "NDCG",
+    "RBP",
+    "AveragePrecision",
+    "Entropy",
+    "ExposureGini",
     "GeometricRankWeight",
-    "LogRankWeight",
     "Hit",
+    "ListGini",
+    "LogRBP",
+    "LogRankWeight",
+    "MeanPopRank",
     "Precision",
+    "RankBiasedEntropy",
+    "RankWeight",
+    "RankingMetricBase",
     "Recall",
     "RecipRank",
-    "NDCG",
-    "DCG",
-    "RBP",
+    "log_rank_biased_precision",
     "rank_biased_precision",
-    "MeanPopRank",
-    "AveragePrecision",
-    "ListGini",
-    "ExposureGini",
-    "Entropy",
-    "RankBiasedEntropy",
-    "ILS",
 ]

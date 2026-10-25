@@ -11,7 +11,7 @@ from pytest import approx
 
 from lenskit.data import ItemList
 from lenskit.metrics.ranking import Precision
-from lenskit.testing import demo_recs  # noqa: F401
+from lenskit.testing import demo_recs
 
 
 def _test_prec(items, rel, **kw):

@@ -8,6 +8,9 @@
 EASE scoring model.
 """
 
+from threading import Lock
+from typing import override
+
 import numpy as np
 import scipy
 import scipy.linalg as spla
@@ -15,7 +18,6 @@ import torch
 from humanize import naturalsize
 from packaging.version import Version
 from pydantic import BaseModel, PositiveFloat
-from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.types import NPMatrix
@@ -28,6 +30,8 @@ __all__ = ["EASEConfig", "EASEScorer"]
 _log = get_logger(__name__)
 
 MIN_SCIPY_VERSION = Version("1.17")
+# lock for PyTorch Cholesky operations
+_chol_lock = Lock()
 
 
 class EASEConfig(BaseModel):
@@ -187,14 +191,16 @@ def _chol_invert_torch(
     cooc: NPMatrix[np.float32], device: str, *, raise_oom: bool = False
 ) -> NPMatrix[np.float32] | None:
     """
-    Invert the co-occurrance matrix using SciPy.
+    Invert the co-occurrance matrix using PyTorch.
     """
 
     with torch.inference_mode():
         cooc_t = torch.from_numpy(cooc).to(device)
         del cooc
 
-        decomp, info = torch.linalg.cholesky_ex(cooc_t)
+        with _chol_lock:
+            decomp, info = torch.linalg.cholesky_ex(cooc_t)
+
         if info.item():
             raise RuntimeError(f"matrix minor {info.item()} is not positive-definite.")
 

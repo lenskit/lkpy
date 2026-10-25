@@ -13,14 +13,14 @@ from lenskit.pipeline import PipelineBuilder, PipelineProfiler
 from .test_pipeline_clone import PrefixConfig, Prefixer
 
 
-def test_basic_profile(tmpdir: Path):
+def test_basic_profile(tmp_path: Path):
     builder = PipelineBuilder()
     msg = builder.create_input("msg", str)
     builder.add_component("prefix", Prefixer, PrefixConfig(prefix="scroll named "), msg=msg)
     builder.default_component("prefix")
     pipe = builder.build()
 
-    pipe_file = tmpdir / "profile.csv"
+    pipe_file = tmp_path / "profile.csv"
     with PipelineProfiler(pipe, pipe_file) as profiler:
         pipe.run("prefix", msg="hello", _profile=profiler)
 

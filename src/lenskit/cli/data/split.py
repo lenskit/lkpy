@@ -51,7 +51,7 @@ def split(
 
     if date:
         if re.match(r"^\d+(\.\d+)?$", date):
-            split_time = dt.datetime.fromtimestamp(float(date))
+            split_time = dt.datetime.fromtimestamp(float(date), tz=dt.UTC)
         elif re.match(r"^\d+-\d+-\d+([T ]\d+:\d+:\d+(\.\d+)?)?", date):
             split_time = dt.datetime.fromisoformat(date)
         else:  # pragma: nocover

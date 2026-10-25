@@ -9,9 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
-
-from typing_extensions import override
+from typing import Literal, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline import Component
@@ -27,9 +25,9 @@ class TrainingItemsCandidateConfig:
     """
 
     exclude: (
-        None
-        | Literal["query", "all", "history", "session", "context"]
+        Literal["query", "all", "history", "session", "context"]
         | Sequence[Literal["history", "session", "context"]]
+        | None
     ) = "query"
     """
     Specify the items from the query to exclude from the candidates.
