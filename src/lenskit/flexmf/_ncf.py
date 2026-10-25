@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import torch
-from pydantic import PositiveInt
+from pydantic import Field, PositiveInt
 from torch import Tensor, nn
 from torch.linalg import norm
 
@@ -36,7 +36,7 @@ class FlexMFNCFConfig(FlexMFImplicitConfig):
     The size of the MLP embedding space.
     """
 
-    mlp_layers: list[PositiveInt] = [16, 8, 4]
+    mlp_layers: list[PositiveInt] = Field(default_factory=lambda: [16, 8, 4])
     """
     The sizes of the MLP hidden layers.
     """
@@ -114,8 +114,7 @@ class FlexMFNCFModel(nn.Module):
         mlp_modules = []
         input_size = mlp_e_size * 2
         for size in mlp_layers:
-            mlp_modules.append(nn.Linear(input_size, size))
-            mlp_modules.append(nn.ReLU())
+            mlp_modules.extend([nn.Linear(input_size, size), nn.ReLU()])
             input_size = size
 
         self.mlp = nn.Sequential(*mlp_modules)
