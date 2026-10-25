@@ -6,9 +6,11 @@
 
 from itertools import product
 
+import torch
+
 from pytest import mark, skip
 
-from lenskit.flexmf._ncf import FlexMFNCFConfig, FlexMFNCFScorer
+from lenskit.flexmf._ncf import FlexMFNCFConfig, FlexMFNCFModel, FlexMFNCFScorer
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 
@@ -31,6 +33,33 @@ def test_ncf_config_defaults():
     assert cfg.embedding_size == 64  # inherited default from FlexMFConfigBase
     assert cfg.mlp_embedding_size == 8
     assert cfg.mlp_layers == [16, 8, 4]
+    assert cfg.user_bias is False
+    assert cfg.item_bias is False
+
+
+@mark.parametrize(["user_bias", "item_bias"], product([True, False], [True, False]))
+def test_ncf_biases(ml_ds, user_bias, item_bias):
+    config = FlexMFNCFConfig(epochs=1, user_bias=user_bias, item_bias=item_bias)
+    model = FlexMFNCFScorer(config)
+    model.train(ml_ds)
+
+    ncf = model.model
+    assert isinstance(ncf, FlexMFNCFModel)
+    gmf = ncf.gmf_model
+    assert (gmf.u_bias is not None) == user_bias
+    assert (gmf.i_bias is not None) == item_bias
+
+    users = torch.tensor([0])
+    items = torch.arange(5)
+    scores = ncf(users, items)
+    assert scores.shape == (5,)
+    assert torch.all(torch.isfinite(scores))
+
+    # biases must actually contribute to the score
+    if gmf.i_bias is not None:
+        with torch.no_grad():
+            gmf.i_bias.weight[items] += 1.0
+            assert torch.allclose(ncf(users, items), scores + 1.0, atol=1e-5)
 
 
 def test_ncf_config_negative_default():

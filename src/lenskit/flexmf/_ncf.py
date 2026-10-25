@@ -41,10 +41,25 @@ class FlexMFNCFConfig(FlexMFImplicitConfig):
     The sizes of the MLP hidden layers.
     """
 
-    # Override implicit defaults: NCF uses more negatives and no bias terms by default.
     negative_count: PositiveInt = 4
+    """
+    The number of negative items to sample for each positive item.  NCF
+    defaults to 4, following the original NCF paper.
+    """
+
     user_bias: bool | None = False
+    """
+    Whether to learn a user bias term, added to the NCF output score.  NCF
+    defaults to ``False`` to match the original model, since the final
+    prediction layer already has a global bias; set to ``True`` (or ``None``
+    for the implicit-feedback default) to enable it.
+    """
+
     item_bias: bool = False
+    """
+    Whether to learn an item bias term, added to the NCF output score.  NCF
+    defaults to ``False`` to match the original model.
+    """
 
 
 class FlexMFNCFModel(nn.Module):
@@ -53,7 +68,8 @@ class FlexMFNCFModel(nn.Module):
 
     Uses composition rather than inheritance: holds a :class:`FlexMFModel` for
     the GMF path alongside a separate MLP tower, combining both via a final
-    linear layer.
+    linear layer.  If enabled, the GMF model's user and item bias terms are
+    added to the final score.
     """
 
     gmf_model: FlexMFModel
@@ -66,19 +82,22 @@ class FlexMFNCFModel(nn.Module):
         n_users: int,
         n_items: int,
         rng: torch.Generator,
+        user_bias: bool = False,
+        item_bias: bool = False,
         init_scale: float = 0.1,
         sparse: bool = False,
     ):
         super().__init__()
 
-        # GMF component: a standard MF model providing u_embed / i_embed.
+        # GMF component: a standard MF model providing u_embed / i_embed (and
+        # u_bias / i_bias, when enabled).
         self.gmf_model = FlexMFModel(
             e_size=gmf_e_size,
             n_users=n_users,
             n_items=n_items,
             rng=rng,
-            user_bias=False,
-            item_bias=False,
+            user_bias=user_bias,
+            item_bias=item_bias,
             init_scale=init_scale,
             sparse=sparse,
             layers=0,
@@ -142,9 +161,19 @@ class FlexMFNCFModel(nn.Module):
         out = torch.cat([gmf_out, mlp_out], dim=-1)
         score = self.prediction(out).squeeze(-1)
 
+        # Add user and item biases (zero if disabled).
+        zero = torch.tensor(0.0)
+        u_bias = self.gmf_model.u_bias
+        i_bias = self.gmf_model.i_bias
+        ub = u_bias(user).reshape(user.shape) if u_bias is not None else zero
+        ib = i_bias(item).reshape(item.shape) if i_bias is not None else zero
+        score = score + ub + ib
+
         if return_norm:
             l2 = (
-                norm(u_gmf, dim=-1)
+                torch.square(ub)
+                + torch.square(ib)
+                + norm(u_gmf, dim=-1)
                 + norm(i_gmf, dim=-1)
                 + norm(u_mlp, dim=-1)
                 + norm(i_mlp, dim=-1)
@@ -167,6 +196,8 @@ class FlexMFNCFTrainer(FlexMFImplicitTrainer):
             n_users=self.data.n_users,
             n_items=self.data.n_items,
             rng=self.torch_rng,
+            user_bias=self.config.selected_user_bias(),
+            item_bias=self.config.item_bias,
             sparse=self.config.reg_method != "AdamW",
         )
 
