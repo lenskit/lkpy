@@ -18,6 +18,7 @@ import hypothesis.strategies as st
 from hypothesis import assume, given
 from pytest import approx, mark, warns
 
+from lenskit.config import env_flag
 from lenskit.data.types import NPVector
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger
@@ -60,19 +61,20 @@ class CITester:
 
     @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
     @mark.parametrize("size", [1000, 10000, 50000])
-    @mark.skipif(not is_free_threaded(require_active=True), reason="requires free-threading")
+    @mark.skipif(
+        not is_free_threaded(require_active=True) and not env_flag("LK_FORCE_BLB_TESTS"),
+        reason="requires free-threading",
+    )
     def test_compute(self, size: int, rng: np.random.Generator):
         results = []
         times = []
 
-        rngs = rng.spawn(self.N_TRIALS)
-        with ThreadPoolExecutor() as pool:
-            for mean, summary, time in pool.map(lambda t: _blb_worker(size, self, t), rngs):
-                assert isinstance(summary, dict)
-                assert summary["estimate"] == approx(mean)
+        for mean, summary, time in _blb_loop(self, size, rng):
+            assert isinstance(summary, dict)
+            assert summary["estimate"] == approx(mean)
 
-                results.append(summary)
-                times.append(time)
+            results.append(summary)
+            times.append(time)
 
         _log.info("completed %d trials (avg %.2fms / trial)", len(results), np.mean(times) * 1000)
         n_lb_good = len([r for r in results if r["ci_lower"] <= self.parameter])
@@ -137,6 +139,17 @@ class CITester:
 
         # leave some wiggle room
         assert bt.pvalue >= 0.05
+
+
+def _blb_loop(test: CITester, size: int, rng: np.random.Generator):
+    if is_free_threaded(require_active=True):
+        rngs = rng.spawn(test.N_TRIALS)
+        with ThreadPoolExecutor() as pool:
+            yield from pool.map(lambda t: _blb_worker(size, test, t), rngs)
+
+    else:
+        for _i in range(test.N_TRIALS):
+            yield _blb_worker(size, test, rng)
 
 
 def _blb_worker(
