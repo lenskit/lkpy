@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import os
 import platform
-import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from time import perf_counter
@@ -22,6 +21,7 @@ from typing import TYPE_CHECKING, Generic, Literal, Protocol, overload, override
 import numpy as np
 from typing_extensions import TypeVar
 
+from lenskit.config import parse_flag
 from lenskit.data import Dataset, ItemList
 from lenskit.logging import get_logger, item_progress
 from lenskit.parallel import is_free_threaded
@@ -178,20 +178,7 @@ class TrainingOptions:
         Query a boolean flag from the environment.
         """
         val = self.env_var(name)
-        if val is None:
-            return default
-        elif isinstance(val, bool):
-            return val
-        elif isinstance(val, int):
-            return bool(val)
-        elif re.match(r"^\d+$", val):
-            return bool(int(val))
-        elif re.match(r"^(?:t(?:rue)?|y(?:es)?)$", val, re.IGNORECASE):
-            return True
-        elif re.match(r"^(?:f(?:alse)?|n(?:o)?)$", val, re.IGNORECASE):
-            return False
-        else:
-            raise ValueError(f"unrecognized boolean value {name}={val}")
+        return parse_flag(val, default=default)
 
     def torch_compilation_enabled(self) -> bool:
         """
