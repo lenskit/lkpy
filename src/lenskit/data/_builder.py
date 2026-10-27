@@ -16,7 +16,7 @@ import json
 import warnings
 from collections.abc import Mapping, Sequence
 from os import PathLike
-from typing import Any, Literal, overload
+from typing import Any, Literal, Protocol, overload, runtime_checkable
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,15 @@ from .types import ID, NPID, IDSequence  # noqa: F401
 
 _log = get_logger(__name__)
 
-type TableInput = pd.DataFrame | pa.Table | dict[str, NDArray[Any]]
+
+@runtime_checkable
+class ArrowStreamSource(Protocol):
+    """A table that exports the Arrow PyCapsule stream interface."""
+
+    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any: ...
+
+
+type TableInput = pd.DataFrame | pa.Table | dict[str, NDArray[Any]] | ArrowStreamSource
 type RelationshipEntities = Sequence[str] | Mapping[str, str | None]
 
 type DuplicateAction = Literal["update", "error", "overwrite"]
@@ -284,6 +292,13 @@ class DatasetBuilder:
                     )
                 source = source.reset_index(names=id_col)
             source = pa.Table.from_pandas(source, preserve_index=False)
+        elif isinstance(source, ArrowStreamSource):
+            # Series and Arrow columns also export streams, but contain IDs,
+            # rather than table rows. Keep their existing array conversion.
+            shape = getattr(source, "shape", None)
+            is_vector = isinstance(shape, tuple) and len(shape) == 1
+            if not is_vector and not isinstance(source, (pa.Array, pa.ChunkedArray)):
+                source = _table_from_stream(source)
 
         if isinstance(source, pa.Table):
             try:
@@ -322,7 +337,9 @@ class DatasetBuilder:
         log = self._log.bind(class_name=cls)
 
         # we have a sequence of IDs
-        ids: pa.Array = pa.array(source)
+        ids: pa.Array = (
+            source.combine_chunks() if isinstance(source, pa.ChunkedArray) else pa.array(source)
+        )
 
         # figure out the new schema
         schema = pa.schema({id_name: ids.type})
@@ -431,6 +448,8 @@ class DatasetBuilder:
         """
         if isinstance(data, pd.DataFrame):
             table = pa.Table.from_pandas(data, preserve_index=False)
+        elif isinstance(data, ArrowStreamSource):
+            table = _table_from_stream(data)
         elif isinstance(data, dict):
             table = pa.table(data)  # type: ignore
         else:
@@ -637,7 +656,7 @@ class DatasetBuilder:
         cls: str,
         min_time: float | dt.datetime | None = None,
         max_time: float | dt.datetime | None = None,
-        remove: pa.Table | dict[str, ArrayLike] | pd.DataFrame | None = None,
+        remove: pa.Table | dict[str, ArrayLike] | pd.DataFrame | ArrowStreamSource | None = None,
     ):
         """
         Filter interactions based on timestamp or to remove particular entities.
@@ -702,6 +721,8 @@ class DatasetBuilder:
         if remove is not None:
             if isinstance(remove, pd.DataFrame):
                 remove = pa.Table.from_pandas(remove, preserve_index=False)
+            elif isinstance(remove, ArrowStreamSource):
+                remove = _table_from_stream(remove)
             else:
                 remove = pa.table(remove)  # type: ignore
             assert isinstance(remove, pa.Table)
@@ -838,6 +859,10 @@ class DatasetBuilder:
         id_col = id_col_name(cls)
 
         if values is None:
+            if not isinstance(entities, (pd.Series, pd.DataFrame)) and isinstance(
+                entities, ArrowStreamSource
+            ):
+                entities = _table_from_stream(entities)
             if isinstance(entities, pd.Series):
                 # it is a series, use the index
                 values = entities.values
@@ -930,6 +955,10 @@ class DatasetBuilder:
         id_col = id_col_name(cls)
 
         if values is None:
+            if not isinstance(entities, (pd.Series, pd.DataFrame)) and isinstance(
+                entities, ArrowStreamSource
+            ):
+                entities = _table_from_stream(entities)
             if isinstance(entities, pd.Series):
                 # it is a series, use the index
                 values = entities.values
@@ -940,6 +969,9 @@ class DatasetBuilder:
                     entities = entities[id_col].values
                 else:
                     entities = entities.index.values
+            elif isinstance(entities, pa.Table):
+                values = entities.column(name)
+                entities = entities.column(id_col)
 
         e_tbl = self._tables[cls]
         if e_tbl is None:  # pragma: nocover
@@ -1235,6 +1267,32 @@ def _expand_and_align_list_array(
 
     # we can now construct the array — these offsets point into the source array
     return pa.ListArray.from_arrays(offsets, lists.values, mask=mask)
+
+
+def _table_from_stream(source: ArrowStreamSource) -> pa.Table:
+    """Import a table using the types supported by the dataset's stored arrays."""
+    table = pa.table(source)
+    schema = pa.schema(
+        [field.with_type(_stream_storage_type(field.type)) for field in table.schema],
+        metadata=table.schema.metadata,
+    )
+    return table.cast(schema) if schema != table.schema else table
+
+
+def _stream_storage_type(dtype: pa.DataType) -> pa.DataType:
+    # Polars exports view strings and 64-bit list offsets through its stream.
+    # Dataset IDs accept string/large_string, and list attributes use ListArray.
+    if pa.types.is_string_view(dtype):
+        return pa.large_string()
+    if pa.types.is_binary_view(dtype):
+        return pa.large_binary()
+    if pa.types.is_large_list(dtype) or pa.types.is_list(dtype):
+        return pa.list_(dtype.value_field.with_type(_stream_storage_type(dtype.value_type)))
+    if pa.types.is_fixed_size_list(dtype):
+        return pa.list_(
+            dtype.value_field.with_type(_stream_storage_type(dtype.value_type)), dtype.list_size
+        )
+    return dtype
 
 
 def _empty_rel_table(types: list[str]) -> pa.Table:
