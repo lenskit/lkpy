@@ -6,6 +6,8 @@
 
 from pathlib import Path
 
+import numpy as np
+
 from pytest import fixture, mark, skip
 
 from lenskit.data import from_interactions_df
@@ -64,3 +66,27 @@ def test_tune_als(ml_100k, tmp_path, tuner_class, version: str):
     if tuner_class.__name__ == "PipelineTuner":
         assert (tpath / "trials.csv").exists()
         assert (tpath / "trial-epochs.csv").exists()
+
+
+@mark.slow
+@mark.realdata
+def test_tune_als_logrbp(ml_100k, tmp_path):
+    "test that Optuna can optimize LogRBP"
+    from lenskit.tuning import PipelineTuner
+
+    spec = TuningSpec.load(Path("pipelines/als-implicit-search.toml"))
+    spec.search.metric = "LogRBP"
+    spec.search.method = "random"
+    spec.search.max_points = 2
+    spec.search.min_epochs = 2
+    spec.search.max_epochs = 3
+
+    tuner = PipelineTuner(spec, tmp_path)
+    split = sample_records(from_interactions_df(ml_100k), 20000)
+    tuner.set_data(split.train, split.test)
+
+    result = tuner.run()
+
+    assert result.num_failed() == 0
+    assert result.num_trials() == 2
+    assert np.isfinite(result.best_result()["LogRBP"])
