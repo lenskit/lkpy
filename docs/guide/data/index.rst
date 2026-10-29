@@ -177,6 +177,42 @@ data sources.
     lenskit.data.DatasetBuilder
     lenskit.data.from_interactions_df
 
+Polars and Arrow Stream Inputs
+-----------------------------
+
+:class:`DatasetBuilder` accepts tables that implement the `Arrow PyCapsule
+stream interface`_, including Polars data frames and Arrow record batch readers.
+Polars is optional; LensKit does not import or install it. For example, when
+Polars is installed:
+
+.. code-block:: python
+
+    import polars as pl
+    from lenskit.data import DatasetBuilder
+
+    ratings = pl.DataFrame({
+        "user_id": [1, 1, 2],
+        "item_id": [10, 20, 10],
+        "rating": [4.0, 3.0, 5.0],
+    })
+    builder = DatasetBuilder()
+    builder.add_interactions(
+        "rating", ratings, entities=["user", "item"], missing="insert"
+    )
+    dataset = builder.build()
+
+The same table interface is available for entity tables, scalar and list
+attribute tables, and the ``remove`` table for filtering interactions. Tables
+must contain explicit ID columns such as ``user_id`` or ``item_id``. Pandas
+entity data frames retain their existing index-based ID behavior.
+
+Streams are consumed once into an Arrow table. String views and large-list
+offsets are converted to the dataset's supported storage types; this may copy
+data. Collect a Polars lazy frame before passing it to the builder. This input
+support does not change the formats returned by dataset or evaluation methods.
+
+.. _Arrow PyCapsule stream interface: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+
 Loading Common Datasets
 ~~~~~~~~~~~~~~~~~~~~~~~
 
