@@ -10,6 +10,10 @@ See `README.md` for instructions on setting up a development environment to work
 on LensKit, setting up pre-commit hooks, and for running the tests. All new
 contributions to LensKit must pass the test suite and lint/formatting checks.
 
+- All new functionality must be accompanied by behavior tests that exercise the new functionality.
+- When practical (mostly for fundamental functions or classes), property-based tests with Hypothesis are very useful to ferret out bugs.
+- Bug fixes should be accompanied by a test for the erroneous behavior to help prevent future regressions.  It is best to put the test and the bug fix in separate commits (test first, then bug fix).
+
 ## Code Style
 
 - Python, Rust, and shell code is auto-formatted with `prek` hooks.
