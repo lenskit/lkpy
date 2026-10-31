@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from pytest import fixture, mark, skip
+from pytest import fixture, importorskip, mark, skip
 
 from lenskit.data import from_interactions_df
 from lenskit.splitting import sample_records
@@ -72,6 +72,8 @@ def test_tune_als(ml_100k, tmp_path, tuner_class, version: str):
 @mark.realdata
 def test_tune_als_logrbp(ml_100k, tmp_path):
     "test that Optuna can optimize LogRBP"
+    importorskip("optuna")
+
     from lenskit.tuning import PipelineTuner
 
     spec = TuningSpec.load(Path("pipelines/als-implicit-search.toml"))
