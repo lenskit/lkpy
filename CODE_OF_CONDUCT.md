@@ -45,7 +45,7 @@ If you believe someone is violating the code of conduct, we ask that you report 
 
 ## Reporting
 
-If you believe someone is violating the code of conduct you can always report it to the project leader, Michael Ekstrand, by emailing <mdekstrand@drexel.edu>. All reports will be kept confidential to the extent possible; however, as a Drexel University faculty member, Dr. Ekstrand is a mandatory reporter under U.S. Title IX, so he is obligated to notify the Drexel University Title IX office of any reports of sexual harassment involving members of the Drexel community.
+If you believe someone is violating the code of conduct you can always report it to the project leader, Michael Ekstrand, by emailing <mdekstrand@drexel.edu>. All reports will be kept confidential to the extent possible; however, as a Drexel University faculty member, Dr. Ekstrand is a mandatory reporter under U.S. Title IX and Drexel Policy CR-1, so he is obligated to notify the Drexel University Title IX or Civil Rights office of allegations involving members of the Drexel community.
 
 ## Enforcement
 
