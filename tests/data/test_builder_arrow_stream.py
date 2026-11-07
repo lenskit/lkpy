@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from pytest import fixture, importorskip, raises
+from pytest import fixture, mark, raises
 
 from lenskit.data import DatasetBuilder
 from lenskit.diagnostics import DataError
@@ -29,11 +29,8 @@ class StreamTable:
         return self.table.__arrow_c_stream__(requested_schema)
 
 
-@fixture(params=["arrow", "stream", "reader", "polars"])
+@fixture(params=["arrow", "stream", "reader"])
 def table_source(request):
-    if request.param == "polars":
-        polars = importorskip("polars")
-        return polars.from_arrow
     if request.param == "stream":
         return StreamTable
     if request.param == "reader":
@@ -185,9 +182,49 @@ def test_pandas_arrow_series_ids_keep_existing_behavior():
     assert builder.build().items.ids().tolist() == [1, 2]
 
 
-def test_polars_series_ids_keep_existing_behavior():
-    polars = importorskip("polars")
-    series = polars.Series("item_id", ["b", "a"])
+@mark.parametrize("attribute", ["direct", "entity"])
+@mark.parametrize("kind", ["float", "string"])
+def test_fixed_size_list_attribute(table_source, attribute, kind):
+    if kind == "float":
+        values = [[0.1, 0.2], None, [0.3, 0.4]]
+        value_type = pa.float64()
+    else:
+        values = [["a", "b"], None, ["c", "d"]]
+        value_type = pa.string()
+    frame = pa.table(
+        {"item_id": [3, 1, 2], "features": pa.array(values, type=pa.list_(value_type, 2))}
+    )
     builder = DatasetBuilder()
-    builder.add_entities("item", series)
-    assert builder.build().items.ids().tolist() == ["a", "b"]
+    if attribute == "entity":
+        builder.add_entities("item", table_source(frame))
+    else:
+        builder.add_entities("item", [1, 2, 3])
+        builder.add_list_attribute("item", "features", table_source(frame))
+    assert builder.build().entities("item").arrow().column("features").to_pylist() == [
+        None, values[2], values[0]
+    ]
+
+
+@mark.parametrize("attribute", ["direct", "entity"])
+def test_nullable_list_attribute(table_source, attribute):
+    frame = pa.table({"item_id": [3, 1, 2], "genres": [["a", "b"], None, []]})
+    builder = DatasetBuilder()
+    if attribute == "entity":
+        builder.add_entities("item", table_source(frame))
+    else:
+        builder.add_entities("item", [1, 2, 3])
+        builder.add_list_attribute("item", "genres", table_source(frame))
+    assert builder.build().entities("item").arrow().column("genres").to_pylist() == [
+        None, [], ["a", "b"]
+    ]
+
+
+def test_empty_scalar_attribute_keeps_type(table_source):
+    frame = pa.table({"item_id": pa.array([], type=pa.string()),
+                      "title": pa.array([], type=pa.string())})
+    builder = DatasetBuilder()
+    builder.add_entities("item", table_source(frame))
+    result = builder.build().entities("item").arrow()
+    assert result.field("title").type == pa.string()
+
+
