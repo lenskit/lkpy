@@ -52,9 +52,12 @@ _log = get_logger(__name__)
 
 @runtime_checkable
 class ArrowStreamSource(Protocol):
-    """A table that exports the Arrow PyCapsule stream interface."""
+    """Runtime check for Arrow's copyable stream-export Protocol typehint.
 
-    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any: ...
+    See https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#protocol-typehints
+    """
+
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object: ...
 
 
 type TableInput = pd.DataFrame | pa.Table | dict[str, NDArray[Any]] | ArrowStreamSource
@@ -887,7 +890,9 @@ class DatasetBuilder:
         if n_bad := nums.null_count:  # pragma: nocover
             raise DataError(f"{n_bad} unknown entity IDs")
 
-        val_array: pa.Array = pa.array(values)  # type: ignore
+        val_array = values if isinstance(values, pa.ChunkedArray) else pa.array(values)
+        if isinstance(val_array, pa.ChunkedArray):
+            val_array = val_array.combine_chunks()
         nums_np = nums.to_numpy()
         vals_np = np.full(e_tbl.num_rows, None, dtype=object)
         vals_np[nums_np] = val_array.to_numpy(zero_copy_only=False)
@@ -980,12 +985,12 @@ class DatasetBuilder:
         if n_bad := nums.null_count:  # pragma: nocover
             raise DataError(f"{n_bad} unknown entity IDs")
 
-        val_array: pa.Array = pa.array(values)  # type: ignore
+        val_array = values if isinstance(values, pa.ChunkedArray) else pa.array(values)
+        if isinstance(val_array, pa.ChunkedArray):
+            val_array = val_array.combine_chunks()
         if not pa.types.is_list(val_array.type):
             raise TypeError("attribute data did not resolve to list")
 
-        if isinstance(val_array, pa.ChunkedArray):  # pragma: nocover
-            val_array = val_array.combine_chunks()
         assert isinstance(val_array, pa.ListArray)
 
         if dictionary:
@@ -1280,18 +1285,18 @@ def _table_from_stream(source: ArrowStreamSource) -> pa.Table:
 
 
 def _stream_storage_type(dtype: pa.DataType) -> pa.DataType:
-    # Polars exports view strings and 64-bit list offsets through its stream.
+    # Polars exports view strings and large/fixed-size lists through its stream.
     # Dataset IDs accept string/large_string, and list attributes use ListArray.
     if pa.types.is_string_view(dtype):
         return pa.large_string()
     if pa.types.is_binary_view(dtype):
         return pa.large_binary()
-    if pa.types.is_large_list(dtype) or pa.types.is_list(dtype):
+    if (
+        pa.types.is_large_list(dtype)
+        or pa.types.is_list(dtype)
+        or pa.types.is_fixed_size_list(dtype)
+    ):
         return pa.list_(dtype.value_field.with_type(_stream_storage_type(dtype.value_type)))
-    if pa.types.is_fixed_size_list(dtype):
-        return pa.list_(
-            dtype.value_field.with_type(_stream_storage_type(dtype.value_type)), dtype.list_size
-        )
     return dtype
 
 

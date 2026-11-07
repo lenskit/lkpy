@@ -182,8 +182,8 @@ Polars and Arrow Stream Inputs
 
 :class:`DatasetBuilder` accepts tables that implement the `Arrow PyCapsule
 stream interface`_, including Polars data frames and Arrow record batch readers.
-Polars is optional; LensKit does not import or install it. For example, when
-Polars is installed:
+Polars is optional and is not imported by LensKit. Install ``lenskit[polars]``
+to include it, or use an existing Polars installation. For example:
 
 .. code-block:: python
 
@@ -206,9 +206,10 @@ attribute tables, and the ``remove`` table for filtering interactions. Tables
 must contain explicit ID columns such as ``user_id`` or ``item_id``. Pandas
 entity data frames retain their existing index-based ID behavior.
 
-Streams are consumed once into an Arrow table. String views and large-list
-offsets are converted to the dataset's supported storage types; this may copy
-data. Collect a Polars lazy frame before passing it to the builder. This input
+Streams are consumed once into an Arrow table. String views, large-list
+offsets, and fixed-size lists are converted to the dataset's supported storage
+types; this may copy data. Null lists remain distinct from empty lists. Collect
+a Polars lazy frame before passing it to the builder. This input
 support does not change the formats returned by dataset or evaluation methods.
 
 .. _Arrow PyCapsule stream interface: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html

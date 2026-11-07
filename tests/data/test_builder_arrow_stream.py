@@ -201,7 +201,9 @@ def test_fixed_size_list_attribute(table_source, attribute, kind):
         builder.add_entities("item", [1, 2, 3])
         builder.add_list_attribute("item", "features", table_source(frame))
     assert builder.build().entities("item").arrow().column("features").to_pylist() == [
-        None, values[2], values[0]
+        None,
+        values[2],
+        values[0],
     ]
 
 
@@ -215,16 +217,17 @@ def test_nullable_list_attribute(table_source, attribute):
         builder.add_entities("item", [1, 2, 3])
         builder.add_list_attribute("item", "genres", table_source(frame))
     assert builder.build().entities("item").arrow().column("genres").to_pylist() == [
-        None, [], ["a", "b"]
+        None,
+        [],
+        ["a", "b"],
     ]
 
 
 def test_empty_scalar_attribute_keeps_type(table_source):
-    frame = pa.table({"item_id": pa.array([], type=pa.string()),
-                      "title": pa.array([], type=pa.string())})
+    frame = pa.table(
+        {"item_id": pa.array([], type=pa.string()), "title": pa.array([], type=pa.string())}
+    )
     builder = DatasetBuilder()
     builder.add_entities("item", table_source(frame))
     result = builder.build().entities("item").arrow()
     assert result.field("title").type == pa.string()
-
-

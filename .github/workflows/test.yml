@@ -52,7 +52,8 @@ jobs:
         run: |
           uv_extra=
           if [[ "${{matrix.python}}" = *t ]]; then
-            uv_extra="--no-extra ray --no-extra tune"
+            # Polars currently publishes ABI3 wheels, which do not support free-threaded Python.
+            uv_extra="--no-extra ray --no-extra tune --no-extra polars"
           fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
         env:
@@ -62,7 +63,11 @@ jobs:
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
-          uv sync --no-default-groups --group test
+          $polars_extra = @()
+          if ("${{matrix.python}}" -notlike "*t") {
+            $polars_extra = @("--extra", "polars")
+          }
+          uv sync --no-default-groups --group test @polars_extra
         env:
           # disable MARCH for hpfrec wheels
           DONT_SET_MARCH: 1
@@ -138,7 +143,7 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv pip install --resolution=lowest-direct --group=test '.[sklearn,hpf,implicit,funksvd]'
+          uv pip install --resolution=lowest-direct --group=test '.[sklearn,hpf,implicit,funksvd,polars]'
         env:
           CC: gcc
           DONT_SET_MARCH: 1

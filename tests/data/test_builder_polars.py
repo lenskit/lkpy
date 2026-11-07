@@ -46,7 +46,9 @@ def test_fixed_array_attribute(attribute, kind):
         builder.add_entities("item", [1, 2, 3])
         builder.add_list_attribute("item", "features", frame)
     assert builder.build().entities("item").arrow().column("features").to_pylist() == [
-        None, values[2], values[0]
+        None,
+        values[2],
+        values[0],
     ]
     assert frame["features"].to_list() == values
 
@@ -63,14 +65,20 @@ def test_binary_attribute(attribute):
         builder.add_entities("item", [1, 2, 3])
         builder.add_scalar_attribute("item", "payload", frame)
     assert builder.build().entities("item").arrow().column("payload").to_pylist() == [
-        None, b"", b"\x00\xff"
+        None,
+        b"",
+        b"\x00\xff",
     ]
 
 
 def test_native_interactions_timestamps_and_filtering():
     frame = pl.DataFrame(
-        {"user_id": ["u2", "u1", "u1"], "item_id": ["b", "a", "b"],
-         "rating": [4.0, None, 2.0], "timestamp": [1700000000, 1700000001, 1700000002]}
+        {
+            "user_id": ["u2", "u1", "u1"],
+            "item_id": ["b", "a", "b"],
+            "rating": [4.0, None, 2.0],
+            "timestamp": [1700000000, 1700000001, 1700000002],
+        }
     )
     builder = DatasetBuilder()
     builder.add_interactions(
@@ -78,8 +86,12 @@ def test_native_interactions_timestamps_and_filtering():
     )
     builder.filter_interactions("rating", remove=pl.DataFrame({"item_id": ["b"]}))
     assert builder.build().interaction_table(format="arrow", original_ids=True).to_pylist() == [
-        {"user_id": "u1", "item_id": "a", "rating": None,
-         "timestamp": datetime.fromtimestamp(1700000001, UTC).replace(tzinfo=None)}
+        {
+            "user_id": "u1",
+            "item_id": "a",
+            "rating": None,
+            "timestamp": datetime.fromtimestamp(1700000001, UTC).replace(tzinfo=None),
+        }
     ]
 
 
@@ -109,8 +121,9 @@ def test_native_series_ids(ids):
 
 
 def test_empty_typed_native_frame():
-    frame = pl.DataFrame(schema={"item_id": pl.String, "title": pl.String,
-                                 "features": pl.Array(pl.Float64, 2)})
+    frame = pl.DataFrame(
+        schema={"item_id": pl.String, "title": pl.String, "features": pl.Array(pl.Float64, 2)}
+    )
     builder = DatasetBuilder()
     builder.add_entities("item", frame)
     dataset = builder.build()
@@ -120,12 +133,17 @@ def test_empty_typed_native_frame():
 
 def test_native_frame_save_and_reload(tmp_path):
     frame = pl.DataFrame(
-        {"item_id": [3, 1, 2], "features": pl.Series(
-            [[0.1, 0.2], None, [0.3, 0.4]], dtype=pl.Array(pl.Float64, 2))}
+        {
+            "item_id": [3, 1, 2],
+            "features": pl.Series([[0.1, 0.2], None, [0.3, 0.4]], dtype=pl.Array(pl.Float64, 2)),
+        }
     )
     builder = DatasetBuilder()
     builder.add_entities("item", frame)
     original = builder.build()
     original.save(tmp_path / "dataset")
     restored = Dataset.load(tmp_path / "dataset")
-    assert restored.entities("item").arrow().to_pylist() == original.entities("item").arrow().to_pylist()
+    assert (
+        restored.entities("item").arrow().to_pylist()
+        == original.entities("item").arrow().to_pylist()
+    )
