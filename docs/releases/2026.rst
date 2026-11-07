@@ -18,10 +18,15 @@ rough corners polished off the interfaces, and hopefully fewer bugs.
 Ffith feature release in 2026, with more feature updates and bug fixes.  A full list of
 fixed issues and merged PRs is on `milestone 2026.5`_.
 
+- Added Python 3.15 to the test matrix (:issue:`1231`, :pr:`1235`).
 - Removed dependency on the ``xopen`` crate, introducing :func:`lenskit.data.xopen` with comparable functionality and no external dependencies on Python 3.15 (:issue:`1238`, :pr:`1239`).
 - Added support for Optuna 5 (:pr:`1234`)
 - Added :class:`~lenskit.metrics.LogRBP` metric to compute and average RBP in log-space for greater stability (:issue:`1159`, :pr:`1236`, first contribution by :user:`GBX-Max1220`).
-- Internal refactorings and dependency updates.
+- Added support for new :class:`~lenskit.metrics.LogRBP` as a tuning objective (:pr:`1249`).
+- Allow input ranks to be optionally preserved when selecting and reranking item lists (:issue:`1243`, :pr:`1244`).
+- Added option to exclude history lookup from a recommendation pipeline, useful when the pipeline will always be called with history in the queries (:issue:`1217`, :pr:`1229`).
+- Dependency updates to test against PyTorch 3.15 and Pandas 3.1.0 (:pr:`1248`, :pr:`1233`, :pr:`1245`).
+- Internal refactorings and some new internal support code.
 
 .. _milestone 2026.5: https://github.com/lenskit/lkpy/milestone/30
 

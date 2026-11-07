@@ -118,7 +118,6 @@ just an alternate index view that reduces some package conflicts.
 
 [issues]: https://github.com/lenskit/lkpy/issues
 [workflow]: https://github.com/lenskit/lkpy/wiki/DevWorkflow
-[Mise]: https://mise.jdx.dev
 [hk]: https://hk.jdx.dev
 
 To contribute to LensKit, clone or fork the repository, get to work, and submit
@@ -190,7 +189,7 @@ $ uv sync --all-extras
 
 You should always test your changes by running the LensKit test suite:
 
-    uv run pytest tests
+    uv run just test
 
 If you want to use your changes in a LensKit experiment, you can locally install
 your modified LensKit into your experiment's environment. We recommend using

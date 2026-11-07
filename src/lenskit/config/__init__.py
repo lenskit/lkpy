@@ -33,6 +33,8 @@ from lenskit.schemas.settings import (
     TuneSettings,
 )
 
+from ._env import env_flag, parse_flag
+
 __all__ = [
     "LenskitSettings",
     "MachineSettings",
@@ -42,8 +44,10 @@ __all__ = [
     "RandomSettings",
     "TuneSettings",
     "configure",
+    "env_flag",
     "lenskit_config",
     "locate_configuration_root",
+    "parse_flag",
 ]
 
 SettingsClass = TypeVar("SettingsClass", bound="LenskitSettings", default="LenskitSettings")

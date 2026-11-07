@@ -24,7 +24,9 @@ jobs:
           - "3.12.5"
           - "3.13"
           - "3.14"
-          - "3.14t"
+          - "3.14+freethreaded"
+          - "3.15"
+          - "3.15+freethreaded"
         platform:
           - ubuntu-latest
           - ubuntu-24.04-arm
@@ -41,7 +43,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v2
 
       - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           python-version: ${{ matrix.python }}
           activate-environment: true
@@ -51,9 +53,12 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           uv_extra=
-          if [[ "${{matrix.python}}" = *t ]]; then
+          if [[ "${{matrix.python}}" = *+freethreaded || "${{matrix.python}}" = 3.15* ]]; then
+            uv_extra="--no-extra ray --no-extra tune"
+          fi
+          if [[ "${{matrix.python}}" = *+freethreaded ]]; then
             # Polars currently publishes ABI3 wheels, which do not support free-threaded Python.
-            uv_extra="--no-extra ray --no-extra tune --no-extra polars"
+            uv_extra="$uv_extra --no-extra polars"
           fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
         env:
@@ -64,7 +69,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           $polars_extra = @()
-          if ("${{matrix.python}}" -notlike "*t") {
+          if ("${{matrix.python}}" -notlike "*+freethreaded") {
             $polars_extra = @("--extra", "polars")
           }
           uv sync --no-default-groups --group test @polars_extra
