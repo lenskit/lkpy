@@ -36,7 +36,7 @@ class FlexMFNCFConfig(FlexMFImplicitConfig):
     The size of the MLP embedding space.
     """
 
-    mlp_layers: list[PositiveInt] = Field(default_factory=lambda: [16, 8, 4])
+    mlp_layer_sizes: list[PositiveInt] = Field(default_factory=lambda: [16, 8, 4])
     """
     The sizes of the MLP hidden layers.
     """
@@ -73,12 +73,17 @@ class FlexMFNCFModel(nn.Module):
     """
 
     gmf_model: FlexMFModel
+    mlp_e_size: int
+    u_mlp_embed: nn.Embedding
+    i_mlp_embed: nn.Embedding
+    mlp: nn.Sequential
+    prediction: nn.Linear
 
     def __init__(
         self,
         gmf_e_size: int,
         mlp_e_size: int,
-        mlp_layers: list[int],
+        mlp_layer_sizes: list[int],
         n_users: int,
         n_items: int,
         rng: torch.Generator,
@@ -113,15 +118,19 @@ class FlexMFNCFModel(nn.Module):
         # Build MLP
         mlp_modules = []
         input_size = mlp_e_size * 2
-        for size in mlp_layers:
-            mlp_modules.extend([nn.Linear(input_size, size), nn.ReLU()])
+        for size in mlp_layer_sizes:
+            layer = nn.Linear(input_size, size)
+            nn.init.kaiming_uniform_(layer.weight, nonlinearity="relu", generator=rng)
+            nn.init.zeros_(layer.bias)
+            mlp_modules.extend([layer, nn.ReLU()])
             input_size = size
 
         self.mlp = nn.Sequential(*mlp_modules)
 
         # Final output layer: concatenated GMF and MLP outputs → scalar score.
         self.prediction = nn.Linear(input_size + gmf_e_size, 1)
-        nn.init.kaiming_uniform_(self.prediction.weight, a=1, nonlinearity="sigmoid")
+        nn.init.kaiming_uniform_(self.prediction.weight, a=1, nonlinearity="sigmoid", generator=rng)
+        nn.init.zeros_(self.prediction.bias)
 
     @property
     def device(self):
@@ -191,7 +200,7 @@ class FlexMFNCFTrainer(FlexMFImplicitTrainer):
         return FlexMFNCFModel(
             gmf_e_size=self.config.embedding_size,
             mlp_e_size=self.config.mlp_embedding_size,  # type: ignore
-            mlp_layers=self.config.mlp_layers,  # type: ignore
+            mlp_layer_sizes=self.config.mlp_layer_sizes,  # type: ignore
             n_users=self.data.n_users,
             n_items=self.data.n_items,
             rng=self.torch_rng,

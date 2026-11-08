@@ -18,7 +18,7 @@ class TestFlexMFNCF(BasicComponentTests, ScorerTests):
     expected_ndcg = (0.01, 0.25)
     component = FlexMFNCFScorer
     config = FlexMFNCFConfig(
-        epochs=3, embedding_size=16, mlp_embedding_size=16, mlp_layers=[32, 16, 8]
+        epochs=3, embedding_size=16, mlp_embedding_size=16, mlp_layer_sizes=[32, 16, 8]
     )
 
     def test_skip_retrain(self, ml_ds):
@@ -32,7 +32,7 @@ def test_ncf_config_defaults():
     cfg = FlexMFNCFConfig()
     assert cfg.embedding_size == 64  # inherited default from FlexMFConfigBase
     assert cfg.mlp_embedding_size == 8
-    assert cfg.mlp_layers == [16, 8, 4]
+    assert cfg.mlp_layer_sizes == [16, 8, 4]
     assert cfg.user_bias is False
     assert cfg.item_bias is False
 
