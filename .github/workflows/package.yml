@@ -77,7 +77,7 @@ jobs:
             pyarch: x64
             target: x64
             manylinux: auto
-          - host: macos-14
+          - host: macos-latest
             pyarch: arm64
             target: aarch64
             manylinux: auto
