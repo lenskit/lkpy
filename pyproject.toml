@@ -164,17 +164,17 @@ exclude = ["docs/*", ".pixi", ".venv", ".nox", "target", "build", "dist", "outpu
 reportMissingImports = true
 reportMissingTypeStubs = false
 
-[tool.pytest.ini_options]
-addopts = "--benchmark-skip"
+[tool.pytest]
+addopts = ["--benchmark-skip"]
 consider_namespace_packages = true
 filterwarnings = [
-  "ignore:::pyarrow[.*]",
-  "ignore:.*matrix subclass.*:PendingDeprecationWarning",
-  "ignore:.*np.asscalar.*:DeprecationWarning",
   "ignore:.*deprecated create function*:DeprecationWarning",
   "ignore:.*importing the ABCs*:DeprecationWarning",
-  "ignore:.*use_ratings option.*:UserWarning",
+  "ignore:.*matrix subclass.*:PendingDeprecationWarning",
+  "ignore:.*np.asscalar.*:DeprecationWarning",
   "ignore:.*tensor support is in beta state.*:UserWarning",
+  "ignore:.*use_ratings option.*:UserWarning",
+  "ignore:::pyarrow[.*]",
 ]
 log_cli_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(message)s"
 log_file_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(message)s"
@@ -182,13 +182,14 @@ log_file_level = "DEBUG"
 log_format = "[%(levelname)7s] [%(processName)s] %(name)s %(message)s"
 log_level = "INFO"
 markers = [
-  "eval: mark the test as running the evaluator over custom data",
-  "slow: mark the test as taking a larger-than-usual amount of time",
-  "realdata: mark the test as using a real data set like ML-20M",
   "compat: mark the test as testing compatibility with old LensKit versions",
+  "eval: mark the test as running the evaluator over custom data",
+  "realdata: mark the test as using a real data set like ML-20M",
+  "slow: mark the test as taking a larger-than-usual amount of time",
 ]
-testpaths = "tests"
-doctest_plus = true
+minversion = "9.0"
+testpaths = ["tests"]
+doctest_plus = "true"
 doctest_subpackage_requires = ["src/lenskit/hpf.py = hpfrec"]
 
 [tool.ruff]
