@@ -94,6 +94,8 @@ New Features
   the inner computations of RBP.
 - Add new method :meth:`~lenskit.data.RelationshipSet.co_occurrences` to count
   entity co-occurrences in a dataset.
+- Add new method :meth:`~lenskit.data.AttributeSet.cat_matrix` to uniformly
+  obtain matrix views of categorical attributes (:issue:`892`, :pr:`912`).
 
 Deprecations
 ------------
