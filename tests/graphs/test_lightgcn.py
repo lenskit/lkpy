@@ -6,6 +6,7 @@
 
 import logging
 import pickle
+import sys
 from itertools import product
 
 import numpy as np
@@ -19,6 +20,11 @@ from lenskit.flexmf import FlexMFImplicitConfig, FlexMFImplicitScorer
 from lenskit.graphs.lightgcn import LightGCNConfig, LightGCNScorer
 from lenskit.metrics import quick_measure_model
 from lenskit.testing import BasicComponentTests, ScorerTests
+
+# FIXME: remove this when torch-geometric is compatible with Python 3.15+
+pytestmark = mark.xfail(
+    sys.version_info >= (3, 15), reason="torch-geometric is not compatible with Python 3.15+"
+)
 
 
 class TestLightGCNPairwise(BasicComponentTests, ScorerTests):

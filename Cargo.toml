@@ -39,7 +39,7 @@ ndarray = { version = "^0.17", features = ["rayon"] }
 numpy = "^0.29"
 
 [dev-dependencies]
-ntest = "^0.9"
+ntest = "^0.10"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage_nightly)"] }
