@@ -77,7 +77,7 @@ outputs:
             - pyproject.toml
         requirements:
           run:
-            - pytest >=8.2,<10
+            - pytest >=9.0,<10
             - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
@@ -111,7 +111,7 @@ outputs:
             - pyproject.toml
         requirements:
           run:
-            - pytest >=8.2,<10
+            - pytest >=9.0,<10
             - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
@@ -145,7 +145,7 @@ outputs:
             - pyproject.toml
         requirements:
           run:
-            - pytest >=8.2,<10
+            - pytest >=9.0,<10
             - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
@@ -179,7 +179,7 @@ outputs:
             - pyproject.toml
         requirements:
           run:
-            - pytest >=8.2,<10
+            - pytest >=9.0,<10
             - pytest-benchmark ~=5.1
             - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
