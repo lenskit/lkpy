@@ -20,6 +20,7 @@ training.
 from ._base import FlexMFConfigBase, FlexMFScorerBase
 from ._explicit import FlexMFExplicitConfig, FlexMFExplicitScorer
 from ._implicit import FlexMFImplicitConfig, FlexMFImplicitScorer
+from ._ncf import FlexMFNCFConfig, FlexMFNCFScorer
 
 __all__ = [
     "FlexMFConfigBase",
@@ -27,5 +28,7 @@ __all__ = [
     "FlexMFExplicitScorer",
     "FlexMFImplicitConfig",
     "FlexMFImplicitScorer",
+    "FlexMFNCFConfig",
+    "FlexMFNCFScorer",
     "FlexMFScorerBase",
 ]

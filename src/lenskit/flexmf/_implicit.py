@@ -129,6 +129,12 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
         else:
             return "uniform"
 
+    def selected_user_bias(self) -> bool:
+        if self.user_bias is not None:
+            return self.user_bias
+        else:
+            return self.loss == "logistic"
+
     @model_validator(mode="before")
     @classmethod
     def apply_preset(cls, data):
@@ -287,19 +293,12 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         """
         Prepare the model for training.
         """
-        user_bias = self.config.user_bias
-        if user_bias is None:
-            if self.config.loss == "logistic":
-                user_bias = True
-            else:
-                user_bias = False
-
         return FlexMFModel(
             self.config.embedding_size,
             self.data.n_users,
             self.data.n_items,
             self.torch_rng,
-            user_bias=user_bias,
+            user_bias=self.config.selected_user_bias(),
             item_bias=self.config.item_bias,
             layers=self.config.convolution_layers,
             sparse=self.config.reg_method != "AdamW",
