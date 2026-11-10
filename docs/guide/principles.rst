@@ -42,7 +42,9 @@ Bridge to other tools
 
 Use standard data structures
     This principle has evolved from its original version :cite:p:`lkpy`, when we
-    used Pandas data frames as the interchange format between components, but
+    used Pandas data frames as the interchange format between components — LensKit
+    now has a dedicated :ref:`data-model` realized through the :class:`~lenskit.data.Dataset` and :class:`~lenskit.data.ItemList`
+    data structures — but
     LensKit data is still based on standard arrays (supporting both NumPy and
     PyTorch), sparse matrices, etc.
 
