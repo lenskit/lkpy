@@ -6,11 +6,9 @@
 
 from __future__ import annotations
 
-import pandas as pd
-
 from lenskit import Pipeline
 from lenskit.batch import BatchPipelineRunner
-from lenskit.data import ItemListCollection
+from lenskit.data import ItemList, ItemListCollection
 from lenskit.logging import Task, get_logger
 from lenskit.metrics import (
     DCG,
@@ -22,7 +20,6 @@ from lenskit.metrics import (
     LogRBP,
     MeasurementCollector,
     RecipRank,
-    measure_list,
 )
 from lenskit.schemas.tuning import TuningSpec
 
@@ -46,12 +43,15 @@ def measure_pipeline(
     collector.add_metric(Hit())
     collector.add_metric(Hit(n=10))
 
-    prediction_metrics = []
+    pred_collector = None
 
     runner = BatchPipelineRunner()
     runner.recommend(n=spec.search.list_length)
     if pipe.node("rating-predictor", missing=None) is not None:
         runner.predict()
+        pred_collector = MeasurementCollector()
+        pred_collector.add_metric(RMSE())
+        pred_collector.add_metric(MAE())
 
     for result in runner.run_iter(pipe, test_users):
         log = _log.bind(key=result.key)
@@ -62,29 +62,19 @@ def measure_pipeline(
         test = test_users.lookup(result.key)
         assert test is not None
 
+        assert isinstance(recs, ItemList)
         collector.add_list_measurement(recs, test)
 
         if preds is not None:
+            assert pred_collector is not None
+            assert isinstance(preds, ItemList)
             log.debug("measuring rating predictions")
-            prediction_metrics.append(
-                {"RMSE": measure_list(RMSE, preds, test), "MAE": measure_list(MAE, preds, test)}
-            )
+            pred_collector.add_list_measurement(preds, test)
 
-    summary = collector.summary_metrics()
-    metric_names = ("RBP", "LogRBP", "DCG", "NDCG", "NDCG@10", "RecipRank", "Hit", "Hit@10")
+    agg_metrics: dict[str, object] = _collect_means(collector)
 
-    agg_metrics = {}
-
-    for name in metric_names:
-        if f"{name}.mean" in summary:
-            agg_metrics[name] = summary[f"{name}.mean"]
-        elif f"{name}.logmean" in summary:
-            agg_metrics[name] = summary[f"{name}.logmean"]
-        else:
-            raise ValueError(f"No supported aggregate for metric {name}")
-
-    if prediction_metrics:
-        agg_metrics.update(pd.DataFrame.from_records(prediction_metrics).mean().to_dict())
+    if pred_collector is not None:
+        agg_metrics.update(_collect_means(pred_collector))
 
     if train_task is not None:
         agg_metrics["TrainTask"] = train_task.task_id
@@ -96,3 +86,17 @@ def measure_pipeline(
         agg_metrics["TestTime"] = test_task.duration
         agg_metrics["TestCPU"] = test_task.cpu_time
     return agg_metrics
+
+
+def _collect_means(collector: MeasurementCollector) -> dict[str, object]:
+    summary = collector.summary_metrics()
+    means = {}
+    for name in collector.metric_names:
+        if f"{name}.mean" in summary:
+            means[name] = summary[f"{name}.mean"]
+        elif f"{name}.logmean" in summary:
+            means[name] = summary[f"{name}.logmean"]
+        else:
+            raise ValueError(f"No supported aggregate for metric {name}")
+
+    return means
