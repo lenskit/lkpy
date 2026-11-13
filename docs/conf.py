@@ -24,7 +24,7 @@ from lenskit._version import lenskit_version  # noqa: PLC2701
 _log = getLogger("sphinx.lenskit")
 
 project = "LensKit"
-copyright = "2018–2025 Drexel University, Boise State University, and collaborators"
+copyright = "2018–2026 Drexel University, Boise State University, and collaborators"
 author = "Michael D. Ekstrand"
 
 release = lenskit_version()
