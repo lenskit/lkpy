@@ -1,6 +1,6 @@
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University.
-# Copyright (C) 2023-2025 Drexel University.
+# Copyright (C) 2023-2026 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -74,6 +74,10 @@ html_theme_options = {
         "json_url": "https://lenskit.org/versions.json",
         "version_match": "2024.0dev",
     },
+    "announcement": """
+        This is the archived documentation for the LensKit 2025 release series.
+        You probably want the <a href="https://lenskit.org/">latest documentation</a>.
+    """,
     "show_version_warning_banner": True,
     "icon_links": [
         {
