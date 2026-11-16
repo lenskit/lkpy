@@ -334,7 +334,11 @@ class DatasetBuilder:
                 table = table.cast(schema)
         elif pa.types.is_integer(ids.type):
             self.schema.entities[cls].id_type = "int"
-        elif pa.types.is_string(ids.type) or pa.types.is_large_string(ids.type):
+        elif (
+            pa.types.is_string(ids.type)
+            or pa.types.is_large_string(ids.type)
+            or pa.types.is_string_view(ids.type)
+        ):
             self.schema.entities[cls].id_type = "str"
         else:
             raise TypeError(f"invalid ID type {ids.type}")
@@ -343,6 +347,9 @@ class DatasetBuilder:
         id_type: pa.DataType = id_field.type
 
         # de-duplicate and sort the IDs
+        if pa.types.is_string_view(ids.type):
+            # FIXME: string views need to be cast to strings first due to lack of sort kernel
+            ids = ids.cast(pa.string())
         ids = pc.unique(ids).sort()
 
         n = len(ids)

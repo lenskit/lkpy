@@ -10,10 +10,11 @@ Tests for the Dataset class.
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from pytest import raises
 
-from lenskit.data import Dataset, from_interactions_df
+from lenskit.data import Dataset, DatasetBuilder, from_interactions_df
 from lenskit.testing import ml_ds, ml_ratings
 
 
@@ -115,3 +116,26 @@ def test_item_num_many(ml_ds: Dataset):
 def test_item_num_missing_error(ml_ds: Dataset):
     with raises(KeyError):
         ml_ds.items.number(-402, missing="error")
+
+
+def test_string_view_ids(ml_ratings: pd.DataFrame):
+    items = [str(i) for i in ml_ratings["item_id"].values]
+    users = [str(i) for i in ml_ratings["user_id"].values]
+    item_set = pa.array(set(items), type=pa.string_view())
+    user_set = pa.array(set(users), type=pa.string_view())
+    dsb = DatasetBuilder()
+    dsb.add_entities("item", item_set)
+    dsb.add_entities("user", user_set)
+    itbl = pa.table(
+        {
+            "item_id": items,
+            "user_id": users,
+            "rating": ml_ratings["rating"].values,
+            "timestamp": ml_ratings["timestamp"].values,
+        }
+    )
+    dsb.add_interactions("rating", itbl)
+
+    ds = dsb.build()
+    assert ds.item_count == ml_ratings["item_id"].nunique()
+    assert ds.user_count == ml_ratings["user_id"].nunique()
