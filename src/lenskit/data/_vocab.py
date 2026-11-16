@@ -34,16 +34,13 @@ class Vocabulary:
     Vocabularies of entity identifiers for the LensKit data model.
 
     This class supports bidirectional mappings between key-like data and
-    congiguous nonnegative integer indices.  Its key use is to facilitate the
+    contiguous nonnegative integer indices.  Its key use is to facilitate the
     entity ID vocabularies in :class:`~lenskit.data.Dataset`, but it can also be
     used for things like item tags.
 
     IDs in a vocabulary must be unique.  Constructing a vocabulary with
     ``reorder=True`` ensures uniqueness (and sorts the IDs), but does not
     preserve the order of IDs in the original input.
-
-    It is currently a wrapper around :class:`pandas.Index`, but this fact is not
-    part of the stable public API.
 
     Args:
         keys:
@@ -61,12 +58,12 @@ class Vocabulary:
 
     name: str | None
     "The name of the vocabulary (e.g. “user”, “item”)."
-    _pd_index: pd.Index | None = None
-    "The Pandas index implementing the vocabulary."
     _array: pa.Array
-    "PyArrow array for the vocabulary."
+    "PyArrow array containing the vocabulary terms."
     _index: _accel.data.IDIndex
-    "Internal index."
+    "Index storing the ID-to-index mapping."
+    _pd_index: pd.Index | None = None
+    "Pandas index view of the vocabulary."
     _hash: str | None
     "Checksum of index data for fast equivalence testing."
     _log: BoundLogger
@@ -96,7 +93,6 @@ class Vocabulary:
             key_arr = pa.array(keys)  # type: ignore
 
         if reorder:
-            self._pd_index = None
             key_arr = key_arr.drop_null().unique().sort()
 
         assert key_arr.null_count == 0
@@ -106,19 +102,18 @@ class Vocabulary:
 
     def _ensure_hash(self):
         if not hasattr(self, "_hash"):
-            # since we just made this array, we can assume the buffer is fully used
             self._hash = _accel.data.hash_array(self._array)
 
     @property
     def index(self) -> pd.Index:
         """
-        The vocabulary as a Pandas index.
+        Get a copy of the vocabulary as a Pandas index.
 
         Stability:
             Internal
         """
         if self._pd_index is None:
-            self._pd_index = pd.Index(self._array.to_numpy(zero_copy_only=False))
+            self._pd_index = pd.Index(self._array)
             self._pd_index.name = f"{self.name}_id"
         return self._pd_index
 
@@ -271,7 +266,7 @@ class Vocabulary:
     def id_array(self) -> pa.Array:
         return self._array
 
-    def __eq__(self, other: Vocabulary) -> bool:
+    def __eq__(self, other: object) -> bool:
         if self is other:
             return True
         elif not isinstance(other, Vocabulary):
