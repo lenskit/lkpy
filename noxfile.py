@@ -21,6 +21,13 @@ def sweep_numpy(session, numpy):
     run_pytest(session)
 
 
+@nox.session(venv_backend="uv", python="3.12")
+@nox.parametrize("arrow", ["20", "22", "23", "24", "25", "26"])
+def sweep_arrow(session, arrow):
+    session.install(f"pyarrow ~={arrow}.0", "-e", ".", "--group", "test")
+    run_pytest(session)
+
+
 def run_pytest(session):
     opts = session.posargs
     if not opts:

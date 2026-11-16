@@ -25,7 +25,7 @@ dependencies = [
   "prettytable ~=3.14",
   "psutil >=6",
   "py-cpuinfo >=9.0",
-  "pyarrow >=20,!=21.*",
+  "pyarrow >=25",
   "pydantic-settings~=2.8",
   "pydantic ~=2.12",
   "pyzmq >=26",
