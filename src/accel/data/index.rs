@@ -75,7 +75,10 @@ impl IDIndex {
             DataType::LargeUtf8 => Box::new(IndirectHashTable::from_unique(
                 StringContentArray::new(ids.as_string::<i64>().clone()),
             )?),
-            // TODO: add support for views and binaries
+            DataType::Utf8View => Box::new(IndirectHashTable::from_unique(
+                StringContentArray::new(ids.as_string_view().clone()),
+            )?),
+            // TODO: add support for binaries
             _ => {
                 return Err(PyTypeError::new_err(format!(
                     "unsupported ID type {}",

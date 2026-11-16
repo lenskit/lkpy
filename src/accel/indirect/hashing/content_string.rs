@@ -21,29 +21,29 @@ use rustc_hash::FxHasher;
 use super::{IndirectHashContent, IndirectSearcher};
 
 /// Helper trait for accessing string arrays.
-trait StringAccess {
+pub trait StringAccess {
     fn len(&self) -> usize;
     fn value(&self, idx: usize) -> &str;
 }
 
 /// ID array implementation for string IDs.
-pub struct StringContentArray<OS: OffsetSizeTrait> {
-    array: GenericStringArray<OS>,
+pub struct StringContentArray<A: StringAccess> {
+    array: A,
 }
 
-pub struct StringSearch<'a, OS: OffsetSizeTrait> {
-    this: &'a GenericStringArray<OS>,
+pub struct StringSearch<'a, A: StringAccess> {
+    this: &'a A,
     other: Box<dyn StringAccess>,
 }
 
-impl<OS: OffsetSizeTrait> StringContentArray<OS> {
-    pub fn new(array: GenericStringArray<OS>) -> Self {
+impl<A: StringAccess> StringContentArray<A> {
+    pub fn new(array: A) -> Self {
         StringContentArray { array }
     }
 }
 
-impl<OS: OffsetSizeTrait> IndirectHashContent for StringContentArray<OS> {
-    type Searcher<'a> = StringSearch<'a, OS>;
+impl<A: StringAccess + 'static> IndirectHashContent for StringContentArray<A> {
+    type Searcher<'a> = StringSearch<'a, A>;
 
     fn hash_entry(&self, idx: u32) -> u64 {
         hash_array_idx(&self.array, idx as usize)
@@ -54,14 +54,14 @@ impl<OS: OffsetSizeTrait> IndirectHashContent for StringContentArray<OS> {
     }
 
     fn len(&self) -> usize {
-        Array::len(&self.array)
+        self.array.len()
     }
 
     fn create_searcher<'py, 'a>(
         &'a self,
         _py: pyo3::Python<'py>,
         val: pyo3::Bound<'py, pyo3::PyAny>,
-    ) -> pyo3::PyResult<StringSearch<'a, OS>> {
+    ) -> pyo3::PyResult<StringSearch<'a, A>> {
         let arr: Box<dyn StringAccess> = if let Ok(val) = val.extract::<&str>() {
             let mut ab = StringBuilder::with_capacity(1, val.len() + 1);
             ab.append_value(val);
@@ -95,7 +95,7 @@ impl<OS: OffsetSizeTrait> IndirectHashContent for StringContentArray<OS> {
     }
 }
 
-impl<'a, OS: OffsetSizeTrait> IndirectSearcher<'a> for StringSearch<'a, OS> {
+impl<'a, A: StringAccess> IndirectSearcher<'a> for StringSearch<'a, A> {
     fn len(&self) -> usize {
         self.other.len()
     }
@@ -121,8 +121,8 @@ fn hash_array_idx(arr: &dyn StringAccess, idx: usize) -> u64 {
     h.finish()
 }
 
-fn compare_array_idx<OS: OffsetSizeTrait>(
-    arr1: &GenericStringArray<OS>,
+fn compare_array_idx<A: StringAccess>(
+    arr1: &A,
     idx1: usize,
     arr2: &dyn StringAccess,
     idx2: usize,

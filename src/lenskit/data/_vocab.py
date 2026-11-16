@@ -93,6 +93,9 @@ class Vocabulary:
             key_arr = pa.array(keys)  # type: ignore
 
         if reorder:
+            # sort is not implemented on string views
+            if pa.types.is_string_view(key_arr.type):
+                key_arr = key_arr.cast(pa.string())
             key_arr = key_arr.drop_null().unique().sort()
 
         assert key_arr.null_count == 0

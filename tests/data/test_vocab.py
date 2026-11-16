@@ -270,6 +270,45 @@ def test_all_terms(initial: set[int] | set[str]):
     assert all(terms == tl)
 
 
+@given(st.sets(st.emails()))
+def test_arrow_string_input(initial: set[str]):
+    input = pa.array(initial, type=pa.string())
+    vocab = Vocabulary(input)
+
+    tl = sorted(initial)
+
+    terms = vocab.terms()
+    assert isinstance(terms, np.ndarray)
+    terms = terms.tolist()
+    assert terms == tl
+
+
+@given(st.sets(st.emails()))
+def test_arrow_string_view_input(initial: set[str]):
+    input = pa.array(initial, type=pa.string_view())
+    vocab = Vocabulary(input)
+
+    tl = sorted(initial)
+
+    terms = vocab.terms()
+    assert isinstance(terms, np.ndarray)
+    terms = terms.tolist()
+    assert terms == tl
+
+
+@given(st.sets(st.emails()))
+def test_arrow_string_view_sorted_input(initial: set[str]):
+    input = pa.array(sorted(initial), type=pa.string_view())
+    vocab = Vocabulary(input, reorder=False)
+
+    tl = sorted(initial)
+
+    terms = vocab.terms()
+    assert isinstance(terms, np.ndarray)
+    terms = terms.tolist()
+    assert terms == tl
+
+
 def test_lots_of_strings(rng: np.random.Generator):
     "make sure a lot of strings work"
     N = 10_000
