@@ -164,7 +164,10 @@ class SystemInspector(Inspector):
     @group()
     def body(self):
         cpu = get_cpu_info()
-        yield kvp("Processor", cpu["brand_raw"])
+        if brand := cpu.get("brand_raw", None):
+            yield kvp("Processor", brand)
+        else:
+            yield kvp("Processor", "[yellow]unknown[/yellow]")
         if freq := cpu.get("hz_advertised", None):
             yield kvp("CPU Frequency", metric(freq[0], unit="Hz"))
 
