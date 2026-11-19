@@ -184,7 +184,6 @@ log_level = "INFO"
 markers = [
   "compat: mark the test as testing compatibility with old LensKit versions",
   "eval: mark the test as running the evaluator over custom data",
-  "realdata: mark the test as using a real data set like ML-20M",
   "slow: mark the test as taking a larger-than-usual amount of time",
 ]
 minversion = "9.0"

@@ -32,7 +32,6 @@ def ml20m():
 
 
 @pytest.mark.slow
-@pytest.mark.realdata
 @pytest.mark.parametrize("n_jobs", [1, 2])
 def test_pop_recommend(ml20m: Dataset, rng, n_jobs):
     users = rng.choice(ml20m.users.ids(), 10000, replace=False)
