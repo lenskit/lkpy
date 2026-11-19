@@ -30,28 +30,37 @@ mod transpose;
 pub use coordinates::CoordinateTable;
 pub use index::IDIndex;
 
-/// Register the lenskit._accel.als module
-pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-    let data = PyModule::new(parent.py(), "data")?;
-    parent.add_submodule(&data)?;
+#[pymodule(name = "data")]
+pub mod pymod {
+    #[pymodule_export]
+    use super::CoordinateTable;
+    #[pymodule_export]
+    use super::IDIndex;
 
-    data.add_class::<IDIndex>()?;
-    data.add_class::<CoordinateTable>()?;
-
-    data.add_function(wrap_pyfunction!(transpose::transpose_csr, &data)?)?;
-    data.add_function(wrap_pyfunction!(sorting::is_sorted_coo, &data)?)?;
-    data.add_function(wrap_pyfunction!(sorting::argsort_descending, &data)?)?;
-    data.add_function(wrap_pyfunction!(sorting::argtopn, &data)?)?;
-    data.add_function(wrap_pyfunction!(selection::negative_mask, &data)?)?;
-    data.add_function(wrap_pyfunction!(sampling::sample_negatives, &data)?)?;
-    data.add_function(wrap_pyfunction!(scatter::scatter_array, &data)?)?;
-    data.add_function(wrap_pyfunction!(scatter::scatter_array_empty, &data)?)?;
-    data.add_function(wrap_pyfunction!(cooc::count_cooc, &data)?)?;
-    data.add_function(wrap_pyfunction!(cooc::dense_cooc, &data)?)?;
-    data.add_function(wrap_pyfunction!(hash_array, &data)?)?;
-    data.add_function(wrap_pyfunction!(pyon::pyon_loads, &data)?)?;
-
-    Ok(())
+    #[pymodule_export]
+    use super::cooc::count_cooc;
+    #[pymodule_export]
+    use super::cooc::dense_cooc;
+    #[pymodule_export]
+    use super::hash_array;
+    #[pymodule_export]
+    use super::pyon::pyon_loads;
+    #[pymodule_export]
+    use super::sampling::sample_negatives;
+    #[pymodule_export]
+    use super::scatter::scatter_array;
+    #[pymodule_export]
+    use super::scatter::scatter_array_empty;
+    #[pymodule_export]
+    use super::selection::negative_mask;
+    #[pymodule_export]
+    use super::sorting::argsort_descending;
+    #[pymodule_export]
+    use super::sorting::argtopn;
+    #[pymodule_export]
+    use super::sorting::is_sorted_coo;
+    #[pymodule_export]
+    use super::transpose::transpose_csr;
 }
 
 #[pyfunction]

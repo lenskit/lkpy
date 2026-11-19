@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: MIT
 
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
-use pyo3::{exceptions::PyRuntimeError, prelude::*};
+use pyo3::prelude::*;
 
 mod als;
 mod arrow;
@@ -17,34 +17,50 @@ mod indirect;
 mod knn;
 mod logging;
 mod parallel;
-mod slim;
 mod sparse;
 mod tasks;
 mod util;
 
-/// Entry point for LensKit accelerator module.
-#[pymodule(gil_used = false)]
-fn _accel<'py>(py: Python<'py>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    logging::init_rust_logger()
-        .map_err(|_| PyRuntimeError::new_err("failed to install Rust logger"))?;
+/// Layout for LensKit accelerator Python module.
+#[pymodule(gil_used = false, name = "_accel")]
+mod accel {
+    use pyo3::exceptions::PyRuntimeError;
+    use pyo3::prelude::*;
 
-    knn::register_knn(m)?;
-    als::register_als(m)?;
-    data::register_data(m)?;
-    slim::register_slim(m)?;
+    #[pymodule_export]
+    use super::als::pymod as als;
+    #[pymodule_export]
+    use super::data::pymod as data;
+    #[pymodule_export]
+    use super::knn::pymod as knn;
 
-    m.add_class::<logging::AccelLogListener>()?;
-    m.add_class::<funksvd::FunkSVDTrainer>()?;
-    m.add_class::<util::atomic::AtomicInt>()?;
-    m.add_class::<parallel::NestedAccelPool>()?;
-    m.add_function(wrap_pyfunction!(parallel::init_accel_pool, m)?)?;
-    m.add_function(wrap_pyfunction!(parallel::thread_count, m)?)?;
-    m.add_function(wrap_pyfunction!(sparse::sparse_row_debug_type, m)?)?;
-    m.add_function(wrap_pyfunction!(sparse::sparse_structure_debug_large, m)?)?;
-    m.add_function(wrap_pyfunction!(arrow::arrow_type, m)?)?;
+    #[pymodule_export]
+    use super::funksvd::FunkSVDTrainer;
+    #[pymodule_export]
+    use super::logging::AccelLogListener;
+    #[pymodule_export]
+    use super::parallel::NestedAccelPool;
+    #[pymodule_export]
+    use super::util::atomic::AtomicInt;
 
-    let helper = py.import("lenskit.logging._accel")?;
-    helper.call_method("ensure_accel_logging", (), None)?;
+    #[pymodule_export]
+    use super::arrow::arrow_type;
+    #[pymodule_export]
+    use super::parallel::init_accel_pool;
+    #[pymodule_export]
+    use super::parallel::thread_count;
+    #[pymodule_export]
+    use super::sparse::sparse_row_debug_type;
+    #[pymodule_export]
+    use super::sparse::sparse_structure_debug_large;
 
-    Ok(())
+    #[pymodule_init]
+    fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        crate::logging::init_rust_logger()
+            .map_err(|_| PyRuntimeError::new_err("failed to install Rust logger"))?;
+
+        let helper = m.py().import("lenskit.logging._accel")?;
+        helper.call_method("ensure_accel_logging", (), None)?;
+        Ok(())
+    }
 }

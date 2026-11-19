@@ -41,21 +41,12 @@ struct SLIMTask {
     iu_matrix: CSRStructure<i64>,
 }
 
-/// Register the lenskit._accel.slim module
-pub fn register_slim(parent: &Bound<'_, PyModule>) -> PyResult<()> {
-    let slim = PyModule::new(parent.py(), "slim")?;
-    parent.add_submodule(&slim)?;
-    slim.add_function(wrap_pyfunction!(train_slim, &slim)?)?;
-
-    Ok(())
-}
-
 /// Learn SLIM regression weights.
 ///
 /// This returns the **transpose** of the weight matrix, for convenient
 /// implementation.
 #[pyfunction]
-fn train_slim(
+pub fn train_slim(
     ui_matrix: PyArrowType<ArrayData>,
     iu_matrix: PyArrowType<ArrayData>,
     l1_reg: FP,

@@ -6,7 +6,7 @@
 
 import pyarrow as pa
 
-from lenskit._accel import slim as _slim_accel
+from lenskit._accel import knn as _knn_accel
 from lenskit.data import Dataset
 from lenskit.data.matrix import SparseRowArray
 from lenskit.knn.slim import SLIMConfig, SLIMScorer
@@ -23,7 +23,7 @@ def test_slim_trainer(ml_ds: Dataset):
     ui_matrix = ml_ds.interactions().matrix().csr_structure(format="arrow")
     iu_matrix = ui_matrix.transpose()
 
-    result = run_accel_task(_slim_accel.train_slim(ui_matrix, iu_matrix, 0.005, 0.01, 10, 100))
+    result = run_accel_task(_knn_accel.train_slim(ui_matrix, iu_matrix, 0.005, 0.01, 10, 100))
     result = pa.chunked_array(result).combine_chunks()
     result = SparseRowArray.from_array(result)
     assert isinstance(result, SparseRowArray)

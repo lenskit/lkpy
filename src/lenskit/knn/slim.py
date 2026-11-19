@@ -13,7 +13,7 @@ import pyarrow as pa
 from pydantic import BaseModel, PositiveFloat, PositiveInt
 from scipy.sparse import csr_array
 
-from lenskit._accel import slim as _slim_accel
+from lenskit._accel import knn as _slim_accel
 from lenskit.data import Dataset, ItemList, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
 from lenskit.logging import Stopwatch, get_logger, item_progress

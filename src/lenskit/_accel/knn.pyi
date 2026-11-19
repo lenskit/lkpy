@@ -27,3 +27,11 @@ def score_implicit(
     max_nbrs: int,
     min_nbrs: int,
 ) -> tuple[pa.FloatArray, pa.Int32Array]: ...
+def train_slim(
+    ui_matrix: SparseRowArray,
+    iu_matrix: SparseRowArray,
+    l1_reg: float,
+    l2_reg: float,
+    max_iters: int,
+    max_nbrs: int | None,
+) -> AccelTask[Sequence[SparseRowArray]]: ...
