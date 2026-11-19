@@ -4,7 +4,7 @@ repos:
     hooks:
       - id: no-commit-to-branch
       - id: check-added-large-files
-        exclude: pixi\.lock$
+        exclude: "^data/"
       - id: check-json
         exclude: \.(vscode|devcontainer)/.*\.json$
       - id: check-merge-conflict
