@@ -32,7 +32,7 @@ For an example, let's start with importing things to run a quick batch:
 
 Load and split some data:
 
-    >>> data = load_movielens('data/ml-100k.zip')
+    >>> data = load_movielens('data/ml-100k')
     >>> split = sample_users(data, 150, SampleN(5, rng=1024), rng=42)
 
 Configure and train the model:

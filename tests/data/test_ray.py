@@ -17,7 +17,7 @@ data_dir = Path("data")
 
 
 @mark.slow
-@mark.parametrize("name", ["ml-latest-small", "ml-100k.zip", "ml-20m.zip"])
+@mark.parametrize("name", ["ml-latest-small", "ml-100k", "ml-20m.zip"])
 def test_ray_roundtrip(name):
     ensure_cluster()
     ds_path = data_dir / name

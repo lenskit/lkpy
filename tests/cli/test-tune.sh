@@ -1,4 +1,4 @@
-ML100K="data/ml-100k.zip"
+ML100K="data/ml-100k"
 data="$TEST_WORK/ml-data"
 train="$TEST_WORK/ml-data.train"
 test="$TEST_WORK/ml-data.test.parquet"
@@ -12,7 +12,7 @@ fi
 
 begin-suite
 
-if [[ ! -f $ML100K ]]; then
+if [[ ! -d $ML100K ]]; then
     msg "ML-100K not available, skipping tune test"
     return
 fi
