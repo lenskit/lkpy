@@ -18,6 +18,7 @@ use sha1::{Digest, Sha1};
 
 mod cooc;
 mod coordinates;
+mod dedup;
 mod index;
 mod pairs;
 mod pyon;
@@ -36,6 +37,8 @@ pub mod pymod {
     use super::CoordinateTable;
     #[pymodule_export]
     use super::IDIndex;
+    #[pymodule_export]
+    use super::dedup::TableDedup;
 
     #[pymodule_export]
     use super::cooc::count_cooc;
