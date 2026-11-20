@@ -85,12 +85,14 @@ jobs:
           just test-cli --coverage --cov-append
         env:
           LK_TUNE_JOBS: 2
+          LK_TEST_TUNER: yes
 
       - name: 🕺🏻 Test LensKit tune CLI (with Ray)
         run: |
           just test-cli --coverage --cov-append tests/cli/test-tune.sh
         env:
           LK_USE_RAY_TUNE: 1
+          LK_TEST_TUNER: yes
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0

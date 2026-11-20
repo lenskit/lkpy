@@ -83,6 +83,7 @@ jobs:
           just test-cli --coverage --cov-append
         env:
           MERMAID_DOCKER: 1
+          LK_TEST_TUNER: no
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0
@@ -190,6 +191,8 @@ jobs:
       - name: 🕺🏻 Test LensKit CLI
         run: |
           just test-cli --coverage --cov-append
+        env:
+          LK_TEST_TUNER: no
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0
