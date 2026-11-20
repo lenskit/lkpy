@@ -102,9 +102,9 @@ def pytest_collection_modifyitems(items):
     # add 'slow' to all 'eval' tests
     for item in items:
         evm = item.get_closest_marker("eval")
-        rdm = item.get_closest_marker("realdata")
+        big = item.get_closest_marker("bigdata")
         slm = item.get_closest_marker("slow")
-        if slm is None and (evm is not None or rdm is not None):
+        if slm is None and (evm is not None or big is not None):
             _log.debug("adding slow mark to %s", item)
             item.add_marker("slow")
 

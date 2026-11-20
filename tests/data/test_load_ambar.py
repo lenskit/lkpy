@@ -21,7 +21,6 @@ ARTISTS_FILE = AMBAR_DIR / "artists_info.csv"
 
 
 @mark.skipif(not AMBAR_DIR.exists(), reason="input data does not exist")
-@mark.realdata
 def test_ambar():
     ratings = pd.read_csv(RATINGS_FILE)
     users = pd.read_csv(USERS_FILE)
@@ -42,7 +41,6 @@ def test_ambar():
 
 
 @mark.skipif(not AMBAR_DIR.exists(), reason="input data does not exist")
-@mark.realdata
 def test_ambar_artist_attribute():
     data = load_ambar(AMBAR_DIR)
 

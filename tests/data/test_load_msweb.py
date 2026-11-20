@@ -19,7 +19,6 @@ MSWEB_TEST = Path("data/anonymous-msweb.test.gz")
 
 
 @mark.skipif(not MSWEB_TRAIN.exists(), reason="msweb data not present")
-@mark.realdata
 def test_msweb_train():
     ds = load_ms_web(MSWEB_TRAIN)
     assert 32000 < ds.entities("session").count() < 33000
@@ -27,7 +26,6 @@ def test_msweb_train():
 
 
 @mark.skipif(not MSWEB_TEST.exists(), reason="msweb data not present")
-@mark.realdata
 def test_msweb_test():
     ds = load_ms_web(MSWEB_TEST, "collection")
     assert len(ds) >= 500

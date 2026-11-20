@@ -12,8 +12,8 @@ run-cmd -check uv python install 3.11
 msg -step "checking LensKit install"
 run-cmd -check lenskit doctor
 
-msg -step "running basic tests"
-run-cmd just test --coverage -- -m realdata
+msg -step "running data tests"
+run-cmd just test --coverage -- tests/data tests/cli
 if (($?)); then
     die "tests failed"
 fi

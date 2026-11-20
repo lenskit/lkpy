@@ -24,7 +24,6 @@ AZ23_TEST = Path(f"data/az23/{AZ_NAME}.csv.gz")
 
 @mark.skipif(not AZ14_TEST.exists(), reason="input data does not exist")
 @mark.xfail(reason="duplicate ratings")
-@mark.realdata
 def test_amazon_2014():
     df = pd.read_csv(AZ14_TEST, names=["user_id", "item_id", "rating", "timestamp"])
     data = load_amazon_ratings(AZ14_TEST)
@@ -36,7 +35,6 @@ def test_amazon_2014():
 
 @mark.skipif(not AZ18_TEST.exists(), reason="input data does not exist")
 @mark.xfail(reason="duplicate ratings")
-@mark.realdata
 def test_amazon_2018():
     df = pd.read_csv(AZ18_TEST, names=["item_id", "user_id", "rating", "timestamp"])
     data = load_amazon_ratings(AZ18_TEST)
@@ -47,7 +45,6 @@ def test_amazon_2018():
 
 
 @mark.skipif(not AZ23_TEST.exists(), reason="input data does not exist")
-@mark.realdata
 def test_amazon_2023_vocab():
     "targeted vocab tests for broken data set"
     df = pd.read_csv(AZ23_TEST)
@@ -67,7 +64,6 @@ def test_amazon_2023_vocab():
 
 
 @mark.skipif(not AZ23_TEST.exists(), reason="input data does not exist")
-@mark.realdata
 def test_amazon_2023():
     df = pd.read_csv(AZ23_TEST)
     data = load_amazon_ratings(AZ23_TEST)

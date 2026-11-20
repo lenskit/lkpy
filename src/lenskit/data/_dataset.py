@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import functools
 import io
-from abc import abstractmethod
 from collections.abc import Callable
 from os import PathLike
 from typing import Any, Literal, overload
@@ -260,7 +259,6 @@ class Dataset:
         return self.interactions().count()
 
     @overload
-    @abstractmethod
     def interaction_table(
         self,
         *,
@@ -269,16 +267,13 @@ class Dataset:
         original_ids: bool = False,
     ) -> pd.DataFrame: ...
     @overload
-    @abstractmethod
     def interaction_table(
         self, *, format: Literal["numpy"], fields: str | list[str] | None = None
     ) -> dict[str, NDArray[Any]]: ...
     @overload
-    @abstractmethod
     def interaction_table(
         self, *, format: Literal["arrow"], fields: str | list[str] | None = None
     ) -> pa.Table: ...
-    @abstractmethod
     @_uses_data
     def interaction_table(
         self,
@@ -337,7 +332,6 @@ class Dataset:
                 raise ValueError(f"unsupported format {format}")
 
     @overload
-    @abstractmethod
     def interaction_matrix(
         self,
         *,
@@ -346,7 +340,6 @@ class Dataset:
         original_ids: bool = False,
     ) -> pd.DataFrame: ...
     @overload
-    @abstractmethod
     def interaction_matrix(
         self,
         *,
@@ -355,7 +348,6 @@ class Dataset:
         field: str | None = None,
     ) -> torch.Tensor: ...
     @overload
-    @abstractmethod
     def interaction_matrix(
         self,
         *,
@@ -364,7 +356,6 @@ class Dataset:
         field: str | None = None,
     ) -> sps.coo_array: ...
     @overload
-    @abstractmethod
     def interaction_matrix(
         self,
         *,
@@ -373,14 +364,12 @@ class Dataset:
         field: str | None = None,
     ) -> sps.csr_array: ...
     @overload
-    @abstractmethod
     def interaction_matrix(
         self,
         *,
         format: Literal["structure"],
         layout: Literal["csr"] = "csr",
     ) -> CSRStructure: ...
-    @abstractmethod
     @_uses_data
     def interaction_matrix(
         self,
@@ -456,13 +445,10 @@ class Dataset:
             case _:
                 raise ValueError(f"unknown matrix format {format}")
 
-    @abstractmethod
     @overload
     def user_row(self, user_id: ID) -> ItemList | None: ...
-    @abstractmethod
     @overload
     def user_row(self, *, user_num: int) -> ItemList: ...
-    @abstractmethod
     def user_row(
         self, user_id: ID | None = None, *, user_num: int | None = None
     ) -> ItemList | None:

@@ -21,7 +21,6 @@ AU_FILE = STEAM_DIR / "australian_users_items.json.gz"
 
 
 @mark.skipif(not AU_FILE.exists(), reason="input data does not exist")
-@mark.realdata
 def test_steam_australia():
     data = load_steam(AU_FILE)
 

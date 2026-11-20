@@ -35,7 +35,7 @@ def tuner_class(request):
 
 
 @mark.slow
-@mark.realdata
+@mark.eval
 def test_tune_bias(ml_100k, tmp_path, tuner_class):
     # mostly just test that it runs… we aren't checking final results
     spec = TuningSpec.load(Path("pipelines/bias-search.toml"))
