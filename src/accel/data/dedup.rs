@@ -13,7 +13,7 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use arrow_schema::DataType;
-use pyo3::exceptions::{PyNotImplementedError, PyRuntimeError};
+use pyo3::exceptions::{PyNotImplementedError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
 mod pair;
@@ -41,8 +41,12 @@ trait DedupMemory: Send + Sync {
 impl TableDedup {
     /// Construct a new table deduplicator.
     #[new]
-    #[pyo3(signature=(schema, *, columns=None))]
-    fn new<'py>(schema: PyArrowType<Schema>, columns: Option<Vec<String>>) -> PyResult<Self> {
+    #[pyo3(signature=(schema, *, columns=None, row_compare="hash"))]
+    fn new<'py>(
+        schema: PyArrowType<Schema>,
+        columns: Option<Vec<String>>,
+        row_compare: &str,
+    ) -> PyResult<Self> {
         let schema = schema.0;
         let memory: Box<dyn DedupMemory> = if let Some(cols) = columns {
             let mut happy_types = true;
@@ -65,10 +69,22 @@ impl TableDedup {
                     "column-based dedup not yet implemented",
                 ));
             }
-        } else {
-            Box::new(row::RowMemory::new(&schema).map_err(|e| {
+        } else if row_compare == "hash" {
+            row::row_hash_memory(&schema).map_err(|e| {
                 PyRuntimeError::new_err(format!("failed to create deduplicator: {}", e))
-            })?)
+            })?
+        } else if row_compare == "full" {
+            row::row_memory(&schema).map_err(|e| {
+                PyRuntimeError::new_err(format!("failed to create deduplicator: {}", e))
+            })?
+        } else if row_compare == "short-hash" {
+            row::row_short_hash_memory(&schema).map_err(|e| {
+                PyRuntimeError::new_err(format!("failed to create deduplicator: {}", e))
+            })?
+        } else {
+            return Err(PyValueError::new_err(
+                "row_compare must be one of 'hash', 'full', or 'short-hash'",
+            ));
         };
         Ok(TableDedup { memory })
     }

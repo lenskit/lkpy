@@ -14,12 +14,13 @@ from lenskit.testing import ml_20m
 _log = get_logger(__name__)
 
 
-def test_exact_no_dups(ml_ds: Dataset):
+@mark.parametrize("how", ["hash", "full", "short-hash"])
+def test_exact_no_dups(ml_ds: Dataset, how: str):
     "deduplicate data by entire rows"
     table = ml_ds.interactions().arrow()
     timer = Stopwatch()
 
-    dedup = _data_accel.TableDedup(table.schema)
+    dedup = _data_accel.TableDedup(table.schema, row_compare=how)
 
     for batch in table.to_batches(max_chunksize=10240):
         assert dedup.count_duplicates(batch) == 0
@@ -28,12 +29,13 @@ def test_exact_no_dups(ml_ds: Dataset):
 
 
 @mark.bigdata
-def test_exact_no_dups_big(ml_20m: Dataset):
+@mark.parametrize("how", ["hash", "full", "short-hash"])
+def test_exact_no_dups_big(ml_20m: Dataset, how: str):
     "deduplicate data by entire rows"
     table = ml_20m.interactions().arrow()
     timer = Stopwatch()
 
-    dedup = _data_accel.TableDedup(table.schema)
+    dedup = _data_accel.TableDedup(table.schema, row_compare=how)
 
     for batch in table.to_batches(max_chunksize=100240):
         assert dedup.count_duplicates(batch) == 0
