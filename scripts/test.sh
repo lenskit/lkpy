@@ -32,7 +32,10 @@ if (($COVER)); then
 fi
 
 if (($TEST_RELEASE)); then
+    msg "enabling release build"
     build_args+=(-r)
+else
+    msg "testing with debug build"
 fi
 
 msg "building accelerator"
