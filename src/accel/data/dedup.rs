@@ -7,13 +7,16 @@
 //! Deduplication support.
 use arrow::compute::filter_record_batch;
 use arrow::datatypes::Schema;
+use arrow::row::SortField;
 use arrow::{
     array::{BooleanArray, RecordBatch},
     pyarrow::PyArrowType,
 };
+use arrow_schema::DataType;
 use pyo3::exceptions::{PyNotImplementedError, PyRuntimeError};
 use pyo3::prelude::*;
 
+mod pair;
 mod row;
 
 /// Arrow table de-duplicator.
@@ -40,18 +43,34 @@ impl TableDedup {
     #[new]
     #[pyo3(signature=(schema, *, columns=None))]
     fn new<'py>(schema: PyArrowType<Schema>, columns: Option<Vec<String>>) -> PyResult<Self> {
-        if columns.is_some() {
-            Err(PyNotImplementedError::new_err(
-                "column-based dedup not yet implemented",
-            ))
+        let schema = schema.0;
+        let memory: Box<dyn DedupMemory> = if let Some(cols) = columns {
+            let mut happy_types = true;
+            let mut fields = Vec::with_capacity(cols.len());
+            let mut names = Vec::with_capacity(cols.len());
+            for col in cols.iter() {
+                let field = schema
+                    .field_with_name(&col)
+                    .map_err(|e| PyRuntimeError::new_err(format!("invalid field: {}", e)))?;
+                fields.push(SortField::new(field.data_type().clone()));
+                if *field.data_type() != DataType::Int32 {
+                    happy_types = false;
+                }
+                names.push(field.name().clone())
+            }
+            if fields.len() == 2 && happy_types {
+                Box::new(pair::PairMemory::new(names))
+            } else {
+                return Err(PyNotImplementedError::new_err(
+                    "column-based dedup not yet implemented",
+                ));
+            }
         } else {
-            let memory = row::RowMemory::new(&schema.0).map_err(|e| {
+            Box::new(row::RowMemory::new(&schema).map_err(|e| {
                 PyRuntimeError::new_err(format!("failed to create deduplicator: {}", e))
-            })?;
-            Ok(TableDedup {
-                memory: Box::new(memory),
-            })
-        }
+            })?)
+        };
+        Ok(TableDedup { memory })
     }
 
     /// Get the number of unique values this deduplicator has seen.

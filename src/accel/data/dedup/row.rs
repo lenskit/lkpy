@@ -47,11 +47,7 @@ impl DedupMemory for RowMemory {
         let mut result = BooleanBuilder::with_capacity(batch.num_rows());
         for row in self.converter.convert_columns(cols)?.into_iter() {
             let row = row.owned();
-            if self.table.insert(row) {
-                result.append_value(true);
-            } else {
-                result.append_value(false);
-            }
+            result.append_value(self.table.insert(row))
         }
         Ok(result.finish())
     }
