@@ -39,10 +39,13 @@ MSW_BASE = "https://kdd.ics.uci.edu/databases/msweb/"
     "-D", "--data-dir", "dest", default="data", type=Path, help="directory for downloaded data"
 )
 @click.argument("name", nargs=-1)
-def fetch(source: str | None, dest: Path, name: list[str], force: bool, edition: str, core: bool):
+def fetch(
+    source: str | None, dest: Path, name: list[str], force: bool, edition: str, core: bool
+):  # pragma: nocover
     """
     Convert data into the LensKit native format.
     """
+    _log.warning("The lenskit fetch command is deprecated and will be removed.")
 
     if dest is None:
         dest = Path()
