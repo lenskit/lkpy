@@ -4,8 +4,10 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from ._blb import blb_summary
 from ._gini import gini
 
 __all__ = [
+    "blb_summary",
     "gini",
 ]
