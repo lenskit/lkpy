@@ -6,13 +6,12 @@
 
 //! Deduplication support.
 use arrow::compute::filter_record_batch;
-use arrow::datatypes::Schema;
 use arrow::row::SortField;
 use arrow::{
     array::{BooleanArray, RecordBatch},
+    datatypes::{DataType, Schema},
     pyarrow::PyArrowType,
 };
-use arrow_schema::DataType;
 use pyo3::exceptions::{PyNotImplementedError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -24,6 +23,8 @@ mod tuple;
 /// Arrow table de-duplicator.
 #[pyclass]
 pub struct TableDedup {
+    columns: Option<Vec<String>>,
+    schema: arrow::datatypes::Schema,
     memory: Box<dyn DedupMemory>,
 }
 
@@ -50,7 +51,7 @@ impl TableDedup {
         row_compare: &str,
     ) -> PyResult<Self> {
         let schema = schema.0;
-        let memory: Box<dyn DedupMemory> = if let Some(cols) = columns {
+        let memory: Box<dyn DedupMemory> = if let Some(cols) = &columns {
             let mut happy_types = true;
             let mut fields = Vec::with_capacity(cols.len());
             let mut names = Vec::with_capacity(cols.len());
@@ -89,7 +90,21 @@ impl TableDedup {
                 "row_compare must be one of 'hash', 'full', or 'short-hash'",
             ));
         };
-        Ok(TableDedup { memory })
+        Ok(TableDedup {
+            columns,
+            schema,
+            memory,
+        })
+    }
+
+    #[getter]
+    fn columns(&self) -> Option<&Vec<String>> {
+        self.columns.as_ref()
+    }
+
+    #[getter]
+    fn schema(&self) -> PyArrowType<Schema> {
+        self.schema.clone().into()
     }
 
     /// Get the number of unique values this deduplicator has seen.
