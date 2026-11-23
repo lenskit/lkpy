@@ -148,7 +148,7 @@ def test_remove_repeat_interaction_at_builder_saves_last_interaction():
     log = ds.interactions().pandas()
     log = log[(log["user_num"] == 1) & (log["item_num"] == 2)]
     assert len(log) == 1
-    assert log["rating"][5] == 3
+    assert log["rating"].iloc[0] == 3
 
 
 def test_remove_repeat_interaction_at_matrix_saves_last_interaction():
@@ -173,7 +173,7 @@ def test_remove_repeat_interaction_at_matrix_saves_last_interaction():
     log = ds.interactions().matrix().pandas()
     log = log[(log["user_num"] == 1) & (log["item_num"] == 2)]
     assert len(log) == 1
-    assert log["rating"][2] == 3
+    assert log["rating"].iloc[0] == 3
 
 
 def test_remove_repeat_in_multiple_added_interactions():
