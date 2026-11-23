@@ -11,7 +11,7 @@ Tests on the ML-20M data set.
 import logging
 from pathlib import Path
 
-import pytest
+from pytest import fixture, mark, skip
 
 from lenskit.basic import PopScorer
 from lenskit.batch import recommend
@@ -22,18 +22,19 @@ _log = logging.getLogger(__name__)
 
 _ml_path = Path("data/ml-20m.zip")
 
+pytestmark = mark.bigdata
 
-@pytest.fixture(scope="module")
+
+@fixture(scope="module")
 def ml20m():
     if _ml_path.exists():
         return load_movielens(_ml_path)
     else:
-        pytest.skip("ML-20M not available")
+        skip("ML-20M not available")
 
 
-@pytest.mark.slow
-@pytest.mark.realdata
-@pytest.mark.parametrize("n_jobs", [1, 2])
+@mark.slow
+@mark.parametrize("n_jobs", [1, 2])
 def test_pop_recommend(ml20m: Dataset, rng, n_jobs):
     users = rng.choice(ml20m.users.ids(), 10000, replace=False)
     scorer = PopScorer()

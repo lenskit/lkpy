@@ -30,7 +30,7 @@ _log = get_logger("lenskit.testing")
 
 
 ml_test_dir = Path("data/ml-latest-small")
-ml_100k_zip = Path("data/ml-100k.zip")
+ml_100k_dir = Path("data/ml-100k")
 ml_25m_zip = Path("data/ml-25m.zip")
 
 ml_test: Dataset = Dataset(lambda: load_movielens(ml_test_dir))
@@ -109,9 +109,9 @@ def ml_100k() -> Generator[pd.DataFrame, None, None]:
     Fixture to load the MovieLens 100K dataset (currently as a data frame).  It skips
     the test if the ML100K data is not available.
     """
-    if not ml_100k_zip.exists():
+    if not ml_100k_dir.exists():
         pytest.skip("ML100K data not available")
-    yield load_movielens_df(ml_100k_zip)
+    yield load_movielens_df(ml_100k_dir)
 
 
 @pytest.fixture(scope="session")

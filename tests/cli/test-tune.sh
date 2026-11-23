@@ -1,8 +1,14 @@
-ML100K="data/ml-100k.zip"
+ML100K="data/ml-100k"
 data="$TEST_WORK/ml-data"
 train="$TEST_WORK/ml-data.train"
 test="$TEST_WORK/ml-data.test.parquet"
 out="$TEST_WORK/bias-tune"
+: ${LK_TEST_TUNER:=maybe}
+
+if [[ $LK_TEST_TUNER = no ]]; then
+    msg "tuner tests disabled"
+    return
+fi
 
 declare -a tune_args=()
 if [[ $LK_USE_RAY_TUNE ]]; then
@@ -12,15 +18,12 @@ fi
 
 begin-suite
 
-if [[ ! -f $ML100K ]]; then
-    msg "ML-100K not available, skipping tune test"
-    return
-fi
-
-msg "checking for Optuna"
+msg "checking for tuning library"
 if ! uv pip list | grep -qE '(optuna|ray)'; then
-    err "tuner not installed aborting"
-    tap_out "Bail out! No tuning library available."
+    err "tuning backend not installed"
+    if [[ $LK_TEST_TUNER = yes ]]; then
+        tap_out "Bail out! No tuning library available."
+    fi
     return
 fi
 

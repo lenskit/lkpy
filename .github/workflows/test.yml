@@ -75,7 +75,7 @@ jobs:
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit --cov-append tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit --cov-append -m 'not eval' tests
 
       - name: 🕺🏻 Test LensKit CLI
         if: runner.os != 'Windows'
@@ -83,6 +83,7 @@ jobs:
           just test-cli --coverage --cov-append
         env:
           MERMAID_DOCKER: 1
+          LK_TEST_TUNER: no
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0
@@ -151,7 +152,7 @@ jobs:
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit -m 'not eval' tests
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0
@@ -185,11 +186,13 @@ jobs:
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
           python -m pytest -vs tests/test_env.py
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit -m 'not eval' tests
 
       - name: 🕺🏻 Test LensKit CLI
         run: |
           just test-cli --coverage --cov-append
+        env:
+          LK_TEST_TUNER: no
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0

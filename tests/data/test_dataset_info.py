@@ -72,7 +72,6 @@ def test_list_type(ml_ds: Dataset):
     assert attr.data_type == pa.string()
 
 
-@mark.realdata
 def test_vector_dtype(ml20m: Dataset):
     attr = ml20m.entities("item").attribute("tag_genome")
     assert attr.layout.value == "vector"

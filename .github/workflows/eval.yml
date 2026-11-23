@@ -43,13 +43,9 @@ jobs:
             data
           key: eval-test-data
 
-      - name: Download datasets
-        run: |
-          lenskit data fetch -D data --movielens ml-100k
-
       - name: Run Eval Tests
         run: |
-          pytest --cov-append --cov=src/lenskit --durations=10 -m 'eval or realdata' --log-file test-eval.log tests
+          pytest --cov-append --cov=src/lenskit --durations=10 -m eval --log-file test-eval.log tests
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0
@@ -84,21 +80,19 @@ jobs:
         env:
           DONT_SET_MARCH: 1
 
-      - name: Download datasets
-        run: |
-          coverage run -a --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k
-
       - name: 🕺🏻 Test LensKit CLI
         run: |
           just test-cli --coverage --cov-append
         env:
           LK_TUNE_JOBS: 2
+          LK_TEST_TUNER: yes
 
       - name: 🕺🏻 Test LensKit tune CLI (with Ray)
         run: |
           just test-cli --coverage --cov-append tests/cli/test-tune.sh
         env:
           LK_USE_RAY_TUNE: 1
+          LK_TEST_TUNER: yes
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v7.0.0

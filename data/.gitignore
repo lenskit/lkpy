@@ -8,5 +8,6 @@ ml-*/
 ms-web/
 steam
 !ml-latest-small/
+!ml-100k/
 *.parquet
 ambar/

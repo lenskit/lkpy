@@ -154,7 +154,7 @@ jobs:
 
       - name: Download ML data
         run: |
-          coverage run --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-1m ml-10m ml-20m
+          coverage run --source=src/lenskit -m lenskit data fetch -D data --movielens ml-1m ml-10m ml-20m
 
       - name: 📕 Validate code examples
         run: |

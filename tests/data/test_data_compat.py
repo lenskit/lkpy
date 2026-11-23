@@ -67,7 +67,6 @@ def test_data_backwards_compat(version, tmp_path: Path):
     assert ml.schema.version is not None
 
 
-@mark.realdata
 @mark.compat
 @mark.skipif(not _ml_path.exists(), reason="ml-20m not available")
 @mark.parametrize("version", LK_VERSIONS.keys())

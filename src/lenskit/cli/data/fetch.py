@@ -39,10 +39,13 @@ MSW_BASE = "https://kdd.ics.uci.edu/databases/msweb/"
     "-D", "--data-dir", "dest", default="data", type=Path, help="directory for downloaded data"
 )
 @click.argument("name", nargs=-1)
-def fetch(source: str | None, dest: Path, name: list[str], force: bool, edition: str, core: bool):
+def fetch(
+    source: str | None, dest: Path, name: list[str], force: bool, edition: str, core: bool
+):  # pragma: no cover
     """
     Convert data into the LensKit native format.
     """
+    _log.warning("The lenskit fetch command is deprecated and will be removed.")
 
     if dest is None:
         dest = Path()
@@ -65,7 +68,7 @@ def fetch(source: str | None, dest: Path, name: list[str], force: bool, edition:
             raise ValueError(f"unknown data format {source}")
 
 
-def fetch_movielens(name: str, base_dir: Path, force: bool):
+def fetch_movielens(name: str, base_dir: Path, force: bool):  # pragma: no cover
     """
     Fetch a MovieLens dataset.  The followings names are recognized:
 
@@ -106,7 +109,9 @@ def fetch_movielens(name: str, base_dir: Path, force: bool):
     log.info("downloaded %s", naturalsize(zipfile.stat().st_size, binary=True))
 
 
-def fetch_amazon_ratings(edition: str, core: bool, name: str, base_dir: Path, force: bool):
+def fetch_amazon_ratings(
+    edition: str, core: bool, name: str, base_dir: Path, force: bool
+):  # pragma: no cover
     key = edition + "-5core" if core else edition
     log = _log.bind(source="amazon", name=name, edition=edition, core=core)
     pat = AZ_LOC[key]
@@ -127,7 +132,7 @@ def fetch_amazon_ratings(edition: str, core: bool, name: str, base_dir: Path, fo
     log.info("downloaded %s", naturalsize(out_path.stat().st_size, binary=True))
 
 
-def fetch_ms_web(base_dir: Path, force: bool):
+def fetch_ms_web(base_dir: Path, force: bool):  # pragma: no cover
     """
     Fetch an MS Web data set.
     """
@@ -153,7 +158,7 @@ def fetch_ms_web(base_dir: Path, force: bool):
 
 
 @contextmanager
-def output_file(path: Path):
+def output_file(path: Path):  # pragma: no cover
     """
     Open an output file and write.
     """

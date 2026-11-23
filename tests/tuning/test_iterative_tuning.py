@@ -37,7 +37,7 @@ def tuner_class(request):
 
 
 @mark.slow
-@mark.realdata
+@mark.eval
 @mark.parametrize("version", ["implicit", "explicit"])
 def test_tune_als(ml_100k, tmp_path, tuner_class, version: str):
     "test optimizing an iterative model"
@@ -69,7 +69,7 @@ def test_tune_als(ml_100k, tmp_path, tuner_class, version: str):
 
 
 @mark.slow
-@mark.realdata
+@mark.eval
 def test_tune_als_logrbp(ml_100k, tmp_path):
     "test that Optuna can optimize LogRBP"
     importorskip("optuna")
