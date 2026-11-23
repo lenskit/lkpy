@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::mem::MaybeUninit;
 
-use arrow::array::{AsArray, BooleanArray, BooleanBuilder, Int32Array, RecordBatch};
+use arrow::array::{Array, AsArray, BooleanArray, BooleanBuilder, Int32Array, RecordBatch};
 use arrow::datatypes::Int32Type;
 use arrow::error::ArrowError;
 use arrow::error::Result as ArrowResult;
@@ -107,6 +107,13 @@ where
 
         assert_eq!(self.fields.len(), N);
         let arrays = self.extract_arrays(batch)?;
+        for a in &arrays {
+            if a.null_count() > 0 {
+                return Err(ArrowError::InvalidArgumentError(
+                    "null row/column values are not supported".to_string(),
+                ));
+            }
+        }
         for i in 0..batch.num_rows() {
             let key = T::from_row(&arrays, i);
             result.append_value(self.table.insert(key));
