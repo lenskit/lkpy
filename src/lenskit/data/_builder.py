@@ -80,10 +80,10 @@ class DatasetBuilder:
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
     _vocabularies: dict[str, Vocabulary]
-    _rel_coords: dict[str, _data_accel.CoordinateTable | None]
+    _rel_dedup: dict[str, _data_accel.TableDedup | None]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
-        self._rel_coords = {}
+        self._rel_dedup = {}
 
         if isinstance(name, Dataset):
             name._ensure_loaded()
@@ -95,11 +95,6 @@ class DatasetBuilder:
                 n: Vocabulary(name.tables[n].column(id_col_name(n)), name=n)
                 for n in name.schema.entities
             }
-            # reuse _rel_coords if we have them
-            if name._rel_coords is not None:
-                self._rel_coords = {
-                    n: coo.copy() for n, coo in name._rel_coords.items() if coo is not None
-                }
         else:
             self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
             self._tables = {"item": None}
@@ -465,10 +460,9 @@ class DatasetBuilder:
             )
             rc_def = self.schema.relationships[cls]
 
-        # FIXME: remove this segment when we can make it work
-
-        if allow_repeats and not rc_def.repeats.is_forbidden:
-            rc_def.repeats = AllowableTroolean.PRESENT
+        # don't let us override the schema
+        if allow_repeats and not rc_def.repeats.is_allowed:
+            allow_repeats = False
 
         link_id_cols = set()
         link_nums = {}
@@ -510,64 +504,57 @@ class DatasetBuilder:
             new_table = new_table.filter(link_mask)
         log.debug("adding %d new rows", new_table.num_rows)
 
+        # obtain the current table and unified schema
         cur_table = self._tables[cls]
-
-        # combine the tables to save them
-        incoming_table = new_table
         if cur_table is not None:
-            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
-
-        if remove_repeats is True:
-            new_table = self._remove_repeated_relationships(t=new_table, rel=rc_def)
+            schema = pa.unify_schemas(
+                [cur_table.schema, new_table.schema], promote_options="permissive"
+            )
+            if schema != cur_table.schema:
+                log.warning("incoming relationship schema does not match current schema, unifying")
+                cur_table = _cast_table(cur_table, schema)
+            if schema != new_table.schema:
+                new_table = _cast_table(new_table, schema)
         else:
+            schema = new_table.schema
+
+        # obtain the dedup table, clearing if schema or dedup logic has changed
+        dedup = self._rel_dedup.get(cls, None)
+        if not _dedup_is_valid(dedup, schema, remove_repeats):
+            dedup = None
+
+        if dedup is None and (remove_repeats or not allow_repeats or not rc_def.repeats.is_present):
+            # initialize the dedup table (with current schema)
             if remove_repeats == "exact":
-                new_table = self._remove_duplicated_relationships(t=new_table)
-                self._rel_coords[cls] = None
+                dedup = _data_accel.TableDedup(schema)
+            else:
+                dedup = _data_accel.TableDedup(schema, columns=list(link_nums.keys()))
 
-            if rc_def.repeats.is_forbidden:
-                _log.debug("checking for repeated interactions")
+            if cur_table is not None:
+                for batch in cur_table.to_batches():
+                    dedup.count_duplicates(batch)
 
-                # FIXME: the coordinate table preservation will be out-of-order with
-                # respect to sorted tables. This will not affect correctness for the
-                # purposes of checking if duplicates exist, but will cause problems
-                # if we count on locations for other purposes.  It also can increase
-                # memory use, since the coordinate table keeps a reference to the
-                # pre-sorted data.
-
-                # get the coordinate table for the previously-existing entries
-                coords = self._rel_coords.get(cls, None)
-                if coords is None:
-                    coords = _data_accel.CoordinateTable(len(rc_def.entities))
-                    if cur_table is not None:
-                        _log.debug("building coord table from previous interactions")
-                        coo = cur_table.select(link_nums.keys())
-                        coords.extend(coo.to_batches())
-                        assert len(coo) == len(cur_table)
-                    self._rel_coords[cls] = coords
-
-                # add the new data
-                coords.extend(incoming_table.select(link_nums.keys()).to_batches())
-                n_dupes = len(coords) - coords.unique_count()
-                _log.debug(
-                    "coordinates: %d total, %d unique, %d dupe",
-                    len(coords),
-                    coords.unique_count(),
-                    n_dupes,
-                )
-
-                if n_dupes:
-                    if rc_def.repeats.is_allowed:
-                        _log.debug("found %d repeat interactions", n_dupes)
+        if remove_repeats:
+            assert dedup is not None
+            log.debug("de-duplicating incoming relationship table")
+            new_table = pa.Table.from_batches(
+                [dedup.dedup_batch(batch) for batch in new_table.to_batches()]
+            )
+        elif dedup is not None:
+            log.debug("scanning incoming relationship table for duplicates")
+            for batch in new_table.to_batches():
+                if (n := dedup.count_duplicates(batch)) > 0:
+                    log.debug(f"found {n} repeated relationships")
+                    if allow_repeats:
                         rc_def.repeats = AllowableTroolean.PRESENT
                     else:
-                        _log.error(
-                            "found %d forbidden repeat interactions (of %d)",
-                            n_dupes,
-                            new_table.num_rows,
-                        )
                         raise DataError(
-                            f"repeated interactions not allowed for relationship class {cls}"
+                            f"repeated relationships not allowed for relationship class {cls}"
                         )
+
+        if cur_table is not None:
+            log.debug("concatenating tables")
+            new_table = pa.concat_tables([cur_table, new_table])
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
@@ -732,7 +719,7 @@ class DatasetBuilder:
             tbl = tbl.join(remove, remove.column_names, join_type="left anti")
 
         self._tables[cls] = tbl
-        self._rel_coords[cls] = None
+        self._rel_dedup[cls] = None
 
     def binarize_ratings(
         self,
@@ -780,14 +767,14 @@ class DatasetBuilder:
             raise ValueError("method must be 'zero' or 'remove'")
 
         self._tables[cls] = tbl
-        self._rel_coords[cls] = None
+        self._rel_dedup[cls] = None
 
     def clear_relationships(self, cls: str):
         """
         Remove all records for a specified relationship class.
         """
         self._tables[cls] = _empty_rel_table(self.schema.relationships[cls].entity_class_names)
-        self._rel_coords[cls] = None
+        self._rel_dedup[cls] = None
 
     @overload
     def add_scalar_attribute(
@@ -1160,7 +1147,7 @@ class DatasetBuilder:
 
                 tables[n] = t
 
-        return DataContainer(self.schema.model_copy(), tables, _rel_coords=self._rel_coords)
+        return DataContainer(self.schema.model_copy(), tables)
 
     def save(self, path: str | PathLike[str]):
         """
@@ -1343,3 +1330,30 @@ def _conform_time(time: float | str | dt.datetime, col_type: pa.DataType):
         return time.timestamp()
 
     return time
+
+
+def _cast_table(table: pa.Table, schema: pa.Schema) -> pa.Table:
+    for c in schema.names:
+        if c not in table.column_names:
+            table = table.append_column(c, pa.nulls(len(table), schema.field(c).type))
+    return table.cast(schema)
+
+
+def _dedup_is_valid(
+    dedup: _data_accel.TableDedup | None,
+    schema: pa.Schema,
+    remove_repeats: bool | Literal["exact"] = False,
+) -> bool:
+    if dedup is None:
+        return False
+
+    if dedup.schema != schema:
+        return False
+
+    if dedup.columns is None and isinstance(remove_repeats, bool):
+        return False
+
+    if dedup.columns is not None and remove_repeats == "exact":  # ruff: ignore[needless-bool]
+        return False
+
+    return True
