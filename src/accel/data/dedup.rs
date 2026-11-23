@@ -16,8 +16,10 @@ use arrow_schema::DataType;
 use pyo3::exceptions::{PyNotImplementedError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
-mod pair;
+use crate::data::dedup::tuple::tuple_memory;
+
 mod row;
+mod tuple;
 
 /// Arrow table de-duplicator.
 #[pyclass]
@@ -62,9 +64,10 @@ impl TableDedup {
                 }
                 names.push(field.name().clone())
             }
-            if fields.len() == 2 && happy_types {
-                Box::new(pair::PairMemory::new(names))
+            if happy_types && let Some(tm) = tuple_memory(&names) {
+                tm
             } else {
+                // FIXME: support reduced row de-duplication
                 return Err(PyNotImplementedError::new_err(
                     "column-based dedup not yet implemented",
                 ));
