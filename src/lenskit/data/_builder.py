@@ -603,21 +603,45 @@ class DatasetBuilder:
         """
         Concatenate, filtering out repeat interactions.
         """
+        dedup = self._rel_repeat.get(cls, None)
 
         # Because filtering is supposed to keep the _latest_ entry, we need to
-        # work backwards with a fresh deduplicator. This does require us to
-        # re-scan the existing table, but most record batches should not be
-        # changed so it shouldn't be super slow.
-        dedup = _data_accel.TableDedup(incoming.schema, columns=columns)
-
+        # work backwards. For consistency, we will maintain a `batches` array
+        # of output record batches in reverse order.
         batches = []
-        for batch in reversed(incoming.to_batches()):
-            batches.append(dedup.dedup_batch(batch, reversed=True))
-        if current is not None:
-            for batch in reversed(current.to_batches()):
-                batches.append(dedup.dedup_batch(batch, reversed=True))
-        batches.reverse()
 
+        # fast path: see if we need to do any de-duplication based on the
+        # existing memory from past adds.
+        if dedup is not None:
+            needs_dedup = False
+            for batch in reversed(incoming.to_batches()):
+                if dedup.count_duplicates(batch) > 0:
+                    # we have to deduplicate
+                    needs_dedup = True
+                    break
+                else:
+                    batches.append(batch)
+        else:
+            # if there is no deduplicator, we'll de-duplicate to make one
+            needs_dedup = True
+
+        if needs_dedup:
+            # Removing repeats requires a fresh deduplicator, so that we can
+            # keep the latest entry for each unique value.
+            dedup = _data_accel.TableDedup(incoming.schema, columns=columns)
+            batches = []
+            for batch in reversed(incoming.to_batches()):
+                batches.append(dedup.dedup_batch(batch, reversed=True))
+            if current is not None:
+                for batch in reversed(current.to_batches()):
+                    batches.append(dedup.dedup_batch(batch, reversed=True))
+            self._rel_repeat[cls] = dedup
+
+        elif current is not None:
+            # no de-dup, so just concat with the current array
+            batches += reversed(current.to_batches())
+
+        batches.reverse()
         new_tbl = pa.Table.from_batches(batches)
         return new_tbl
 
