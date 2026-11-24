@@ -8,12 +8,15 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::mem::MaybeUninit;
 
-use arrow::array::{Array, AsArray, BooleanArray, BooleanBuilder, Int32Array, RecordBatch};
+use arrow::array::{
+    Array, AsArray, BooleanArray, BooleanBufferBuilder, BooleanBuilder, Int32Array, RecordBatch,
+};
 use arrow::datatypes::Int32Type;
 use arrow::error::ArrowError;
 use arrow::error::Result as ArrowResult;
 
-use crate::data::dedup::DedupMemory;
+use super::DedupDirection;
+use super::DedupMemory;
 
 /// Struct for efficiently storing de-duplication basted on row key tuples.
 pub(super) struct TupleMemory<T, const N: usize>
@@ -92,6 +95,40 @@ where
         // SAFETY: we have just initialized all the arrays
         Ok(arrays.map(|a| unsafe { a.assume_init() }))
     }
+
+    fn forward_unique_mask(
+        &mut self,
+        batch: &RecordBatch,
+        arrays: &[Int32Array; N],
+    ) -> ArrowResult<BooleanArray> {
+        let mut result = BooleanBuilder::with_capacity(batch.num_rows());
+        for i in 0..batch.num_rows() {
+            let key = T::from_row(&arrays, i);
+            result.append_value(self.table.insert(key));
+        }
+        Ok(result.finish())
+    }
+
+    fn reverse_unique_mask(
+        &mut self,
+        batch: &RecordBatch,
+        arrays: &[Int32Array; N],
+    ) -> ArrowResult<BooleanArray> {
+        let mut buffer = BooleanBufferBuilder::new(batch.num_rows());
+        buffer.append_n(batch.num_rows(), true);
+
+        // walk through the array backwards
+        for i in (0..batch.num_rows()).rev() {
+            let key = T::from_row(&arrays, i);
+            // clear the bit when the key is not inserted
+            if !self.table.insert(key) {
+                buffer.set_bit(i, false);
+            }
+        }
+
+        // now we build our buffer!
+        Ok(BooleanArray::new(buffer.build(), None))
+    }
 }
 
 impl<T, const N: usize> DedupMemory for TupleMemory<T, N>
@@ -102,9 +139,11 @@ where
         self.table.len()
     }
 
-    fn batch_unique_mask(&mut self, batch: &RecordBatch) -> ArrowResult<BooleanArray> {
-        let mut result = BooleanBuilder::with_capacity(batch.num_rows());
-
+    fn batch_unique_mask(
+        &mut self,
+        batch: &RecordBatch,
+        direction: DedupDirection,
+    ) -> ArrowResult<BooleanArray> {
         assert_eq!(self.fields.len(), N);
         let arrays = self.extract_arrays(batch)?;
         for a in &arrays {
@@ -114,11 +153,10 @@ where
                 ));
             }
         }
-        for i in 0..batch.num_rows() {
-            let key = T::from_row(&arrays, i);
-            result.append_value(self.table.insert(key));
+        match direction {
+            DedupDirection::Forward => self.forward_unique_mask(batch, &arrays),
+            DedupDirection::Reverse => self.reverse_unique_mask(batch, &arrays),
         }
-        Ok(result.finish())
     }
 }
 

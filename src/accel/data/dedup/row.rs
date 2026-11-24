@@ -16,7 +16,8 @@ use arrow::{
 };
 use xxhash_rust::xxh3::{xxh3_64, xxh3_128};
 
-use crate::data::dedup::DedupMemory;
+use super::DedupDirection;
+use super::DedupMemory;
 
 /// [DedupMemory] implementation that uses row strings to de-duplicate rows.
 ///
@@ -67,6 +68,7 @@ impl<K: RowKey> DedupMemory for RowMemory<K> {
     fn batch_unique_mask(
         &mut self,
         batch: &arrow::array::RecordBatch,
+        _dir: DedupDirection,
     ) -> ArrowResult<BooleanArray> {
         let cols = batch.columns();
         let mut result = BooleanBuilder::with_capacity(batch.num_rows());

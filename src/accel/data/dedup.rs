@@ -28,6 +28,12 @@ pub struct TableDedup {
     memory: Box<dyn DedupMemory>,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum DedupDirection {
+    Forward,
+    Reverse,
+}
+
 /// Trait for remembering rows for de-duplication.
 trait DedupMemory: Send + Sync {
     /// The number of entries in the de-duplication cache.
@@ -37,6 +43,7 @@ trait DedupMemory: Send + Sync {
     fn batch_unique_mask(
         &mut self,
         batch: &RecordBatch,
+        direction: DedupDirection,
     ) -> Result<BooleanArray, arrow::error::ArrowError>;
 }
 
@@ -113,15 +120,23 @@ impl TableDedup {
     }
 
     /// Deduplicate a record batch.
+    #[pyo3(signature=(batch,*,reversed=false))]
     fn dedup_batch(
         &mut self,
         batch: PyArrowType<RecordBatch>,
+        reversed: bool,
     ) -> PyResult<PyArrowType<RecordBatch>> {
         let batch = batch.0;
+        let dir = if reversed {
+            DedupDirection::Reverse
+        } else {
+            DedupDirection::Forward
+        };
         let mask = self
             .memory
-            .batch_unique_mask(&batch)
+            .batch_unique_mask(&batch, dir)
             .map_err(|e| PyRuntimeError::new_err(format!("deduplication failed: {}", e)))?;
+
         if mask.false_count() > 0 {
             let filtered = filter_record_batch(&batch, &mask)
                 .map_err(|e| PyRuntimeError::new_err(format!("deduplication failed: {}", e)))?;
@@ -138,7 +153,7 @@ impl TableDedup {
         let batch = batch.0;
         let mask = self
             .memory
-            .batch_unique_mask(&batch)
+            .batch_unique_mask(&batch, DedupDirection::Forward)
             .map_err(|e| PyRuntimeError::new_err(format!("deduplication failed: {}", e)))?;
         Ok(mask.false_count())
     }
