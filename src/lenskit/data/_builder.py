@@ -25,6 +25,7 @@ import pyarrow.compute as pc
 import structlog
 from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import csr_array, sparray
+from structlog.stdlib import BoundLogger
 
 from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataError, DataWarning
@@ -80,10 +81,14 @@ class DatasetBuilder:
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
     _vocabularies: dict[str, Vocabulary]
-    _rel_dedup: dict[str, _data_accel.TableDedup | None]
+    # deduplicators for checking for repeated relationships
+    _rel_repeat: dict[str, _data_accel.TableDedup]
+    # deduplicators for removing exact-duplicate relationships
+    _rel_dedup: dict[str, _data_accel.TableDedup]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
         self._rel_dedup = {}
+        self._rel_repeat = {}
 
         if isinstance(name, Dataset):
             name._ensure_loaded()
@@ -490,6 +495,7 @@ class DatasetBuilder:
             link_nums[num_col_name(alias)] = e_nums
             link_id_cols.add(id_col_name(alias))
 
+        link_num_cols = list(link_nums.keys())
         new_table = pa.table(link_nums)
 
         for col in table.column_names:
@@ -518,48 +524,102 @@ class DatasetBuilder:
         else:
             schema = new_table.schema
 
-        # obtain the dedup table, clearing if schema or dedup logic has changed
-        dedup = self._rel_dedup.get(cls, None)
-        if not _dedup_is_valid(dedup, schema, remove_repeats):
-            dedup = None
-
-        if dedup is None and (remove_repeats or not allow_repeats or not rc_def.repeats.is_present):
-            # initialize the dedup table (with current schema)
-            if remove_repeats == "exact":
-                dedup = _data_accel.TableDedup(schema)
-            else:
-                dedup = _data_accel.TableDedup(schema, columns=list(link_nums.keys()))
-
+        # concatenate and handle de-duplication as desired
+        if remove_repeats == "exact":
+            new_table = self._concat_deduplicate(cls, cur_table, new_table, log)
+        elif remove_repeats:
+            new_table = self._concat_filter(cls, link_num_cols, cur_table, new_table, log)
+        elif rc_def.repeats.is_present and allow_repeats:
             if cur_table is not None:
-                for batch in cur_table.to_batches():
-                    dedup.count_duplicates(batch)
-
-        if remove_repeats:
-            assert dedup is not None
-            log.debug("de-duplicating incoming relationship table")
-            new_table = pa.Table.from_batches(
-                [dedup.dedup_batch(batch) for batch in new_table.to_batches()]
-            )
-        elif dedup is not None:
-            log.debug("scanning incoming relationship table for duplicates")
-            for batch in new_table.to_batches():
-                if (n := dedup.count_duplicates(batch)) > 0:
-                    log.debug(f"found {n} repeated relationships")
-                    if allow_repeats:
-                        rc_def.repeats = AllowableTroolean.PRESENT
-                    else:
-                        raise DataError(
-                            f"repeated relationships not allowed for relationship class {cls}"
-                        )
-
-        if cur_table is not None:
-            log.debug("concatenating tables")
-            new_table = pa.concat_tables([cur_table, new_table])
+                new_table = pa.concat_tables([cur_table, new_table])
+        else:
+            new_table, n_repeats = self._concat_check(cls, link_num_cols, cur_table, new_table, log)
+            if n_repeats > 0:
+                if allow_repeats:
+                    rc_def.repeats = AllowableTroolean.PRESENT
+                else:
+                    raise DataError(
+                        f"repeated relationships not allowed for relationship class {cls}"
+                    )
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
         )
         self._tables[cls] = new_table
+
+    def _concat_deduplicate(
+        self, cls: str, current: pa.Table | None, incoming: pa.Table, log: BoundLogger
+    ) -> pa.Table:
+        """
+        Concatenate after filtering incoming entries for exact duplicates.
+        """
+        dedup = self._rel_dedup.get(cls, None)
+        if dedup is None or dedup.schema != incoming.schema:
+            dedup = _data_accel.TableDedup(incoming.schema)
+            self._rel_dedup[cls] = dedup
+
+        log.debug("de-duplicating incoming relationship table")
+        new_tbl = pa.Table.from_batches(
+            [dedup.dedup_batch(batch) for batch in incoming.to_batches()]
+        )
+        if current is None:
+            return new_tbl
+        else:
+            return pa.concat_tables([current, new_tbl])
+
+    def _concat_check(
+        self,
+        cls: str,
+        columns: list[str],
+        current: pa.Table | None,
+        incoming: pa.Table,
+        log: BoundLogger,
+    ) -> tuple[pa.Table, int]:
+        """
+        Concatenate after checking incoming entries for repeats.
+        """
+        dedup = self._rel_repeat.get(cls, None)
+        if dedup is None:
+            dedup = _data_accel.TableDedup(incoming.schema, columns=columns)
+            self._rel_repeat[cls] = dedup
+
+        n_dupes = 0
+        for batch in incoming.to_batches():
+            n_dupes += dedup.count_duplicates(batch)
+
+        if current is None:
+            return incoming, n_dupes
+        else:
+            return pa.concat_tables([current, incoming]), n_dupes
+
+    def _concat_filter(
+        self,
+        cls: str,
+        columns: list[str],
+        current: pa.Table | None,
+        incoming: pa.Table,
+        log: BoundLogger,
+    ) -> pa.Table:
+        """
+        Concatenate, filtering out repeat interactions.
+        """
+
+        # Because filtering is supposed to keep the _latest_ entry, we need to
+        # work backwards with a fresh deduplicator. This does require us to
+        # re-scan the existing table, but most record batches should not be
+        # changed so it shouldn't be super slow.
+        dedup = _data_accel.TableDedup(incoming.schema, columns=columns)
+
+        batches = []
+        for batch in reversed(incoming.to_batches()):
+            batches.append(dedup.dedup_batch(batch, reversed=True))
+        if current is not None:
+            for batch in reversed(current.to_batches()):
+                batches.append(dedup.dedup_batch(batch, reversed=True))
+        batches.reverse()
+
+        new_tbl = pa.Table.from_batches(batches)
+        return new_tbl
 
     def add_interactions(
         self,
