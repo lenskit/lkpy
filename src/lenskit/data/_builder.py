@@ -854,14 +854,23 @@ class DatasetBuilder:
             raise ValueError("method must be 'zero' or 'remove'")
 
         self._tables[cls] = tbl
-        self._rel_dedup[cls] = None
+        self._clear_rel_caches(cls)
 
     def clear_relationships(self, cls: str):
         """
         Remove all records for a specified relationship class.
         """
         self._tables[cls] = _empty_rel_table(self.schema.relationships[cls].entity_class_names)
-        self._rel_dedup[cls] = None
+        self._clear_rel_caches(cls)
+
+    def _clear_rel_caches(self, cls: str):
+        """
+        Clear the relationship caches for a specified class.
+        """
+        if cls in self._rel_repeat:
+            del self._rel_repeat[cls]
+        if cls in self._rel_dedup:
+            del self._rel_dedup[cls]
 
     @overload
     def add_scalar_attribute(
