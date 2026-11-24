@@ -53,16 +53,6 @@ pub(super) fn tuple_memory(fields: &[String]) -> Option<Box<dyn DedupMemory>> {
             fields: [fields[0].clone(), fields[1].clone(), fields[2].clone()],
             table: HashSet::with_capacity(100_000),
         }))
-    } else if fields.len() == 4 {
-        Some(Box::new(TupleMemory::<(i32, i32, i32, i32), 4> {
-            fields: [
-                fields[0].clone(),
-                fields[1].clone(),
-                fields[2].clone(),
-                fields[3].clone(),
-            ],
-            table: HashSet::with_capacity(100_000),
-        }))
     } else {
         None
     }
@@ -181,15 +171,5 @@ impl RowTuple<3> for (i32, i32, i32) {
         let v2 = arrays[1].value(row);
         let v3 = arrays[2].value(row);
         (v1, v2, v3)
-    }
-}
-
-impl RowTuple<4> for (i32, i32, i32, i32) {
-    fn from_row(arrays: &[Int32Array; 4], row: usize) -> Self {
-        let v1 = arrays[0].value(row);
-        let v2 = arrays[1].value(row);
-        let v3 = arrays[2].value(row);
-        let v4 = arrays[3].value(row);
-        (v1, v2, v3, v4)
     }
 }
