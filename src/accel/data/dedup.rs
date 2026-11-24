@@ -115,7 +115,8 @@ impl TableDedup {
     }
 
     /// Get the number of unique values this deduplicator has seen.
-    fn unique_values(&self) -> usize {
+    #[getter]
+    fn unique_count(&self) -> usize {
         self.memory.len()
     }
 
