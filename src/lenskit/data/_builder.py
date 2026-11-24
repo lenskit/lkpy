@@ -1245,23 +1245,6 @@ class DatasetBuilder:
         container = self.build_container()
         container.save(path)
 
-    def _remove_duplicated_relationships(self, t: pa.Table) -> pa.Table:
-        temp_df = t.to_pandas()
-        temp_df.drop_duplicates(inplace=True)
-        t = pa.Table.from_pandas(temp_df, preserve_index=False)
-        return t
-
-    def _remove_repeated_relationships(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
-        if "timestamp" in t.column_names:
-            t = t.sort_by([("timestamp", "ascending")])
-        t_modified = t.add_column(0, "_row_number", pa.array(np.arange(t.num_rows)))
-        t_modified = t_modified.group_by(
-            [entity + "_num" for entity in rel.entity_class_names]
-        ).aggregate([("_row_number", "max")])
-        t_modified = t_modified.sort_by([("_row_number_max", "ascending")])
-        t = t.take(t_modified.column("_row_number_max"))
-        return t
-
     def _validate_entity_name(self, entity_name: str):
         if entity_name.startswith("_"):
             raise ValueError(f"invalid entity name {entity_name}")
@@ -1421,23 +1404,3 @@ def _cast_table(table: pa.Table, schema: pa.Schema) -> pa.Table:
         if c not in table.column_names:
             table = table.append_column(c, pa.nulls(len(table), schema.field(c).type))
     return table.cast(schema)
-
-
-def _dedup_is_valid(
-    dedup: _data_accel.TableDedup | None,
-    schema: pa.Schema,
-    remove_repeats: bool | Literal["exact"] = False,
-) -> bool:
-    if dedup is None:
-        return False
-
-    if dedup.schema != schema:
-        return False
-
-    if dedup.columns is None and isinstance(remove_repeats, bool):
-        return False
-
-    if dedup.columns is not None and remove_repeats == "exact":  # ruff: ignore[needless-bool]
-        return False
-
-    return True
