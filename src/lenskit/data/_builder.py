@@ -517,7 +517,10 @@ class DatasetBuilder:
                 [cur_table.schema, new_table.schema], promote_options="permissive"
             )
             if schema != cur_table.schema:
-                log.warning("incoming relationship schema does not match current schema, unifying")
+                if cur_table.num_rows > 0:
+                    log.warning(
+                        "incoming relationship schema does not match current schema, unifying"
+                    )
                 cur_table = _cast_table(cur_table, schema)
             if schema != new_table.schema:
                 new_table = _cast_table(new_table, schema)
