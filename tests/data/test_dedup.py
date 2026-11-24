@@ -4,6 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import random
+import uuid
+
+import pyarrow as pa
+
 from pytest import mark
 
 from lenskit._accel import data as _data_accel
@@ -67,4 +72,63 @@ def test_cols_no_dups_big(ml_20m: Dataset):
     for batch in table.to_batches(max_chunksize=100240):
         assert dedup.count_duplicates(batch) == 0
 
+    assert dedup.unique_count == table.num_rows
     _log.info("deduplicated ML 25M in %s", timer)
+
+
+def test_dedup_one_column(ml_ds: Dataset):
+    "deduplicate by a single entity"
+    table = ml_ds.entities("item").arrow()
+
+    dedup = _data_accel.TableDedup(table.schema, columns=["item_id"])
+
+    for batch in table.to_batches(max_chunksize=1000):
+        assert dedup.count_duplicates(batch) == 0
+
+    assert dedup.unique_count == table.num_rows
+
+
+@mark.bigdata
+def test_dedup_one_column_big(ml_20m: Dataset):
+    "deduplicate by a single entity"
+    table = ml_20m.entities("item").arrow()
+
+    dedup = _data_accel.TableDedup(table.schema, columns=["item_id"])
+
+    for batch in table.to_batches(max_chunksize=1000):
+        assert dedup.count_duplicates(batch) == 0
+
+    assert dedup.unique_count == table.num_rows
+
+
+def test_dedup_one_column_ints(random: random.Random):
+    "deduplicate by a single int entity"
+    ids = [random.randint(0, 500000) for _ in range(1000)]
+    dupes = random.choices(ids, k=50)
+    ids.extend(dupes)
+    random.shuffle(ids)
+
+    table = pa.Table.from_pydict(
+        {"item_id": pa.array(ids, type=pa.int32()), "item_pos": range(len(ids))}
+    )
+
+    dedup = _data_accel.TableDedup(table.schema, columns=["item_id"])
+    t2 = pa.Table.from_batches(dedup.dedup_batch(b) for b in table.to_batches(max_chunksize=200))
+
+    assert t2.num_rows == len(set(ids))
+
+
+@mark.xfail("non-int column dedup not implemented")
+def test_dedup_one_column_string(random: random.Random):
+    "deduplicate by a single string entity"
+    uuids = [uuid.uuid4() for _ in range(1000)]
+    dupes = random.choices(uuids, k=50)
+    uuids.extend(dupes)
+    random.shuffle(uuids)
+
+    table = pa.Table.from_pydict({"item_id": uuids, "item_pos": range(len(uuids))})
+
+    dedup = _data_accel.TableDedup(table.schema, columns=["item_id"])
+    t2 = pa.Table.from_batches(dedup.dedup_batch(b) for b in table.to_batches(max_chunksize=200))
+
+    assert t2.num_rows == 1000
