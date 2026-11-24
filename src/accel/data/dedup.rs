@@ -12,9 +12,10 @@ use arrow::{
     datatypes::{DataType, Schema},
     pyarrow::PyArrowType,
 };
-use pyo3::exceptions::{PyNotImplementedError, PyRuntimeError, PyValueError};
+use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
+use crate::data::dedup::row::RowMemoryBuilder;
 use crate::data::dedup::tuple::tuple_memory;
 
 mod row;
@@ -75,27 +76,12 @@ impl TableDedup {
             if happy_types && let Some(tm) = tuple_memory(&names) {
                 tm
             } else {
-                // FIXME: support reduced row de-duplication
-                return Err(PyNotImplementedError::new_err(
-                    "column-based dedup not yet implemented",
-                ));
+                RowMemoryBuilder::new(&schema)
+                    .with_columns(names)
+                    .build_named(row_compare)?
             }
-        } else if row_compare == "hash" {
-            row::row_hash_memory(&schema).map_err(|e| {
-                PyRuntimeError::new_err(format!("failed to create deduplicator: {}", e))
-            })?
-        } else if row_compare == "full" {
-            row::row_memory(&schema).map_err(|e| {
-                PyRuntimeError::new_err(format!("failed to create deduplicator: {}", e))
-            })?
-        } else if row_compare == "short-hash" {
-            row::row_short_hash_memory(&schema).map_err(|e| {
-                PyRuntimeError::new_err(format!("failed to create deduplicator: {}", e))
-            })?
         } else {
-            return Err(PyValueError::new_err(
-                "row_compare must be one of 'hash', 'full', or 'short-hash'",
-            ));
+            RowMemoryBuilder::new(&schema).build_named(row_compare)?
         };
         Ok(TableDedup {
             columns,

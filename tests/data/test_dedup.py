@@ -118,7 +118,6 @@ def test_dedup_one_column_ints(random: random.Random):
     assert t2.num_rows == len(set(ids))
 
 
-@mark.xfail("non-int column dedup not implemented")
 def test_dedup_one_column_string(random: random.Random):
     "deduplicate by a single string entity"
     uuids = [uuid.uuid4() for _ in range(1000)]
