@@ -67,6 +67,16 @@ def rng() -> Generator:
         return default_rng(RNG_SEED)
 
 
+@fixture
+def random():
+    import random
+
+    if RNG_SEED is None:
+        return random.Random()
+    else:
+        return random.Random(RNG_SEED)
+
+
 @fixture(autouse=True)
 def init_rng(request):
     if RNG_SEED is not None:
