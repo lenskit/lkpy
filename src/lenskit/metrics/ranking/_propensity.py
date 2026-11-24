@@ -71,44 +71,23 @@ class UniformPropensity(PropensityModel):
         return np.ones(len(items), dtype=np.float64)
 
 
-class PopularityPropensity(PropensityModel):
+class _CountPropensity(PropensityModel):
     r"""
-    Estimate observation propensities from item popularity, following the
-    select-then-interact model of :cite:t:`yangUnbiasedOfflineRecommender2018`.
-
-    An item is observed if a recommender presents it and the user then interacts
-    with it.  Modelling presentation as a power law in observed popularity and
-    eliminating the unobservable true popularity gives
+    Shared machinery for propensities that are a power of observed popularity.
 
     .. math::
-        \hat{P}_i \propto (n^*_i)^{\frac{\gamma + 1}{2}}
+        \hat{P}_i = \left(\frac{n^*_i}{n^*_{\max}}\right)^{e}
 
-    for observed interaction count :math:`n^*_i`.  We take the constant of
-    proportionality that puts the most popular item at :math:`\hat{P}_i = 1`:
-
-    .. math::
-        \hat{P}_i = \left(\frac{n^*_i}{n^*_{\max}}\right)^{\frac{\gamma+1}{2}}
-
-    so that every weight is at least 1.  Items with no interactions, and items
-    absent from ``data`` entirely, are counted as one interaction and therefore
-    take the largest weight.
-
-    ``gamma`` is the exponent as defined in the paper; the :math:`(\gamma+1)/2`
-    correction is applied here.  It has no default because it depends on both
-    the dataset and the algorithm that produced the log: reported values run
-    from about 1.5 to 3, and :func:`estimate_power_law_gamma` will fit it.
-    :math:`\gamma = -1` gives uniform propensities, but prefer
-    :class:`UniformPropensity` for that.
-
-    Estimate propensities from training data.  The unbiasedness argument holds
-    the propensities fixed with respect to the observations being weighted,
-    which fails when they are drawn from the same test observations.
+    The constant of proportionality puts the most popular item at
+    :math:`\hat{P}_i = 1`, so every weight is at least 1.  Items with no
+    interactions, and items absent from ``data`` entirely, are counted as one
+    interaction and therefore take the largest weight.
 
     Args:
         data:
             The dataset, normally the training split, supplying item popularity.
-        gamma:
-            The power-law exponent :math:`\gamma`.
+        exponent:
+            The exponent to apply to observed popularity.
         count:
             Whether to count distinct users or total interactions.
         max_weight:
@@ -116,15 +95,10 @@ class PopularityPropensity(PropensityModel):
         clip_quantile:
             Cap weights at this quantile of the weight distribution over the
             items of ``data``.  Applied together with ``max_weight``.
-
-    Stability:
-        Caller
     """
 
-    gamma: float
-    "The power-law exponent."
     exponent: float
-    "The exponent applied to observed popularity, :math:`(\\gamma+1)/2`."
+    "The exponent applied to observed popularity."
     item_propensities: pd.Series
     "Propensity of each item in the source dataset."
     missing_propensity: float
@@ -133,21 +107,18 @@ class PopularityPropensity(PropensityModel):
     def __init__(
         self,
         data: Dataset,
+        exponent: float,
         *,
-        gamma: float,
         count: Literal["users", "interactions"] = "users",
         max_weight: float | None = None,
         clip_quantile: float | None = None,
     ):
-        if gamma < -1:
-            raise ValueError("gamma must be at least -1")
         if max_weight is not None and max_weight < 1:
             raise ValueError("max_weight must be at least 1")
         if clip_quantile is not None and not 0 < clip_quantile < 1:
             raise ValueError("clip_quantile must be in (0, 1)")
 
-        self.gamma = gamma
-        self.exponent = (gamma + 1) / 2
+        self.exponent = exponent
 
         counts = _item_counts(data, count).clip(lower=1)
         top = counts.max()
@@ -170,6 +141,118 @@ class PopularityPropensity(PropensityModel):
 
         ps = self.item_propensities.reindex(items.ids(), fill_value=self.missing_propensity)
         return ps.fillna(self.missing_propensity).to_numpy(dtype=np.float64)
+
+
+class PopularityPropensity(_CountPropensity):
+    r"""
+    Estimate observation propensities as proportional to observed popularity:
+
+    .. math::
+        \hat{P}_i \propto n^*_i
+
+    for observed interaction count :math:`n^*_i`.  An item with many
+    interactions was easy to encounter, so an interaction with a rare item is
+    stronger evidence of preference and :math:`w_i = 1 / P_i` makes it count for
+    more.
+
+    .. warning::
+
+        This model under-corrects relative to the select-then-interact model of
+        :cite:t:`yangUnbiasedOfflineRecommender2018`.  Its exponent of 1
+        corresponds to :math:`\gamma = 1`, below their fitted range of 1.55 to
+        3.07.  Use :class:`PowerLawPropensity` with a calibrated
+        :math:`\gamma` to reproduce their estimator.
+
+    Estimate propensities from training data.  The unbiasedness argument holds
+    the propensities fixed with respect to the observations being weighted,
+    which fails when they are drawn from the same test observations.
+
+    Args:
+        data:
+            The dataset, normally the training split, supplying item popularity.
+        count:
+            Whether to count distinct users or total interactions.
+        max_weight:
+            Cap on inverse propensity weights, for variance control.
+        clip_quantile:
+            Cap weights at this quantile of the weight distribution over the
+            items of ``data``.  Applied together with ``max_weight``.
+
+    Stability:
+        Caller
+    """
+
+    def __init__(
+        self,
+        data: Dataset,
+        *,
+        count: Literal["users", "interactions"] = "users",
+        max_weight: float | None = None,
+        clip_quantile: float | None = None,
+    ):
+        super().__init__(data, 1.0, count=count, max_weight=max_weight, clip_quantile=clip_quantile)
+
+
+class PowerLawPropensity(_CountPropensity):
+    r"""
+    Estimate observation propensities from the select-then-interact model of
+    :cite:t:`yangUnbiasedOfflineRecommender2018`.
+
+    An item is observed if a recommender presents it and the user then interacts
+    with it.  Modelling presentation as a power law in observed popularity and
+    eliminating the unobservable true popularity gives
+
+    .. math::
+        \hat{P}_i \propto (n^*_i)^{\frac{\gamma + 1}{2}}
+
+    ``gamma`` is the exponent as defined in the paper; the :math:`(\gamma+1)/2`
+    correction is applied here.  It has no default because it depends on both
+    the dataset and the algorithm that produced the log: reported values run
+    from about 1.5 to 3, and :func:`estimate_power_law_gamma` will fit it.
+    :math:`\gamma = 1` reproduces :class:`PopularityPropensity` and
+    :math:`\gamma = -1` gives uniform propensities; prefer the dedicated classes
+    for both.
+
+    Args:
+        data:
+            The dataset, normally the training split, supplying item popularity.
+        gamma:
+            The power-law exponent :math:`\gamma`.
+        count:
+            Whether to count distinct users or total interactions.
+        max_weight:
+            Cap on inverse propensity weights, for variance control.
+        clip_quantile:
+            Cap weights at this quantile of the weight distribution over the
+            items of ``data``.  Applied together with ``max_weight``.
+
+    Stability:
+        Caller
+    """
+
+    gamma: float
+    "The power-law exponent."
+
+    def __init__(
+        self,
+        data: Dataset,
+        *,
+        gamma: float,
+        count: Literal["users", "interactions"] = "users",
+        max_weight: float | None = None,
+        clip_quantile: float | None = None,
+    ):
+        if gamma < -1:
+            raise ValueError("gamma must be at least -1")
+
+        self.gamma = gamma
+        super().__init__(
+            data,
+            (gamma + 1) / 2,
+            count=count,
+            max_weight=max_weight,
+            clip_quantile=clip_quantile,
+        )
 
 
 class FieldPropensity(PropensityModel):

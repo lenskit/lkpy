@@ -18,6 +18,7 @@ from lenskit.metrics.ranking._ips import IPSRBP
 from lenskit.metrics.ranking._propensity import (
     FieldPropensity,
     PopularityPropensity,
+    PowerLawPropensity,
     UniformPropensity,
     estimate_power_law_gamma,
 )
@@ -168,7 +169,7 @@ def test_golden_self_normalized():
     # gamma 1 gives exponent 1, so with n*max = 4 the weights are 1, 2, 4; item
     # 103 hits at rank 1 and 101 at rank 3, patience 0.5:
     # (4 * 0.5 * 0.5**0 + 1 * 0.5 * 0.5**2) / (1 + 2 + 4)
-    prop = PopularityPropensity(pop_data(), gamma=1.0)
+    prop = PopularityPropensity(pop_data())
     recs = ItemList([103, 999, 101], ordered=True)
     truth = ItemList([101, 102, 103])
 
@@ -176,7 +177,7 @@ def test_golden_self_normalized():
 
 
 def test_golden_unnormalized():
-    prop = PopularityPropensity(pop_data(), gamma=1.0)
+    prop = PopularityPropensity(pop_data())
     recs = ItemList([103, 999, 101], ordered=True)
     truth = ItemList([101, 102, 103])
 
@@ -185,7 +186,7 @@ def test_golden_unnormalized():
 
 
 def test_denominator_is_not_truncated():
-    prop = PopularityPropensity(pop_data(), gamma=1.0)
+    prop = PopularityPropensity(pop_data())
     recs = ItemList([103, 999, 101], ordered=True)
     truth = ItemList([101, 102, 103])
 
@@ -195,7 +196,7 @@ def test_denominator_is_not_truncated():
 
 
 def test_serving_the_tail_scores_higher():
-    prop = PopularityPropensity(pop_data(), gamma=1.0)
+    prop = PopularityPropensity(pop_data())
     truth = ItemList([101, 103])
     metric = IPSRBP(propensity=prop)
 
@@ -212,7 +213,7 @@ def test_flat_popularity_leaves_the_score_alone():
 
     expected = IPSRBP(propensity=UniformPropensity()).measure_list(recs, truth)
     for gamma in [0.0, 1.0, 3.0]:
-        prop = PopularityPropensity(data, gamma=gamma)
+        prop = PowerLawPropensity(data, gamma=gamma)
         assert IPSRBP(propensity=prop).measure_list(recs, truth) == approx(expected)
 
 
@@ -222,7 +223,7 @@ def test_serving_the_tail_gains_as_gamma_rises():
     recs = ItemList([3], ordered=True)
 
     scores = [
-        IPSRBP(propensity=PopularityPropensity(data, gamma=g)).measure_list(recs, truth)
+        IPSRBP(propensity=PowerLawPropensity(data, gamma=g)).measure_list(recs, truth)
         for g in [-1.0, 0.0, 1.0, 2.0, 4.0]
     ]
     assert np.all(np.diff(scores) > 0)
@@ -234,7 +235,7 @@ def test_serving_the_head_loses_as_gamma_rises():
     recs = ItemList([1], ordered=True)
 
     scores = [
-        IPSRBP(propensity=PopularityPropensity(data, gamma=g)).measure_list(recs, truth)
+        IPSRBP(propensity=PowerLawPropensity(data, gamma=g)).measure_list(recs, truth)
         for g in [-1.0, 0.0, 1.0, 2.0, 4.0]
     ]
     assert np.all(np.diff(scores) < 0)
@@ -248,7 +249,7 @@ def test_stronger_skew_amplifies_the_correction():
 
     ratios = []
     for skew in [(4, 3, 2), (16, 4, 1), (64, 8, 1)]:
-        prop = PopularityPropensity(data_with_counts(dict(zip([1, 2, 3], skew))), gamma=1.0)
+        prop = PopularityPropensity(data_with_counts(dict(zip([1, 2, 3], skew))))
         ratios.append(IPSRBP(propensity=prop).measure_list(recs, truth) / aoa)
 
     assert np.all(np.diff(ratios) < 0)
@@ -260,7 +261,7 @@ def test_clipping_pulls_back_toward_the_uncorrected_score():
     recs = ItemList([1], ordered=True)
 
     scores = [
-        IPSRBP(propensity=PopularityPropensity(data, gamma=3.0, max_weight=cap)).measure_list(
+        IPSRBP(propensity=PowerLawPropensity(data, gamma=3.0, max_weight=cap)).measure_list(
             recs, truth
         )
         for cap in [None, 1000.0, 100.0, 10.0]
@@ -277,9 +278,7 @@ def test_correction_beats_aoa_on_a_biased_log():
     uniform = IPSRBP(10, propensity=UniformPropensity())
     true = mean_score(uniform, recs, complete)
     aoa = mean_score(uniform, recs, recorded)
-    corrected = mean_score(
-        IPSRBP(10, propensity=PopularityPropensity(log, gamma=1.0)), recs, recorded
-    )
+    corrected = mean_score(IPSRBP(10, propensity=PopularityPropensity(log)), recs, recorded)
 
     assert aoa > true
     assert abs(corrected - true) < abs(aoa - true)
@@ -292,9 +291,7 @@ def test_correction_does_not_help_an_unbiased_log():
     uniform = IPSRBP(10, propensity=UniformPropensity())
     true = mean_score(uniform, recs, complete)
     aoa = mean_score(uniform, recs, recorded)
-    corrected = mean_score(
-        IPSRBP(10, propensity=PopularityPropensity(log, gamma=1.0)), recs, recorded
-    )
+    corrected = mean_score(IPSRBP(10, propensity=PopularityPropensity(log)), recs, recorded)
 
     assert aoa == approx(true, rel=0.05)
     assert abs(corrected - true) > abs(aoa - true)
@@ -327,7 +324,7 @@ def test_label():
 
 
 def test_popularity_propensity_formula():
-    prop = PopularityPropensity(pop_data(), gamma=2.0)
+    prop = PowerLawPropensity(pop_data(), gamma=2.0)
     assert prop.exponent == approx(1.5)
 
     ps = prop.propensities(ItemList([101, 102, 103]))
@@ -335,46 +332,46 @@ def test_popularity_propensity_formula():
 
 
 def test_popularity_propensity_uniform_at_gamma_minus_one():
-    prop = PopularityPropensity(pop_data(), gamma=-1.0)
+    prop = PowerLawPropensity(pop_data(), gamma=-1.0)
     assert prop.propensities(ItemList([101, 102, 103])) == approx([1.0, 1.0, 1.0])
 
 
 def test_popularity_propensity_counts_interactions():
-    prop = PopularityPropensity(pop_data(), gamma=1.0, count="interactions")
+    prop = PopularityPropensity(pop_data(), count="interactions")
     assert prop.propensities(ItemList([101, 103])) == approx([1.0, 0.25])
 
 
 def test_popularity_propensity_unknown_item():
     "Items absent from the source data count as one interaction."
-    prop = PopularityPropensity(pop_data(), gamma=1.0)
+    prop = PopularityPropensity(pop_data())
     assert prop.propensities(ItemList([999])) == approx([0.25])
     assert prop.weights(ItemList([999])) == approx([4.0])
 
 
 def test_popularity_propensity_max_weight():
-    prop = PopularityPropensity(pop_data(), gamma=1.0, max_weight=2.0)
+    prop = PopularityPropensity(pop_data(), max_weight=2.0)
     assert prop.weights(ItemList([101, 102, 103])) == approx([1.0, 2.0, 2.0])
     assert prop.weights(ItemList([999])) == approx([2.0])
 
 
 def test_popularity_propensity_clip_quantile():
-    prop = PopularityPropensity(pop_data(), gamma=1.0, clip_quantile=0.5)
+    prop = PopularityPropensity(pop_data(), clip_quantile=0.5)
     assert prop.weights(ItemList([101, 102, 103])) == approx([1.0, 2.0, 2.0])
 
 
 def test_popularity_propensity_empty_list():
-    prop = PopularityPropensity(pop_data(), gamma=1.0)
+    prop = PopularityPropensity(pop_data())
     assert len(prop.propensities(ItemList([]))) == 0
 
 
 def test_popularity_propensity_rejects_bad_params():
     data = pop_data()
     with raises(ValueError):
-        PopularityPropensity(data, gamma=-2.0)
+        PowerLawPropensity(data, gamma=-2.0)
     with raises(ValueError):
-        PopularityPropensity(data, gamma=1.0, max_weight=0.5)
+        PopularityPropensity(data, max_weight=0.5)
     with raises(ValueError):
-        PopularityPropensity(data, gamma=1.0, clip_quantile=1.5)
+        PopularityPropensity(data, clip_quantile=1.5)
 
 
 def test_uniform_propensity():
@@ -437,7 +434,7 @@ def test_estimate_gamma_feeds_propensity_model():
     )
 
     gamma = estimate_power_law_gamma(recs, data, exclude_quantile=0.0)
-    prop = PopularityPropensity(data, gamma=gamma)
+    prop = PowerLawPropensity(data, gamma=gamma)
     assert prop.propensities(ItemList([4, 2, 1])) == approx([1.0, 0.5, 0.25])
 
 

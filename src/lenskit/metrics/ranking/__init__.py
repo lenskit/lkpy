@@ -21,6 +21,7 @@ from ._pr import Precision, Recall
 from ._propensity import (
     FieldPropensity,
     PopularityPropensity,
+    PowerLawPropensity,
     PropensityModel,
     UniformPropensity,
     estimate_power_law_gamma,
@@ -45,6 +46,7 @@ __all__ = [
     "LogRankWeight",
     "MeanPopRank",
     "PopularityPropensity",
+    "PowerLawPropensity",
     "Precision",
     "PropensityModel",
     "RankBiasedEntropy",

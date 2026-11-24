@@ -91,14 +91,21 @@ scoring, weighting each observed relevant item by the inverse of its propensity
 to be observed.
 
 Propensities are supplied by a :class:`~lenskit.metrics.PropensityModel`.
-:class:`~lenskit.metrics.PopularityPropensity` estimates them from item
-popularity in the training data, and
-:func:`~lenskit.metrics.estimate_power_law_gamma` fits its exponent from a set
-of recommendations::
+:class:`~lenskit.metrics.PopularityPropensity` takes them to be proportional to
+item popularity in the training data, and needs no configuration::
 
-    propensity = PopularityPropensity(split.train, gamma=1.87)
+    propensity = PopularityPropensity(split.train)
     mc.add_metric(RBP(n=10))
     mc.add_metric(IPSRBP(n=10, propensity=propensity))
+
+:class:`~lenskit.metrics.PowerLawPropensity` instead applies the
+select-then-interact correction of
+:cite:t:`yangUnbiasedOfflineRecommender2018`, and takes their power-law exponent
+:math:`\gamma`.  :func:`~lenskit.metrics.estimate_power_law_gamma` fits one from
+a set of recommendations::
+
+    gamma = estimate_power_law_gamma(recs, split.train)
+    mc.add_metric(IPSRBP(n=10, propensity=PowerLawPropensity(split.train, gamma=gamma)))
 
 Estimate propensities from the training data, not from the test data being
 measured: the unbiasedness argument holds them fixed with respect to the
