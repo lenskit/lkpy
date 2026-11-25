@@ -102,6 +102,7 @@ jobs:
       - name: 🦀 Install Rust
         uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
+          toolchain: nightly
           components: llvm-tools
 
       - name: 🕶️ Install uv
