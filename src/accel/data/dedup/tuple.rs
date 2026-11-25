@@ -67,19 +67,25 @@ where
         let mut arrays = [const { MaybeUninit::uninit() }; N];
         for k in 0..N {
             let field = &self.fields[k];
-            let arr = batch.column_by_name(field).ok_or_else(|| {
-                ArrowError::InvalidArgumentError(format!(
-                    "record batch has no column named {}",
-                    field
-                ))
-            })?;
-            let arr = arr.as_primitive_opt::<Int32Type>().ok_or_else(|| {
-                ArrowError::InvalidArgumentError(format!(
-                    "incorrect type for {}: expected Int32, found {}",
-                    field,
-                    arr.data_type()
-                ))
-            })?;
+            let arr = batch.column_by_name(field).ok_or_else(
+                #[cfg_attr(coverage_nightly, coverage(off))]
+                || {
+                    ArrowError::InvalidArgumentError(format!(
+                        "record batch has no column named {}",
+                        field
+                    ))
+                },
+            )?;
+            let arr = arr.as_primitive_opt::<Int32Type>().ok_or_else(
+                #[cfg_attr(coverage_nightly, coverage(off))]
+                || {
+                    ArrowError::InvalidArgumentError(format!(
+                        "incorrect type for {}: expected Int32, found {}",
+                        field,
+                        arr.data_type()
+                    ))
+                },
+            )?;
             arrays[k].write(arr.clone());
         }
         // SAFETY: we have just initialized all the arrays

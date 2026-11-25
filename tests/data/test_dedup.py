@@ -7,9 +7,10 @@
 import random
 import uuid
 
+import numpy as np
 import pyarrow as pa
 
-from pytest import mark
+from pytest import mark, raises
 
 from lenskit._accel import data as _data_accel
 from lenskit.data import Dataset
@@ -59,6 +60,23 @@ def test_cols_no_dups(ml_ds: Dataset):
         assert dedup.count_duplicates(batch) == 0
 
     _log.info("deduplicated ML Small in %s", timer)
+
+
+def test_cols_dedup_null_fails(ml_ds: Dataset):
+    "deduplicate data by user/item numbers with null values"
+    table = ml_ds.interactions().arrow()
+
+    mask = np.zeros(table.num_rows, dtype=np.bool_)
+    mask[1000:10000:250] = True
+    ino2 = pa.array(table.column("item_num"), mask=mask)
+    table = table.set_column(1, "item_num", ino2)
+    assert table.column_names[:2] == ["user_num", "item_num"]
+
+    dedup = _data_accel.TableDedup(table.schema, columns=["user_num", "item_num"])
+
+    with raises(RuntimeError, match=r"null.*values are not supported"):
+        for batch in table.to_batches(max_chunksize=10240):
+            assert dedup.count_duplicates(batch) == 0
 
 
 @mark.bigdata

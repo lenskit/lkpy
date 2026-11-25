@@ -20,6 +20,8 @@ use pyo3::PyResult;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use xxhash_rust::xxh3::{xxh3_64, xxh3_128};
 
+use crate::errors::PythonizeError;
+
 use super::DedupDirection;
 use super::DedupMemory;
 
@@ -59,15 +61,18 @@ impl<'s> RowMemoryBuilder<'s> {
     /// Build a [`DedupMemory`] with the named method.
     pub fn build_named(self, name: &str) -> PyResult<Box<dyn DedupMemory>> {
         match name {
-            "full" => Ok(Box::new(self.build_exact().map_err(|e| {
-                PyRuntimeError::new_err(format!("failed to create memory: {}", e))
-            })?)),
-            "hash" => Ok(Box::new(self.build_hash().map_err(|e| {
-                PyRuntimeError::new_err(format!("failed to create memory: {}", e))
-            })?)),
-            "short-hash" => Ok(Box::new(self.build_short_hash().map_err(|e| {
-                PyRuntimeError::new_err(format!("failed to create memory: {}", e))
-            })?)),
+            "full" => Ok(Box::new(
+                self.build_exact()
+                    .pythonize_err::<_, PyRuntimeError>("failed to create memory")?,
+            )),
+            "hash" => Ok(Box::new(
+                self.build_hash()
+                    .pythonize_err::<_, PyRuntimeError>("failed to create memory")?,
+            )),
+            "short-hash" => Ok(Box::new(
+                self.build_short_hash()
+                    .pythonize_err::<_, PyRuntimeError>("failed to create memory")?,
+            )),
             _ => Err(PyValueError::new_err(format!(
                 "Unknown dedup comparison method: {}",
                 name
@@ -75,21 +80,21 @@ impl<'s> RowMemoryBuilder<'s> {
         }
     }
 
-    pub fn build_exact(self) -> Result<RowMemory<OwnedRow>, ArrowError> {
+    pub fn build_exact(self) -> PyResult<RowMemory<OwnedRow>> {
         RowMemory::new(self.schema, self.columns)
     }
 
-    pub fn build_hash(self) -> Result<RowMemory<u128>, ArrowError> {
+    pub fn build_hash(self) -> PyResult<RowMemory<u128>> {
         RowMemory::new(self.schema, self.columns)
     }
 
-    pub fn build_short_hash(self) -> Result<RowMemory<u64>, ArrowError> {
+    pub fn build_short_hash(self) -> PyResult<RowMemory<u64>> {
         RowMemory::new(self.schema, self.columns)
     }
 }
 
 impl<K: RowKey> RowMemory<K> {
-    fn new(schema: &Schema, columns: Option<Vec<String>>) -> ArrowResult<Self> {
+    fn new(schema: &Schema, columns: Option<Vec<String>>) -> PyResult<Self> {
         if let Some(cols) = columns {
             Self::with_columns(schema, cols)
         } else {
@@ -97,29 +102,33 @@ impl<K: RowKey> RowMemory<K> {
         }
     }
 
-    fn without_columns(schema: &Schema) -> ArrowResult<Self> {
+    fn without_columns(schema: &Schema) -> PyResult<Self> {
         let mut fields = vec![];
         for field in schema.fields() {
             fields.push(SortField::new(field.data_type().clone()))
         }
         Ok(RowMemory {
-            converter: RowConverter::new(fields)?,
+            converter: RowConverter::new(fields)
+                .pythonize_err::<_, PyRuntimeError>("failed to create row memory")?,
             columns: None,
             table: HashSet::with_capacity(100_000),
         })
     }
 
-    fn with_columns(schema: &Schema, columns: Vec<String>) -> ArrowResult<Self> {
+    fn with_columns(schema: &Schema, columns: Vec<String>) -> PyResult<Self> {
         let mut fields = Vec::with_capacity(columns.len());
         let mut col_owned = Vec::with_capacity(columns.len());
         for name in columns {
             let name = name.as_ref();
-            let field = schema.field_with_name(name)?;
+            let field = schema
+                .field_with_name(name)
+                .pythonize_err::<_, PyRuntimeError>(format_args!("no such field: {}", name))?;
             fields.push(SortField::new(field.data_type().clone()));
             col_owned.push(name.to_string());
         }
         Ok(RowMemory {
-            converter: RowConverter::new(fields)?,
+            converter: RowConverter::new(fields)
+                .pythonize_err::<_, PyRuntimeError>("failed to create row memory")?,
             columns: Some(col_owned),
             table: HashSet::with_capacity(100_000),
         })
