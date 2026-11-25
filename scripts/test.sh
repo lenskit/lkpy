@@ -43,7 +43,12 @@ run-cmd -check just build-accel "${build_args[@]}"
 
 if (($ACCEL_COVER)); then
     msg "re-building accelerator with coverage"
-    run-cmd -check maturin develop --profile=dev -- -C instrument-coverage
+    declare -a cov_cfg=(--cfg coverage)
+    if [[ ${RUSTUP_TOOLCHAIN:-stable} = nightly* ]]; then
+        msg "nightly toolchain detected"
+        cov_cfg+=(--cfg coverage_nightly)
+    fi
+    run-cmd -check maturin develop --profile=dev -- -C instrument-coverage "${cov_cfg[@]}"
     export LLVM_PROFILE_FILE="$PWD/.coverage-prof/lenskit-test-%p-%m.profraw"
     just _clean-rust-coverage || die "cannot clean coverage"
 fi
